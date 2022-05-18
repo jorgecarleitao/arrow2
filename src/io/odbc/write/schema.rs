@@ -1,7 +1,7 @@
 use super::super::api;
 
 use crate::datatypes::{DataType, Field};
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 /// Infers the [`api::ColumnDescription`] from the fields
 pub fn infer_descriptions(fields: &[Field]) -> Result<Vec<api::ColumnDescription>> {
@@ -33,6 +33,6 @@ fn data_type_to(data_type: &DataType) -> Result<api::DataType> {
         DataType::FixedSizeBinary(length) => api::DataType::Binary { length: *length },
         DataType::Binary | DataType::LargeBinary => api::DataType::Varbinary { length: 0 },
         DataType::Utf8 | DataType::LargeUtf8 => api::DataType::Varchar { length: 0 },
-        other => return Err(ArrowError::nyi(format!("{other:?} to ODBC"))),
+        other => return Err(Error::nyi(format!("{other:?} to ODBC"))),
     })
 }

@@ -2,7 +2,7 @@ use serde_derive::Deserialize;
 use serde_json::Value;
 
 use crate::{
-    error::{ArrowError, Result},
+    error::{Error, Result},
     io::ipc::IpcField,
 };
 
@@ -17,7 +17,7 @@ fn to_time_unit(item: Option<&Value>) -> Result<TimeUnit> {
         Some(p) if p == "MILLISECOND" => Ok(TimeUnit::Millisecond),
         Some(p) if p == "MICROSECOND" => Ok(TimeUnit::Microsecond),
         Some(p) if p == "NANOSECOND" => Ok(TimeUnit::Nanosecond),
-        _ => Err(ArrowError::OutOfSpec(
+        _ => Err(Error::OutOfSpec(
             "time unit missing or invalid".to_string(),
         )),
     }
@@ -32,13 +32,13 @@ fn to_int(item: &Value) -> Result<IntegerType> {
                 Some(32) => IntegerType::Int32,
                 Some(64) => IntegerType::Int64,
                 _ => {
-                    return Err(ArrowError::OutOfSpec(
+                    return Err(Error::OutOfSpec(
                         "int bitWidth missing or invalid".to_string(),
                     ))
                 }
             },
             _ => {
-                return Err(ArrowError::OutOfSpec(
+                return Err(Error::OutOfSpec(
                     "int bitWidth missing or invalid".to_string(),
                 ))
             }
@@ -50,19 +50,19 @@ fn to_int(item: &Value) -> Result<IntegerType> {
                 Some(32) => IntegerType::UInt32,
                 Some(64) => IntegerType::UInt64,
                 _ => {
-                    return Err(ArrowError::OutOfSpec(
+                    return Err(Error::OutOfSpec(
                         "int bitWidth missing or invalid".to_string(),
                     ))
                 }
             },
             _ => {
-                return Err(ArrowError::OutOfSpec(
+                return Err(Error::OutOfSpec(
                     "int bitWidth missing or invalid".to_string(),
                 ))
             }
         },
         _ => {
-            return Err(ArrowError::OutOfSpec(
+            return Err(Error::OutOfSpec(
                 "int signed missing or invalid".to_string(),
             ))
         }
@@ -78,7 +78,7 @@ fn deserialize_fields(children: Option<&Value>) -> Result<Vec<Field>> {
                     .map(deserialize_field)
                     .collect::<Result<Vec<_>>>()
             } else {
-                Err(ArrowError::OutOfSpec(
+                Err(Error::OutOfSpec(
                     "children must be an array".to_string(),
                 ))
             }
@@ -94,7 +94,7 @@ fn read_metadata(metadata: &Value) -> Result<Metadata> {
                 match value.as_object() {
                     Some(map) => {
                         if map.len() != 2 {
-                            return Err(ArrowError::OutOfSpec(
+                            return Err(Error::OutOfSpec(
                                 "Field 'metadata' must have exact two entries for each key-value map".to_string(),
                             ));
                         }
@@ -102,20 +102,20 @@ fn read_metadata(metadata: &Value) -> Result<Metadata> {
                             if let (Some(k_str), Some(v_str)) = (k.as_str(), v.as_str()) {
                                 res.insert(k_str.to_string().clone(), v_str.to_string().clone());
                             } else {
-                                return Err(ArrowError::OutOfSpec(
+                                return Err(Error::OutOfSpec(
                                     "Field 'metadata' must have map value of string type"
                                         .to_string(),
                                 ));
                             }
                         } else {
-                            return Err(ArrowError::OutOfSpec(
+                            return Err(Error::OutOfSpec(
                                 "Field 'metadata' lacks map keys named \"key\" or \"value\""
                                     .to_string(),
                             ));
                         }
                     }
                     _ => {
-                        return Err(ArrowError::OutOfSpec(
+                        return Err(Error::OutOfSpec(
                             "Field 'metadata' contains non-object key-value pair".to_string(),
                         ));
                     }
@@ -129,7 +129,7 @@ fn read_metadata(metadata: &Value) -> Result<Metadata> {
                 if let Some(str_value) = v.as_str() {
                     res.insert(k.clone(), str_value.to_string().clone());
                 } else {
-                    return Err(ArrowError::OutOfSpec(format!(
+                    return Err(Error::OutOfSpec(format!(
                         "Field 'metadata' contains non-string value for key {}",
                         k
                     )));
@@ -137,7 +137,7 @@ fn read_metadata(metadata: &Value) -> Result<Metadata> {
             }
             Ok(res)
         }
-        _ => Err(ArrowError::OutOfSpec(
+        _ => Err(Error::OutOfSpec(
             "Invalid json value type for field".to_string(),
         )),
     }
@@ -146,12 +146,12 @@ fn read_metadata(metadata: &Value) -> Result<Metadata> {
 fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
     let type_ = item
         .get("name")
-        .ok_or_else(|| ArrowError::OutOfSpec("type missing".to_string()))?;
+        .ok_or_else(|| Error::OutOfSpec("type missing".to_string()))?;
 
     let type_ = if let Value::String(name) = type_ {
         name.as_str()
     } else {
-        return Err(ArrowError::OutOfSpec("type is not a string".to_string()));
+        return Err(Error::OutOfSpec("type is not a string".to_string()));
     };
 
     use DataType::*;
@@ -165,7 +165,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             if let Some(Value::Number(size)) = item.get("byteWidth") {
                 DataType::FixedSizeBinary(size.as_i64().unwrap() as usize)
             } else {
-                return Err(ArrowError::OutOfSpec(
+                return Err(Error::OutOfSpec(
                     "Expecting a byteWidth for fixedsizebinary".to_string(),
                 ));
             }
@@ -176,13 +176,13 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             // return a list with any type as its child isn't defined in the map
             let precision = match item.get("precision") {
                 Some(p) => Ok(p.as_u64().unwrap() as usize),
-                None => Err(ArrowError::OutOfSpec(
+                None => Err(Error::OutOfSpec(
                     "Expecting a precision for decimal".to_string(),
                 )),
             };
             let scale = match item.get("scale") {
                 Some(s) => Ok(s.as_u64().unwrap() as usize),
-                _ => Err(ArrowError::OutOfSpec(
+                _ => Err(Error::OutOfSpec(
                     "Expecting a scale for decimal".to_string(),
                 )),
             };
@@ -194,7 +194,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             Some(p) if p == "SINGLE" => DataType::Float32,
             Some(p) if p == "DOUBLE" => DataType::Float64,
             _ => {
-                return Err(ArrowError::OutOfSpec(
+                return Err(Error::OutOfSpec(
                     "floatingpoint precision missing or invalid".to_string(),
                 ))
             }
@@ -204,7 +204,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             let tz = match item.get("timezone") {
                 None => Ok(None),
                 Some(Value::String(tz)) => Ok(Some(tz.clone())),
-                _ => Err(ArrowError::OutOfSpec(
+                _ => Err(Error::OutOfSpec(
                     "timezone must be a string".to_string(),
                 )),
             }?;
@@ -214,7 +214,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             Some(p) if p == "DAY" => DataType::Date32,
             Some(p) if p == "MILLISECOND" => DataType::Date64,
             _ => {
-                return Err(ArrowError::OutOfSpec(
+                return Err(Error::OutOfSpec(
                     "date unit missing or invalid".to_string(),
                 ))
             }
@@ -225,7 +225,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
                 Some(p) if p == 32 => DataType::Time32(unit),
                 Some(p) if p == 64 => DataType::Time64(unit),
                 _ => {
-                    return Err(ArrowError::OutOfSpec(
+                    return Err(Error::OutOfSpec(
                         "time bitWidth missing or invalid".to_string(),
                     ))
                 }
@@ -240,7 +240,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             Some(p) if p == "YEAR_MONTH" => DataType::Interval(IntervalUnit::YearMonth),
             Some(p) if p == "MONTH_DAY_NANO" => DataType::Interval(IntervalUnit::MonthDayNano),
             _ => {
-                return Err(ArrowError::OutOfSpec(
+                return Err(Error::OutOfSpec(
                     "interval unit missing or invalid".to_string(),
                 ))
             }
@@ -255,7 +255,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
                     size.as_i64().unwrap() as usize,
                 )
             } else {
-                return Err(ArrowError::OutOfSpec(
+                return Err(Error::OutOfSpec(
                     "Expecting a listSize for fixedsizelist".to_string(),
                 ));
             }
@@ -265,12 +265,12 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             let mode = if let Some(Value::String(mode)) = item.get("mode") {
                 UnionMode::sparse(mode == "SPARSE")
             } else {
-                return Err(ArrowError::OutOfSpec("union requires mode".to_string()));
+                return Err(Error::OutOfSpec("union requires mode".to_string()));
             };
             let ids = if let Some(Value::Array(ids)) = item.get("typeIds") {
                 Some(ids.iter().map(|x| x.as_i64().unwrap() as i32).collect())
             } else {
-                return Err(ArrowError::OutOfSpec("union requires ids".to_string()));
+                return Err(Error::OutOfSpec("union requires ids".to_string()));
             };
             DataType::Union(children, ids, mode)
         }
@@ -278,12 +278,12 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             let sorted_keys = if let Some(Value::Bool(sorted_keys)) = item.get("keysSorted") {
                 *sorted_keys
             } else {
-                return Err(ArrowError::OutOfSpec("sorted keys not defined".to_string()));
+                return Err(Error::OutOfSpec("sorted keys not defined".to_string()));
             };
             DataType::Map(Box::new(children.pop().unwrap()), sorted_keys)
         }
         other => {
-            return Err(ArrowError::NotYetImplemented(format!(
+            return Err(Error::NotYetImplemented(format!(
                 "invalid json value type \"{}\"",
                 other
             )))
@@ -295,7 +295,7 @@ fn deserialize_ipc_field(value: &Value) -> Result<IpcField> {
     let map = if let Value::Object(map) = value {
         map
     } else {
-        return Err(ArrowError::OutOfSpec(
+        return Err(Error::OutOfSpec(
             "Invalid json value type for field".to_string(),
         ));
     };
@@ -309,7 +309,7 @@ fn deserialize_ipc_field(value: &Value) -> Result<IpcField> {
                     .map(deserialize_ipc_field)
                     .collect::<Result<Vec<_>>>()
             } else {
-                Err(ArrowError::OutOfSpec(
+                Err(Error::OutOfSpec(
                     "children must be an array".to_string(),
                 ))
             }
@@ -320,7 +320,7 @@ fn deserialize_ipc_field(value: &Value) -> Result<IpcField> {
         match dictionary.get("id") {
             Some(Value::Number(n)) => Some(n.as_i64().unwrap()),
             _ => {
-                return Err(ArrowError::OutOfSpec(
+                return Err(Error::OutOfSpec(
                     "Field missing 'id' attribute".to_string(),
                 ));
             }
@@ -338,7 +338,7 @@ fn deserialize_field(value: &Value) -> Result<Field> {
     let map = if let Value::Object(map) = value {
         map
     } else {
-        return Err(ArrowError::OutOfSpec(
+        return Err(Error::OutOfSpec(
             "Invalid json value type for field".to_string(),
         ));
     };
@@ -346,7 +346,7 @@ fn deserialize_field(value: &Value) -> Result<Field> {
     let name = match map.get("name") {
         Some(&Value::String(ref name)) => name.to_string(),
         _ => {
-            return Err(ArrowError::OutOfSpec(
+            return Err(Error::OutOfSpec(
                 "Field missing 'name' attribute".to_string(),
             ));
         }
@@ -354,7 +354,7 @@ fn deserialize_field(value: &Value) -> Result<Field> {
     let is_nullable = match map.get("nullable") {
         Some(&Value::Bool(b)) => b,
         _ => {
-            return Err(ArrowError::OutOfSpec(
+            return Err(Error::OutOfSpec(
                 "Field missing 'nullable' attribute".to_string(),
             ));
         }
@@ -370,7 +370,7 @@ fn deserialize_field(value: &Value) -> Result<Field> {
 
     let type_ = map
         .get("type")
-        .ok_or_else(|| ArrowError::OutOfSpec("type missing".to_string()))?;
+        .ok_or_else(|| Error::OutOfSpec("type missing".to_string()))?;
 
     let children = deserialize_fields(map.get("children"))?;
     let data_type = to_data_type(type_, children)?;
@@ -385,7 +385,7 @@ fn deserialize_field(value: &Value) -> Result<Field> {
         let index_type = match dictionary.get("indexType") {
             Some(t) => to_int(t)?,
             _ => {
-                return Err(ArrowError::OutOfSpec(
+                return Err(Error::OutOfSpec(
                     "Field missing 'indexType' attribute".to_string(),
                 ));
             }
@@ -393,7 +393,7 @@ fn deserialize_field(value: &Value) -> Result<Field> {
         let is_ordered = match dictionary.get("isOrdered") {
             Some(&Value::Bool(n)) => n,
             _ => {
-                return Err(ArrowError::OutOfSpec(
+                return Err(Error::OutOfSpec(
                     "Field missing 'isOrdered' attribute".to_string(),
                 ));
             }
@@ -434,13 +434,13 @@ fn from_metadata(json: &Value) -> Result<Metadata> {
                 if let Value::String(v) = v {
                     Ok((k.to_string(), v.to_string()))
                 } else {
-                    Err(ArrowError::OutOfSpec(
+                    Err(Error::OutOfSpec(
                         "metadata `value` field must be a string".to_string(),
                     ))
                 }
             })
             .collect::<Result<_>>(),
-        _ => Err(ArrowError::OutOfSpec(
+        _ => Err(Error::OutOfSpec(
             "`metadata` field must be an object".to_string(),
         )),
     }
@@ -451,7 +451,7 @@ pub fn deserialize_schema(value: &Value) -> Result<(Schema, Vec<IpcField>)> {
     let schema = if let Value::Object(schema) = value {
         schema
     } else {
-        return Err(ArrowError::OutOfSpec(
+        return Err(Error::OutOfSpec(
             "Invalid json value type for schema".to_string(),
         ));
     };
@@ -462,7 +462,7 @@ pub fn deserialize_schema(value: &Value) -> Result<(Schema, Vec<IpcField>)> {
             .map(deserialize_field)
             .collect::<Result<_>>()?
     } else {
-        return Err(ArrowError::OutOfSpec(
+        return Err(Error::OutOfSpec(
             "Schema fields should be an array".to_string(),
         ));
     };
@@ -473,7 +473,7 @@ pub fn deserialize_schema(value: &Value) -> Result<(Schema, Vec<IpcField>)> {
             .map(deserialize_ipc_field)
             .collect::<Result<_>>()?
     } else {
-        return Err(ArrowError::OutOfSpec(
+        return Err(Error::OutOfSpec(
             "Schema fields should be an array".to_string(),
         ));
     };

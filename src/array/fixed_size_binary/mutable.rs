@@ -4,7 +4,7 @@ use crate::{
     array::{Array, MutableArray},
     bitmap::MutableBitmap,
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use super::{FixedSizeBinaryArray, FixedSizeBinaryValues};
@@ -82,7 +82,7 @@ impl MutableFixedSizeBinaryArray {
             Some(bytes) => {
                 let bytes = bytes.as_ref();
                 if self.size != bytes.len() {
-                    return Err(ArrowError::InvalidArgumentError(
+                    return Err(Error::InvalidArgumentError(
                         "FixedSizeBinaryArray requires every item to be of its length".to_string(),
                     ));
                 }

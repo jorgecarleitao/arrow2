@@ -1,6 +1,6 @@
 //! Boolean operators of [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics).
 use crate::datatypes::DataType;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::scalar::BooleanScalar;
 use crate::{
     array::BooleanArray,
@@ -26,7 +26,7 @@ use crate::{
 /// ```
 pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
     if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "Cannot perform bitwise operation on arrays of different length".to_string(),
         ));
     }
@@ -116,7 +116,7 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// ```
 pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
     if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "Cannot perform bitwise operation on arrays of different length".to_string(),
         ));
     }

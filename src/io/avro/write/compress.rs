@@ -41,19 +41,19 @@ pub fn compress(
             compressed.resize(required_len, 0);
             let compressed_bytes = Encoder::new()
                 .compress(block, compressed)
-                .map_err(|e| crate::error::ArrowError::ExternalFormat(e.to_string()))?;
+                .map_err(|e| crate::error::Error::ExternalFormat(e.to_string()))?;
             compressed.truncate(compressed_bytes);
 
             compressed.extend(CRC_TABLE.checksum(block).to_be_bytes());
             Ok(false)
         }
         #[cfg(not(feature = "io_avro_compression"))]
-        Some(Compression::Deflate) => Err(crate::error::ArrowError::InvalidArgumentError(
+        Some(Compression::Deflate) => Err(crate::error::Error::InvalidArgumentError(
             "Trying to compress Avro with deflate but feature 'io_avro_compression' is not active."
                 .to_string(),
         )),
         #[cfg(not(feature = "io_avro_compression"))]
-        Some(Compression::Snappy) => Err(crate::error::ArrowError::InvalidArgumentError(
+        Some(Compression::Snappy) => Err(crate::error::Error::InvalidArgumentError(
             "Trying to compress Avro with snappy but feature 'io_avro_compression' is not active."
                 .to_string(),
         )),

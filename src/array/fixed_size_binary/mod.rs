@@ -2,7 +2,7 @@ use crate::{
     bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
     datatypes::DataType,
-    error::ArrowError,
+    error::Error,
 };
 
 use super::Array;
@@ -35,11 +35,11 @@ impl FixedSizeBinaryArray {
         data_type: DataType,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
-    ) -> Result<Self, ArrowError> {
+    ) -> Result<Self, Error> {
         let size = Self::maybe_get_size(&data_type)?;
 
         if values.len() % size != 0 {
-            return Err(ArrowError::oos(format!(
+            return Err(Error::oos(format!(
                 "values (of len {}) must be a multiple of size ({}) in FixedSizeBinaryArray.",
                 values.len(),
                 size
@@ -51,7 +51,7 @@ impl FixedSizeBinaryArray {
             .as_ref()
             .map_or(false, |validity| validity.len() != len)
         {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "validity mask length must be equal to the number of values divided by size",
             ));
         }
@@ -216,10 +216,10 @@ impl FixedSizeBinaryArray {
 }
 
 impl FixedSizeBinaryArray {
-    pub(crate) fn maybe_get_size(data_type: &DataType) -> Result<usize, ArrowError> {
+    pub(crate) fn maybe_get_size(data_type: &DataType) -> Result<usize, Error> {
         match data_type.to_logical_type() {
             DataType::FixedSizeBinary(size) => Ok(*size),
-            _ => Err(ArrowError::oos(
+            _ => Err(Error::oos(
                 "FixedSizeBinaryArray expects DataType::FixedSizeBinary",
             )),
         }
@@ -269,7 +269,7 @@ impl FixedSizeBinaryArray {
     pub fn try_from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = Option<P>>>(
         iter: I,
         size: usize,
-    ) -> Result<Self, ArrowError> {
+    ) -> Result<Self, Error> {
         MutableFixedSizeBinaryArray::try_from_iter(iter, size).map(|x| x.into())
     }
 

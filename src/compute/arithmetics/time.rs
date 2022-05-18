@@ -17,7 +17,7 @@ use crate::{
     array::PrimitiveArray,
     compute::arity::{binary, unary},
     datatypes::{DataType, TimeUnit},
-    error::{ArrowError, Result},
+    error::{Error, Result},
     scalar::{PrimitiveScalar, Scalar},
     temporal_conversions,
     types::{months_days_ns, NativeType},
@@ -54,7 +54,7 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
             temporal_conversions::timeunit_scale(TimeUnit::Millisecond, *timeunit)
         }
         _ => {
-            return Err(ArrowError::InvalidArgumentError(
+            return Err(Error::InvalidArgumentError(
                 "Incorrect data type for the arguments".to_string(),
             ));
         }
@@ -271,7 +271,7 @@ pub fn subtract_timestamps(
 
             Ok(binary(lhs, rhs, DataType::Duration(*timeunit_a), op))
         }
-        _ => Err(ArrowError::InvalidArgumentError(
+        _ => Err(Error::InvalidArgumentError(
             "Incorrect data type for the arguments".to_string(),
         )),
     }
@@ -291,7 +291,7 @@ pub fn sub_timestamps_scalar(
                 timeunit_a,
             )
         } else {
-            return Err(ArrowError::InvalidArgumentError(
+            return Err(Error::InvalidArgumentError(
                 "sub_timestamps_scalar requires both arguments to be timestamps without timezone"
                     .to_string(),
             ));
@@ -346,7 +346,7 @@ pub fn add_interval(
                     ))
                 }
                 #[cfg(not(feature = "chrono-tz"))]
-                _ => Err(ArrowError::InvalidArgumentError(format!(
+                _ => Err(Error::InvalidArgumentError(format!(
                     "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
                     timezone_str
                 ))),
@@ -363,7 +363,7 @@ pub fn add_interval(
                 },
             ))
         }
-        _ => Err(ArrowError::InvalidArgumentError(
+        _ => Err(Error::InvalidArgumentError(
             "Adding an interval is only supported for `DataType::Timestamp`".to_string(),
         )),
     }
@@ -411,7 +411,7 @@ pub fn add_interval_scalar(
                     ))
                 }
                 #[cfg(not(feature = "chrono-tz"))]
-                _ => Err(ArrowError::InvalidArgumentError(format!(
+                _ => Err(Error::InvalidArgumentError(format!(
                     "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
                     timezone_str
                 ))),
@@ -427,7 +427,7 @@ pub fn add_interval_scalar(
                 timestamp.data_type().clone(),
             ))
         }
-        _ => Err(ArrowError::InvalidArgumentError(
+        _ => Err(Error::InvalidArgumentError(
             "Adding an interval is only supported for `DataType::Timestamp`".to_string(),
         )),
     }

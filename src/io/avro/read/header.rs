@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use avro_schema::Schema;
 use serde_json;
 
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::Compression;
 
@@ -13,10 +13,10 @@ pub(crate) fn deserialize_header(
 ) -> Result<(Schema, Option<Compression>)> {
     let schema = header
         .get("avro.schema")
-        .ok_or_else(|| ArrowError::ExternalFormat("Avro schema must be present".to_string()))
+        .ok_or_else(|| Error::ExternalFormat("Avro schema must be present".to_string()))
         .and_then(|bytes| {
             serde_json::from_slice(bytes.as_ref())
-                .map_err(|e| ArrowError::ExternalFormat(e.to_string()))
+                .map_err(|e| Error::ExternalFormat(e.to_string()))
         })?;
 
     let compression = header.get("avro.codec").and_then(|bytes| {

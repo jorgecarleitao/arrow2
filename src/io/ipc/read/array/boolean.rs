@@ -3,7 +3,7 @@ use std::io::{Read, Seek};
 
 use crate::array::BooleanArray;
 use crate::datatypes::DataType;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::super::read_basic::*;
 use super::super::{Compression, IpcBuffer, Node};
@@ -18,7 +18,7 @@ pub fn read_boolean<R: Read + Seek>(
     compression: Option<Compression>,
 ) -> Result<BooleanArray> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
-        ArrowError::oos(format!(
+        Error::oos(format!(
             "IPC: unable to fetch the field for {:?}. The file or stream is corrupted.",
             data_type
         ))
@@ -50,16 +50,16 @@ pub fn skip_boolean(
     buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<()> {
     let _ = field_nodes.pop_front().ok_or_else(|| {
-        ArrowError::oos(
+        Error::oos(
             "IPC: unable to fetch the field for boolean. The file or stream is corrupted.",
         )
     })?;
 
     let _ = buffers
         .pop_front()
-        .ok_or_else(|| ArrowError::oos("IPC: missing validity buffer."))?;
+        .ok_or_else(|| Error::oos("IPC: missing validity buffer."))?;
     let _ = buffers
         .pop_front()
-        .ok_or_else(|| ArrowError::oos("IPC: missing values buffer."))?;
+        .ok_or_else(|| Error::oos("IPC: missing values buffer."))?;
     Ok(())
 }

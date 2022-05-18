@@ -2,11 +2,11 @@ use std::fs::File;
 
 use arrow2::{
     array::{Array, Int32Array},
-    error::ArrowError,
+    error::Error,
     io::json::write,
 };
 
-fn write_array(path: &str, array: Box<dyn Array>) -> Result<(), ArrowError> {
+fn write_array(path: &str, array: Box<dyn Array>) -> Result<(), Error> {
     let mut writer = File::create(path)?;
 
     let arrays = vec![Ok(array)].into_iter();
@@ -20,7 +20,7 @@ fn write_array(path: &str, array: Box<dyn Array>) -> Result<(), ArrowError> {
     Ok(())
 }
 
-fn main() -> Result<(), ArrowError> {
+fn main() -> Result<(), Error> {
     use std::env;
     let args: Vec<String> = env::args().collect();
 

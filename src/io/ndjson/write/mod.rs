@@ -4,7 +4,7 @@ use std::io::Write;
 pub use fallible_streaming_iterator::FallibleStreamingIterator;
 
 use crate::array::Array;
-use crate::error::ArrowError;
+use crate::error::Error;
 
 use super::super::json::write::new_serializer;
 
@@ -24,7 +24,7 @@ fn serialize(array: &dyn Array, buffer: &mut Vec<u8>) {
 pub struct Serializer<A, I>
 where
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<A, ArrowError>>,
+    I: Iterator<Item = Result<A, Error>>,
 {
     arrays: I,
     buffer: Vec<u8>,
@@ -33,7 +33,7 @@ where
 impl<A, I> Serializer<A, I>
 where
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<A, ArrowError>>,
+    I: Iterator<Item = Result<A, Error>>,
 {
     /// Creates a new [`Serializer`].
     pub fn new(arrays: I, buffer: Vec<u8>) -> Self {
@@ -44,13 +44,13 @@ where
 impl<A, I> FallibleStreamingIterator for Serializer<A, I>
 where
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<A, ArrowError>>,
+    I: Iterator<Item = Result<A, Error>>,
 {
     type Item = [u8];
 
-    type Error = ArrowError;
+    type Error = Error;
 
-    fn advance(&mut self) -> Result<(), ArrowError> {
+    fn advance(&mut self) -> Result<(), Error> {
         self.buffer.clear();
         self.arrays
             .next()
@@ -76,7 +76,7 @@ where
 pub struct FileWriter<W, I>
 where
     W: Write,
-    I: FallibleStreamingIterator<Item = [u8], Error = ArrowError>,
+    I: FallibleStreamingIterator<Item = [u8], Error = Error>,
 {
     writer: W,
     iterator: I,
@@ -85,7 +85,7 @@ where
 impl<W, I> FileWriter<W, I>
 where
     W: Write,
-    I: FallibleStreamingIterator<Item = [u8], Error = ArrowError>,
+    I: FallibleStreamingIterator<Item = [u8], Error = Error>,
 {
     /// Creates a new [`FileWriter`].
     pub fn new(writer: W, iterator: I) -> Self {
@@ -105,9 +105,9 @@ where
 impl<W, I> Iterator for FileWriter<W, I>
 where
     W: Write,
-    I: FallibleStreamingIterator<Item = [u8], Error = ArrowError>,
+    I: FallibleStreamingIterator<Item = [u8], Error = Error>,
 {
-    type Item = Result<(), ArrowError>;
+    type Item = Result<(), Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let item = self.iterator.next().transpose()?;

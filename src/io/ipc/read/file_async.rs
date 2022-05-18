@@ -11,7 +11,7 @@ use futures::{
 use crate::array::*;
 use crate::chunk::Chunk;
 use crate::datatypes::{Field, Schema};
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::io::ipc::{IpcSchema, ARROW_MAGIC, CONTINUATION_MARKER};
 
 use super::common::{apply_projection, prepare_projection, read_dictionary, read_record_batch};
@@ -125,13 +125,13 @@ async fn read_footer_len<R: AsyncRead + AsyncSeek + Unpin>(reader: &mut R) -> Re
     let footer_len = i32::from_le_bytes(footer[..4].try_into().unwrap());
 
     if footer[4..] != ARROW_MAGIC {
-        return Err(ArrowError::OutOfSpec(
+        return Err(Error::OutOfSpec(
             "Arrow file does not contain correct footer".to_string(),
         ));
     }
     footer_len
         .try_into()
-        .map_err(|_| ArrowError::oos("The footer's lenght must be a positive number"))
+        .map_err(|_| Error::oos("The footer's lenght must be a positive number"))
 }
 
 /// Read the metadata from an IPC file.
@@ -173,7 +173,7 @@ where
     reader.read_exact(meta_buffer).await?;
 
     let message = MessageRef::read_as_root(&meta_buffer[..])
-        .map_err(|err| ArrowError::oos(format!("unable to parse message: {:?}", err)))?;
+        .map_err(|err| Error::oos(format!("unable to parse message: {:?}", err)))?;
     let batch = get_serialized_batch(&message)?;
     block_buffer.clear();
     block_buffer.resize(message.body_length()? as usize, 0);
@@ -211,11 +211,11 @@ where
         read_dictionary_message(&mut reader, offset, &mut data).await?;
 
         let message = MessageRef::read_as_root(&data).map_err(|err| {
-            ArrowError::OutOfSpec(format!("unable to get root as message: {:?}", err))
+            Error::OutOfSpec(format!("unable to get root as message: {:?}", err))
         })?;
         let header = message
             .header()?
-            .ok_or_else(|| ArrowError::oos("message must have a header"))?;
+            .ok_or_else(|| Error::oos("message must have a header"))?;
         match header {
             MessageHeaderRef::DictionaryBatch(batch) => {
                 buffer.clear();
@@ -225,7 +225,7 @@ where
                 read_dictionary(batch, fields, ipc_schema, &mut dictionaries, &mut cursor, 0)?;
             }
             other => {
-                return Err(ArrowError::OutOfSpec(format!(
+                return Err(Error::OutOfSpec(format!(
                     "expected DictionaryBatch in dictionary blocks, found {:?}",
                     other,
                 )))

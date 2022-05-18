@@ -2,7 +2,7 @@
 use crate::array::{Array, BooleanArray};
 use crate::bitmap::{Bitmap, MutableBitmap};
 use crate::datatypes::DataType;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::scalar::BooleanScalar;
 
 use super::utils::combine_validities;
@@ -13,7 +13,7 @@ where
     F: Fn(&Bitmap, &Bitmap) -> Bitmap,
 {
     if lhs.len() != rhs.len() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "Cannot perform bitwise operation on arrays of different length".to_string(),
         ));
     }

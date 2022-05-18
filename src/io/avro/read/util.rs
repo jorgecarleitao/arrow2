@@ -3,7 +3,7 @@ use std::io::Read;
 
 use avro_schema::Schema;
 
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::super::{avro_decode, read_header, read_metadata};
 use super::{deserialize_header, Compression};

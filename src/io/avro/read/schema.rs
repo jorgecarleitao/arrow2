@@ -1,7 +1,7 @@
 use avro_schema::{Enum, Fixed, Record, Schema as AvroSchema};
 
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 fn external_props(schema: &AvroSchema) -> Metadata {
     let mut props = Metadata::new();
@@ -35,7 +35,7 @@ pub fn infer_schema(schema: &AvroSchema) -> Result<Schema> {
             .collect::<Result<Vec<_>>>()?
             .into())
     } else {
-        Err(ArrowError::OutOfSpec(
+        Err(Error::OutOfSpec(
             "The root AvroSchema must be of type Record".to_string(),
         ))
     }
@@ -99,7 +99,7 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
                 {
                     schema_to_field(schema, None, Metadata::default())?.data_type
                 } else {
-                    return Err(ArrowError::NotYetImplemented(format!(
+                    return Err(Error::NotYetImplemented(format!(
                         "Can't read avro union {:?}",
                         schema
                     )));

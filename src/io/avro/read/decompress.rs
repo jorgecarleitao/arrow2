@@ -3,7 +3,7 @@ use std::io::Read;
 
 use fallible_streaming_iterator::FallibleStreamingIterator;
 
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::super::{Block, CompressedBlock};
 use super::BlockStreamIterator;
@@ -40,30 +40,30 @@ pub fn decompress_block(
             let block = &block[..block.len() - 4];
 
             let len = snap::raw::decompress_len(block)
-                .map_err(|e| ArrowError::ExternalFormat(e.to_string()))?;
+                .map_err(|e| Error::ExternalFormat(e.to_string()))?;
             decompressed.clear();
             decompressed.resize(len, 0);
             snap::raw::Decoder::new()
                 .decompress(block, decompressed)
-                .map_err(|e| ArrowError::ExternalFormat(e.to_string()))?;
+                .map_err(|e| Error::ExternalFormat(e.to_string()))?;
 
             let expected_crc = u32::from_be_bytes([crc[0], crc[1], crc[2], crc[3]]);
 
             let actual_crc = CRC_TABLE.checksum(decompressed);
             if expected_crc != actual_crc {
-                return Err(ArrowError::ExternalFormat(
+                return Err(Error::ExternalFormat(
                     "The crc of snap-compressed block does not match".to_string(),
                 ));
             }
             Ok(false)
         }
         #[cfg(not(feature = "io_avro_compression"))]
-        Some(Compression::Deflate) => Err(ArrowError::InvalidArgumentError(
+        Some(Compression::Deflate) => Err(Error::InvalidArgumentError(
             "The avro file is deflate-encoded but feature 'io_avro_compression' is not active."
                 .to_string(),
         )),
         #[cfg(not(feature = "io_avro_compression"))]
-        Some(Compression::Snappy) => Err(ArrowError::InvalidArgumentError(
+        Some(Compression::Snappy) => Err(Error::InvalidArgumentError(
             "The avro file is snappy-encoded but feature 'io_avro_compression' is not active."
                 .to_string(),
         )),
@@ -96,7 +96,7 @@ impl<R: Read> Decompressor<R> {
 }
 
 impl<'a, R: Read> FallibleStreamingIterator for Decompressor<R> {
-    type Error = ArrowError;
+    type Error = Error;
     type Item = Block;
 
     fn advance(&mut self) -> Result<()> {

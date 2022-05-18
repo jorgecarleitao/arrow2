@@ -489,8 +489,8 @@ fn chrono_tz_timestamp_to_utf8<O: Offset>(
     _: TimeUnit,
     timezone_str: &str,
 ) -> Result<Utf8Array<O>> {
-    use crate::error::ArrowError;
-    Err(ArrowError::InvalidArgumentError(format!(
+    use crate::error::Error;
+    Err(Error::InvalidArgumentError(format!(
         "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
         timezone_str
     )))

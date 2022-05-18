@@ -28,7 +28,7 @@ macro_rules! avro_decode {
             loop {
                 if j > 9 {
                     // if j * 7 > 64
-                    return Err(ArrowError::ExternalFormat(
+                    return Err(Error::ExternalFormat(
                         "zigzag decoding failed - corrupt avro file".to_string(),
                     ));
                 }
@@ -60,7 +60,7 @@ macro_rules! read_header {
             for _ in 0..len {
                 let key = _read_binary($reader)$($_await)*?;
                 let key = String::from_utf8(key)
-                    .map_err(|_| ArrowError::ExternalFormat("Invalid Avro header".to_string()))?;
+                    .map_err(|_| Error::ExternalFormat("Invalid Avro header".to_string()))?;
                 let value = _read_binary($reader)$($_await)*?;
                 items.insert(key, value);
             }
@@ -75,7 +75,7 @@ macro_rules! read_metadata {
 
         // see https://avro.apache.org/docs/current/spec.html#Object+Container+Files
         if magic_number != [b'O', b'b', b'j', 1u8] {
-            return Err(ArrowError::ExternalFormat(
+            return Err(Error::ExternalFormat(
                 "Avro header does not contain a valid magic number".to_string(),
             ));
         }

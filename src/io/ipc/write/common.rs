@@ -6,7 +6,7 @@ use arrow_format::ipc::planus::Builder;
 use crate::array::*;
 use crate::chunk::Chunk;
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::io::ipc::endianess::is_native_little_endian;
 use crate::io::ipc::read::Dictionaries;
 
@@ -43,7 +43,7 @@ fn encode_dictionary(
         | FixedSizeBinary => Ok(()),
         Dictionary(key_type) => match_integer_type!(key_type, |$T| {
             let dict_id = field.dictionary_id
-                .ok_or_else(|| ArrowError::InvalidArgumentError("Dictionaries must have an associated id".to_string()))?;
+                .ok_or_else(|| Error::InvalidArgumentError("Dictionaries must have an associated id".to_string()))?;
 
             let emit = dictionary_tracker.insert(dict_id, array)?;
 
@@ -70,7 +70,7 @@ fn encode_dictionary(
             let array = array.as_any().downcast_ref::<StructArray>().unwrap();
             let fields = field.fields.as_slice();
             if array.fields().len() != fields.len() {
-                return Err(ArrowError::InvalidArgumentError(
+                return Err(Error::InvalidArgumentError(
                     "The number of fields in a struct must equal the number of children in IpcField".to_string(),
                 ));
             }
@@ -140,7 +140,7 @@ fn encode_dictionary(
                 .fields();
             let fields = &field.fields[..]; // todo: error instead
             if values.len() != fields.len() {
-                return Err(ArrowError::InvalidArgumentError(
+                return Err(Error::InvalidArgumentError(
                     "The number of fields in a union must equal the number of children in IpcField"
                         .to_string(),
                 ));
@@ -346,7 +346,7 @@ impl DictionaryTracker {
                 // Same dictionary values => no need to emit it again
                 return Ok(false);
             } else if self.cannot_replace {
-                return Err(ArrowError::InvalidArgumentError(
+                return Err(Error::InvalidArgumentError(
                     "Dictionary replacement detected when writing IPC file format. \
                      Arrow IPC files only support a single dictionary for a given field \
                      across all batches."

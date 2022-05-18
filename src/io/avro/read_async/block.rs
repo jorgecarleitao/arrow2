@@ -4,7 +4,7 @@ use futures::AsyncRead;
 use futures::AsyncReadExt;
 use futures::Stream;
 
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::CompressedBlock;
 
@@ -13,12 +13,12 @@ use super::utils::zigzag_i64;
 async fn read_size<R: AsyncRead + Unpin + Send>(reader: &mut R) -> Result<(usize, usize)> {
     let rows = match zigzag_i64(reader).await {
         Ok(a) => a,
-        Err(ArrowError::Io(io_err)) => {
+        Err(Error::Io(io_err)) => {
             if let std::io::ErrorKind::UnexpectedEof = io_err.kind() {
                 // end
                 return Ok((0, 0));
             } else {
-                return Err(ArrowError::Io(io_err));
+                return Err(Error::Io(io_err));
             }
         }
         Err(other) => return Err(other),
@@ -49,7 +49,7 @@ async fn read_block<R: AsyncRead + Unpin + Send>(
     reader.read_exact(&mut marker).await?;
 
     if marker != file_marker {
-        return Err(ArrowError::ExternalFormat(
+        return Err(Error::ExternalFormat(
             "Avro: the sync marker in the block does not correspond to the file marker".to_string(),
         ));
     }

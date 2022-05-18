@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use crate::array::ord;
 use crate::compute::take;
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::{
     array::*,
     types::{Index, NativeType},
@@ -162,7 +162,7 @@ pub fn sort_to_indices<I: Index>(
                 DataType::UInt16 => Ok(sort_list::<I, i32, u16>(values, v, n, options, limit)),
                 DataType::UInt32 => Ok(sort_list::<I, i32, u32>(values, v, n, options, limit)),
                 DataType::UInt64 => Ok(sort_list::<I, i32, u64>(values, v, n, options, limit)),
-                t => Err(ArrowError::NotYetImplemented(format!(
+                t => Err(Error::NotYetImplemented(format!(
                     "Sort not supported for list type {:?}",
                     t
                 ))),
@@ -179,7 +179,7 @@ pub fn sort_to_indices<I: Index>(
                 DataType::UInt16 => Ok(sort_list::<I, i64, u16>(values, v, n, options, limit)),
                 DataType::UInt32 => Ok(sort_list::<I, i64, u32>(values, v, n, options, limit)),
                 DataType::UInt64 => Ok(sort_list::<I, i64, u64>(values, v, n, options, limit)),
-                t => Err(ArrowError::NotYetImplemented(format!(
+                t => Err(Error::NotYetImplemented(format!(
                     "Sort not supported for list type {:?}",
                     t
                 ))),
@@ -196,7 +196,7 @@ pub fn sort_to_indices<I: Index>(
                 DataType::UInt16 => Ok(sort_list::<I, i32, u16>(values, v, n, options, limit)),
                 DataType::UInt32 => Ok(sort_list::<I, i32, u32>(values, v, n, options, limit)),
                 DataType::UInt64 => Ok(sort_list::<I, i32, u64>(values, v, n, options, limit)),
-                t => Err(ArrowError::NotYetImplemented(format!(
+                t => Err(Error::NotYetImplemented(format!(
                     "Sort not supported for list type {:?}",
                     t
                 ))),
@@ -205,12 +205,12 @@ pub fn sort_to_indices<I: Index>(
         DataType::Dictionary(key_type, value_type, _) => match value_type.as_ref() {
             DataType::Utf8 => Ok(sort_dict::<I, i32>(values, key_type, options, limit)),
             DataType::LargeUtf8 => Ok(sort_dict::<I, i64>(values, key_type, options, limit)),
-            t => Err(ArrowError::NotYetImplemented(format!(
+            t => Err(Error::NotYetImplemented(format!(
                 "Sort not supported for dictionary type with keys {:?}",
                 t
             ))),
         },
-        t => Err(ArrowError::NotYetImplemented(format!(
+        t => Err(Error::NotYetImplemented(format!(
             "Sort not supported for data type {:?}",
             t
         ))),

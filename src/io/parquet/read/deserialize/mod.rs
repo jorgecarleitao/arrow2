@@ -13,7 +13,7 @@ mod utils;
 use crate::{
     array::{Array, BinaryArray, FixedSizeListArray, ListArray, Utf8Array},
     datatypes::{DataType, Field},
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use self::nested_utils::{InitNested, NestedArrayIter, NestedState};
@@ -76,7 +76,7 @@ fn create_list(
             ))
         }
         _ => {
-            return Err(ArrowError::NotYetImplemented(format!(
+            return Err(Error::NotYetImplemented(format!(
                 "Read nested datatype {:?}",
                 data_type
             )))

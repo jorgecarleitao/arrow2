@@ -7,7 +7,7 @@ use arrow_format::ipc::planus::ReadAsRoot;
 use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::Schema;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::io::ipc::IpcSchema;
 
 use super::super::CONTINUATION_MARKER;
@@ -100,7 +100,7 @@ fn read_next<R: Read>(
                 // https://arrow.apache.org/docs/format/Columnar.html#ipc-streaming-format
                 Ok(Some(StreamState::Waiting))
             } else {
-                Err(ArrowError::from(e))
+                Err(Error::from(e))
             };
         }
     }
@@ -124,14 +124,14 @@ fn read_next<R: Read>(
     reader.read_exact(message_buffer)?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(message_buffer).map_err(|err| {
-        ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
+        Error::OutOfSpec(format!("Unable to get root as message: {:?}", err))
     })?;
     let header = message.header()?.ok_or_else(|| {
-        ArrowError::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
+        Error::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
     })?;
 
     match header {
-        arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(ArrowError::oos("A stream ")),
+        arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(Error::oos("A stream ")),
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
             // read the block that makes up the record batch into a buffer
             data_buffer.clear();
@@ -171,7 +171,7 @@ fn read_next<R: Read>(
             // read the next message until we encounter a RecordBatch message
             read_next(reader, metadata, dictionaries, message_buffer, data_buffer)
         }
-        t => Err(ArrowError::OutOfSpec(format!(
+        t => Err(Error::OutOfSpec(format!(
             "Reading types other than record batches not yet supported, unable to read {:?} ",
             t
         ))),

@@ -14,7 +14,7 @@ use super::{default_ipc_fields, schema_to_bytes};
 use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 /// Arrow stream writer
 ///
@@ -74,7 +74,7 @@ impl<W: Write> StreamWriter<W> {
         ipc_fields: Option<&[IpcField]>,
     ) -> Result<()> {
         if self.finished {
-            return Err(ArrowError::Io(std::io::Error::new(
+            return Err(Error::Io(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
                 "Cannot write to a finished stream".to_string(),
             )));

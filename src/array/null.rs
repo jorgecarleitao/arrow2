@@ -3,7 +3,7 @@ use crate::{bitmap::Bitmap, datatypes::DataType};
 use crate::{
     array::{Array, FromFfi, ToFfi},
     datatypes::PhysicalType,
-    error::ArrowError,
+    error::Error,
     ffi,
 };
 
@@ -19,9 +19,9 @@ impl NullArray {
     /// # Errors
     /// This function errors iff:
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to [`crate::datatypes::PhysicalType::Null`].
-    pub fn try_new(data_type: DataType, length: usize) -> Result<Self, ArrowError> {
+    pub fn try_new(data_type: DataType, length: usize) -> Result<Self, Error> {
         if data_type.to_physical_type() != PhysicalType::Null {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "NullArray can only be initialized with a DataType whose physical type is Boolean",
             ));
         }
@@ -127,7 +127,7 @@ unsafe impl ToFfi for NullArray {
 }
 
 impl<A: ffi::ArrowArrayRef> FromFfi<A> for NullArray {
-    unsafe fn try_from_ffi(array: A) -> Result<Self, ArrowError> {
+    unsafe fn try_from_ffi(array: A) -> Result<Self, Error> {
         let data_type = array.data_type().clone();
         Self::try_new(data_type, array.array().len())
     }

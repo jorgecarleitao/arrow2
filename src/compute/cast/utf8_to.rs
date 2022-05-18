@@ -5,7 +5,7 @@ use chrono::Datelike;
 use crate::{
     array::*,
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
     temporal_conversions::{
         utf8_to_naive_timestamp_ns as utf8_to_naive_timestamp_ns_,
         utf8_to_timestamp_ns as utf8_to_timestamp_ns_, EPOCH_DAYS_FROM_CE,
@@ -165,7 +165,7 @@ pub fn utf8_large_to_utf8(from: &Utf8Array<i64>) -> Result<Utf8Array<i32>> {
     let validity = from.validity().cloned();
     let values = from.values().clone();
     let _ =
-        i32::try_from(*from.offsets().last().unwrap()).map_err(ArrowError::from_external_error)?;
+        i32::try_from(*from.offsets().last().unwrap()).map_err(Error::from_external_error)?;
 
     let offsets = from
         .offsets()

@@ -3,7 +3,7 @@
 use crate::{
     array::{Array, Offset, Utf8Array},
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 /// utf8_apply will apply `Fn(&str) -> String` to every value in Utf8Array.
@@ -32,7 +32,7 @@ pub fn upper(array: &dyn Array) -> Result<Box<dyn Array>> {
                 .downcast_ref::<Utf8Array<i32>>()
                 .expect("A string is expected"),
         ))),
-        _ => Err(ArrowError::InvalidArgumentError(format!(
+        _ => Err(Error::InvalidArgumentError(format!(
             "upper does not support type {:?}",
             array.data_type()
         ))),
@@ -74,7 +74,7 @@ pub fn lower(array: &dyn Array) -> Result<Box<dyn Array>> {
                 .downcast_ref::<Utf8Array<i32>>()
                 .expect("A string is expected"),
         ))),
-        _ => Err(ArrowError::InvalidArgumentError(format!(
+        _ => Err(Error::InvalidArgumentError(format!(
             "lower does not support type {:?}",
             array.data_type()
         ))),

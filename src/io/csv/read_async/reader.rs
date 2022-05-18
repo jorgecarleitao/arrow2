@@ -2,7 +2,7 @@ use futures::AsyncRead;
 
 use super::{AsyncReader, ByteRecord};
 
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 /// Asynchronosly read `len` rows from `reader` into `row`, skiping the first `skip`.
 /// This operation has minimal CPU work and is thus the fastest way to read through a CSV
@@ -27,7 +27,7 @@ where
     let mut row_number = 0;
     for row in rows.iter_mut() {
         let has_more = reader.read_byte_record(row).await.map_err(|e| {
-            ArrowError::External(format!(" at line {}", skip + row_number), Box::new(e))
+            Error::External(format!(" at line {}", skip + row_number), Box::new(e))
         })?;
         if !has_more {
             break;

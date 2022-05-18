@@ -2,7 +2,7 @@ use std::io::{Read, Seek};
 use std::{collections::VecDeque, convert::TryInto};
 
 use crate::datatypes::DataType;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::{array::PrimitiveArray, types::NativeType};
 
 use super::super::read_basic::*;
@@ -21,7 +21,7 @@ where
     Vec<u8>: TryInto<T::Bytes>,
 {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
-        ArrowError::oos(format!(
+        Error::oos(format!(
             "IPC: unable to fetch the field for {:?}. The file or stream is corrupted.",
             data_type
         ))
@@ -52,16 +52,16 @@ pub fn skip_primitive(
     buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<()> {
     let _ = field_nodes.pop_front().ok_or_else(|| {
-        ArrowError::oos(
+        Error::oos(
             "IPC: unable to fetch the field for primitive. The file or stream is corrupted.",
         )
     })?;
 
     let _ = buffers
         .pop_front()
-        .ok_or_else(|| ArrowError::oos("IPC: missing validity buffer."))?;
+        .ok_or_else(|| Error::oos("IPC: missing validity buffer."))?;
     let _ = buffers
         .pop_front()
-        .ok_or_else(|| ArrowError::oos("IPC: missing values buffer."))?;
+        .ok_or_else(|| Error::oos("IPC: missing values buffer."))?;
     Ok(())
 }

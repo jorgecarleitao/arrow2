@@ -6,7 +6,7 @@ use parquet2::write::RowGroupIter;
 use parquet2::write::WriteOptions as FileWriteOptions;
 
 use crate::datatypes::Schema;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::{schema::schema_to_metadata_key, to_parquet_schema, WriteOptions};
 
@@ -78,7 +78,7 @@ impl<W: Write> FileWriter<W> {
     }
 
     /// Writes a row group to the file.
-    pub fn write(&mut self, row_group: RowGroupIter<'_, ArrowError>) -> Result<()> {
+    pub fn write(&mut self, row_group: RowGroupIter<'_, Error>) -> Result<()> {
         Ok(self.writer.write(row_group)?)
     }
 

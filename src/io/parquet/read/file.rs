@@ -7,7 +7,7 @@ use crate::datatypes::Schema;
 use crate::io::parquet::read::read_columns_many;
 use crate::{
     datatypes::Field,
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use super::{infer_schema, read_metadata, FileMetaData, RowGroupDeserializer, RowGroupMetaData};
@@ -68,7 +68,7 @@ impl<R: Read + Seek> FileReader<R> {
 
         if let Some(projection) = &projection {
             if fields.len() != projection.len() {
-                return Err(ArrowError::InvalidArgumentError(
+                return Err(Error::InvalidArgumentError(
                     "While reading parquet, some columns in the projection do not exist in the file"
                         .to_string(),
                 ));

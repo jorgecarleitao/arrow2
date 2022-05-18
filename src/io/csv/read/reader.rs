@@ -2,7 +2,7 @@ use std::io::Read;
 
 use super::{ByteRecord, Reader};
 
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 /// Reads `len` rows from `reader` into `row`, skiping the first `skip`.
 /// This operation has minimal CPU work and is thus the fastest way to read through a CSV
@@ -24,7 +24,7 @@ pub fn read_rows<R: Read>(
     let mut row_number = 0;
     for row in rows.iter_mut() {
         let has_more = reader.read_byte_record(row).map_err(|e| {
-            ArrowError::External(format!(" at line {}", skip + row_number), Box::new(e))
+            Error::External(format!(" at line {}", skip + row_number), Box::new(e))
         })?;
         if !has_more {
             break;

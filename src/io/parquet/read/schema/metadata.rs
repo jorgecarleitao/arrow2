@@ -1,7 +1,7 @@
 pub use parquet2::metadata::KeyValue;
 
 use crate::datatypes::{Metadata, Schema};
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::io::ipc::read::deserialize_schema;
 
 use super::super::super::ARROW_SCHEMA_META_KEY;
@@ -30,7 +30,7 @@ fn get_arrow_schema_from_metadata(encoded_meta: &str) -> Result<Schema> {
         }
         Err(err) => {
             // The C++ implementation returns an error if the schema can't be parsed.
-            Err(ArrowError::InvalidArgumentError(format!(
+            Err(Error::InvalidArgumentError(format!(
                 "Unable to decode the encoded schema stored in {}, {:?}",
                 ARROW_SCHEMA_META_KEY, err
             )))

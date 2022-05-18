@@ -36,7 +36,7 @@ impl<O: Offset> DynMutableListArray<O> {
     #[inline]
     pub fn try_push_valid(&mut self) -> Result<()> {
         let size = self.values.len();
-        let size = O::from_usize(size).ok_or(ArrowError::Overflow)?;
+        let size = O::from_usize(size).ok_or(Error::Overflow)?;
         assert!(size >= *self.offsets.last().unwrap());
 
         self.offsets.push(size);

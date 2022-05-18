@@ -4,7 +4,7 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field},
-    error::ArrowError,
+    error::Error,
 };
 
 use super::{
@@ -46,14 +46,14 @@ impl<O: Offset> ListArray<O> {
         offsets: Buffer<O>,
         values: Arc<dyn Array>,
         validity: Option<Bitmap>,
-    ) -> Result<Self, ArrowError> {
+    ) -> Result<Self, Error> {
         try_check_offsets(&offsets, values.len())?;
 
         if validity
             .as_ref()
             .map_or(false, |validity| validity.len() != offsets.len() - 1)
         {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "validity mask length must match the number of values",
             ));
         }
@@ -61,7 +61,7 @@ impl<O: Offset> ListArray<O> {
         let child_data_type = Self::try_get_child(&data_type)?.data_type();
         let values_data_type = values.data_type();
         if child_data_type != values_data_type {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 format!("ListArray's child's DataType must match. However, the expected DataType is {child_data_type:?} while it got {values_data_type:?}."),
             ));
         }
@@ -143,14 +143,14 @@ impl<O: Offset> ListArray<O> {
         offsets: Buffer<O>,
         values: Arc<dyn Array>,
         validity: Option<Bitmap>,
-    ) -> Result<Self, ArrowError> {
+    ) -> Result<Self, Error> {
         try_check_offsets_bounds(&offsets, values.len())?;
 
         if validity
             .as_ref()
             .map_or(false, |validity| validity.len() != offsets.len() - 1)
         {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "validity mask length must match the number of values",
             ));
         }
@@ -158,7 +158,7 @@ impl<O: Offset> ListArray<O> {
         let child_data_type = Self::try_get_child(&data_type)?.data_type();
         let values_data_type = values.data_type();
         if child_data_type != values_data_type {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 format!("ListArray's child's DataType must match. However, the expected DataType is {child_data_type:?} while it got {values_data_type:?}."),
             ));
         }
@@ -309,18 +309,16 @@ impl<O: Offset> ListArray<O> {
     /// Returns a the inner [`Field`]
     /// # Errors
     /// Panics iff the logical type is not consistent with this struct.
-    fn try_get_child(data_type: &DataType) -> Result<&Field, ArrowError> {
+    fn try_get_child(data_type: &DataType) -> Result<&Field, Error> {
         if O::IS_LARGE {
             match data_type.to_logical_type() {
                 DataType::LargeList(child) => Ok(child.as_ref()),
-                _ => Err(ArrowError::oos(
-                    "ListArray<i64> expects DataType::LargeList",
-                )),
+                _ => Err(Error::oos("ListArray<i64> expects DataType::LargeList")),
             }
         } else {
             match data_type.to_logical_type() {
                 DataType::List(child) => Ok(child.as_ref()),
-                _ => Err(ArrowError::oos("ListArray<i32> expects DataType::List")),
+                _ => Err(Error::oos("ListArray<i32> expects DataType::List")),
             }
         }
     }

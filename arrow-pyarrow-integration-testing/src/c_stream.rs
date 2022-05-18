@@ -19,7 +19,7 @@ pub fn to_rust_iterator(ob: PyObject, py: Python) -> PyResult<Vec<PyObject>> {
     ob.call_method1(py, "_export_to_c", (stream_ptr as Py_uintptr_t,))?;
 
     let mut iter =
-        unsafe { ffi::ArrowArrayStreamReader::try_new(stream).map_err(PyO3ArrowError::from) }?;
+        unsafe { ffi::ArrowArrayStreamReader::try_new(stream).map_err(PyO3Error::from) }?;
 
     let mut arrays = vec![];
     while let Some(array) = unsafe { iter.next() } {

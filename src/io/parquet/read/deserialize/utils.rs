@@ -10,11 +10,11 @@ use parquet2::schema::Repetition;
 
 use crate::bitmap::utils::BitmapIter;
 use crate::bitmap::MutableBitmap;
-use crate::error::ArrowError;
+use crate::error::Error;
 
 use super::super::DataPages;
 
-pub fn not_implemented(page: &DataPage) -> ArrowError {
+pub fn not_implemented(page: &DataPage) -> Error {
     let is_optional = page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
     let is_filtered = page.selected_rows().is_some();
     let required = if is_optional { "optional" } else { "required" };
@@ -24,7 +24,7 @@ pub fn not_implemented(page: &DataPage) -> ArrowError {
     } else {
         ""
     };
-    ArrowError::NotYetImplemented(format!(
+    Error::NotYetImplemented(format!(
         "Decoding {:?} \"{:?}\"-encoded{} {} {} parquet pages",
         page.descriptor.primitive_type.physical_type,
         page.encoding(),
@@ -357,7 +357,7 @@ pub(super) trait Decoder<'a> {
     type State: PageState<'a>;
     type DecodedState: DecodedState<'a>;
 
-    fn build_state(&self, page: &'a DataPage) -> Result<Self::State, ArrowError>;
+    fn build_state(&self, page: &'a DataPage) -> Result<Self::State, Error>;
 
     /// Initializes a new state
     fn with_capacity(&self, capacity: usize) -> Self::DecodedState;
@@ -417,7 +417,7 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
     items: &mut VecDeque<D::DecodedState>,
     chunk_size: usize,
     decoder: &D,
-) -> MaybeNext<Result<D::DecodedState, ArrowError>> {
+) -> MaybeNext<Result<D::DecodedState, Error>> {
     // front[a1, a2, a3, ...]back
     if items.len() > 1 {
         let item = items.pop_front().unwrap();

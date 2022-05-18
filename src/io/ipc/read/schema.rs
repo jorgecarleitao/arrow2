@@ -5,7 +5,7 @@ use crate::{
         get_extension, DataType, Extension, Field, IntegerType, IntervalUnit, Metadata, Schema,
         TimeUnit, UnionMode,
     },
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use super::{
@@ -35,7 +35,7 @@ fn deserialize_field(ipc_field: arrow_format::ipc::FieldRef) -> Result<(Field, I
     let field = Field {
         name: ipc_field
             .name()?
-            .ok_or_else(|| ArrowError::oos("Every field in IPC must have a name"))?
+            .ok_or_else(|| Error::oos("Every field in IPC must have a name"))?
             .to_string(),
         data_type,
         is_nullable: ipc_field.nullable()?,
@@ -71,7 +71,7 @@ fn deserialize_integer(int: arrow_format::ipc::IntRef) -> Result<IntegerType> {
         (64, true) => IntegerType::Int64,
         (64, false) => IntegerType::UInt64,
         _ => {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "IPC: indexType can only be 8, 16, 32 or 64.",
             ))
         }
@@ -98,7 +98,7 @@ fn get_data_type(
         if may_be_dictionary {
             let int = dictionary
                 .index_type()?
-                .ok_or_else(|| ArrowError::oos("indexType is mandatory in Dictionary."))?;
+                .ok_or_else(|| Error::oos("indexType is mandatory in Dictionary."))?;
             let index_type = deserialize_integer(int)?;
             let (inner, mut ipc_field) = get_data_type(field, extension, false)?;
             ipc_field.dictionary_id = Some(dictionary.id()?);
@@ -120,7 +120,7 @@ fn get_data_type(
 
     let type_ = field
         .type_()?
-        .ok_or_else(|| ArrowError::oos("IPC: field type is mandatory"))?;
+        .ok_or_else(|| Error::oos("IPC: field type is mandatory"))?;
 
     use arrow_format::ipc::TypeRef::*;
     Ok(match type_ {
@@ -162,7 +162,7 @@ fn get_data_type(
                 (64, TimeUnit::Microsecond) => DataType::Time64(TimeUnit::Microsecond),
                 (64, TimeUnit::Nanosecond) => DataType::Time64(TimeUnit::Nanosecond),
                 (bits, precision) => {
-                    return Err(ArrowError::nyi(format!(
+                    return Err(Error::nyi(format!(
                         "Time type with bit width of {} and unit of {:?}",
                         bits, precision
                     )))
@@ -204,10 +204,10 @@ fn get_data_type(
         List(_) => {
             let children = field
                 .children()?
-                .ok_or_else(|| ArrowError::oos("IPC: List must contain children"))?;
+                .ok_or_else(|| Error::oos("IPC: List must contain children"))?;
             let inner = children
                 .get(0)
-                .ok_or_else(|| ArrowError::oos("IPC: List must contain one child"))??;
+                .ok_or_else(|| Error::oos("IPC: List must contain one child"))??;
             let (field, ipc_field) = deserialize_field(inner)?;
 
             (
@@ -221,10 +221,10 @@ fn get_data_type(
         LargeList(_) => {
             let children = field
                 .children()?
-                .ok_or_else(|| ArrowError::oos("IPC: List must contain children"))?;
+                .ok_or_else(|| Error::oos("IPC: List must contain children"))?;
             let inner = children
                 .get(0)
-                .ok_or_else(|| ArrowError::oos("IPC: List must contain one child"))??;
+                .ok_or_else(|| Error::oos("IPC: List must contain one child"))??;
             let (field, ipc_field) = deserialize_field(inner)?;
 
             (
@@ -238,10 +238,10 @@ fn get_data_type(
         FixedSizeList(list) => {
             let children = field
                 .children()?
-                .ok_or_else(|| ArrowError::oos("IPC: FixedSizeList must contain children"))?;
+                .ok_or_else(|| Error::oos("IPC: FixedSizeList must contain children"))?;
             let inner = children
                 .get(0)
-                .ok_or_else(|| ArrowError::oos("IPC: FixedSizeList must contain one child"))??;
+                .ok_or_else(|| Error::oos("IPC: FixedSizeList must contain one child"))??;
             let (field, ipc_field) = deserialize_field(inner)?;
 
             let size = list.list_size()? as usize;
@@ -257,9 +257,9 @@ fn get_data_type(
         Struct(_) => {
             let fields = field
                 .children()?
-                .ok_or_else(|| ArrowError::oos("IPC: Struct must contain children"))?;
+                .ok_or_else(|| Error::oos("IPC: Struct must contain children"))?;
             if fields.is_empty() {
-                return Err(ArrowError::oos(
+                return Err(Error::oos(
                     "IPC: Struct must contain at least one child",
                 ));
             }
@@ -279,9 +279,9 @@ fn get_data_type(
 
             let fields = field
                 .children()?
-                .ok_or_else(|| ArrowError::oos("IPC: Union must contain children"))?;
+                .ok_or_else(|| Error::oos("IPC: Union must contain children"))?;
             if fields.is_empty() {
-                return Err(ArrowError::oos(
+                return Err(Error::oos(
                     "IPC: Union must contain at least one child",
                 ));
             }
@@ -301,10 +301,10 @@ fn get_data_type(
 
             let children = field
                 .children()?
-                .ok_or_else(|| ArrowError::oos("IPC: Map must contain children"))?;
+                .ok_or_else(|| Error::oos("IPC: Map must contain children"))?;
             let inner = children
                 .get(0)
-                .ok_or_else(|| ArrowError::oos("IPC: Map must contain one child"))??;
+                .ok_or_else(|| Error::oos("IPC: Map must contain one child"))??;
             let (field, ipc_field) = deserialize_field(inner)?;
 
             let data_type = DataType::Map(Box::new(field), is_sorted);
@@ -322,13 +322,13 @@ fn get_data_type(
 /// Deserialize an flatbuffers-encoded Schema message into [`Schema`] and [`IpcSchema`].
 pub fn deserialize_schema(bytes: &[u8]) -> Result<(Schema, IpcSchema)> {
     let message = arrow_format::ipc::MessageRef::read_as_root(bytes)
-        .map_err(|err| ArrowError::oos(format!("Unable deserialize message: {:?}", err)))?;
+        .map_err(|err| Error::oos(format!("Unable deserialize message: {:?}", err)))?;
 
     let schema = match message.header()?.ok_or_else(|| {
-        ArrowError::oos("Unable to convert flight data header to a record batch".to_string())
+        Error::oos("Unable to convert flight data header to a record batch".to_string())
     })? {
         arrow_format::ipc::MessageHeaderRef::Schema(schema) => Ok(schema),
-        _ => Err(ArrowError::nyi(
+        _ => Err(Error::nyi(
             "flight currently only supports reading RecordBatch messages",
         )),
     }?;
@@ -340,7 +340,7 @@ pub fn deserialize_schema(bytes: &[u8]) -> Result<(Schema, IpcSchema)> {
 pub(super) fn fb_to_schema(schema: arrow_format::ipc::SchemaRef) -> Result<(Schema, IpcSchema)> {
     let fields = schema
         .fields()?
-        .ok_or_else(|| ArrowError::oos("IPC: Schema must contain fields"))?;
+        .ok_or_else(|| Error::oos("IPC: Schema must contain fields"))?;
     let (fields, ipc_fields) = try_unzip_vec(fields.iter().map(|field| {
         let (field, fields) = deserialize_field(field?)?;
         Ok((field, fields))
@@ -376,17 +376,17 @@ pub(super) fn fb_to_schema(schema: arrow_format::ipc::SchemaRef) -> Result<(Sche
 
 pub(super) fn deserialize_stream_metadata(meta: &[u8]) -> Result<StreamMetadata> {
     let message = arrow_format::ipc::MessageRef::read_as_root(meta).map_err(|err| {
-        ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
+        Error::OutOfSpec(format!("Unable to get root as message: {:?}", err))
     })?;
     let version = message.version()?;
     // message header is a Schema, so read it
     let header = message
         .header()?
-        .ok_or_else(|| ArrowError::oos("Unable to read the first IPC message"))?;
+        .ok_or_else(|| Error::oos("Unable to read the first IPC message"))?;
     let schema = if let arrow_format::ipc::MessageHeaderRef::Schema(schema) = header {
         schema
     } else {
-        return Err(ArrowError::oos(
+        return Err(Error::oos(
             "The first IPC message of the stream must be a schema",
         ));
     };

@@ -2,7 +2,7 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 use either::Either;
 
@@ -68,13 +68,13 @@ impl<O: Offset> Utf8Array<O> {
             .as_ref()
             .map_or(false, |validity| validity.len() != offsets.len() - 1)
         {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "validity mask length must match the number of values",
             ));
         }
 
         if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "Utf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8",
             ));
         }
@@ -177,13 +177,13 @@ impl<O: Offset> Utf8Array<O> {
             .as_ref()
             .map_or(false, |validity| validity.len() != offsets.len() - 1)
         {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "validity mask length must match the number of values",
             ));
         }
 
         if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "BinaryArray can only be initialized with DataType::Utf8 or DataType::LargeUtf8",
             ));
         }

@@ -3,10 +3,10 @@
 pub mod read;
 pub mod write;
 
-use crate::error::ArrowError;
+use crate::error::Error;
 
-impl From<serde_json::error::Error> for ArrowError {
+impl From<serde_json::error::Error> for Error {
     fn from(error: serde_json::error::Error) -> Self {
-        ArrowError::External("".to_string(), Box::new(error))
+        Error::External("".to_string(), Box::new(error))
     }
 }

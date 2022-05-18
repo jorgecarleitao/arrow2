@@ -2,7 +2,7 @@
 //! same length.
 
 use crate::array::Array;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 /// A vector of trait objects of [`Array`] where every item has
 /// the same length, [`Chunk::len`].
@@ -30,7 +30,7 @@ impl<A: AsRef<dyn Array>> Chunk<A> {
                 .map(|array| array.as_ref())
                 .any(|array| array.len() != len)
             {
-                return Err(ArrowError::InvalidArgumentError(
+                return Err(Error::InvalidArgumentError(
                     "Chunk require all its arrays to have an equal number of rows".to_string(),
                 ));
             }

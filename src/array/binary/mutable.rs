@@ -4,7 +4,7 @@ use crate::{
     array::{specification::check_offsets, Array, MutableArray, Offset, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
     trusted_len::TrustedLen,
 };
 
@@ -427,7 +427,7 @@ impl<O: Offset, T: AsRef<[u8]>> TryPush<Option<T>> for MutableBinaryArray<O> {
                 let bytes = value.as_ref();
 
                 let size =
-                    O::from_usize(self.values.len() + bytes.len()).ok_or(ArrowError::Overflow)?;
+                    O::from_usize(self.values.len() + bytes.len()).ok_or(Error::Overflow)?;
 
                 self.values.extend_from_slice(bytes);
 

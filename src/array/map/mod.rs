@@ -4,7 +4,7 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field},
-    error::ArrowError,
+    error::Error,
 };
 
 use super::{new_empty_array, specification::try_check_offsets, Array};
@@ -38,23 +38,23 @@ impl MapArray {
         offsets: Buffer<i32>,
         field: Arc<dyn Array>,
         validity: Option<Bitmap>,
-    ) -> Result<Self, ArrowError> {
+    ) -> Result<Self, Error> {
         try_check_offsets(&offsets, field.len())?;
 
         let inner_field = Self::try_get_field(&data_type)?;
         if let DataType::Struct(inner) = inner_field.data_type() {
             if inner.len() != 2 {
-                return Err(ArrowError::InvalidArgumentError(
+                return Err(Error::InvalidArgumentError(
                     "MapArray's inner `Struct` must have 2 fields (keys and maps)".to_string(),
                 ));
             }
         } else {
-            return Err(ArrowError::InvalidArgumentError(
+            return Err(Error::InvalidArgumentError(
                 "MapArray expects `DataType::Struct` as its inner logical type".to_string(),
             ));
         }
         if field.data_type() != inner_field.data_type() {
-            return Err(ArrowError::InvalidArgumentError(
+            return Err(Error::InvalidArgumentError(
                 "MapArray expects `field.data_type` to match its inner DataType".to_string(),
             ));
         }
@@ -63,7 +63,7 @@ impl MapArray {
             .as_ref()
             .map_or(false, |validity| validity.len() != offsets.len() - 1)
         {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "validity mask length must match the number of values",
             ));
         }
@@ -148,11 +148,11 @@ impl MapArray {
         }
     }
 
-    pub(crate) fn try_get_field(data_type: &DataType) -> Result<&Field, ArrowError> {
+    pub(crate) fn try_get_field(data_type: &DataType) -> Result<&Field, Error> {
         if let DataType::Map(field, _) = data_type.to_logical_type() {
             Ok(field.as_ref())
         } else {
-            Err(ArrowError::oos(
+            Err(Error::oos(
                 "The data_type's logical type must be DataType::Map",
             ))
         }

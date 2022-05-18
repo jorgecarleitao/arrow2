@@ -1,15 +1,15 @@
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::types::Offset;
 
 pub fn try_check_offsets_bounds<O: Offset>(offsets: &[O], values_len: usize) -> Result<usize> {
     if let Some(last_offset) = offsets.last() {
         if last_offset.to_usize() > values_len {
-            Err(ArrowError::oos("offsets must not exceed the values length"))
+            Err(Error::oos("offsets must not exceed the values length"))
         } else {
             Ok(last_offset.to_usize())
         }
     } else {
-        Err(ArrowError::oos("offsets must have at least one element"))
+        Err(Error::oos("offsets must have at least one element"))
     }
 }
 
@@ -54,7 +54,7 @@ pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Re
 
             // check monotonicity
             if start > end {
-                return Err(ArrowError::oos("offsets must be monotonically increasing"));
+                return Err(Error::oos("offsets must be monotonically increasing"));
             }
 
             let first = values.get(start);
@@ -63,7 +63,7 @@ pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Re
                 // A valid code-point iff it does not start with 0b10xxxxxx
                 // Bit-magic taken from `std::str::is_char_boundary`
                 if (b as i8) < -0x40 {
-                    return Err(ArrowError::oos("Non-valid char boundary detected"));
+                    return Err(Error::oos("Non-valid char boundary detected"));
                 }
             }
         }
@@ -72,7 +72,7 @@ pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Re
             .last()
             .map_or(true, |last| last.to_usize() > values.len())
         {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "offsets must have at least one element and must not exceed values length",
             ));
         };
@@ -92,12 +92,12 @@ pub fn check_offsets<O: Offset>(offsets: &[O], values_len: usize) {
 /// `values_len`.
 pub fn try_check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> Result<()> {
     if offsets.windows(2).any(|window| window[0] > window[1]) {
-        Err(ArrowError::oos("offsets must be monotonically increasing"))
+        Err(Error::oos("offsets must be monotonically increasing"))
     } else if offsets
         .last()
         .map_or(true, |last| last.to_usize() > values_len)
     {
-        Err(ArrowError::oos(
+        Err(Error::oos(
             "offsets must have at least one element and must not exceed values length",
         ))
     } else {

@@ -10,7 +10,7 @@ use parquet2::{
 use crate::{
     array::{Array, BinaryArray, DictionaryKey, MutablePrimitiveArray, PrimitiveArray, Utf8Array},
     datatypes::{DataType, IntervalUnit, TimeUnit},
-    error::{ArrowError, Result},
+    error::{Error, Result},
     types::NativeType,
 };
 
@@ -134,7 +134,7 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                 |x: i64| x as i128,
             ))),
             &PhysicalType::FixedLenByteArray(n) if n > 16 => {
-                return Err(ArrowError::NotYetImplemented(format!(
+                return Err(Error::NotYetImplemented(format!(
                     "Can't decode Decimal128 type from Fixed Size Byte Array of len {:?}",
                     n
                 )))
@@ -219,7 +219,7 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
         }
 
         other => {
-            return Err(ArrowError::NotYetImplemented(format!(
+            return Err(Error::NotYetImplemented(format!(
                 "Reading {:?} from parquet still not implemented",
                 other
             )))
@@ -244,13 +244,13 @@ fn timestamp<'a, I: 'a + DataPages>(
                 int96_to_i64_ns,
             ))));
         } else {
-            return Err(ArrowError::nyi(
+            return Err(Error::nyi(
                 "Can't decode int96 to timestamp other than ns",
             ));
         }
     };
     if physical_type != &PhysicalType::Int64 {
-        return Err(ArrowError::nyi(
+        return Err(Error::nyi(
             "Can't decode a timestamp from a non-int64 parquet type",
         ));
     }
@@ -305,7 +305,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
                 int96_to_i64_ns,
             )));
         } else {
-            return Err(ArrowError::nyi(
+            return Err(Error::nyi(
                 "Can't decode int96 to timestamp other than ns",
             ));
         }
@@ -514,7 +514,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             iter, data_type, chunk_size,
         )),
         other => {
-            return Err(ArrowError::nyi(format!(
+            return Err(Error::nyi(format!(
                 "Reading dictionaries of type {:?}",
                 other
             )))

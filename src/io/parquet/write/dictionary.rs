@@ -17,7 +17,7 @@ use super::utf8::encode_plain as utf8_encode_plain;
 use super::WriteOptions;
 use crate::bitmap::Bitmap;
 use crate::datatypes::DataType;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::io::parquet::write::utils;
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
@@ -193,7 +193,7 @@ pub fn array_to_pages<K: DictionaryKey>(
                     (EncodedDictPage::new(buffer, array.len()), stats)
                 }
                 other => {
-                    return Err(ArrowError::NotYetImplemented(format!(
+                    return Err(Error::NotYetImplemented(format!(
                         "Writing dictionary arrays to parquet only support data type {:?}",
                         other
                     )))
@@ -213,7 +213,7 @@ pub fn array_to_pages<K: DictionaryKey>(
             let iter = std::iter::once(Ok(dict_page)).chain(std::iter::once(Ok(data_page)));
             Ok(DynIter::new(Box::new(iter)))
         }
-        _ => Err(ArrowError::NotYetImplemented(
+        _ => Err(Error::NotYetImplemented(
             "Dictionary arrays only support dictionary encoding".to_string(),
         )),
     }

@@ -7,7 +7,7 @@ use avro_schema::{Enum, Schema as AvroSchema};
 use crate::array::*;
 use crate::chunk::Chunk;
 use crate::datatypes::*;
-use crate::error::ArrowError;
+use crate::error::Error;
 use crate::error::Result;
 use crate::types::months_days_ns;
 
@@ -65,7 +65,7 @@ fn make_mutable(
                     as Box<dyn MutableArray>
             }
             other => {
-                return Err(ArrowError::NotYetImplemented(format!(
+                return Err(Error::NotYetImplemented(format!(
                     "Deserializing type {:#?} is still not implemented",
                     other
                 )))
@@ -240,7 +240,7 @@ fn deserialize_value<'a>(
                     let len = match avro_inner {
                         AvroSchema::Bytes(_) => {
                             util::zigzag_i64(&mut block)?.try_into().map_err(|_| {
-                                ArrowError::ExternalFormat(
+                                Error::ExternalFormat(
                                     "Avro format contains a non-usize number of bytes".to_string(),
                                 )
                             })?
@@ -249,7 +249,7 @@ fn deserialize_value<'a>(
                         _ => unreachable!(),
                     };
                     if len > 16 {
-                        return Err(ArrowError::ExternalFormat(
+                        return Err(Error::ExternalFormat(
                             "Avro decimal bytes return more than 16 bytes".to_string(),
                         ));
                     }
@@ -267,7 +267,7 @@ fn deserialize_value<'a>(
             },
             PhysicalType::Utf8 => {
                 let len: usize = util::zigzag_i64(&mut block)?.try_into().map_err(|_| {
-                    ArrowError::ExternalFormat(
+                    Error::ExternalFormat(
                         "Avro format contains a non-usize number of bytes".to_string(),
                     )
                 })?;
@@ -282,7 +282,7 @@ fn deserialize_value<'a>(
             }
             PhysicalType::Binary => {
                 let len: usize = util::zigzag_i64(&mut block)?.try_into().map_err(|_| {
-                    ArrowError::ExternalFormat(
+                    Error::ExternalFormat(
                         "Avro format contains a non-usize number of bytes".to_string(),
                     )
                 })?;
@@ -400,7 +400,7 @@ fn skip_item<'a>(field: &Field, avro_field: &AvroSchema, mut block: &'a [u8]) ->
                     let len = match avro_inner {
                         AvroSchema::Bytes(_) => {
                             util::zigzag_i64(&mut block)?.try_into().map_err(|_| {
-                                ArrowError::ExternalFormat(
+                                Error::ExternalFormat(
                                     "Avro format contains a non-usize number of bytes".to_string(),
                                 )
                             })?
@@ -414,7 +414,7 @@ fn skip_item<'a>(field: &Field, avro_field: &AvroSchema, mut block: &'a [u8]) ->
             },
             PhysicalType::Utf8 | PhysicalType::Binary => {
                 let len: usize = util::zigzag_i64(&mut block)?.try_into().map_err(|_| {
-                    ArrowError::ExternalFormat(
+                    Error::ExternalFormat(
                         "Avro format contains a non-usize number of bytes".to_string(),
                     )
                 })?;

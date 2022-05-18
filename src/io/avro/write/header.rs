@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use avro_schema::Schema;
 use serde_json;
 
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::Compression;
 
@@ -13,7 +13,7 @@ pub(crate) fn serialize_header(
     compression: Option<Compression>,
 ) -> Result<HashMap<String, Vec<u8>>> {
     let schema =
-        serde_json::to_string(schema).map_err(|e| ArrowError::ExternalFormat(e.to_string()))?;
+        serde_json::to_string(schema).map_err(|e| Error::ExternalFormat(e.to_string()))?;
 
     let mut header = HashMap::<String, Vec<u8>>::default();
 

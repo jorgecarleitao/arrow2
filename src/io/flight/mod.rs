@@ -9,7 +9,7 @@ use crate::{
     array::Array,
     chunk::Chunk,
     datatypes::*,
-    error::{ArrowError, Result},
+    error::{Error, Result},
     io::ipc::read,
     io::ipc::write,
     io::ipc::write::common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions},
@@ -118,13 +118,13 @@ pub fn deserialize_batch(
     // check that the data_header is a record batch message
     let message =
         arrow_format::ipc::MessageRef::read_as_root(&data.data_header).map_err(|err| {
-            ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
+            Error::OutOfSpec(format!("Unable to get root as message: {:?}", err))
         })?;
 
     let mut reader = std::io::Cursor::new(&data.data_body);
 
     match message.header()?.ok_or_else(|| {
-        ArrowError::oos("Unable to convert flight data header to a record batch".to_string())
+        Error::oos("Unable to convert flight data header to a record batch".to_string())
     })? {
         ipc::MessageHeaderRef::RecordBatch(batch) => read::read_record_batch(
             batch,
@@ -136,7 +136,7 @@ pub fn deserialize_batch(
             &mut reader,
             0,
         ),
-        _ => Err(ArrowError::nyi(
+        _ => Err(Error::nyi(
             "flight currently only supports reading RecordBatch messages",
         )),
     }

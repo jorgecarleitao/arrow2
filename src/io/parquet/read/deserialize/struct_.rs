@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::array::{Array, StructArray};
 use crate::datatypes::{DataType, Field};
-use crate::error::ArrowError;
+use crate::error::Error;
 
 use super::nested_utils::{NestedArrayIter, NestedState};
 
@@ -19,7 +19,7 @@ impl<'a> StructIterator<'a> {
 }
 
 impl<'a> Iterator for StructIterator<'a> {
-    type Item = Result<(NestedState, Arc<dyn Array>), ArrowError>;
+    type Item = Result<(NestedState, Arc<dyn Array>), Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let values = self
@@ -34,7 +34,7 @@ impl<'a> Iterator for StructIterator<'a> {
         let values = values
             .into_iter()
             .map(|x| x.unwrap().map(|x| x.1))
-            .collect::<Result<Vec<_>, ArrowError>>();
+            .collect::<Result<Vec<_>, Error>>();
 
         match values {
             Ok(values) => Some(Ok((

@@ -4,7 +4,7 @@ use multiversion::multiversion;
 
 use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
 use crate::datatypes::{DataType, PhysicalType, PrimitiveType};
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::scalar::*;
 use crate::types::simd::*;
 use crate::types::NativeType;
@@ -134,7 +134,7 @@ macro_rules! with_match_primitive_type {(
         UInt64 => __with_ty__! { u64 },
         Float32 => __with_ty__! { f32 },
         Float64 => __with_ty__! { f64 },
-        _ => return Err(ArrowError::InvalidArgumentError(format!(
+        _ => return Err(Error::InvalidArgumentError(format!(
             "`sum` operator do not support primitive `{:?}`",
             $key_type,
         ))),
@@ -153,7 +153,7 @@ pub fn sum(array: &dyn Array) -> Result<Box<dyn Scalar>> {
             Box::new(PrimitiveScalar::new(data_type, sum_primitive::<$T>(array)))
         }),
         _ => {
-            return Err(ArrowError::InvalidArgumentError(format!(
+            return Err(Error::InvalidArgumentError(format!(
                 "The `sum` operator does not support type `{:?}`",
                 array.data_type(),
             )))

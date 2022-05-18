@@ -14,12 +14,12 @@
 //! ```
 
 use crate::array::{growable::make_growable, Array};
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 /// Concatenate multiple [Array] of the same type into a single [`Array`].
 pub fn concatenate(arrays: &[&dyn Array]) -> Result<Box<dyn Array>> {
     if arrays.is_empty() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "concat requires input of at least one array".to_string(),
         ));
     }
@@ -28,7 +28,7 @@ pub fn concatenate(arrays: &[&dyn Array]) -> Result<Box<dyn Array>> {
         .iter()
         .any(|array| array.data_type() != arrays[0].data_type())
     {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "It is not possible to concatenate arrays of different data types.".to_string(),
         ));
     }

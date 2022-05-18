@@ -19,7 +19,7 @@
 
 use crate::array::ord::DynComparator;
 use crate::compute::sort::{build_compare, SortColumn};
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use std::cmp::Ordering;
 use std::iter::Iterator;
 use std::ops::Range;
@@ -50,13 +50,13 @@ struct LexicographicalPartitionIterator {
 impl LexicographicalPartitionIterator {
     fn try_new(columns: &[SortColumn]) -> Result<Self> {
         if columns.is_empty() {
-            return Err(ArrowError::InvalidArgumentError(
+            return Err(Error::InvalidArgumentError(
                 "Sort requires at least one column".to_string(),
             ));
         }
         let num_rows = columns[0].values.len();
         if columns.iter().any(|item| item.values.len() != num_rows) {
-            return Err(ArrowError::InvalidArgumentError(
+            return Err(Error::InvalidArgumentError(
                 "Lexical sort columns have different row counts".to_string(),
             ));
         };

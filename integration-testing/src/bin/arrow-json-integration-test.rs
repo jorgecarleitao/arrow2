@@ -6,7 +6,7 @@ use clap::Parser;
 use arrow2::io::ipc::read;
 use arrow2::io::ipc::write;
 use arrow2::{
-    error::{ArrowError, Result},
+    error::{Error, Result},
     io::json_integration::write as json_write,
 };
 use arrow_integration_testing::read_json_file;
@@ -123,7 +123,7 @@ fn validate(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()> {
 
     // compare schemas
     if &json_file.schema != arrow_schema {
-        return Err(ArrowError::InvalidArgumentError(format!(
+        return Err(Error::InvalidArgumentError(format!(
             "Schemas do not match. JSON: {:?}. Arrow: {:?}",
             json_file.schema, arrow_schema
         )));

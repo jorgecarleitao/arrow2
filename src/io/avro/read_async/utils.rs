@@ -1,7 +1,7 @@
 use futures::AsyncRead;
 use futures::AsyncReadExt;
 
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::super::avro_decode;
 

@@ -4,7 +4,7 @@ use crate::{
     array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::{DataType, Field},
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use super::FixedSizeListArray;
@@ -80,7 +80,7 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
     /// This is a relatively low level function, prefer `try_push` when you can.
     pub fn try_push_valid(&mut self) -> Result<()> {
         if self.values.len() % self.size != 0 {
-            return Err(ArrowError::Overflow);
+            return Err(Error::Overflow);
         };
         if let Some(validity) = &mut self.validity {
             validity.push(true)

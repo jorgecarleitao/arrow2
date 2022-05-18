@@ -11,7 +11,7 @@ use crate::{
     array::*,
     bitmap::MutableBitmap,
     datatypes::{DataType, IntervalUnit},
-    error::ArrowError,
+    error::Error,
     types::NativeType,
 };
 
@@ -260,14 +260,14 @@ pub(crate) fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) ->
 /// This function errors iff either:
 /// * `json` is not a [`Value::Array`]
 /// * `data_type` is neither [`DataType::List`] nor [`DataType::LargeList`]
-pub fn deserialize(json: &Value, data_type: DataType) -> Result<Arc<dyn Array>, ArrowError> {
+pub fn deserialize(json: &Value, data_type: DataType) -> Result<Arc<dyn Array>, Error> {
     match json {
         Value::Array(rows) => match data_type {
             DataType::List(inner) | DataType::LargeList(inner) => {
                 Ok(_deserialize(rows, inner.data_type))
             }
-            _ => Err(ArrowError::nyi("read an Array from a non-Array data type")),
+            _ => Err(Error::nyi("read an Array from a non-Array data type")),
         },
-        _ => Err(ArrowError::nyi("read an Array from a non-Array JSON")),
+        _ => Err(Error::nyi("read an Array from a non-Array JSON")),
     }
 }

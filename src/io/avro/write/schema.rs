@@ -4,7 +4,7 @@ use avro_schema::{
 };
 
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 /// Converts a [`Schema`] to a vector of [`AvroField`] with it.
 pub fn to_avro_schema(schema: &Schema) -> Result<Vec<AvroField>> {
@@ -63,7 +63,7 @@ fn _type_to_schema(data_type: &DataType) -> Result<AvroSchema> {
         DataType::FixedSizeBinary(size) => AvroSchema::Fixed(Fixed::new("", *size)),
         DataType::Decimal(p, s) => AvroSchema::Bytes(Some(BytesLogical::Decimal(*p, *s))),
         other => {
-            return Err(ArrowError::NotYetImplemented(format!(
+            return Err(Error::NotYetImplemented(format!(
                 "write {:?} to avro",
                 other
             )))

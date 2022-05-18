@@ -8,12 +8,12 @@ use super::utils::combine_validities;
 use crate::array::{BooleanArray, Offset, Utf8Array};
 use crate::bitmap::Bitmap;
 use crate::datatypes::DataType;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 /// Regex matches
 pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Result<BooleanArray> {
     if values.len() != regex.len() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "Cannot perform comparison operation on arrays of different length".to_string(),
         ));
     }
@@ -33,7 +33,7 @@ pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Re
             regex
         } else {
             let re = Regex::new(regex).map_err(|e| {
-                ArrowError::InvalidArgumentError(format!(
+                Error::InvalidArgumentError(format!(
                     "Unable to build regex from LIKE pattern: {}",
                     e
                 ))
@@ -62,7 +62,7 @@ pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Re
 /// ```
 pub fn regex_match_scalar<O: Offset>(values: &Utf8Array<O>, regex: &str) -> Result<BooleanArray> {
     let regex = Regex::new(regex)
-        .map_err(|e| ArrowError::InvalidArgumentError(format!("Unable to compile regex: {}", e)))?;
+        .map_err(|e| Error::InvalidArgumentError(format!("Unable to compile regex: {}", e)))?;
     Ok(unary_utf8_boolean(values, |x| regex.is_match(x)))
 }
 

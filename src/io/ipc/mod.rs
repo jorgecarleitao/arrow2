@@ -35,7 +35,7 @@
 //! # use arrow2::datatypes::{Field, Schema, DataType};
 //! # use arrow2::array::{Int32Array, Array};
 //! # use arrow2::chunk::Chunk;
-//! # use arrow2::error::ArrowError;
+//! # use arrow2::error::Error;
 //! // Setup the writer
 //! let path = "example.arrow".to_string();
 //! let mut file = File::create(&path)?;
@@ -66,7 +66,7 @@
 //! let row2 = filereader.next().unwrap();  // [[-1, 1], [1, -1]]
 //! let mut reader = filereader.into_inner();
 //! // Do more stuff with the reader, like seeking ahead.
-//! # Ok::<(), ArrowError>(())
+//! # Ok::<(), Error>(())
 //! ```
 //!
 //! For further information and examples please consult the
@@ -76,7 +76,7 @@
 //! [2](https://github.com/jorgecarleitao/arrow2/blob/main/examples/ipc_file_write.rs),
 //! [3](https://github.com/jorgecarleitao/arrow2/tree/main/examples/ipc_pyarrow)).
 
-use crate::error::ArrowError;
+use crate::error::Error;
 
 mod compression;
 mod endianess;
@@ -107,8 +107,8 @@ pub struct IpcSchema {
     pub is_little_endian: bool,
 }
 
-impl From<arrow_format::ipc::planus::Error> for ArrowError {
+impl From<arrow_format::ipc::planus::Error> for Error {
     fn from(error: arrow_format::ipc::planus::Error) -> Self {
-        ArrowError::OutOfSpec(error.to_string())
+        Error::OutOfSpec(error.to_string())
     }
 }

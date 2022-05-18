@@ -3,7 +3,7 @@ use parquet2::indexes::PageIndex;
 use crate::{
     array::{Array, BinaryArray, PrimitiveArray, Utf8Array},
     datatypes::{DataType, PhysicalType},
-    error::ArrowError,
+    error::Error,
     trusted_len::TrustedLen,
 };
 
@@ -12,7 +12,7 @@ use super::ColumnIndex;
 pub fn deserialize(
     indexes: &[PageIndex<Vec<u8>>],
     data_type: &DataType,
-) -> Result<ColumnIndex, ArrowError> {
+) -> Result<ColumnIndex, Error> {
     Ok(ColumnIndex {
         min: deserialize_binary_iter(indexes.iter().map(|index| index.min.as_ref()), data_type)?,
         max: deserialize_binary_iter(indexes.iter().map(|index| index.max.as_ref()), data_type)?,
@@ -27,7 +27,7 @@ pub fn deserialize(
 fn deserialize_binary_iter<'a, I: TrustedLen<Item = Option<&'a Vec<u8>>>>(
     iter: I,
     data_type: &DataType,
-) -> Result<Box<dyn Array>, ArrowError> {
+) -> Result<Box<dyn Array>, Error> {
     match data_type.to_physical_type() {
         PhysicalType::LargeBinary => Ok(Box::new(BinaryArray::<i64>::from_iter(iter))),
         PhysicalType::Utf8 => {

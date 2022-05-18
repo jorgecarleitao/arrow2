@@ -21,7 +21,7 @@ use chrono::{Datelike, Timelike};
 
 use crate::array::*;
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::temporal_conversions::*;
 use crate::types::NativeType;
 
@@ -66,7 +66,7 @@ macro_rules! date_like {
                     chrono_tz(array, *time_unit, timezone_str, |x| x.$extract())
                 }
             }
-            dt => Err(ArrowError::NotYetImplemented(format!(
+            dt => Err(Error::NotYetImplemented(format!(
                 "\"{}\" does not support type {:?}",
                 stringify!($extract),
                 dt
@@ -129,7 +129,7 @@ macro_rules! time_like {
                     chrono_tz(array, *time_unit, timezone_str, |x| x.$extract())
                 }
             }
-            dt => Err(ArrowError::NotYetImplemented(format!(
+            dt => Err(Error::NotYetImplemented(format!(
                 "\"{}\" does not support type {:?}",
                 stringify!($extract),
                 dt
@@ -266,7 +266,7 @@ where
     O: NativeType,
     F: Fn(chrono::DateTime<chrono::FixedOffset>) -> O,
 {
-    Err(ArrowError::InvalidArgumentError(format!(
+    Err(Error::InvalidArgumentError(format!(
         "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
         timezone_str
     )))

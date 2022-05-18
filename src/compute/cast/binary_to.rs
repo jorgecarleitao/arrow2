@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::{array::*, datatypes::DataType, types::NativeType};
 
 use super::CastOptions;
@@ -25,7 +25,7 @@ pub fn binary_large_to_binary(
 ) -> Result<BinaryArray<i32>> {
     let values = from.values().clone();
     let _ =
-        i32::try_from(*from.offsets().last().unwrap()).map_err(ArrowError::from_external_error)?;
+        i32::try_from(*from.offsets().last().unwrap()).map_err(Error::from_external_error)?;
 
     let offsets = from.offsets().iter().map(|x| *x as i32).collect::<Vec<_>>();
     // todo: use `new_unchecked` since all invariants are preserved

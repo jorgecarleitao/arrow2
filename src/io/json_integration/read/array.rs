@@ -9,7 +9,7 @@ use crate::{
     buffer::Buffer,
     chunk::Chunk,
     datatypes::{DataType, PhysicalType, PrimitiveType, Schema},
-    error::{ArrowError, Result},
+    error::{Error, Result},
     io::ipc::IpcField,
     types::{days_ms, months_days_ns, NativeType},
 };
@@ -239,7 +239,7 @@ fn to_dictionary<K: DictionaryKey>(
     // find dictionary
     let dict_id = field.dictionary_id.unwrap();
     let dictionary = dictionaries.get(&dict_id).ok_or_else(|| {
-        ArrowError::OutOfSpec(format!("Unable to find any dictionary id {}", dict_id))
+        Error::OutOfSpec(format!("Unable to find any dictionary id {}", dict_id))
     })?;
 
     let keys = to_primitive(json_col, K::PRIMITIVE.into());

@@ -16,7 +16,7 @@ use crate::datatypes::Field;
 use crate::{
     array::{Array, UInt64Array},
     datatypes::DataType,
-    error::ArrowError,
+    error::Error,
 };
 
 /// Arrow-deserialized [`ColumnIndex`] containing the minimum and maximum value
@@ -51,7 +51,7 @@ impl ColumnIndex {
 fn deserialize(
     indexes: &[Box<dyn ParquetIndex>],
     data_types: Vec<DataType>,
-) -> Result<Vec<ColumnIndex>, ArrowError> {
+) -> Result<Vec<ColumnIndex>, Error> {
     indexes
         .iter()
         .zip(data_types.into_iter())
@@ -126,7 +126,7 @@ pub fn read_columns_indexes<R: Read + Seek>(
     reader: &mut R,
     chunks: &[ColumnChunkMetaData],
     fields: &[Field],
-) -> Result<Vec<ColumnIndex>, ArrowError> {
+) -> Result<Vec<ColumnIndex>, Error> {
     let indexes = _read_columns_indexes(reader, chunks)?;
 
     // map arrow fields to the corresponding columns in parquet taking into account
