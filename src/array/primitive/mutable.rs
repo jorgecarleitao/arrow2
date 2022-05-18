@@ -14,7 +14,7 @@ use super::PrimitiveArray;
 
 /// The Arrow's equivalent to `Vec<Option<T>>` where `T` is byte-size (e.g. `i32`).
 /// Converting a [`MutablePrimitiveArray`] into a [`PrimitiveArray`] is `O(1)`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MutablePrimitiveArray<T: NativeType> {
     data_type: DataType,
     values: Vec<T>,

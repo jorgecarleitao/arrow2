@@ -270,6 +270,12 @@ fn set_validity() {
     a.extend_trusted_len(vec![Some(1), Some(2)].into_iter());
     let validity = a.validity().unwrap();
     assert_eq!(validity.null_count(), 0);
+
+    // test that upon conversion to array the bitmap is set to None
+    let arr: PrimitiveArray<_> = a.clone().into();
+    assert_eq!(arr.validity(), None);
+
+    // test set_validity
     a.set_validity(Some(MutableBitmap::from([false, true])));
     assert_eq!(a.validity(), Some(&MutableBitmap::from([false, true])));
 }
