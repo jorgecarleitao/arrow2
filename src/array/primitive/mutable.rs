@@ -201,6 +201,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
             let mut validity = MutableBitmap::new();
             validity.extend_constant(self.len(), true);
             extend_trusted_len_unzip(iterator, &mut validity, &mut self.values);
+            self.validity = Some(validity);
         }
     }
     /// Extends the [`MutablePrimitiveArray`] from an iterator of values of trusted len.
