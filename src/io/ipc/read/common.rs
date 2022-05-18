@@ -246,9 +246,7 @@ pub fn read_dictionary<R: Read + Seek>(
         }
         _ => None,
     }
-    .ok_or_else(|| {
-        Error::InvalidArgumentError("dictionary id not found in schema".to_string())
-    })?;
+    .ok_or_else(|| Error::InvalidArgumentError("dictionary id not found in schema".to_string()))?;
 
     dictionaries.insert(id, dictionary_values);
 

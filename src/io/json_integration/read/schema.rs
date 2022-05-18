@@ -17,9 +17,7 @@ fn to_time_unit(item: Option<&Value>) -> Result<TimeUnit> {
         Some(p) if p == "MILLISECOND" => Ok(TimeUnit::Millisecond),
         Some(p) if p == "MICROSECOND" => Ok(TimeUnit::Microsecond),
         Some(p) if p == "NANOSECOND" => Ok(TimeUnit::Nanosecond),
-        _ => Err(Error::OutOfSpec(
-            "time unit missing or invalid".to_string(),
-        )),
+        _ => Err(Error::OutOfSpec("time unit missing or invalid".to_string())),
     }
 }
 
@@ -78,9 +76,7 @@ fn deserialize_fields(children: Option<&Value>) -> Result<Vec<Field>> {
                     .map(deserialize_field)
                     .collect::<Result<Vec<_>>>()
             } else {
-                Err(Error::OutOfSpec(
-                    "children must be an array".to_string(),
-                ))
+                Err(Error::OutOfSpec("children must be an array".to_string()))
             }
         })
         .unwrap_or_else(|| Ok(vec![]))
@@ -204,20 +200,14 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             let tz = match item.get("timezone") {
                 None => Ok(None),
                 Some(Value::String(tz)) => Ok(Some(tz.clone())),
-                _ => Err(Error::OutOfSpec(
-                    "timezone must be a string".to_string(),
-                )),
+                _ => Err(Error::OutOfSpec("timezone must be a string".to_string())),
             }?;
             DataType::Timestamp(unit, tz)
         }
         "date" => match item.get("unit") {
             Some(p) if p == "DAY" => DataType::Date32,
             Some(p) if p == "MILLISECOND" => DataType::Date64,
-            _ => {
-                return Err(Error::OutOfSpec(
-                    "date unit missing or invalid".to_string(),
-                ))
-            }
+            _ => return Err(Error::OutOfSpec("date unit missing or invalid".to_string())),
         },
         "time" => {
             let unit = to_time_unit(item.get("unit"))?;
@@ -309,9 +299,7 @@ fn deserialize_ipc_field(value: &Value) -> Result<IpcField> {
                     .map(deserialize_ipc_field)
                     .collect::<Result<Vec<_>>>()
             } else {
-                Err(Error::OutOfSpec(
-                    "children must be an array".to_string(),
-                ))
+                Err(Error::OutOfSpec("children must be an array".to_string()))
             }
         })
         .unwrap_or_else(|| Ok(vec![]))?;
@@ -320,9 +308,7 @@ fn deserialize_ipc_field(value: &Value) -> Result<IpcField> {
         match dictionary.get("id") {
             Some(Value::Number(n)) => Some(n.as_i64().unwrap()),
             _ => {
-                return Err(Error::OutOfSpec(
-                    "Field missing 'id' attribute".to_string(),
-                ));
+                return Err(Error::OutOfSpec("Field missing 'id' attribute".to_string()));
             }
         }
     } else {

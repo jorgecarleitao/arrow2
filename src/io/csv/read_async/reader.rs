@@ -26,9 +26,10 @@ where
 
     let mut row_number = 0;
     for row in rows.iter_mut() {
-        let has_more = reader.read_byte_record(row).await.map_err(|e| {
-            Error::External(format!(" at line {}", skip + row_number), Box::new(e))
-        })?;
+        let has_more = reader
+            .read_byte_record(row)
+            .await
+            .map_err(|e| Error::External(format!(" at line {}", skip + row_number), Box::new(e)))?;
         if !has_more {
             break;
         }

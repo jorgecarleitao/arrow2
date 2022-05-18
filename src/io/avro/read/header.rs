@@ -15,8 +15,7 @@ pub(crate) fn deserialize_header(
         .get("avro.schema")
         .ok_or_else(|| Error::ExternalFormat("Avro schema must be present".to_string()))
         .and_then(|bytes| {
-            serde_json::from_slice(bytes.as_ref())
-                .map_err(|e| Error::ExternalFormat(e.to_string()))
+            serde_json::from_slice(bytes.as_ref()).map_err(|e| Error::ExternalFormat(e.to_string()))
         })?;
 
     let compression = header.get("avro.codec").and_then(|bytes| {

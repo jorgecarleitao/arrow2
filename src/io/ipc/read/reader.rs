@@ -79,9 +79,8 @@ pub(crate) fn read_dictionaries<R: Read + Seek>(
         let length = block.meta_data_length as u64;
         read_dictionary_message(reader, offset, &mut data)?;
 
-        let message = arrow_format::ipc::MessageRef::read_as_root(&data).map_err(|err| {
-            Error::OutOfSpec(format!("Unable to get root as message: {:?}", err))
-        })?;
+        let message = arrow_format::ipc::MessageRef::read_as_root(&data)
+            .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
 
         let header = message
             .header()?
@@ -133,9 +132,9 @@ pub(super) fn deserialize_footer(footer_data: &[u8]) -> Result<FileMetadata> {
     let footer = arrow_format::ipc::FooterRef::read_as_root(footer_data)
         .map_err(|err| Error::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
 
-    let blocks = footer.record_batches()?.ok_or_else(|| {
-        Error::OutOfSpec("Unable to get record batches from footer".to_string())
-    })?;
+    let blocks = footer
+        .record_batches()?
+        .ok_or_else(|| Error::OutOfSpec("Unable to get record batches from footer".to_string()))?;
 
     let blocks = blocks
         .iter()

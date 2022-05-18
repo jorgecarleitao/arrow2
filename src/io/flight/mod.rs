@@ -116,10 +116,8 @@ pub fn deserialize_batch(
     dictionaries: &read::Dictionaries,
 ) -> Result<Chunk<Arc<dyn Array>>> {
     // check that the data_header is a record batch message
-    let message =
-        arrow_format::ipc::MessageRef::read_as_root(&data.data_header).map_err(|err| {
-            Error::OutOfSpec(format!("Unable to get root as message: {:?}", err))
-        })?;
+    let message = arrow_format::ipc::MessageRef::read_as_root(&data.data_header)
+        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
 
     let mut reader = std::io::Cursor::new(&data.data_body);
 

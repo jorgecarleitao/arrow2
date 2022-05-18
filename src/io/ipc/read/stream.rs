@@ -123,9 +123,8 @@ fn read_next<R: Read>(
     message_buffer.resize(meta_length, 0);
     reader.read_exact(message_buffer)?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(message_buffer).map_err(|err| {
-        Error::OutOfSpec(format!("Unable to get root as message: {:?}", err))
-    })?;
+    let message = arrow_format::ipc::MessageRef::read_as_root(message_buffer)
+        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
     let header = message.header()?.ok_or_else(|| {
         Error::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
     })?;

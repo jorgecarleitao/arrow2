@@ -12,8 +12,7 @@ pub(crate) fn serialize_header(
     schema: &Schema,
     compression: Option<Compression>,
 ) -> Result<HashMap<String, Vec<u8>>> {
-    let schema =
-        serde_json::to_string(schema).map_err(|e| Error::ExternalFormat(e.to_string()))?;
+    let schema = serde_json::to_string(schema).map_err(|e| Error::ExternalFormat(e.to_string()))?;
 
     let mut header = HashMap::<String, Vec<u8>>::default();
 

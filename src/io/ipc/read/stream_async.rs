@@ -98,10 +98,8 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
     state.message_buffer.resize(meta_length, 0);
     state.reader.read_exact(&mut state.message_buffer).await?;
 
-    let message =
-        arrow_format::ipc::MessageRef::read_as_root(&state.message_buffer).map_err(|err| {
-            Error::OutOfSpec(format!("Unable to get root as message: {:?}", err))
-        })?;
+    let message = arrow_format::ipc::MessageRef::read_as_root(&state.message_buffer)
+        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
     let header = message.header()?.ok_or_else(|| {
         Error::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
     })?;

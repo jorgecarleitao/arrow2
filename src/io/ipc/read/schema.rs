@@ -70,11 +70,7 @@ fn deserialize_integer(int: arrow_format::ipc::IntRef) -> Result<IntegerType> {
         (32, false) => IntegerType::UInt32,
         (64, true) => IntegerType::Int64,
         (64, false) => IntegerType::UInt64,
-        _ => {
-            return Err(Error::oos(
-                "IPC: indexType can only be 8, 16, 32 or 64.",
-            ))
-        }
+        _ => return Err(Error::oos("IPC: indexType can only be 8, 16, 32 or 64.")),
     })
 }
 
@@ -259,9 +255,7 @@ fn get_data_type(
                 .children()?
                 .ok_or_else(|| Error::oos("IPC: Struct must contain children"))?;
             if fields.is_empty() {
-                return Err(Error::oos(
-                    "IPC: Struct must contain at least one child",
-                ));
+                return Err(Error::oos("IPC: Struct must contain at least one child"));
             }
             let (fields, ipc_fields) = try_unzip_vec(fields.iter().map(|field| {
                 let (field, fields) = deserialize_field(field?)?;
@@ -281,9 +275,7 @@ fn get_data_type(
                 .children()?
                 .ok_or_else(|| Error::oos("IPC: Union must contain children"))?;
             if fields.is_empty() {
-                return Err(Error::oos(
-                    "IPC: Union must contain at least one child",
-                ));
+                return Err(Error::oos("IPC: Union must contain at least one child"));
             }
 
             let (fields, ipc_fields) = try_unzip_vec(fields.iter().map(|field| {
@@ -375,9 +367,8 @@ pub(super) fn fb_to_schema(schema: arrow_format::ipc::SchemaRef) -> Result<(Sche
 }
 
 pub(super) fn deserialize_stream_metadata(meta: &[u8]) -> Result<StreamMetadata> {
-    let message = arrow_format::ipc::MessageRef::read_as_root(meta).map_err(|err| {
-        Error::OutOfSpec(format!("Unable to get root as message: {:?}", err))
-    })?;
+    let message = arrow_format::ipc::MessageRef::read_as_root(meta)
+        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
     let version = message.version()?;
     // message header is a Schema, so read it
     let header = message

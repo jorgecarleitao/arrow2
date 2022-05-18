@@ -70,9 +70,7 @@ pub fn skip_struct(
     buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<()> {
     let _ = field_nodes.pop_front().ok_or_else(|| {
-        Error::oos(
-            "IPC: unable to fetch the field for struct. The file or stream is corrupted.",
-        )
+        Error::oos("IPC: unable to fetch the field for struct. The file or stream is corrupted.")
     })?;
 
     let _ = buffers

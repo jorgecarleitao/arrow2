@@ -79,10 +79,7 @@ fn read_empty_reader() -> Result<()> {
     assert!(matches!(infer_error, Err(Error::ExternalFormat(_))));
 
     let deserialize_error = ndjson_read::deserialize(&[], DataType::Null);
-    assert!(matches!(
-        deserialize_error,
-        Err(Error::ExternalFormat(_))
-    ));
+    assert!(matches!(deserialize_error, Err(Error::ExternalFormat(_))));
     Ok(())
 }
 

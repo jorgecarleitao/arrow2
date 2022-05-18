@@ -230,9 +230,9 @@ pub fn read_validity<R: Read + Seek>(
             compression,
         )?)
     } else {
-        let _ = buffers.pop_front().ok_or_else(|| {
-            Error::oos("IPC: unable to fetch a buffer. The file is corrupted.")
-        })?;
+        let _ = buffers
+            .pop_front()
+            .ok_or_else(|| Error::oos("IPC: unable to fetch a buffer. The file is corrupted."))?;
         None
     })
 }

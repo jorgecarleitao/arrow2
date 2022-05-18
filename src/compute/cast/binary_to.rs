@@ -24,8 +24,7 @@ pub fn binary_large_to_binary(
     to_data_type: DataType,
 ) -> Result<BinaryArray<i32>> {
     let values = from.values().clone();
-    let _ =
-        i32::try_from(*from.offsets().last().unwrap()).map_err(Error::from_external_error)?;
+    let _ = i32::try_from(*from.offsets().last().unwrap()).map_err(Error::from_external_error)?;
 
     let offsets = from.offsets().iter().map(|x| *x as i32).collect::<Vec<_>>();
     // todo: use `new_unchecked` since all invariants are preserved

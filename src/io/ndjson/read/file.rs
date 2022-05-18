@@ -21,9 +21,9 @@ fn read_rows<R: BufRead>(reader: &mut R, rows: &mut [String], limit: usize) -> R
     for row in rows.iter_mut() {
         loop {
             row.clear();
-            let _ = reader.read_line(row).map_err(|e| {
-                Error::External(format!(" at line {}", row_number), Box::new(e))
-            })?;
+            let _ = reader
+                .read_line(row)
+                .map_err(|e| Error::External(format!(" at line {}", row_number), Box::new(e)))?;
             if row.is_empty() {
                 break;
             }

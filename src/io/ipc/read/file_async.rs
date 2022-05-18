@@ -210,9 +210,8 @@ where
         let length = block.body_length as usize;
         read_dictionary_message(&mut reader, offset, &mut data).await?;
 
-        let message = MessageRef::read_as_root(&data).map_err(|err| {
-            Error::OutOfSpec(format!("unable to get root as message: {:?}", err))
-        })?;
+        let message = MessageRef::read_as_root(&data)
+            .map_err(|err| Error::OutOfSpec(format!("unable to get root as message: {:?}", err)))?;
         let header = message
             .header()?
             .ok_or_else(|| Error::oos("message must have a header"))?;

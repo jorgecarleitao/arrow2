@@ -53,9 +53,7 @@ impl StructArray {
     ) -> Result<Self, Error> {
         let fields = Self::try_get_fields(&data_type)?;
         if fields.is_empty() {
-            return Err(Error::oos(
-                "A StructArray must contain at least one field",
-            ));
+            return Err(Error::oos("A StructArray must contain at least one field"));
         }
         if fields.len() != values.len() {
             return Err(Error::oos(

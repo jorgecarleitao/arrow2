@@ -244,9 +244,7 @@ fn timestamp<'a, I: 'a + DataPages>(
                 int96_to_i64_ns,
             ))));
         } else {
-            return Err(Error::nyi(
-                "Can't decode int96 to timestamp other than ns",
-            ));
+            return Err(Error::nyi("Can't decode int96 to timestamp other than ns"));
         }
     };
     if physical_type != &PhysicalType::Int64 {
@@ -305,9 +303,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
                 int96_to_i64_ns,
             )));
         } else {
-            return Err(Error::nyi(
-                "Can't decode int96 to timestamp other than ns",
-            ));
+            return Err(Error::nyi("Can't decode int96 to timestamp other than ns"));
         }
     };
 
