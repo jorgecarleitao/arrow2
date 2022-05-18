@@ -13,6 +13,7 @@ use crate::{
 
 use super::Utf8Array;
 use crate::array::physical_binary::*;
+use crate::bitmap::Bitmap;
 
 struct StrAsBytes<P>(P);
 impl<T: AsRef<str>> AsRef<[u8]> for StrAsBytes<T> {
@@ -36,12 +37,24 @@ impl<O: Offset> From<MutableUtf8Array<O>> for Utf8Array<O> {
         // Safety:
         // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
+        let validity = other
+            .validity
+            .map(|x| {
+                let bitmap: Bitmap = x.into();
+                if bitmap.null_count() == 0 {
+                    None
+                } else {
+                    Some(bitmap)
+                }
+            })
+            .flatten();
+
         unsafe {
             Utf8Array::<O>::from_data_unchecked(
                 other.data_type,
                 other.offsets.into(),
                 other.values.into(),
-                other.validity.map(|x| x.into()),
+                validity,
             )
         }
     }
@@ -368,10 +381,6 @@ impl<O: Offset> MutableUtf8Array<O> {
             self.validity.as_mut().unwrap(),
             iterator,
         );
-
-        if self.validity.as_mut().unwrap().null_count() == 0 {
-            self.validity = None;
-        }
     }
 
     /// Creates a [`MutableUtf8Array`] from an iterator of trusted length.
