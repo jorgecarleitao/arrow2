@@ -14,6 +14,7 @@ use super::Bitmap;
 /// The main difference against [`Vec<bool>`] is that a bitmap cannot be represented as `&[bool]`.
 /// # Implementation
 /// This container is backed by [`Vec<u8>`].
+#[derive(Clone)]
 pub struct MutableBitmap {
     buffer: Vec<u8>,
     // invariant: length.saturating_add(7) / 8 == buffer.len();

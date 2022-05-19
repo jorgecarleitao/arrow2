@@ -1,5 +1,6 @@
 use std::{iter::FromIterator, sync::Arc};
 
+use crate::bitmap::Bitmap;
 use crate::{
     array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
@@ -13,7 +14,7 @@ use super::PrimitiveArray;
 
 /// The Arrow's equivalent to `Vec<Option<T>>` where `T` is byte-size (e.g. `i32`).
 /// Converting a [`MutablePrimitiveArray`] into a [`PrimitiveArray`] is `O(1)`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MutablePrimitiveArray<T: NativeType> {
     data_type: DataType,
     values: Vec<T>,
@@ -22,11 +23,14 @@ pub struct MutablePrimitiveArray<T: NativeType> {
 
 impl<T: NativeType> From<MutablePrimitiveArray<T>> for PrimitiveArray<T> {
     fn from(other: MutablePrimitiveArray<T>) -> Self {
-        let validity = if other.validity.as_ref().map(|x| x.null_count()).unwrap_or(0) > 0 {
-            other.validity.map(|x| x.into())
-        } else {
-            None
-        };
+        let validity = other.validity.and_then(|x| {
+            let bitmap: Bitmap = x.into();
+            if bitmap.null_count() == 0 {
+                None
+            } else {
+                Some(bitmap)
+            }
+        });
 
         PrimitiveArray::<T>::new(other.data_type, other.values.into(), validity)
     }
@@ -194,9 +198,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
             let mut validity = MutableBitmap::new();
             validity.extend_constant(self.len(), true);
             extend_trusted_len_unzip(iterator, &mut validity, &mut self.values);
-            if validity.null_count() > 0 {
-                self.validity = Some(validity);
-            }
+            self.validity = Some(validity);
         }
     }
     /// Extends the [`MutablePrimitiveArray`] from an iterator of values of trusted len.
@@ -526,11 +528,7 @@ impl<T: NativeType, Ptr: std::borrow::Borrow<Option<T>>> FromIterator<Ptr>
             })
             .collect();
 
-        let validity = if validity.null_count() > 0 {
-            Some(validity)
-        } else {
-            None
-        };
+        let validity = Some(validity);
 
         Self {
             data_type: T::PRIMITIVE.into(),
@@ -588,11 +586,7 @@ where
 
     extend_trusted_len_unzip(iterator, &mut validity, &mut buffer);
 
-    let validity = if validity.null_count() > 0 {
-        Some(validity)
-    } else {
-        None
-    };
+    let validity = Some(validity);
 
     (validity, buffer)
 }
@@ -634,11 +628,7 @@ where
     buffer.set_len(len);
     null.set_len(len);
 
-    let validity = if null.null_count() > 0 {
-        Some(null)
-    } else {
-        None
-    };
+    let validity = Some(null);
 
     Ok((validity, buffer))
 }

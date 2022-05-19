@@ -126,7 +126,8 @@ fn set() {
 fn from_iter() {
     let a = MutablePrimitiveArray::<i32>::from_iter((0..2).map(Some));
     assert_eq!(a.len(), 2);
-    assert_eq!(a.validity(), None);
+    let validity = a.validity().unwrap();
+    assert_eq!(validity.null_count(), 0);
 }
 
 #[test]
@@ -176,7 +177,8 @@ fn from_trusted_len() {
 fn extend_trusted_len() {
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.extend_trusted_len(vec![Some(1), Some(2)].into_iter());
-    assert_eq!(a.validity(), None);
+    let validity = a.validity().unwrap();
+    assert_eq!(validity.null_count(), 0);
     a.extend_trusted_len(vec![None, Some(4)].into_iter());
     assert_eq!(
         a.validity(),
@@ -266,7 +268,14 @@ fn extend_from_slice() {
 fn set_validity() {
     let mut a = MutablePrimitiveArray::<i32>::new();
     a.extend_trusted_len(vec![Some(1), Some(2)].into_iter());
-    assert_eq!(a.validity(), None);
+    let validity = a.validity().unwrap();
+    assert_eq!(validity.null_count(), 0);
+
+    // test that upon conversion to array the bitmap is set to None
+    let arr: PrimitiveArray<_> = a.clone().into();
+    assert_eq!(arr.validity(), None);
+
+    // test set_validity
     a.set_validity(Some(MutableBitmap::from([false, true])));
     assert_eq!(a.validity(), Some(&MutableBitmap::from([false, true])));
 }
