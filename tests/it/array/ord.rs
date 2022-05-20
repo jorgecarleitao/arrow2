@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 
 use arrow2::array::ord::build_compare;
 use arrow2::array::*;
+use arrow2::datatypes::DataType;
 use arrow2::error::Result;
 
 #[test]
@@ -64,6 +65,19 @@ fn f64_zeros() -> Result<()> {
     // official IEEE 754 (2008 revision)
     assert_eq!(Ordering::Less, (cmp)(0, 1));
     assert_eq!(Ordering::Greater, (cmp)(1, 0));
+    Ok(())
+}
+
+#[test]
+fn decimal() -> Result<()> {
+	let array = Int128Array::from_slice(&[1, 2]).to(DataType::Decimal(38, 0));
+	
+	let cmp = build_compare(&array, &array)?;
+
+    assert_eq!(Ordering::Less, (cmp)(0, 1));
+	assert_eq!(Ordering::Equal, (cmp)(1, 1));
+	assert_eq!(Ordering::Greater, (cmp)(1, 2));
+	
     Ok(())
 }
 

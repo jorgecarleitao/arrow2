@@ -211,6 +211,7 @@ pub fn build_compare(left: &dyn Array, right: &dyn Array) -> Result<DynComparato
         | (Duration(Nanosecond), Duration(Nanosecond)) => compare_primitives::<i64>(left, right),
         (Float32, Float32) => compare_f32(left, right),
         (Float64, Float64) => compare_f64(left, right),
+		(Decimal(_,_), Decimal(_,_)) => compare_primitives::<i128>(left, right),
         (Utf8, Utf8) => compare_string::<i32>(left, right),
         (LargeUtf8, LargeUtf8) => compare_string::<i64>(left, right),
         (Binary, Binary) => compare_binary::<i32>(left, right),
