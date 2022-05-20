@@ -70,14 +70,14 @@ fn f64_zeros() -> Result<()> {
 
 #[test]
 fn decimal() -> Result<()> {
-	let array = Int128Array::from_slice(&[1, 2]).to(DataType::Decimal(38, 0));
-	
-	let cmp = build_compare(&array, &array)?;
+    let array = Int128Array::from_slice(&[1, 2]).to(DataType::Decimal(38, 0));
+    
+    let cmp = build_compare(&array, &array)?;
 
     assert_eq!(Ordering::Less, (cmp)(0, 1));
-	assert_eq!(Ordering::Equal, (cmp)(1, 1));
-	assert_eq!(Ordering::Greater, (cmp)(1, 2));
-	
+    assert_eq!(Ordering::Equal, (cmp)(1, 1));
+    assert_eq!(Ordering::Greater, (cmp)(1, 2));
+    
     Ok(())
 }
 
