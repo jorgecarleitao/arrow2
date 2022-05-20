@@ -76,7 +76,7 @@ fn decimal() -> Result<()> {
 
     assert_eq!(Ordering::Less, (cmp)(0, 1));
     assert_eq!(Ordering::Equal, (cmp)(1, 1));
-    assert_eq!(Ordering::Greater, (cmp)(1, 2));
+    assert_eq!(Ordering::Greater, (cmp)(1, 0));
     
     Ok(())
 }
