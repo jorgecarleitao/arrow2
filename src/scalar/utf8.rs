@@ -46,7 +46,7 @@ impl<O: Offset> Scalar for Utf8Scalar<O> {
 
     #[inline]
     fn data_type(&self) -> &DataType {
-        if O::is_large() {
+        if O::IS_LARGE {
             &DataType::LargeUtf8
         } else {
             &DataType::Utf8

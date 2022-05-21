@@ -20,7 +20,7 @@ impl<O: Offset> Debug for ListArray<O> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let writer = |f: &mut Formatter, index| write_value(self, index, "None", f);
 
-        let head = if O::is_large() {
+        let head = if O::IS_LARGE {
             "LargeListArray"
         } else {
             "ListArray"

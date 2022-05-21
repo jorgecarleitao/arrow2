@@ -4,19 +4,13 @@ use super::Index;
 /// as offsets of variable-length Arrow arrays.
 pub trait Offset: super::private::Sealed + Index {
     /// Whether it is `i32` (false) or `i64` (true).
-    fn is_large() -> bool;
+    const IS_LARGE: bool;
 }
 
 impl Offset for i32 {
-    #[inline]
-    fn is_large() -> bool {
-        false
-    }
+    const IS_LARGE: bool = false;
 }
 
 impl Offset for i64 {
-    #[inline]
-    fn is_large() -> bool {
-        true
-    }
+    const IS_LARGE: bool = true;
 }

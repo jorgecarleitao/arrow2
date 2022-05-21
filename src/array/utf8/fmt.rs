@@ -12,7 +12,7 @@ impl<O: Offset> Debug for Utf8Array<O> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let writer = |f: &mut Formatter, index| write_value(self, index, f);
 
-        let head = if O::is_large() {
+        let head = if O::IS_LARGE {
             "LargeUtf8Array"
         } else {
             "Utf8Array"
