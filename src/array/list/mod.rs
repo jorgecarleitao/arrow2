@@ -292,7 +292,7 @@ impl<O: Offset> ListArray<O> {
     /// Returns a default [`DataType`]: inner field is named "item" and is nullable
     pub fn default_datatype(data_type: DataType) -> DataType {
         let field = Box::new(Field::new("item", data_type, true));
-        if O::is_large() {
+        if O::IS_LARGE {
             DataType::LargeList(field)
         } else {
             DataType::List(field)
@@ -310,7 +310,7 @@ impl<O: Offset> ListArray<O> {
     /// # Errors
     /// Panics iff the logical type is not consistent with this struct.
     fn try_get_child(data_type: &DataType) -> Result<&Field, ArrowError> {
-        if O::is_large() {
+        if O::IS_LARGE {
             match data_type.to_logical_type() {
                 DataType::LargeList(child) => Ok(child.as_ref()),
                 _ => Err(ArrowError::oos(

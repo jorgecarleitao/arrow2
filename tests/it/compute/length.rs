@@ -15,7 +15,7 @@ fn length_test_string<O: Offset>() {
         let array = Utf8Array::<O>::from(&input);
         let result = length(&array).unwrap();
 
-        let data_type = if O::is_large() {
+        let data_type = if O::IS_LARGE {
             DataType::Int64
         } else {
             DataType::Int32

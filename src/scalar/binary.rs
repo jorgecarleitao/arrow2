@@ -46,7 +46,7 @@ impl<O: Offset> Scalar for BinaryScalar<O> {
 
     #[inline]
     fn data_type(&self) -> &DataType {
-        if O::is_large() {
+        if O::IS_LARGE {
             &DataType::LargeBinary
         } else {
             &DataType::Binary

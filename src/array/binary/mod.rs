@@ -124,7 +124,7 @@ impl<O: Offset> BinaryArray<O> {
 
     /// Returns the default [`DataType`], `DataType::Binary` or `DataType::LargeBinary`
     pub fn default_data_type() -> DataType {
-        if O::is_large() {
+        if O::IS_LARGE {
             DataType::LargeBinary
         } else {
             DataType::Binary

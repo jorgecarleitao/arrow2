@@ -265,7 +265,7 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
     }
 
     fn data_type(&self) -> &DataType {
-        if O::is_large() {
+        if O::IS_LARGE {
             &DataType::LargeUtf8
         } else {
             &DataType::Utf8

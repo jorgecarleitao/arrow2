@@ -35,7 +35,7 @@ where
         .map(|offset| op(offset[1] - offset[0]))
         .collect::<Vec<_>>();
 
-    let data_type = if O::is_large() {
+    let data_type = if O::IS_LARGE {
         DataType::Int64
     } else {
         DataType::Int32

@@ -15,7 +15,7 @@ impl<O: Offset> Debug for BinaryArray<O> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let writer = |f: &mut Formatter, index| write_value(self, index, f);
 
-        let head = if O::is_large() {
+        let head = if O::IS_LARGE {
             "LargeBinaryArray"
         } else {
             "BinaryArray"

@@ -142,7 +142,7 @@ impl<O: Offset> Utf8Array<O> {
 
     /// Returns the default [`DataType`], `DataType::Utf8` or `DataType::LargeUtf8`
     pub fn default_data_type() -> DataType {
-        if O::is_large() {
+        if O::IS_LARGE {
             DataType::LargeUtf8
         } else {
             DataType::Utf8

@@ -110,7 +110,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// Creates a new [`MutableListArray`] from a [`MutableArray`].
     pub fn new_with_field(values: M, name: &str, nullable: bool) -> Self {
         let field = Box::new(Field::new(name, values.data_type().clone(), nullable));
-        let data_type = if O::is_large() {
+        let data_type = if O::IS_LARGE {
             DataType::LargeList(field)
         } else {
             DataType::List(field)
