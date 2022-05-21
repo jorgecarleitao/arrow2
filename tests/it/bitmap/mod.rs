@@ -108,3 +108,17 @@ fn not() {
     let expected = create_bitmap([0b00010101], 6);
     assert_eq!(!&lhs, expected);
 }
+
+#[test]
+fn subslicing_gives_correct_null_count() {
+    let base = Bitmap::from([false, true, true, false, false, true, true, true]);
+    assert_eq!(base.null_count(), 3);
+
+    let view1 = base.clone().slice(0, 1);
+    let view2 = base.slice(1, 7);
+    assert_eq!(view1.null_count(), 1);
+    assert_eq!(view2.null_count(), 2);
+
+    let view3 = view2.slice(0, 1);
+    assert_eq!(view3.null_count(), 0);
+}
