@@ -103,8 +103,7 @@ impl<T: BitChunk> Iterator for BitChunkIter<T> {
 // a mathematical invariant of this iterator
 unsafe impl<T: BitChunk> crate::trusted_len::TrustedLen for BitChunkIter<T> {}
 
-/// An [`Iterator<Item=usize>`] over a [`BitChunk`].
-/// This iterator returns the postion of bit set.
+/// An [`Iterator<Item=usize>`] over a [`BitChunk`] returning the index of each bit set in the chunk
 /// Refer: https://lemire.me/blog/2018/03/08/iterating-over-set-bits-quickly-simd-edition/
 /// # Example
 /// ```
@@ -154,27 +153,3 @@ impl<T: BitChunk> Iterator for BitChunkOnes<T> {
 // # Safety
 // a mathematical invariant of this iterator
 unsafe impl<T: BitChunk> crate::trusted_len::TrustedLen for BitChunkOnes<T> {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_basic1() {
-        let a = [0b00000001, 0b00010000]; // 0th and 13th entry
-        let a = u16::from_ne_bytes(a);
-        let iter = BitChunkIter::new(a, 16);
-        let r = iter.collect::<Vec<_>>();
-        assert_eq!(r, (0..16).map(|x| x == 0 || x == 12).collect::<Vec<_>>(),);
-    }
-
-    #[test]
-    fn test_ones() {
-        let a = [0b00000001, 0b00010000]; // 0th and 13th entry
-        let a = u16::from_ne_bytes(a);
-        let mut iter = BitChunkOnes::new(a);
-        assert_eq!(iter.size_hint(), (2, Some(2)));
-        assert_eq!(iter.next(), Some(0));
-        assert_eq!(iter.next(), Some(12));
-    }
-}

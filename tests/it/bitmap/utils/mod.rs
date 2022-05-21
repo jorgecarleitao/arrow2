@@ -6,6 +6,7 @@ use crate::bitmap::bitmap_strategy;
 
 mod bit_chunks_exact;
 mod chunk_iter;
+mod fmt;
 mod iterator;
 mod slice_iterator;
 mod zip_validity;
