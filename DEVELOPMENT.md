@@ -9,7 +9,7 @@ the CI to understand how to test the different parts of this library locally.
 The simplest way to test the crate is to run 
 
 ```bash
-cargo test
+cargo test --tests
 ```
 
 This runs the tests of the crate without features. To run all features, use
@@ -23,12 +23,14 @@ to reduce the feature set - the tests are gated to only the relevant tests
 of that feature set. For example, if improving JSON, you can use
 
 ```bash
-cargo test --features io_json
+cargo test --tests --features io_json
 ```
+
+to only run both non-feature-specific tests and tests for json.
 
 ## Merging
 
-We currently do not have maintaince versions and thus only PR and merge to `main`.
+We currently do not have maintainance versions and thus only PR and merge to `main`.
 
 We use labels to build a changelog - it is very important to label issues and/or PRs
 accordingly. Because our changelog can contain both issues and PRs, when a PR closes
