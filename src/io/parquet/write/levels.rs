@@ -3,35 +3,39 @@ use parquet2::write::Version;
 
 use crate::{array::Offset, bitmap::Bitmap, error::Result};
 
-pub fn num_values<O: Offset>(offsets: &[O]) -> usize {
+fn num_values_iter<I: Iterator<Item = usize>>(lengths: I) -> usize {
+    lengths
+        .map(|length| if length == 0 { 1 } else { length })
+        .sum()
+}
+
+fn to_length<O: Offset>(
+    offsets: &[O],
+) -> impl Iterator<Item = usize> + std::fmt::Debug + Clone + '_ {
     offsets
         .windows(2)
-        .map(|w| {
-            let length = w[1].to_usize() - w[0].to_usize();
-            if length == 0 {
-                1
-            } else {
-                length
-            }
-        })
-        .sum()
+        .map(|w| w[1].to_usize() - w[0].to_usize())
+}
+
+pub fn num_values<O: Offset>(offsets: &[O]) -> usize {
+    num_values_iter(to_length(offsets))
 }
 
 /// Iterator adapter of parquet / dremel repetition levels
 #[derive(Debug)]
-pub struct RepLevelsIter<'a, O: Offset> {
-    iter: std::slice::Windows<'a, O>,
+pub struct RepLevelsIter<I: Iterator<Item = usize> + std::fmt::Debug + Clone> {
+    iter: I,
     remaining: usize,
     length: usize,
     total_size: usize,
 }
 
-impl<'a, O: Offset> RepLevelsIter<'a, O> {
-    pub fn new(offsets: &'a [O]) -> Self {
-        let total_size = num_values(offsets);
+impl<I: Iterator<Item = usize> + std::fmt::Debug + Clone> RepLevelsIter<I> {
+    pub fn new(iter: I) -> Self {
+        let total_size = num_values_iter(iter.clone());
 
         Self {
-            iter: offsets.windows(2),
+            iter,
             remaining: 0,
             length: 0,
             total_size,
@@ -39,13 +43,12 @@ impl<'a, O: Offset> RepLevelsIter<'a, O> {
     }
 }
 
-impl<O: Offset> Iterator for RepLevelsIter<'_, O> {
+impl<I: Iterator<Item = usize> + std::fmt::Debug + Clone> Iterator for RepLevelsIter<I> {
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining == self.length {
-            let w = self.iter.next()?;
-            self.length = w[1].to_usize() - w[0].to_usize();
+            self.length = self.iter.next()?;
             self.remaining = 0;
             if self.length == 0 {
                 self.total_size -= 1;
@@ -64,19 +67,29 @@ impl<O: Offset> Iterator for RepLevelsIter<'_, O> {
 }
 
 /// Iterator adapter of parquet / dremel definition levels
-pub struct DefLevelsIter<'a, O: Offset, II: Iterator<Item = u32>, I: Iterator<Item = u32>> {
-    iter: std::iter::Zip<std::slice::Windows<'a, O>, II>,
+pub struct DefLevelsIter<L, II, I>
+where
+    L: Iterator<Item = usize> + std::fmt::Debug + Clone,
+    II: Iterator<Item = u32>,
+    I: Iterator<Item = u32>,
+{
+    iter: std::iter::Zip<L, II>,
     primitive_validity: I,
     remaining: usize,
     is_valid: u32,
     total_size: usize,
 }
 
-impl<'a, O: Offset, II: Iterator<Item = u32>, I: Iterator<Item = u32>> DefLevelsIter<'a, O, II, I> {
-    pub fn new(offsets: &'a [O], validity: II, primitive_validity: I) -> Self {
-        let total_size = num_values(offsets);
+impl<L, II, I> DefLevelsIter<L, II, I>
+where
+    L: Iterator<Item = usize> + std::fmt::Debug + Clone,
+    II: Iterator<Item = u32>,
+    I: Iterator<Item = u32>,
+{
+    pub fn new(lenghts: L, validity: II, primitive_validity: I) -> Self {
+        let total_size = num_values_iter(lenghts.clone());
 
-        let iter = offsets.windows(2).zip(validity);
+        let iter = lenghts.zip(validity);
 
         Self {
             iter,
@@ -88,17 +101,18 @@ impl<'a, O: Offset, II: Iterator<Item = u32>, I: Iterator<Item = u32>> DefLevels
     }
 }
 
-impl<O: Offset, II: Iterator<Item = u32>, I: Iterator<Item = u32>> Iterator
-    for DefLevelsIter<'_, O, II, I>
+impl<L, II, I> Iterator for DefLevelsIter<L, II, I>
+where
+    L: Iterator<Item = usize> + std::fmt::Debug + Clone,
+    II: Iterator<Item = u32>,
+    I: Iterator<Item = u32>,
 {
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining == 0 {
-            let (w, is_valid) = self.iter.next()?;
-            let start = w[0].to_usize();
-            let end = w[1].to_usize();
-            self.remaining = end - start;
+            let (length, is_valid) = self.iter.next()?;
+            self.remaining = length;
             self.is_valid = is_valid + 1;
             if self.remaining == 0 {
                 self.total_size -= 1;
@@ -164,16 +178,21 @@ pub fn write_rep_levels<O: Offset>(
 ) -> Result<()> {
     let num_bits = 1; // todo: compute this
 
+    let lengths = nested
+        .offsets
+        .windows(2)
+        .map(|w| w[1].to_usize() - w[0].to_usize());
+
     match version {
         Version::V1 => {
             write_levels_v1(buffer, |buffer: &mut Vec<u8>| {
-                let levels = RepLevelsIter::new(nested.offsets);
+                let levels = RepLevelsIter::new(lengths);
                 encode_u32(buffer, levels, num_bits)?;
                 Ok(())
             })?;
         }
         Version::V2 => {
-            let levels = RepLevelsIter::new(nested.offsets);
+            let levels = RepLevelsIter::new(lengths);
 
             encode_u32(buffer, levels, num_bits)?;
         }
@@ -225,12 +244,12 @@ pub fn write_def_levels<O: Offset>(
         (true, None, true, None) => {
             let nested_validity = std::iter::repeat(1);
             let validity = std::iter::repeat(1);
-            let levels = DefLevelsIter::new(nested.offsets, nested_validity, validity);
+            let levels = DefLevelsIter::new(to_length(nested.offsets), nested_validity, validity);
             write_def_levels1(buffer, levels, num_bits, version)
         }
         (true, Some(nested_validity), true, None) => {
             let levels = DefLevelsIter::new(
-                nested.offsets,
+                to_length(nested.offsets),
                 nested_validity.iter().map(|x| x as u32),
                 std::iter::repeat(1),
             );
@@ -238,7 +257,7 @@ pub fn write_def_levels<O: Offset>(
         }
         (true, None, true, Some(validity)) => {
             let levels = DefLevelsIter::new(
-                nested.offsets,
+                to_length(nested.offsets),
                 std::iter::repeat(1),
                 validity.iter().map(|x| x as u32),
             );
@@ -246,7 +265,7 @@ pub fn write_def_levels<O: Offset>(
         }
         (true, Some(nested_validity), true, Some(validity)) => {
             let levels = DefLevelsIter::new(
-                nested.offsets,
+                to_length(nested.offsets),
                 nested_validity.iter().map(|x| x as u32),
                 validity.iter().map(|x| x as u32),
             );
@@ -255,31 +274,31 @@ pub fn write_def_levels<O: Offset>(
         (true, None, false, _) => {
             let nested_validity = std::iter::repeat(1);
             let validity = std::iter::repeat(0);
-            let levels = DefLevelsIter::new(nested.offsets, nested_validity, validity);
+            let levels = DefLevelsIter::new(to_length(nested.offsets), nested_validity, validity);
             write_def_levels1(buffer, levels, num_bits, version)
         }
         (true, Some(nested_validity), false, _) => {
             let nested_validity = nested_validity.iter().map(|x| x as u32);
             let validity = std::iter::repeat(0);
-            let levels = DefLevelsIter::new(nested.offsets, nested_validity, validity);
+            let levels = DefLevelsIter::new(to_length(nested.offsets), nested_validity, validity);
             write_def_levels1(buffer, levels, num_bits, version)
         }
         (false, _, true, None) => {
             let nested_validity = std::iter::repeat(0);
             let validity = std::iter::repeat(1);
-            let levels = DefLevelsIter::new(nested.offsets, nested_validity, validity);
+            let levels = DefLevelsIter::new(to_length(nested.offsets), nested_validity, validity);
             write_def_levels1(buffer, levels, num_bits, version)
         }
         (false, _, true, Some(validity)) => {
             let nested_validity = std::iter::repeat(0);
             let validity = validity.iter().map(|x| x as u32);
-            let levels = DefLevelsIter::new(nested.offsets, nested_validity, validity);
+            let levels = DefLevelsIter::new(to_length(nested.offsets), nested_validity, validity);
             write_def_levels1(buffer, levels, num_bits, version)
         }
         (false, _, false, _) => {
             let nested_validity = std::iter::repeat(0);
             let validity = std::iter::repeat(0);
-            let levels = DefLevelsIter::new(nested.offsets, nested_validity, validity);
+            let levels = DefLevelsIter::new(to_length(nested.offsets), nested_validity, validity);
             write_def_levels1(buffer, levels, num_bits, version)
         }
     }
@@ -291,10 +310,10 @@ mod tests {
 
     #[test]
     fn test_rep_levels() {
-        let offsets = [0, 2, 2, 5, 8, 8, 11, 11, 12].as_ref();
+        let lengths = [2, 0, 3, 3, 0, 3, 0, 1].into_iter();
         let expected = vec![0u32, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0];
 
-        let result = RepLevelsIter::new(offsets).collect::<Vec<_>>();
+        let result = RepLevelsIter::new(lengths).collect::<Vec<_>>();
         assert_eq!(result, expected)
     }
 
@@ -316,7 +335,8 @@ mod tests {
         .map(|x| x as u32);
         let expected = vec![3u32, 3, 0, 3, 2, 3, 3, 3, 3, 1, 3, 3, 3, 0, 3];
 
-        let result = DefLevelsIter::new(offsets, validity, primitive_validity).collect::<Vec<_>>();
+        let result = DefLevelsIter::new(to_length(offsets), validity, primitive_validity)
+            .collect::<Vec<_>>();
         assert_eq!(result, expected)
     }
 
@@ -328,7 +348,8 @@ mod tests {
         let primitive_validity = std::iter::repeat(0);
         let expected = vec![1u32, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1];
 
-        let result = DefLevelsIter::new(offsets, validity, primitive_validity).collect::<Vec<_>>();
+        let result = DefLevelsIter::new(to_length(offsets), validity, primitive_validity)
+            .collect::<Vec<_>>();
         assert_eq!(result, expected)
     }
 }
