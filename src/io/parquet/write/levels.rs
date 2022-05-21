@@ -44,17 +44,12 @@ impl<O: Offset> Iterator for RepLevelsIter<'_, O> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining == self.length {
-            if let Some(w) = self.iter.next() {
-                let start = w[0].to_usize();
-                let end = w[1].to_usize();
-                self.length = end - start;
-                self.remaining = 0;
-                if self.length == 0 {
-                    self.total_size -= 1;
-                    return Some(0);
-                }
-            } else {
-                return None;
+            let w = self.iter.next()?;
+            self.length = w[1].to_usize() - w[0].to_usize();
+            self.remaining = 0;
+            if self.length == 0 {
+                self.total_size -= 1;
+                return Some(0);
             }
         }
         let old = self.remaining;
