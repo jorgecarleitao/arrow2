@@ -75,39 +75,28 @@ fn min_max_string<O: Offset, F: Fn(&str, &str) -> bool>(
     array: &Utf8Array<O>,
     cmp: F,
 ) -> Option<&str> {
-    let null_count = array.null_count();
-
-    if null_count == array.len() || array.len() == 0 {
-        return None;
-    }
-    let value = if array.validity().is_some() {
-        array.iter().fold(None, |mut acc: Option<&str>, v| {
-            if let Some(item) = v {
-                if let Some(acc) = acc.as_mut() {
-                    if cmp(acc, item) {
-                        *acc = item
+    if array.null_count() == array.len() {
+        None
+    } else if array.validity().is_some() {
+        array
+            .iter()
+            .reduce(|v1, v2| match (v1, v2) {
+                (None, v2) => v2,
+                (v1, None) => v1,
+                (Some(v1), Some(v2)) => {
+                    if cmp(v1, v2) {
+                        Some(v2)
+                    } else {
+                        Some(v1)
                     }
-                } else {
-                    acc = Some(item)
                 }
-            }
-            acc
-        })
+            })
+            .unwrap_or(None)
     } else {
         array
             .values_iter()
-            .fold(None, |mut acc: Option<&str>, item| {
-                if let Some(acc) = acc.as_mut() {
-                    if cmp(acc, item) {
-                        *acc = item
-                    }
-                } else {
-                    acc = Some(item)
-                }
-                acc
-            })
-    };
-    value
+            .reduce(|v1, v2| if cmp(v1, v2) { v2 } else { v1 })
+    }
 }
 
 fn nonnull_min_primitive<T>(values: &[T]) -> T
