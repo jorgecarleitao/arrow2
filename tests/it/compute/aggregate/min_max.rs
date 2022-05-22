@@ -112,12 +112,11 @@ fn min_max_f64_edge_cases() {
     assert_eq!(Some(f64::INFINITY), max_primitive(&a));
 }
 
-// todo: convert me
 #[test]
 fn test_string_min_max_with_nulls() {
     let a = Utf8Array::<i32>::from(&[Some("b"), None, None, Some("a"), Some("c")]);
-    assert_eq!("a", min_string(&a).unwrap());
-    assert_eq!("c", max_string(&a).unwrap());
+    assert_eq!(Some("a"), min_string(&a));
+    assert_eq!(Some("c"), max_string(&a));
 }
 
 #[test]
@@ -125,6 +124,13 @@ fn test_string_min_max_all_nulls() {
     let a = Utf8Array::<i32>::from(&[None::<&str>, None]);
     assert_eq!(None, min_string(&a));
     assert_eq!(None, max_string(&a));
+}
+
+#[test]
+fn test_string_min_max_no_null() {
+    let a = Utf8Array::<i32>::from(&[Some("abc"), Some("abd"), Some("bac"), Some("bbb")]);
+    assert_eq!(Some("abc"), min_string(&a));
+    assert_eq!(Some("bbb"), max_string(&a));
 }
 
 #[test]
