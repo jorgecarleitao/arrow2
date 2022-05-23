@@ -21,7 +21,14 @@ pub fn num_values<O: Offset>(offsets: &[O]) -> usize {
     num_values_iter(to_length(offsets))
 }
 
-/// Iterator adapter of parquet / dremel repetition levels
+/// Iterator adapter of dremel repetition levels. The adapted iterator is assumed to be a sequence of lengths.
+///
+/// This iterator returns 0 or 1 depending on whether it is the start of the record.
+/// For example, the lengths [0, 1, 2, 0] yield [0, 0, 0, 1, 0]:
+/// * 0 -> 0
+/// * 1 -> 0
+/// * 2 -> 0, 1
+/// * 0 -> 0
 #[derive(Debug)]
 pub struct RepLevelsIter<I: Iterator<Item = usize> + std::fmt::Debug + Clone> {
     iter: I,
@@ -31,6 +38,7 @@ pub struct RepLevelsIter<I: Iterator<Item = usize> + std::fmt::Debug + Clone> {
 }
 
 impl<I: Iterator<Item = usize> + std::fmt::Debug + Clone> RepLevelsIter<I> {
+    /// `iter` is expected to be a list of lengths.
     pub fn new(iter: I) -> Self {
         let total_size = num_values_iter(iter.clone());
 
@@ -131,11 +139,11 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NestedInfo<'a, O: Offset> {
-    is_optional: bool,
-    offsets: &'a [O],
-    validity: Option<&'a Bitmap>,
+    pub is_optional: bool,
+    pub offsets: &'a [O],
+    pub validity: Option<&'a Bitmap>,
 }
 
 impl<'a, O: Offset> NestedInfo<'a, O> {
