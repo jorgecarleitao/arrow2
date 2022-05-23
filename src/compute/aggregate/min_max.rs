@@ -30,75 +30,6 @@ pub trait SimdOrd<T> {
     fn new_max() -> Self;
 }
 
-/// Helper to compute min/max of [`BinaryArray`]
-fn min_max_binary<O: Offset, F: Fn(&[u8], &[u8]) -> bool>(
-    array: &BinaryArray<O>,
-    cmp: F,
-) -> Option<&[u8]> {
-    let null_count = array.null_count();
-
-    if null_count == array.len() || array.len() == 0 {
-        return None;
-    }
-    let value = if array.validity().is_some() {
-        array.iter().fold(None, |mut acc: Option<&[u8]>, v| {
-            if let Some(item) = v {
-                if let Some(acc) = acc.as_mut() {
-                    if cmp(acc, item) {
-                        *acc = item
-                    }
-                } else {
-                    acc = Some(item)
-                }
-            }
-            acc
-        })
-    } else {
-        array
-            .values_iter()
-            .fold(None, |mut acc: Option<&[u8]>, item| {
-                if let Some(acc) = acc.as_mut() {
-                    if cmp(acc, item) {
-                        *acc = item
-                    }
-                } else {
-                    acc = Some(item)
-                }
-                acc
-            })
-    };
-    value
-}
-
-/// Helper to compute min/max of [`Utf8Array`]
-fn min_max_string<O: Offset, F: Fn(&str, &str) -> bool>(
-    array: &Utf8Array<O>,
-    cmp: F,
-) -> Option<&str> {
-    if array.null_count() == array.len() {
-        None
-    } else if array.validity().is_some() {
-        array
-            .iter()
-            .reduce(|v1, v2| match (v1, v2) {
-                (None, v2) => v2,
-                (v1, None) => v1,
-                (Some(v1), Some(v2)) => {
-                    if cmp(v1, v2) {
-                        Some(v2)
-                    } else {
-                        Some(v1)
-                    }
-                }
-            })
-            .unwrap_or(None)
-    } else {
-        array
-            .values_iter()
-            .reduce(|v1, v2| if cmp(v1, v2) { v2 } else { v1 })
-    }
-}
-
 fn nonnull_min_primitive<T>(values: &[T]) -> T
 where
     T: NativeType + Simd,
@@ -267,24 +198,52 @@ where
     })
 }
 
+/// Helper to compute min/max of [`BinaryArray`] and [`Utf8Array`]
+macro_rules! min_max_binary_utf8 {
+    ($array: expr, $cmp: expr) => {
+        if $array.null_count() == $array.len() {
+            None
+        } else if $array.validity().is_some() {
+            $array
+                .iter()
+                .reduce(|v1, v2| match (v1, v2) {
+                    (None, v2) => v2,
+                    (v1, None) => v1,
+                    (Some(v1), Some(v2)) => {
+                        if $cmp(v1, v2) {
+                            Some(v2)
+                        } else {
+                            Some(v1)
+                        }
+                    }
+                })
+                .unwrap_or(None)
+        } else {
+            $array
+                .values_iter()
+                .reduce(|v1, v2| if $cmp(v1, v2) { v2 } else { v1 })
+        }
+    };
+}
+
 /// Returns the maximum value in the binary array, according to the natural order.
 pub fn max_binary<O: Offset>(array: &BinaryArray<O>) -> Option<&[u8]> {
-    min_max_binary(array, |a, b| a < b)
+    min_max_binary_utf8!(array, |a, b| a < b)
 }
 
 /// Returns the minimum value in the binary array, according to the natural order.
 pub fn min_binary<O: Offset>(array: &BinaryArray<O>) -> Option<&[u8]> {
-    min_max_binary(array, |a, b| a > b)
+    min_max_binary_utf8!(array, |a, b| a > b)
 }
 
 /// Returns the maximum value in the string array, according to the natural order.
 pub fn max_string<O: Offset>(array: &Utf8Array<O>) -> Option<&str> {
-    min_max_string(array, |a, b| a < b)
+    min_max_binary_utf8!(array, |a, b| a < b)
 }
 
 /// Returns the minimum value in the string array, according to the natural order.
 pub fn min_string<O: Offset>(array: &Utf8Array<O>) -> Option<&str> {
-    min_max_string(array, |a, b| a > b)
+    min_max_binary_utf8!(array, |a, b| a > b)
 }
 
 /// Returns the minimum value in the boolean array.
