@@ -198,8 +198,20 @@ fn test_boolean_min_max_smaller() {
 #[test]
 fn test_binary_min_max_with_nulls() {
     let a = BinaryArray::<i32>::from(&[Some(b"b"), None, None, Some(b"a"), Some(b"c")]);
-    assert_eq!("a".as_bytes(), min_binary(&a).unwrap());
-    assert_eq!("c".as_bytes(), max_binary(&a).unwrap());
+    assert_eq!(Some("a".as_bytes()), min_binary(&a));
+    assert_eq!(Some("c".as_bytes()), max_binary(&a));
+}
+
+#[test]
+fn test_binary_min_max_no_null() {
+    let a = BinaryArray::<i32>::from(&[
+        Some("abc".as_bytes()),
+        Some(b"acd"),
+        Some(b"aabd"),
+        Some(b""),
+    ]);
+    assert_eq!(Some("".as_bytes()), min_binary(&a));
+    assert_eq!(Some("acd".as_bytes()), max_binary(&a));
 }
 
 #[test]
