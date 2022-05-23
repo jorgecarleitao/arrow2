@@ -42,6 +42,18 @@ fn add_benchmark(c: &mut Criterion) {
         c.bench_function(&format!("min null 2^{} f32", log2_size), |b| {
             b.iter(|| bench_min(&arr_a))
         });
+
+        let arr_a = create_string_array::<i32>(1, size, 0.0, 0);
+
+        c.bench_function(&format!("min 2^{} utf8", log2_size), |b| {
+            b.iter(|| bench_min(&arr_a))
+        });
+
+        let arr_a = create_string_array::<i32>(1, size, 0.1, 0);
+
+        c.bench_function(&format!("min null 2^{} utf8", log2_size), |b| {
+            b.iter(|| bench_min(&arr_a))
+        });
     });
 }
 
