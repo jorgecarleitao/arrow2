@@ -3,13 +3,13 @@ use parquet2::write::Version;
 
 use crate::{array::Offset, bitmap::Bitmap, error::Result};
 
-fn num_values_iter<I: Iterator<Item = usize>>(lengths: I) -> usize {
+pub fn num_values_iter<I: Iterator<Item = usize>>(lengths: I) -> usize {
     lengths
         .map(|length| if length == 0 { 1 } else { length })
         .sum()
 }
 
-fn to_length<O: Offset>(
+pub fn to_length<O: Offset>(
     offsets: &[O],
 ) -> impl Iterator<Item = usize> + std::fmt::Debug + Clone + '_ {
     offsets
@@ -21,23 +21,41 @@ pub fn num_values<O: Offset>(offsets: &[O]) -> usize {
     num_values_iter(to_length(offsets))
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RepetitionRecord {
+    Empty,
+    FirstItem(usize),
+    Item,
+}
+
+impl From<RepetitionRecord> for u32 {
+    #[inline]
+    fn from(other: RepetitionRecord) -> Self {
+        match other {
+            RepetitionRecord::Empty => 0,
+            RepetitionRecord::FirstItem(_) => 0,
+            RepetitionRecord::Item => 1,
+        }
+    }
+}
+
 /// Iterator adapter of dremel repetition levels. The adapted iterator is assumed to be a sequence of lengths.
 ///
 /// This iterator returns 0 or 1 depending on whether it is the start of the record.
 /// For example, the lengths [0, 1, 2, 0] yield [0, 0, 0, 1, 0]:
-/// * 0 -> 0
+/// * 0 -> Empty
 /// * 1 -> 0
 /// * 2 -> 0, 1
 /// * 0 -> 0
 #[derive(Debug)]
-pub struct RepLevelsIter<I: Iterator<Item = usize> + std::fmt::Debug + Clone> {
+pub struct RepRecordIter<I: Iterator<Item = usize> + std::fmt::Debug + Clone> {
     iter: I,
     remaining: usize,
     length: usize,
     total_size: usize,
 }
 
-impl<I: Iterator<Item = usize> + std::fmt::Debug + Clone> RepLevelsIter<I> {
+impl<I: Iterator<Item = usize> + std::fmt::Debug + Clone> RepRecordIter<I> {
     /// `iter` is expected to be a list of lengths.
     pub fn new(iter: I) -> Self {
         let total_size = num_values_iter(iter.clone());
@@ -51,26 +69,66 @@ impl<I: Iterator<Item = usize> + std::fmt::Debug + Clone> RepLevelsIter<I> {
     }
 }
 
-impl<I: Iterator<Item = usize> + std::fmt::Debug + Clone> Iterator for RepLevelsIter<I> {
-    type Item = u32;
+impl<I: Iterator<Item = usize> + std::fmt::Debug + Clone> Iterator for RepRecordIter<I> {
+    type Item = RepetitionRecord;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining == self.length {
             self.length = self.iter.next()?;
             self.remaining = 0;
             if self.length == 0 {
                 self.total_size -= 1;
-                return Some(0);
+                return Some(RepetitionRecord::Empty);
             }
         }
         let old = self.remaining;
         self.remaining += 1;
         self.total_size -= 1;
-        Some((old >= 1) as u32)
+        Some(if old >= 1 {
+            RepetitionRecord::Item
+        } else {
+            RepetitionRecord::FirstItem(self.length)
+        })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.total_size, Some(self.total_size))
+    }
+}
+
+/// Iterator adapter of dremel repetition levels. The adapted iterator is assumed to be a sequence of lengths.
+///
+/// This iterator returns 0 or 1 depending on whether it is the start of the record.
+/// For example, the lengths [0, 1, 2, 0] yield [0, 0, 0, 1, 0]:
+/// * 0 -> 0
+/// * 1 -> 0
+/// * 2 -> 0, 1
+/// * 0 -> 0
+#[derive(Debug)]
+pub struct RepLevelsIter<I: Iterator<Item = usize> + std::fmt::Debug + Clone> {
+    iter: RepRecordIter<I>,
+}
+
+impl<I: Iterator<Item = usize> + std::fmt::Debug + Clone> RepLevelsIter<I> {
+    /// `iter` is expected to be a list of lengths.
+    pub fn new(iter: I) -> Self {
+        Self {
+            iter: RepRecordIter::new(iter),
+        }
+    }
+}
+
+impl<I: Iterator<Item = usize> + std::fmt::Debug + Clone> Iterator for RepLevelsIter<I> {
+    type Item = u32;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|x| x.into())
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
     }
 }
 

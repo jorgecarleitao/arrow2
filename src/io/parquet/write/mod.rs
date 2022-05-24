@@ -5,6 +5,8 @@ mod dictionary;
 mod file;
 mod fixed_len_bytes;
 mod levels;
+mod nested;
+mod pages;
 mod primitive;
 mod row_group;
 mod schema;
@@ -29,7 +31,7 @@ pub use parquet2::{
     fallible_streaming_iterator,
     metadata::{Descriptor, KeyValue, SchemaDescriptor},
     page::{CompressedDataPage, CompressedPage, EncodedPage},
-    schema::types::ParquetType,
+    schema::types::{FieldInfo, ParquetType, PhysicalType as ParquetPhysicalType},
     write::{compress, Compressor, DynIter, DynStreamingIterator, RowGroupIter, Version},
     FallibleStreamingIterator,
 };
