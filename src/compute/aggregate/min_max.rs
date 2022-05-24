@@ -259,16 +259,19 @@ pub fn min_string<O: Offset>(array: &Utf8Array<O>) -> Option<&str> {
 /// ```
 pub fn min_boolean(array: &BooleanArray) -> Option<bool> {
     // short circuit if all nulls / zero length array
-    if array.null_count() == array.len() {
-        return None;
+    let null_count = array.null_count();
+    if null_count == array.len() {
+        None
+    } else if null_count == 0 {
+        Some(array.values().null_count() == 0)
+    } else {
+        // Note the min bool is false (0), so short circuit as soon as we see it
+        array
+            .iter()
+            .find(|&b| b == Some(false))
+            .flatten()
+            .or(Some(true))
     }
-
-    // Note the min bool is false (0), so short circuit as soon as we see it
-    array
-        .iter()
-        .find(|&b| b == Some(false))
-        .flatten()
-        .or(Some(true))
 }
 
 /// Returns the maximum value in the boolean array
@@ -284,16 +287,19 @@ pub fn min_boolean(array: &BooleanArray) -> Option<bool> {
 /// ```
 pub fn max_boolean(array: &BooleanArray) -> Option<bool> {
     // short circuit if all nulls / zero length array
-    if array.null_count() == array.len() {
-        return None;
+    let null_count = array.null_count();
+    if null_count == array.len() {
+        None
+    } else if null_count == 0 {
+        Some(array.values().null_count() < array.len())
+    } else {
+        // Note the max bool is true (1), so short circuit as soon as we see it
+        array
+            .iter()
+            .find(|&b| b == Some(true))
+            .flatten()
+            .or(Some(false))
     }
-
-    // Note the max bool is true (1), so short circuit as soon as we see it
-    array
-        .iter()
-        .find(|&b| b == Some(true))
-        .flatten()
-        .or(Some(false))
 }
 
 macro_rules! dyn_generic {
