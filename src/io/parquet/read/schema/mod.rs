@@ -10,6 +10,8 @@ pub use metadata::read_schema_from_metadata;
 pub use parquet2::metadata::{FileMetaData, KeyValue, SchemaDescriptor};
 pub use parquet2::schema::types::ParquetType;
 
+pub(crate) use convert::*;
+
 use self::metadata::parse_key_value_metadata;
 
 /// Infers a [`Schema`] from parquet's [`FileMetaData`]. This first looks for the metadata key
