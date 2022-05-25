@@ -4,10 +4,10 @@ use crate::array::Array;
 use crate::datatypes::{IntervalUnit, TimeUnit};
 use crate::types::{days_ms, months_days_ns};
 
-use super::super::super::temporal_conversions;
-use super::super::super::types::NativeType;
-use super::super::fmt::write_vec;
 use super::PrimitiveArray;
+use crate::array::fmt::write_vec;
+use crate::temporal_conversions;
+use crate::types::NativeType;
 
 macro_rules! dyn_primitive {
     ($array:expr, $ty:ty, $expr:expr) => {{
