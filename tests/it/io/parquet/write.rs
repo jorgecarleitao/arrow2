@@ -7,31 +7,30 @@ use super::*;
 
 fn round_trip(
     column: &str,
-    nullable: bool,
-    nested: bool,
+    file: &str,
     version: Version,
     compression: CompressionOptions,
-    encoding: Encoding,
+    encodings: Vec<Encoding>,
 ) -> Result<()> {
-    let (array, statistics) = if nested {
-        (
+    let (array, statistics) = match file {
+        "nested" => (
             pyarrow_nested_nullable(column),
             pyarrow_nested_nullable_statistics(column),
-        )
-    } else if nullable {
-        (
+        ),
+        "nullable" => (
             pyarrow_nullable(column),
             pyarrow_nullable_statistics(column),
-        )
-    } else {
-        (
+        ),
+        "required" => (
             pyarrow_required(column),
             pyarrow_required_statistics(column),
-        )
+        ),
+        "struct" => (pyarrow_struct(column), pyarrow_struct_statistics(column)),
+        _ => unreachable!(),
     };
     let array: Arc<dyn Array> = array.into();
 
-    let field = Field::new("a1", array.data_type().clone(), nullable);
+    let field = Field::new("a1", array.data_type().clone(), true);
     let schema = Schema::from(vec![field]);
 
     let options = WriteOptions {
@@ -42,7 +41,8 @@ fn round_trip(
 
     let iter = vec![Chunk::try_new(vec![array.clone()])];
 
-    let row_groups = RowGroupIterator::try_new(iter.into_iter(), &schema, options, vec![encoding])?;
+    let row_groups =
+        RowGroupIterator::try_new(iter.into_iter(), &schema, options, vec![encodings])?;
 
     let writer = Cursor::new(vec![]);
     let mut writer = FileWriter::try_new(writer, schema, options)?;
@@ -65,11 +65,10 @@ fn round_trip(
 fn int64_optional_v1() -> Result<()> {
     round_trip(
         "int64",
-        true,
-        false,
+        "nullable",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -77,11 +76,10 @@ fn int64_optional_v1() -> Result<()> {
 fn int64_required_v1() -> Result<()> {
     round_trip(
         "int64",
-        false,
-        false,
+        "required",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -89,11 +87,10 @@ fn int64_required_v1() -> Result<()> {
 fn int64_optional_v2() -> Result<()> {
     round_trip(
         "int64",
-        true,
-        false,
+        "nullable",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -102,11 +99,10 @@ fn int64_optional_v2() -> Result<()> {
 fn int64_optional_v2_compressed() -> Result<()> {
     round_trip(
         "int64",
-        true,
-        false,
+        "nullable",
         Version::V2,
         CompressionOptions::Snappy,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -114,11 +110,10 @@ fn int64_optional_v2_compressed() -> Result<()> {
 fn utf8_optional_v1() -> Result<()> {
     round_trip(
         "string",
-        true,
-        false,
+        "nullable",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -126,11 +121,10 @@ fn utf8_optional_v1() -> Result<()> {
 fn utf8_required_v1() -> Result<()> {
     round_trip(
         "string",
-        false,
-        false,
+        "required",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -138,11 +132,10 @@ fn utf8_required_v1() -> Result<()> {
 fn utf8_optional_v2() -> Result<()> {
     round_trip(
         "string",
-        true,
-        false,
+        "nullable",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -150,11 +143,10 @@ fn utf8_optional_v2() -> Result<()> {
 fn utf8_required_v2() -> Result<()> {
     round_trip(
         "string",
-        false,
-        false,
+        "required",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -163,11 +155,10 @@ fn utf8_required_v2() -> Result<()> {
 fn utf8_optional_v2_compressed() -> Result<()> {
     round_trip(
         "string",
-        true,
-        false,
+        "nullable",
         Version::V2,
         CompressionOptions::Snappy,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -176,11 +167,10 @@ fn utf8_optional_v2_compressed() -> Result<()> {
 fn utf8_required_v2_compressed() -> Result<()> {
     round_trip(
         "string",
-        false,
-        false,
+        "required",
         Version::V2,
         CompressionOptions::Snappy,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -188,11 +178,10 @@ fn utf8_required_v2_compressed() -> Result<()> {
 fn bool_optional_v1() -> Result<()> {
     round_trip(
         "bool",
-        true,
-        false,
+        "nullable",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -200,11 +189,10 @@ fn bool_optional_v1() -> Result<()> {
 fn bool_required_v1() -> Result<()> {
     round_trip(
         "bool",
-        false,
-        false,
+        "required",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -212,11 +200,10 @@ fn bool_required_v1() -> Result<()> {
 fn bool_optional_v2_uncompressed() -> Result<()> {
     round_trip(
         "bool",
-        true,
-        false,
+        "nullable",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -224,11 +211,10 @@ fn bool_optional_v2_uncompressed() -> Result<()> {
 fn bool_required_v2_uncompressed() -> Result<()> {
     round_trip(
         "bool",
-        false,
-        false,
+        "required",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -237,11 +223,10 @@ fn bool_required_v2_uncompressed() -> Result<()> {
 fn bool_required_v2_compressed() -> Result<()> {
     round_trip(
         "bool",
-        false,
-        false,
+        "required",
         Version::V2,
         CompressionOptions::Snappy,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -249,11 +234,10 @@ fn bool_required_v2_compressed() -> Result<()> {
 fn list_int64_optional_v2() -> Result<()> {
     round_trip(
         "list_int64",
-        true,
-        true,
+        "nested",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -261,11 +245,10 @@ fn list_int64_optional_v2() -> Result<()> {
 fn list_int64_optional_v1() -> Result<()> {
     round_trip(
         "list_int64",
-        true,
-        true,
+        "nested",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -273,11 +256,10 @@ fn list_int64_optional_v1() -> Result<()> {
 fn list_int64_required_required_v1() -> Result<()> {
     round_trip(
         "list_int64_required_required",
-        false,
-        true,
+        "nested",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -285,11 +267,10 @@ fn list_int64_required_required_v1() -> Result<()> {
 fn list_int64_required_required_v2() -> Result<()> {
     round_trip(
         "list_int64_required_required",
-        false,
-        true,
+        "nested",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -297,11 +278,10 @@ fn list_int64_required_required_v2() -> Result<()> {
 fn list_bool_optional_v2() -> Result<()> {
     round_trip(
         "list_bool",
-        true,
-        true,
+        "nested",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -309,11 +289,10 @@ fn list_bool_optional_v2() -> Result<()> {
 fn list_bool_optional_v1() -> Result<()> {
     round_trip(
         "list_bool",
-        true,
-        true,
+        "nested",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -321,11 +300,10 @@ fn list_bool_optional_v1() -> Result<()> {
 fn list_utf8_optional_v2() -> Result<()> {
     round_trip(
         "list_utf8",
-        true,
-        true,
+        "nested",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -333,11 +311,10 @@ fn list_utf8_optional_v2() -> Result<()> {
 fn list_utf8_optional_v1() -> Result<()> {
     round_trip(
         "list_utf8",
-        true,
-        true,
+        "nested",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -345,11 +322,10 @@ fn list_utf8_optional_v1() -> Result<()> {
 fn list_large_binary_optional_v2() -> Result<()> {
     round_trip(
         "list_large_binary",
-        true,
-        true,
+        "nested",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -357,11 +333,10 @@ fn list_large_binary_optional_v2() -> Result<()> {
 fn list_large_binary_optional_v1() -> Result<()> {
     round_trip(
         "list_large_binary",
-        true,
-        true,
+        "nested",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -370,11 +345,10 @@ fn list_large_binary_optional_v1() -> Result<()> {
 fn utf8_optional_v2_delta() -> Result<()> {
     round_trip(
         "string",
-        true,
-        false,
+        "nullable",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::DeltaLengthByteArray,
+        vec![Encoding::DeltaLengthByteArray],
     )
 }
 
@@ -382,11 +356,10 @@ fn utf8_optional_v2_delta() -> Result<()> {
 fn i32_optional_v2_dict() -> Result<()> {
     round_trip(
         "int32_dict",
-        true,
-        false,
+        "nullable",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::RleDictionary,
+        vec![Encoding::RleDictionary],
     )
 }
 
@@ -395,11 +368,10 @@ fn i32_optional_v2_dict() -> Result<()> {
 fn i32_optional_v2_dict_compressed() -> Result<()> {
     round_trip(
         "int32_dict",
-        true,
-        false,
+        "nullable",
         Version::V2,
         CompressionOptions::Snappy,
-        Encoding::RleDictionary,
+        vec![Encoding::RleDictionary],
     )
 }
 
@@ -408,11 +380,10 @@ fn i32_optional_v2_dict_compressed() -> Result<()> {
 fn decimal_9_optional_v1() -> Result<()> {
     round_trip(
         "decimal_9",
-        true,
-        false,
+        "nullable",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -420,11 +391,10 @@ fn decimal_9_optional_v1() -> Result<()> {
 fn decimal_9_required_v1() -> Result<()> {
     round_trip(
         "decimal_9",
-        false,
-        false,
+        "required",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -432,11 +402,10 @@ fn decimal_9_required_v1() -> Result<()> {
 fn decimal_18_optional_v1() -> Result<()> {
     round_trip(
         "decimal_18",
-        true,
-        false,
+        "nullable",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -444,11 +413,10 @@ fn decimal_18_optional_v1() -> Result<()> {
 fn decimal_18_required_v1() -> Result<()> {
     round_trip(
         "decimal_18",
-        false,
-        false,
+        "required",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -456,11 +424,10 @@ fn decimal_18_required_v1() -> Result<()> {
 fn decimal_26_optional_v1() -> Result<()> {
     round_trip(
         "decimal_26",
-        true,
-        false,
+        "nullable",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -468,11 +435,10 @@ fn decimal_26_optional_v1() -> Result<()> {
 fn decimal_26_required_v1() -> Result<()> {
     round_trip(
         "decimal_26",
-        false,
-        false,
+        "required",
         Version::V1,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -480,11 +446,10 @@ fn decimal_26_required_v1() -> Result<()> {
 fn decimal_9_optional_v2() -> Result<()> {
     round_trip(
         "decimal_9",
-        true,
-        false,
+        "nullable",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -492,11 +457,10 @@ fn decimal_9_optional_v2() -> Result<()> {
 fn decimal_9_required_v2() -> Result<()> {
     round_trip(
         "decimal_9",
-        false,
-        false,
+        "required",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -504,11 +468,10 @@ fn decimal_9_required_v2() -> Result<()> {
 fn decimal_18_optional_v2() -> Result<()> {
     round_trip(
         "decimal_18",
-        true,
-        false,
+        "nullable",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -516,11 +479,10 @@ fn decimal_18_optional_v2() -> Result<()> {
 fn decimal_18_required_v2() -> Result<()> {
     round_trip(
         "decimal_18",
-        false,
-        false,
+        "required",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -528,11 +490,10 @@ fn decimal_18_required_v2() -> Result<()> {
 fn decimal_26_optional_v2() -> Result<()> {
     round_trip(
         "decimal_26",
-        true,
-        false,
+        "nullable",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
     )
 }
 
@@ -540,10 +501,20 @@ fn decimal_26_optional_v2() -> Result<()> {
 fn decimal_26_required_v2() -> Result<()> {
     round_trip(
         "decimal_26",
-        false,
-        false,
+        "required",
         Version::V2,
         CompressionOptions::Uncompressed,
-        Encoding::Plain,
+        vec![Encoding::Plain],
+    )
+}
+
+#[test]
+fn struct_() -> Result<()> {
+    round_trip(
+        "struct",
+        "struct",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain, Encoding::Plain],
     )
 }

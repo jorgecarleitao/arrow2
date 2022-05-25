@@ -800,11 +800,11 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Resu
         .fields
         .iter()
         .map(|x| {
-            if let DataType::Dictionary(..) = x.data_type() {
+            vec![if let DataType::Dictionary(..) = x.data_type() {
                 Encoding::RleDictionary
             } else {
                 Encoding::Plain
-            }
+            }]
         })
         .collect();
 

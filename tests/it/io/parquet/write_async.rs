@@ -30,7 +30,7 @@ async fn test_parquet_async_roundtrip() {
         Field::new("a1", DataType::Int32, true),
         Field::new("a2", DataType::Float32, true),
     ]);
-    let encoding = vec![Encoding::Plain, Encoding::Plain];
+    let encoding = vec![vec![Encoding::Plain], vec![Encoding::Plain]];
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,

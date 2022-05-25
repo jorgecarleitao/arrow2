@@ -38,7 +38,11 @@ fn pages(
         .map(|array| {
             array_to_page(
                 &array,
-                parquet_schema.fields()[0].clone(),
+                parquet_schema.columns()[0]
+                    .descriptor
+                    .primitive_type
+                    .clone(),
+                vec![Nested::Primitive(None, true, array.len())],
                 options,
                 Encoding::Plain,
             )
@@ -50,7 +54,11 @@ fn pages(
         .flat_map(|array| {
             array_to_pages(
                 *array,
-                parquet_schema.fields()[1].clone(),
+                parquet_schema.columns()[1]
+                    .descriptor
+                    .primitive_type
+                    .clone(),
+                vec![Nested::Primitive(None, true, array.len())],
                 options,
                 encoding,
             )

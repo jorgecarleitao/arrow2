@@ -1,5 +1,5 @@
-use super::super::levels::to_length;
 use super::super::pages::Nested;
+use super::to_length;
 
 trait DebugIter: Iterator<Item = usize> + std::fmt::Debug {}
 
@@ -9,17 +9,19 @@ fn iter<'a>(nested: &'a [Nested]) -> Vec<Box<dyn DebugIter + 'a>> {
     nested
         .iter()
         .filter_map(|nested| match nested {
-            Nested::Primitive(_, _) => None,
+            Nested::Primitive(_, _, _) => None,
             Nested::List(nested) => Some(Box::new(to_length(nested.offsets)) as Box<dyn DebugIter>),
             Nested::LargeList(nested) => {
                 Some(Box::new(to_length(nested.offsets)) as Box<dyn DebugIter>)
             }
-            Nested::Struct(_, _) => None,
+            Nested::Struct(_, _, length) => {
+                Some(Box::new(std::iter::repeat(0usize).take(*length)) as Box<dyn DebugIter>)
+            }
         })
         .collect()
 }
 
-fn num_values(nested: &[Nested]) -> usize {
+pub fn num_values(nested: &[Nested]) -> usize {
     let iterators = iter(nested);
     let depth = iterators.len();
 
@@ -27,7 +29,7 @@ fn num_values(nested: &[Nested]) -> usize {
         .into_iter()
         .enumerate()
         .map(|(index, lengths)| {
-            let length = if index == depth - 1 {
+            if index == depth - 1 {
                 lengths
                     .map(|length| if length == 0 { 1 } else { length })
                     .sum::<usize>()
@@ -35,8 +37,7 @@ fn num_values(nested: &[Nested]) -> usize {
                 lengths
                     .map(|length| if length == 0 { 1 } else { 0 })
                     .sum::<usize>()
-            };
-            length
+            }
         })
         .sum()
 }
@@ -132,51 +133,62 @@ impl<'a> Iterator for RepLevelsIter<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::io::parquet::write::levels::NestedInfo;
+    use super::super::super::pages::ListNested;
 
     use super::*;
 
-    #[test]
-    fn test_rep_levels() {
-        let nested = vec![
-            Nested::List(NestedInfo::<i32> {
-                is_optional: false,
-                offsets: &[0, 2, 4],
-                validity: None,
-            }),
-            Nested::List(NestedInfo::<i32> {
-                is_optional: false,
-                offsets: &[0, 3, 7, 8, 10],
-                validity: None,
-            }),
-            Nested::Primitive(None, false),
-        ];
+    fn test(nested: Vec<Nested>, expected: Vec<u32>) {
         let mut iter = RepLevelsIter::new(&nested);
-        assert_eq!(iter.size_hint().0, 10);
+        assert_eq!(iter.size_hint().0, expected.len());
         let result = iter.by_ref().collect::<Vec<_>>();
-        assert_eq!(result, vec![0, 2, 2, 1, 2, 2, 2, 0, 1, 2]);
+        assert_eq!(result, expected);
         assert_eq!(iter.size_hint().0, 0);
     }
 
     #[test]
-    fn test_rep_levels_with_zero() {
+    fn struct_required() {
         let nested = vec![
-            Nested::List(NestedInfo::<i32> {
+            Nested::Struct(None, true, 10),
+            Nested::Primitive(None, true, 10),
+        ];
+        let expected = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn l1() {
+        let nested = vec![
+            Nested::List(ListNested::<i32> {
+                is_optional: false,
+                offsets: &[0, 2, 2, 5, 8, 8, 11, 11, 12],
+                validity: None,
+            }),
+            Nested::Primitive(None, false, 12),
+        ];
+
+        let expected = vec![0u32, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn l2() {
+        let nested = vec![
+            Nested::List(ListNested::<i32> {
                 is_optional: false,
                 offsets: &[0, 2, 2, 4],
                 validity: None,
             }),
-            Nested::List(NestedInfo::<i32> {
+            Nested::List(ListNested::<i32> {
                 is_optional: false,
                 offsets: &[0, 3, 7, 8, 10],
                 validity: None,
             }),
-            Nested::Primitive(None, false),
+            Nested::Primitive(None, false, 10),
         ];
-        let mut iter = RepLevelsIter::new(&nested);
-        assert_eq!(iter.size_hint().0, 11);
-        let result = iter.by_ref().collect::<Vec<_>>();
-        assert_eq!(result, vec![0, 2, 2, 1, 2, 2, 2, 0, 0, 1, 2]);
-        assert_eq!(iter.size_hint().0, 0);
+        let expected = vec![0, 2, 2, 1, 2, 2, 2, 0, 0, 1, 2];
+
+        test(nested, expected)
     }
 }

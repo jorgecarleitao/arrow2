@@ -59,7 +59,7 @@ pub struct FileSink<'a, W: AsyncWrite + Send + Unpin> {
     writer: Option<FileStreamer<W>>,
     task: Option<BoxFuture<'a, Result<Option<FileStreamer<W>>, ArrowError>>>,
     options: WriteOptions,
-    encoding: Vec<Encoding>,
+    encoding: Vec<Vec<Encoding>>,
     schema: Schema,
     parquet_schema: SchemaDescriptor,
     /// Key-value metadata that will be written to the file on close.
@@ -77,7 +77,7 @@ where
     pub fn try_new(
         writer: W,
         schema: Schema,
-        encoding: Vec<Encoding>,
+        encoding: Vec<Vec<Encoding>>,
         options: WriteOptions,
     ) -> Result<Self, ArrowError> {
         let parquet_schema = crate::io::parquet::write::to_parquet_schema(&schema)?;
