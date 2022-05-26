@@ -1,0 +1,81 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Functions to perform merge-sorts."><meta name="keywords" content="rust, rustlang, rust-lang, merge_sort"><title>arrow2::compute::merge_sort - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><script defer src="../../../main.js"></script>
+    <noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"></h2>
+    </nav>
+    <nav class="sidebar"><a class="sidebar-logo" href="../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"><a href="#">Module merge_sort</a></h2><div class="sidebar-elems"><section><div class="block"><ul><li><a href="#reexports">Re-exports</a></li><li><a href="#structs">Structs</a></li><li><a href="#functions">Functions</a></li><li><a href="#types">Type Definitions</a></li></ul></div></section><div id="sidebar-vars" data-name="merge_sort" data-ty="mod" data-relpath="./"></div><script defer src="./sidebar-items.js"></script></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../arrow2/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><div id="settings-menu" tabindex="-1">
+                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
+                        </div></form></nav></div><section id="main-content" class="content"><div class="main-heading">
+    <h1 class="fqn"><span class="in-band">Module <a href="../../index.html">arrow2</a>::<wbr><a href="../index.html">compute</a>::<wbr><a class="mod" href="#">merge_sort</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../../../src/arrow2/compute/merge_sort/mod.rs.html#1-531">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><span class="item-info"><div class="stab portability">Available on <strong>crate feature <code>compute_merge_sort</code></strong> only.</div></span><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Functions to perform merge-sorts.</p>
+<p>The goal of merge-sort is to merge two sorted arrays, <code>[a0, a1]</code>, <code>merge_sort(a0, a1)</code>,
+so that the resulting array is sorted, i.e. the following invariant upholds:
+<code>sort(merge_sort(a0, a1)) == merge_sort(a0, a1)</code> for any two sorted arrays <code>a0</code> and <code>a1</code>.</p>
+<p>Given that two sorted arrays are more likely to be partially sorted within each other,
+and that the resulting array is built by taking elements from each array, it is
+advantageous to <code>take</code> slices of items, not items, from each array.
+As such, this module’s main data representation is <code>(i: usize, start: usize, len: usize)</code>,
+which represents a slice of array <code>i</code>.</p>
+<p>In this context, <code>merge_sort</code> is composed by two main operations:</p>
+<ol>
+<li>compute the array of slices <code>v</code> that construct a new sorted array from <code>a0</code> and <code>a1</code>.</li>
+<li><code>take_arrays</code> from <code>a0</code> and <code>a1</code>, creating the sorted array.</li>
+</ol>
+<p>In the extreme case where the two arrays are already sorted between then (e.g. <code>[0, 2]</code>, <code>[3, 4]</code>),
+we need two slices, <code>v = vec![(0, 0, a0.len()), (1, 0, a1.len())]</code>. The higher the
+inter-leave between the two arrays, the more slices will be needed, and
+generally the more expensive the <code>take</code> operation will be.</p>
+<h3 id="merge-sort-multiple-arrays"><a href="#merge-sort-multiple-arrays">Merge-sort multiple arrays</a></h3>
+<p>The main advantage of merge-sort over <code>sort</code> is that it can be parallelized.
+For example, given a set of arrays <code>[a0, a1, a2, a3]</code> representing the same field,
+e.g. over 4 batches of arrays, they can be sorted in parallel as follows (pseudo-code):</p>
+
+<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore"><code><span class="comment">// in parallel</span>
+<span class="kw">let</span> <span class="ident">a0</span> <span class="op">=</span> <span class="ident">sort</span>(<span class="ident">a0</span>);
+<span class="kw">let</span> <span class="ident">a1</span> <span class="op">=</span> <span class="ident">sort</span>(<span class="ident">a1</span>);
+<span class="kw">let</span> <span class="ident">a2</span> <span class="op">=</span> <span class="ident">sort</span>(<span class="ident">a2</span>);
+<span class="kw">let</span> <span class="ident">a3</span> <span class="op">=</span> <span class="ident">sort</span>(<span class="ident">a3</span>);
+
+<span class="comment">// in parallel and recursively</span>
+<span class="kw">let</span> <span class="ident">slices1</span> <span class="op">=</span> <span class="ident">merge_sort_slices</span>(<span class="ident">a0</span>, <span class="ident">a1</span>);
+<span class="kw">let</span> <span class="ident">slices2</span> <span class="op">=</span> <span class="ident">merge_sort_slices</span>(<span class="ident">a2</span>, <span class="ident">a3</span>);
+<span class="kw">let</span> <span class="ident">slices</span> <span class="op">=</span> <span class="ident">merge_sort_slices</span>(<span class="ident">slices1</span>, <span class="ident">slices2</span>);
+
+<span class="kw">let</span> <span class="ident">array</span> <span class="op">=</span> <span class="ident">take_arrays</span>(<span class="kw-2">&amp;</span>[<span class="ident">a0</span>, <span class="ident">a1</span>, <span class="ident">a2</span>, <span class="ident">a3</span>], <span class="ident">slices</span>, <span class="prelude-val">None</span>);</code></pre></div>
+<p>A common operation in query engines is to merge multiple fields based on the
+same sorting field (e.g. merge-sort multiple batches of arrays).
+To perform this, use the same idea as above, but use <code>take_arrays</code> over
+each independent field (which can again be parallelized):</p>
+
+<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore"><code><span class="comment">// `slices` computed before-hand</span>
+<span class="comment">// in parallel</span>
+<span class="kw">let</span> <span class="ident">array1</span> <span class="op">=</span> <span class="ident">take_arrays</span>(<span class="kw-2">&amp;</span>[<span class="ident">a0</span>, <span class="ident">a1</span>, <span class="ident">a2</span>, <span class="ident">a3</span>], <span class="ident">slices</span>, <span class="prelude-val">None</span>);
+<span class="kw">let</span> <span class="ident">array2</span> <span class="op">=</span> <span class="ident">take_arrays</span>(<span class="kw-2">&amp;</span>[<span class="ident">b0</span>, <span class="ident">b1</span>, <span class="ident">b2</span>, <span class="ident">b3</span>], <span class="ident">slices</span>, <span class="prelude-val">None</span>);</code></pre></div>
+<p>To serialize slices, e.g. for checkpointing or transfer via Arrow’s IPC, you can store
+them as 3 non-null primitive arrays (e.g. <code>PrimitiveArray&lt;i64&gt;</code>).</p>
+</div></details><h2 id="reexports" class="small-section-header"><a href="#reexports">Re-exports</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left import-item" id="reexport.SortOptions"><code>pub use crate::compute::sort::<a class="struct" href="../sort/struct.SortOptions.html" title="struct arrow2::compute::sort::SortOptions">SortOptions</a>;</code></div><div class="item-right docblock-short"></div></div></div><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.MergeSortSlices.html" title="arrow2::compute::merge_sort::MergeSortSlices struct">MergeSortSlices</a></div><div class="item-right docblock-short"><p>An iterator adapter that merge-sorts two iterators of <code>MergeSlice</code> into a single <code>MergeSlice</code>
+such that the resulting <code>MergeSlice</code>s are ordered according to <code>comparator</code>.</p>
+</div></div></div><h2 id="functions" class="small-section-header"><a href="#functions">Functions</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.build_comparator.html" title="arrow2::compute::merge_sort::build_comparator fn">build_comparator</a></div><div class="item-right docblock-short"><p>returns a comparison function between any two arrays of each pair of arrays, according to <code>SortOptions</code>.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.merge_sort.html" title="arrow2::compute::merge_sort::merge_sort fn">merge_sort</a></div><div class="item-right docblock-short"><p>Combines two sorted <a href="../../array/trait.Array.html" title="Array">Array</a>s of the same <a href="../../datatypes/enum.DataType.html" title="crate::datatypes::DataType"><code>crate::datatypes::DataType</code></a> into a single sorted array.
+If the arrays are not sorted (which this function does not check), the result is wrong.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.merge_sort_slices.html" title="arrow2::compute::merge_sort::merge_sort_slices fn">merge_sort_slices</a></div><div class="item-right docblock-short"><p>Given two iterators of slices representing two sets of sorted <a href="../../array/trait.Array.html" title="Array"><code>Array</code></a>s, and a <code>comparator</code> bound to those <a href="../../array/trait.Array.html" title="Array"><code>Array</code></a>s,
+returns a new iterator of slices denoting how to <code>take</code> slices from each of the arrays such that the resulting
+array is sorted according to <code>comparator</code></p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.slices.html" title="arrow2::compute::merge_sort::slices fn">slices</a></div><div class="item-right docblock-short"><p>Returns a vector of slices from different sorted arrays that can be used to create sorted arrays.
+<code>pairs</code> is an array representing multiple sorted array sets. The expected format is</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.take_arrays.html" title="arrow2::compute::merge_sort::take_arrays fn">take_arrays</a></div><div class="item-right docblock-short"><p>Takes N arrays together through <code>slices</code> under the assumption that the slices have
+a total coverage of the arrays.
+I.e. they are such that all elements on all arrays are picked (which is the case in sorting).</p>
+</div></div></div><h2 id="types" class="small-section-header"><a href="#types">Type Definitions</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="type" href="type.MergeSlice.html" title="arrow2::compute::merge_sort::MergeSlice type">MergeSlice</a></div><div class="item-right docblock-short"><p>A slice denoting <code>(array_index, start, len)</code> representing a slice from one of N arrays.
+This is used to keep track of contiguous blocks of slots.
+An array of MergeSlice, <code>[MergeSlice]</code>, represents inter-leaved array slices.
+For example, <code>[(0, 0, 2), (1, 0, 1), (0, 2, 3)]</code> represents 2 arrays (a0 and a1) arranged as follows:
+<code>[a0[0..2], a1[0..1], a0[2..3]]</code>
+This representation is useful when building arrays in memory as it allows to memcopy slices of arrays.
+This is particularly useful in merge-sort because sorted arrays (passed to the merge-sort) are more likely
+to have contiguous blocks of sorted elements (than by random).</p>
+</div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (4cbaac699 2022-05-25)" ></div>
+</body></html>

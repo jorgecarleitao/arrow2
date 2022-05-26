@@ -1,0 +1,82 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="APIs to read from and write to Arrow’s IPC format."><meta name="keywords" content="rust, rustlang, rust-lang, ipc"><title>arrow2::io::ipc - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><script defer src="../../../main.js"></script>
+    <noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"></h2>
+    </nav>
+    <nav class="sidebar"><a class="sidebar-logo" href="../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"><a href="#">Module ipc</a></h2><div class="sidebar-elems"><section><div class="block"><ul><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li></ul></div></section><div id="sidebar-vars" data-name="ipc" data-ty="mod" data-relpath="./"></div><script defer src="./sidebar-items.js"></script></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../arrow2/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><div id="settings-menu" tabindex="-1">
+                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
+                        </div></form></nav></div><section id="main-content" class="content"><div class="main-heading">
+    <h1 class="fqn"><span class="in-band">Module <a href="../../index.html">arrow2</a>::<wbr><a href="../index.html">io</a>::<wbr><a class="mod" href="#">ipc</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../../../src/arrow2/io/ipc/mod.rs.html#1-114">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><span class="item-info"><div class="stab portability">Available on <strong>crate feature <code>io_ipc</code></strong> only.</div></span><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>APIs to read from and write to Arrow’s IPC format.</p>
+<p>Inter-process communication is a method through which different processes
+share and pass data between them. Its use-cases include parallel
+processing of chunks of data across different CPU cores, transferring
+data between different Apache Arrow implementations in other languages and
+more. Under the hood Apache Arrow uses <a href="https://google.github.io/flatbuffers/">FlatBuffers</a>
+as its binary protocol, so every Arrow-centered streaming or serialiation
+problem that could be solved using FlatBuffers could probably be solved
+using the more integrated approach that is exposed in this module.</p>
+<p><a href="https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc">Arrow’s IPC protocol</a>
+allows only batch or dictionary columns to be passed
+around due to its reliance on a pre-defined data scheme. This constraint
+provides a large performance gain because serialized data will always have a
+known structutre, i.e. the same fields and datatypes, with the only variance
+being the number of rows and the actual data inside the Batch. This dramatically
+increases the deserialization rate, as the bytes in the file or stream are already
+structured “correctly”.</p>
+<p>Reading and writing IPC messages is done using one of two variants - either
+<a href="read/struct.FileReader.html"><code>FileReader</code></a> &lt;-&gt; <a href="write/struct.FileWriter.html"><code>FileWriter</code></a> or
+<a href="read/struct.StreamReader.html"><code>StreamReader</code></a> &lt;-&gt; <a href="write/struct.StreamWriter.html"><code>StreamWriter</code></a>.
+These two variants wrap a type <code>T</code> that implements <a href="https://doc.rust-lang.org/nightly/std/io/trait.Read.html"><code>Read</code></a>, and in
+the case of the <code>File</code> variant it also implements <a href="https://doc.rust-lang.org/nightly/std/io/trait.Seek.html"><code>Seek</code></a>. In
+practice it means that <code>File</code>s can be arbitrarily accessed while <code>Stream</code>s are only
+read in certain order - the one they were written in (first in, first out).</p>
+<h2 id="examples"><a href="#examples">Examples</a></h2>
+<p>Read and write to a file:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use</span> <span class="ident">arrow2::io::ipc</span>::{{<span class="ident">read</span>::{<span class="ident">FileReader</span>, <span class="ident">read_file_metadata</span>}}, {<span class="ident">write</span>::{<span class="ident">FileWriter</span>, <span class="ident">WriteOptions</span>}}};
+<span class="comment">// Setup the writer</span>
+<span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;example.arrow&quot;</span>.<span class="ident">to_string</span>();
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File::create</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>)<span class="question-mark">?</span>;
+<span class="kw">let</span> <span class="ident">x_coord</span> <span class="op">=</span> <span class="ident">Field::new</span>(<span class="string">&quot;x&quot;</span>, <span class="ident">DataType::Int32</span>, <span class="bool-val">false</span>);
+<span class="kw">let</span> <span class="ident">y_coord</span> <span class="op">=</span> <span class="ident">Field::new</span>(<span class="string">&quot;y&quot;</span>, <span class="ident">DataType::Int32</span>, <span class="bool-val">false</span>);
+<span class="kw">let</span> <span class="ident">schema</span> <span class="op">=</span> <span class="ident">Schema::from</span>(<span class="macro">vec!</span>[<span class="ident">x_coord</span>, <span class="ident">y_coord</span>]);
+<span class="kw">let</span> <span class="ident">options</span> <span class="op">=</span> <span class="ident">WriteOptions</span> {<span class="ident">compression</span>: <span class="prelude-val">None</span>};
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">writer</span> <span class="op">=</span> <span class="ident">FileWriter::try_new</span>(<span class="ident">file</span>, <span class="kw-2">&amp;</span><span class="ident">schema</span>, <span class="prelude-val">None</span>, <span class="ident">options</span>)<span class="question-mark">?</span>;
+
+<span class="comment">// Setup the data</span>
+<span class="kw">let</span> <span class="ident">x_data</span> <span class="op">=</span> <span class="ident">Int32Array::from_slice</span>([<span class="op">-</span><span class="number">1i32</span>, <span class="number">1</span>]);
+<span class="kw">let</span> <span class="ident">y_data</span> <span class="op">=</span> <span class="ident">Int32Array::from_slice</span>([<span class="number">1i32</span>, <span class="op">-</span><span class="number">1</span>]);
+<span class="kw">let</span> <span class="ident">chunk</span> <span class="op">=</span> <span class="ident">Chunk::try_new</span>(
+    <span class="macro">vec!</span>[<span class="ident">Arc::new</span>(<span class="ident">x_data</span>) <span class="kw">as</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Array</span><span class="op">&gt;</span>, <span class="ident">Arc::new</span>(<span class="ident">y_data</span>)]
+)<span class="question-mark">?</span>;
+
+<span class="comment">// Write the messages and finalize the stream</span>
+<span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">5</span> {
+    <span class="ident">writer</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">chunk</span>, <span class="prelude-val">None</span>);
+}
+<span class="ident">writer</span>.<span class="ident">finish</span>();
+
+<span class="comment">// Fetch some of the data and get the reader back</span>
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">File::open</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>)<span class="question-mark">?</span>;
+<span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">read_file_metadata</span>(<span class="kw-2">&amp;mut</span> <span class="ident">reader</span>)<span class="question-mark">?</span>;
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filereader</span> <span class="op">=</span> <span class="ident">FileReader::new</span>(<span class="ident">reader</span>, <span class="ident">metadata</span>, <span class="prelude-val">None</span>);
+<span class="kw">let</span> <span class="ident">row1</span> <span class="op">=</span> <span class="ident">filereader</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();  <span class="comment">// [[-1, 1], [1, -1]]</span>
+<span class="kw">let</span> <span class="ident">row2</span> <span class="op">=</span> <span class="ident">filereader</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();  <span class="comment">// [[-1, 1], [1, -1]]</span>
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">filereader</span>.<span class="ident">into_inner</span>();
+<span class="comment">// Do more stuff with the reader, like seeking ahead.</span></code></pre></div>
+<p>For further information and examples please consult the
+<a href="https://jorgecarleitao.github.io/arrow2/io/index.html">user guide</a>.
+For even more examples check the <code>examples</code> folder in the main repository
+(<a href="https://github.com/jorgecarleitao/arrow2/blob/main/examples/ipc_file_read.rs">1</a>,
+<a href="https://github.com/jorgecarleitao/arrow2/blob/main/examples/ipc_file_write.rs">2</a>,
+<a href="https://github.com/jorgecarleitao/arrow2/tree/main/examples/ipc_pyarrow">3</a>).</p>
+</div></details><h2 id="modules" class="small-section-header"><a href="#modules">Modules</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="mod" href="append/index.html" title="arrow2::io::ipc::append mod">append</a></div><div class="item-right docblock-short"><p>A struct adapter of Read+Seek+Write to append to IPC files</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="read/index.html" title="arrow2::io::ipc::read mod">read</a></div><div class="item-right docblock-short"><p>APIs to read Arrow’s IPC format.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="mod" href="write/index.html" title="arrow2::io::ipc::write mod">write</a></div><div class="item-right docblock-short"><p>APIs to write to Arrow’s IPC format.</p>
+</div></div></div><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.IpcField.html" title="arrow2::io::ipc::IpcField struct">IpcField</a></div><div class="item-right docblock-short"><p>Struct containing <code>dictionary_id</code> and nested <code>IpcField</code>, allowing users
+to specify the dictionary ids of the IPC fields when writing to IPC.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.IpcSchema.html" title="arrow2::io::ipc::IpcSchema struct">IpcSchema</a></div><div class="item-right docblock-short"><p>Struct containing fields and whether the file is written in little or big endian.</p>
+</div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (4cbaac699 2022-05-25)" ></div>
+</body></html>

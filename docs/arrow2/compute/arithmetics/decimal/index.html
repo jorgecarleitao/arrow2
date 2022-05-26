@@ -1,0 +1,100 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Defines the arithmetic kernels for Decimal `PrimitiveArrays`. The `Decimal` type specifies the precision and scale parameters. These affect the arithmetic operations and need to be considered while doing operations with Decimal numbers."><meta name="keywords" content="rust, rustlang, rust-lang, decimal"><title>arrow2::compute::arithmetics::decimal - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script src="../../../../crates.js"></script><script defer src="../../../../main.js"></script>
+    <noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"></h2>
+    </nav>
+    <nav class="sidebar"><a class="sidebar-logo" href="../../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"><a href="#">Module decimal</a></h2><div class="sidebar-elems"><section><div class="block"><ul><li><a href="#functions">Functions</a></li></ul></div></section><div id="sidebar-vars" data-name="decimal" data-ty="mod" data-relpath="./"></div><script defer src="./sidebar-items.js"></script></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../arrow2/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><div id="settings-menu" tabindex="-1">
+                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
+                        </div></form></nav></div><section id="main-content" class="content"><div class="main-heading">
+    <h1 class="fqn"><span class="in-band">Module <a href="../../../index.html">arrow2</a>::<wbr><a href="../../index.html">compute</a>::<wbr><a href="../index.html">arithmetics</a>::<wbr><a class="mod" href="#">decimal</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../../../../src/arrow2/compute/arithmetics/decimal/mod.rs.html#1-119">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><span class="item-info"><div class="stab portability">Available on <strong>crate feature <code>compute_arithmetics</code></strong> only.</div></span><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Defines the arithmetic kernels for Decimal <code>PrimitiveArrays</code>. The
+<a href="../../../datatypes/enum.DataType.html#variant.Decimal"><code>Decimal</code></a> type specifies the
+precision and scale parameters. These affect the arithmetic operations and
+need to be considered while doing operations with Decimal numbers.</p>
+</div></details><h2 id="functions" class="small-section-header"><a href="#functions">Functions</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.adaptive_add.html" title="arrow2::compute::arithmetics::decimal::adaptive_add fn">adaptive_add</a></div><div class="item-right docblock-short"><p>Adaptive addition of two decimal primitive arrays with different precision
+and scale. If the precision and scale is different, then the smallest scale
+and precision is adjusted to the largest precision and scale. If during the
+addition one of the results is larger than the max possible value, the
+result precision is changed to the precision of the max value</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.adaptive_div.html" title="arrow2::compute::arithmetics::decimal::adaptive_div fn">adaptive_div</a></div><div class="item-right docblock-short"><p>Adaptive division of two decimal primitive arrays with different precision
+and scale. If the precision and scale is different, then the smallest scale
+and precision is adjusted to the largest precision and scale. If during the
+division one of the results is larger than the max possible value, the
+result precision is changed to the precision of the max value. The function
+panics when divided by zero.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.adaptive_mul.html" title="arrow2::compute::arithmetics::decimal::adaptive_mul fn">adaptive_mul</a></div><div class="item-right docblock-short"><p>Adaptive multiplication of two decimal primitive arrays with different
+precision and scale. If the precision and scale is different, then the
+smallest scale and precision is adjusted to the largest precision and
+scale. If during the multiplication one of the results is larger than the
+max possible value, the result precision is changed to the precision of the
+max value</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.adaptive_sub.html" title="arrow2::compute::arithmetics::decimal::adaptive_sub fn">adaptive_sub</a></div><div class="item-right docblock-short"><p>Adaptive subtract of two decimal primitive arrays with different precision
+and scale. If the precision and scale is different, then the smallest scale
+and precision is adjusted to the largest precision and scale. If during the
+addition one of the results is smaller than the min possible value, the
+result precision is changed to the precision of the min value</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.add.html" title="arrow2::compute::arithmetics::decimal::add fn">add</a></div><div class="item-right docblock-short"><p>Adds two decimal <a href="../../../array/struct.PrimitiveArray.html" title="PrimitiveArray"><code>PrimitiveArray</code></a> with the same precision and scale.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.checked_add.html" title="arrow2::compute::arithmetics::decimal::checked_add fn">checked_add</a></div><div class="item-right docblock-short"><p>Checked addition of two decimal primitive arrays with the same precision
+and scale. If the precision and scale is different, then an
+InvalidArgumentError is returned. If the result from the sum is larger than
+the possible number with the selected precision (overflowing), then the
+validity for that index is changed to None</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.checked_div.html" title="arrow2::compute::arithmetics::decimal::checked_div fn">checked_div</a></div><div class="item-right docblock-short"><p>Checked division of two decimal primitive arrays with the same precision
+and scale. If the precision and scale is different, then an
+InvalidArgumentError is returned. If the divisor is zero, then the
+validity for that index is changed to None</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.checked_mul.html" title="arrow2::compute::arithmetics::decimal::checked_mul fn">checked_mul</a></div><div class="item-right docblock-short"><p>Checked multiplication of two decimal primitive arrays with the same
+precision and scale. If the precision and scale is different, then an
+InvalidArgumentError is returned. If the result from the mul is larger than
+the possible number with the selected precision (overflowing), then the
+validity for that index is changed to None</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.checked_sub.html" title="arrow2::compute::arithmetics::decimal::checked_sub fn">checked_sub</a></div><div class="item-right docblock-short"><p>Checked subtract of two decimal primitive arrays with the same precision
+and scale. If the precision and scale is different, then an
+InvalidArgumentError is returned. If the result from the sub is larger than
+the possible number with the selected precision (overflowing), then the
+validity for that index is changed to None</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.div.html" title="arrow2::compute::arithmetics::decimal::div fn">div</a></div><div class="item-right docblock-short"><p>Divide two decimal primitive arrays with the same precision and scale. If
+the precision and scale is different, then an InvalidArgumentError is
+returned. This function panics if the dividend is divided by 0 or None.
+This function also panics if the division produces a number larger
+than the possible number for the array precision.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.div_scalar.html" title="arrow2::compute::arithmetics::decimal::div_scalar fn">div_scalar</a></div><div class="item-right docblock-short"><p>Multiply a decimal <a href="../../../array/struct.PrimitiveArray.html" title="PrimitiveArray"><code>PrimitiveArray</code></a> with a <a href="../../../scalar/struct.PrimitiveScalar.html" title="PrimitiveScalar"><code>PrimitiveScalar</code></a> with the same precision and scale. If
+the precision and scale is different, then an InvalidArgumentError is
+returned. This function panics if the multiplied numbers result in a number
+larger than the possible number for the selected precision.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.mul.html" title="arrow2::compute::arithmetics::decimal::mul fn">mul</a></div><div class="item-right docblock-short"><p>Multiply two decimal primitive arrays with the same precision and scale. If
+the precision and scale is different, then an InvalidArgumentError is
+returned. This function panics if the multiplied numbers result in a number
+larger than the possible number for the selected precision.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.mul_scalar.html" title="arrow2::compute::arithmetics::decimal::mul_scalar fn">mul_scalar</a></div><div class="item-right docblock-short"><p>Multiply a decimal <a href="../../../array/struct.PrimitiveArray.html" title="PrimitiveArray"><code>PrimitiveArray</code></a> with a <a href="../../../scalar/struct.PrimitiveScalar.html" title="PrimitiveScalar"><code>PrimitiveScalar</code></a> with the same precision and scale. If
+the precision and scale is different, then an InvalidArgumentError is
+returned. This function panics if the multiplied numbers result in a number
+larger than the possible number for the selected precision.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.saturating_add.html" title="arrow2::compute::arithmetics::decimal::saturating_add fn">saturating_add</a></div><div class="item-right docblock-short"><p>Saturated addition of two decimal primitive arrays with the same precision
+and scale. If the precision and scale is different, then an
+InvalidArgumentError is returned. If the result from the sum is larger than
+the possible number with the selected precision then the resulted number in
+the arrow array is the maximum number for the selected precision.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.saturating_div.html" title="arrow2::compute::arithmetics::decimal::saturating_div fn">saturating_div</a></div><div class="item-right docblock-short"><p>Saturated division of two decimal primitive arrays with the same
+precision and scale. If the precision and scale is different, then an
+InvalidArgumentError is returned. If the result from the division is
+larger than the possible number with the selected precision then the
+resulted number in the arrow array is the maximum number for the selected
+precision. The function panics if divided by zero.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.saturating_mul.html" title="arrow2::compute::arithmetics::decimal::saturating_mul fn">saturating_mul</a></div><div class="item-right docblock-short"><p>Saturated multiplication of two decimal primitive arrays with the same
+precision and scale. If the precision and scale is different, then an
+InvalidArgumentError is returned. If the result from the multiplication is
+larger than the possible number with the selected precision then the
+resulted number in the arrow array is the maximum number for the selected
+precision.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.saturating_sub.html" title="arrow2::compute::arithmetics::decimal::saturating_sub fn">saturating_sub</a></div><div class="item-right docblock-short"><p>Saturated subtraction of two decimal primitive arrays with the same
+precision and scale. If the precision and scale is different, then an
+InvalidArgumentError is returned. If the result from the sum is smaller
+than the possible number with the selected precision then the resulted
+number in the arrow array is the minimum number for the selected precision.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.sub.html" title="arrow2::compute::arithmetics::decimal::sub fn">sub</a></div><div class="item-right docblock-short"><p>Subtract two decimal primitive arrays with the same precision and scale. If
+the precision and scale is different, then an InvalidArgumentError is
+returned. This function panics if the subtracted numbers result in a number
+smaller than the possible number for the selected precision.</p>
+</div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (4cbaac699 2022-05-25)" ></div>
+</body></html>
