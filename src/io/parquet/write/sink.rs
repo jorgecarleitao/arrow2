@@ -30,7 +30,7 @@ use super::{Encoding, SchemaDescriptor, WriteOptions};
 /// let schema = Schema::from(vec![
 ///     Field::new("values", DataType::Int32, true),
 /// ]);
-/// let encoding = vec![Encoding::Plain];
+/// let encoding = vec![vec![Encoding::Plain]];
 /// let options = WriteOptions {
 ///     write_statistics: true,
 ///     compression: CompressionOptions::Uncompressed,

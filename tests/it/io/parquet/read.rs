@@ -31,7 +31,6 @@ fn test_pyarrow_integration(
 
     let mut file = File::open(path).unwrap();
     let (array, statistics) = read_column(&mut file, column)?;
-    println!("{:?}", array);
 
     let expected = match (type_, required) {
         ("basic", true) => pyarrow_required(column),

@@ -509,11 +509,22 @@ fn decimal_26_required_v2() -> Result<()> {
 }
 
 #[test]
-fn struct_() -> Result<()> {
+fn struct_v1() -> Result<()> {
     round_trip(
         "struct",
         "struct",
         Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain, Encoding::Plain],
+    )
+}
+
+#[test]
+fn struct_v2() -> Result<()> {
+    round_trip(
+        "struct",
+        "struct",
+        Version::V2,
         CompressionOptions::Uncompressed,
         vec![Encoding::Plain, Encoding::Plain],
     )

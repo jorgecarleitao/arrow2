@@ -51,7 +51,7 @@ fn main() -> Result<()> {
         vec![Ok(chunk)].into_iter(),
         &schema,
         options,
-        vec![Encoding::Plain, Encoding::Plain],
+        vec![vec![Encoding::Plain], vec![Encoding::Plain]],
     )?;
 
     // anything implementing `std::io::Write` works

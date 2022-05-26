@@ -19,11 +19,8 @@ pub fn array_to_page(
     let is_optional = is_nullable(&type_.field_info);
 
     let mut buffer = vec![];
-    nested::write_rep_levels(&mut buffer, &nested, options.version)?;
-    let repetition_levels_byte_length = buffer.len();
-
-    nested::write_def_levels(&mut buffer, &nested, options.version)?;
-    let definition_levels_byte_length = buffer.len() - repetition_levels_byte_length;
+    let (repetition_levels_byte_length, definition_levels_byte_length) =
+        nested::write_rep_and_def(options.version, &nested, &mut buffer)?;
 
     encode_plain(array, is_optional, &mut buffer)?;
 

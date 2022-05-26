@@ -148,6 +148,17 @@ mod tests {
     #[test]
     fn struct_required() {
         let nested = vec![
+            Nested::Struct(None, false, 10),
+            Nested::Primitive(None, true, 10),
+        ];
+        let expected = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn struct_optional() {
+        let nested = vec![
             Nested::Struct(None, true, 10),
             Nested::Primitive(None, true, 10),
         ];
