@@ -25,7 +25,7 @@ fn write(array: &dyn Array, encoding: Encoding) -> Result<()> {
         vec![Ok(columns)].into_iter(),
         &schema,
         options,
-        vec![encoding],
+        vec![vec![encoding]],
     )?;
 
     let writer = vec![];
