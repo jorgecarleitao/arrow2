@@ -288,21 +288,19 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
             DataType::Struct(children)
         }
         other => {
-            fn parse_tz(raw: &str) -> Option<String> {
-                // Treat empty string as None, preserve anything other
-                // timezone name literally [#903]
-                if raw.is_empty() {
-                    None
-                } else {
-                    Some(raw.to_string())
-                }
-            }
             match other.split(':').collect::<Vec<_>>()[..] {
-                // Timestamps
-                ["tss", tz] => DataType::Timestamp(TimeUnit::Second, parse_tz(tz)),
-                ["tsm", tz] => DataType::Timestamp(TimeUnit::Millisecond, parse_tz(tz)),
-                ["tsu", tz] => DataType::Timestamp(TimeUnit::Microsecond, parse_tz(tz)),
-                ["tsn", tz] => DataType::Timestamp(TimeUnit::Nanosecond, parse_tz(tz)),
+                // Timestamps with no timezone
+                ["tss", ""] => DataType::Timestamp(TimeUnit::Second, None),
+                ["tsm", ""] => DataType::Timestamp(TimeUnit::Millisecond, None),
+                ["tsu", ""] => DataType::Timestamp(TimeUnit::Microsecond, None),
+                ["tsn", ""] => DataType::Timestamp(TimeUnit::Nanosecond, None),
+
+                // Timestamps with timezone
+                ["tss", tz] => DataType::Timestamp(TimeUnit::Second, Some(tz.to_string())),
+                ["tsm", tz] => DataType::Timestamp(TimeUnit::Millisecond, Some(tz.to_string())),
+                ["tsu", tz] => DataType::Timestamp(TimeUnit::Microsecond, Some(tz.to_string())),
+                ["tsn", tz] => DataType::Timestamp(TimeUnit::Nanosecond, Some(tz.to_string())),
+
                 ["w", size_raw] => {
                     // Example: "w:42" fixed-width binary [42 bytes]
                     let size = size_raw.parse::<usize>().map_err(|_| {
