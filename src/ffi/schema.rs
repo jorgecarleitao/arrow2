@@ -288,74 +288,122 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
             DataType::Struct(children)
         }
         other => {
-            let parts = other.split(':').collect::<Vec<_>>();
-            if parts.len() == 2 && parts[0] == "tss" {
-                DataType::Timestamp(TimeUnit::Second, Some(parts[1].to_string()))
-            } else if parts.len() == 2 && parts[0] == "tsm" {
-                DataType::Timestamp(TimeUnit::Millisecond, Some(parts[1].to_string()))
-            } else if parts.len() == 2 && parts[0] == "tsu" {
-                DataType::Timestamp(TimeUnit::Microsecond, Some(parts[1].to_string()))
-            } else if parts.len() == 2 && parts[0] == "tsn" {
-                DataType::Timestamp(TimeUnit::Nanosecond, Some(parts[1].to_string()))
-            } else if parts.len() == 2 && parts[0] == "w" {
-                let size = parts[1].parse::<usize>().map_err(|_| {
-                    ArrowError::OutOfSpec("size is not a valid integer".to_string())
-                })?;
-                DataType::FixedSizeBinary(size)
-            } else if parts.len() == 2 && parts[0] == "+w" {
-                let size = parts[1].parse::<usize>().map_err(|_| {
-                    ArrowError::OutOfSpec("size is not a valid integer".to_string())
-                })?;
-                let child = to_field(schema.child(0))?;
-                DataType::FixedSizeList(Box::new(child), size)
-            } else if parts.len() == 2 && parts[0] == "d" {
-                let parts = parts[1].split(',').collect::<Vec<_>>();
-                if parts.len() < 2 || parts.len() > 3 {
-                    return Err(ArrowError::OutOfSpec(
-                        "Decimal must contain 2 or 3 comma-separated values".to_string(),
-                    ));
-                };
-                if parts.len() == 3 {
-                    let bit_width = parts[0].parse::<usize>().map_err(|_| {
-                        ArrowError::OutOfSpec(
-                            "Decimal bit width is not a valid integer".to_string(),
-                        )
-                    })?;
-                    if bit_width != 128 {
-                        return Err(ArrowError::OutOfSpec(
-                            "Decimal256 is not supported".to_string(),
-                        ));
-                    }
+            fn parse_tz(raw: &str) -> Option<String> {
+                // Treat empty string as None, preserve anything other
+                // timezone name literally [#903]
+                if raw.is_empty() {
+                    None
+                } else {
+                    Some(raw.to_string())
                 }
-                let precision = parts[0].parse::<usize>().map_err(|_| {
-                    ArrowError::OutOfSpec("Decimal precision is not a valid integer".to_string())
-                })?;
-                let scale = parts[1].parse::<usize>().map_err(|_| {
-                    ArrowError::OutOfSpec("Decimal scale is not a valid integer".to_string())
-                })?;
-                DataType::Decimal(precision, scale)
-            } else if !parts.is_empty() && ((parts[0] == "+us") || (parts[0] == "+ud")) {
-                // union
-                let mode = UnionMode::sparse(parts[0] == "+us");
-                let type_ids = parts[1]
-                    .split(',')
-                    .map(|x| {
-                        x.parse::<i32>().map_err(|_| {
+            }
+            match other.split(':').collect::<Vec<_>>()[..] {
+                // Timestamps
+                ["tss", tz] => DataType::Timestamp(TimeUnit::Second, parse_tz(tz)),
+                ["tsm", tz] => DataType::Timestamp(TimeUnit::Millisecond, parse_tz(tz)),
+                ["tsu", tz] => DataType::Timestamp(TimeUnit::Microsecond, parse_tz(tz)),
+                ["tsn", tz] => DataType::Timestamp(TimeUnit::Nanosecond, parse_tz(tz)),
+                ["w", size_raw] => {
+                    // Example: "w:42" fixed-width binary [42 bytes]
+                    let size = size_raw.parse::<usize>().map_err(|_| {
+                        ArrowError::OutOfSpec("size is not a valid integer".to_string())
+                    })?;
+                    DataType::FixedSizeBinary(size)
+                }
+                ["+w", size_raw] => {
+                    // Example: "+w:123" fixed-sized list [123 items]
+                    let size = size_raw.parse::<usize>().map_err(|_| {
+                        ArrowError::OutOfSpec("size is not a valid integer".to_string())
+                    })?;
+                    let child = to_field(schema.child(0))?;
+                    DataType::FixedSizeList(Box::new(child), size)
+                }
+                ["d", raw] => {
+                    // Decimal
+                    let (precision, scale) = match raw.split(',').collect::<Vec<_>>()[..] {
+                        [precision_raw, scale_raw] => {
+                            // Example: "d:19,10" decimal128 [precision 19, scale 10]
+                            (precision_raw, scale_raw)
+                        }
+                        [precision_raw, scale_raw, width_raw] => {
+                            // Example: "d:19,10,NNN" decimal bitwidth = NNN [precision 19, scale 10]
+                            // Only bitwdth of 128 currently supported
+                            let bit_width = width_raw.parse::<usize>().map_err(|_| {
+                                ArrowError::OutOfSpec(
+                                    "Decimal bit width is not a valid integer".to_string(),
+                                )
+                            })?;
+                            if bit_width != 128 {
+                                return Err(ArrowError::OutOfSpec(
+                                    "Decimal256 is not supported".to_string(),
+                                ));
+                            }
+                            (precision_raw, scale_raw)
+                        }
+                        _ => {
+                            return Err(ArrowError::OutOfSpec(
+                                "Decimal must contain 2 or 3 comma-separated values".to_string(),
+                            ));
+                        }
+                    };
+
+                    DataType::Decimal(
+                        precision.parse::<usize>().map_err(|_| {
                             ArrowError::OutOfSpec(
-                                "Union type id is not a valid integer".to_string(),
+                                "Decimal precision is not a valid integer".to_string(),
                             )
+                        })?,
+                        scale.parse::<usize>().map_err(|_| {
+                            ArrowError::OutOfSpec(
+                                "Decimal scale is not a valid integer".to_string(),
+                            )
+                        })?,
+                    )
+                }
+                ["+us", union_parts] => {
+                    // union, sparse
+                    // Example "+us:I,J,..." sparse union with type ids I,J...
+                    let mode = UnionMode::sparse(true);
+                    let type_ids = union_parts
+                        .split(',')
+                        .map(|x| {
+                            x.parse::<i32>().map_err(|_| {
+                                ArrowError::OutOfSpec(
+                                    "Union type id is not a valid integer".to_string(),
+                                )
+                            })
                         })
-                    })
-                    .collect::<Result<Vec<_>>>()?;
-                let fields = (0..schema.n_children as usize)
-                    .map(|x| to_field(schema.child(x)))
-                    .collect::<Result<Vec<_>>>()?;
-                DataType::Union(fields, Some(type_ids), mode)
-            } else {
-                return Err(ArrowError::OutOfSpec(format!(
-                    "The datatype \"{}\" is still not supported in Rust implementation",
-                    other
-                )));
+                        .collect::<Result<Vec<_>>>()?;
+                    let fields = (0..schema.n_children as usize)
+                        .map(|x| to_field(schema.child(x)))
+                        .collect::<Result<Vec<_>>>()?;
+                    DataType::Union(fields, Some(type_ids), mode)
+                }
+                ["+ud", union_parts] => {
+                    // union, dense
+                    // Example: "+ud:I,J,..." dense union with type ids I,J...
+                    let mode = UnionMode::sparse(false);
+                    let type_ids = union_parts
+                        .split(',')
+                        .map(|x| {
+                            x.parse::<i32>().map_err(|_| {
+                                ArrowError::OutOfSpec(
+                                    "Union type id is not a valid integer".to_string(),
+                                )
+                            })
+                        })
+                        .collect::<Result<Vec<_>>>()?;
+                    let fields = (0..schema.n_children as usize)
+                        .map(|x| to_field(schema.child(x)))
+                        .collect::<Result<Vec<_>>>()?;
+                    DataType::Union(fields, Some(type_ids), mode)
+                }
+                _ => {
+                    return Err(ArrowError::OutOfSpec(format!(
+                        "The datatype \"{}\" is still not supported in Rust implementation",
+                        other
+                    )));
+                }
             }
         }
     })
