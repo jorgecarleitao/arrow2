@@ -540,3 +540,63 @@ unsafe fn metadata_from_bytes(data: *const ::std::os::raw::c_char) -> (Metadata,
     let extension = extension_name.map(|name| (name, extension_metadata));
     (result, extension)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::datatypes::{DataType, TimeUnit, Field};
+
+    macro_rules! test_dt_conv {
+        ($name:ident, $field:expr, $expected:expr,) => {
+            #[test]
+            fn $name() {
+                use crate::ffi::ArrowSchema;
+
+                let field = $field;
+                let schema = ArrowSchema::new(&field);
+                let dt = unsafe { super::to_data_type(&schema).unwrap() };
+                let result = super::to_format(&dt);
+                assert_eq!(result, $expected);
+            }
+        }
+    }
+
+    test_dt_conv!(
+        test_bool,
+        Field::new("example", DataType::Boolean, false),
+        "b",
+    );
+
+    // Timezone handling
+    test_dt_conv!(
+        test_timestamp_none,
+        Field::new("example", DataType::Timestamp(TimeUnit::Second, None), false),
+        "tss:",
+    );
+
+    test_dt_conv!(
+        test_timestamp_something,
+        Field::new("example", DataType::Timestamp(TimeUnit::Second, Some("Nonsense timezone!!".to_string())), false),
+        "tss:Nonsense timezone!!",
+    );
+
+    test_dt_conv!(
+        test_timestamp_empty,
+        Field::new("example", DataType::Timestamp(TimeUnit::Second, Some("   ".to_string())), false),
+        "tss:   ",
+    );
+
+    // Other time stamp types
+    test_dt_conv!(
+        test_timestamp_nanoseconds,
+        Field::new("example", DataType::Timestamp(TimeUnit::Nanosecond, None), false),
+        "tsn:",
+    );
+
+    // Other time stamp types
+    test_dt_conv!(
+        test_list,
+        Field::new("example", DataType::List(Box::new(Field::new("example", DataType::Boolean, false))), false),
+        "+l",
+    );
+
+}
