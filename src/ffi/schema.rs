@@ -358,29 +358,12 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                         })?,
                     )
                 }
-                ["+us", union_parts] => {
+                [union_type @ "+us", union_parts]
+                | [union_type @ "+ud", union_parts] => {
                     // union, sparse
                     // Example "+us:I,J,..." sparse union with type ids I,J...
-                    let mode = UnionMode::sparse(true);
-                    let type_ids = union_parts
-                        .split(',')
-                        .map(|x| {
-                            x.parse::<i32>().map_err(|_| {
-                                ArrowError::OutOfSpec(
-                                    "Union type id is not a valid integer".to_string(),
-                                )
-                            })
-                        })
-                        .collect::<Result<Vec<_>>>()?;
-                    let fields = (0..schema.n_children as usize)
-                        .map(|x| to_field(schema.child(x)))
-                        .collect::<Result<Vec<_>>>()?;
-                    DataType::Union(fields, Some(type_ids), mode)
-                }
-                ["+ud", union_parts] => {
-                    // union, dense
                     // Example: "+ud:I,J,..." dense union with type ids I,J...
-                    let mode = UnionMode::sparse(false);
+                    let mode = UnionMode::sparse(union_type == "+us");
                     let type_ids = union_parts
                         .split(',')
                         .map(|x| {
