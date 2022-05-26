@@ -358,8 +358,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                         })?,
                     )
                 }
-                [union_type @ "+us", union_parts]
-                | [union_type @ "+ud", union_parts] => {
+                [union_type @ "+us", union_parts] | [union_type @ "+ud", union_parts] => {
                     // union, sparse
                     // Example "+us:I,J,..." sparse union with type ids I,J...
                     // Example: "+ud:I,J,..." dense union with type ids I,J...
@@ -543,7 +542,7 @@ unsafe fn metadata_from_bytes(data: *const ::std::os::raw::c_char) -> (Metadata,
 
 #[cfg(test)]
 mod tests {
-    use crate::datatypes::{DataType, TimeUnit, Field};
+    use crate::datatypes::{DataType, Field, TimeUnit};
 
     macro_rules! test_dt_conv {
         ($name:ident, $field:expr, $expected:expr,) => {
@@ -557,7 +556,7 @@ mod tests {
                 let result = super::to_format(&dt);
                 assert_eq!(result, $expected);
             }
-        }
+        };
     }
 
     test_dt_conv!(
@@ -569,34 +568,53 @@ mod tests {
     // Timezone handling
     test_dt_conv!(
         test_timestamp_none,
-        Field::new("example", DataType::Timestamp(TimeUnit::Second, None), false),
+        Field::new(
+            "example",
+            DataType::Timestamp(TimeUnit::Second, None),
+            false
+        ),
         "tss:",
     );
 
     test_dt_conv!(
         test_timestamp_something,
-        Field::new("example", DataType::Timestamp(TimeUnit::Second, Some("Nonsense timezone!!".to_string())), false),
+        Field::new(
+            "example",
+            DataType::Timestamp(TimeUnit::Second, Some("Nonsense timezone!!".to_string())),
+            false
+        ),
         "tss:Nonsense timezone!!",
     );
 
     test_dt_conv!(
         test_timestamp_empty,
-        Field::new("example", DataType::Timestamp(TimeUnit::Second, Some("   ".to_string())), false),
+        Field::new(
+            "example",
+            DataType::Timestamp(TimeUnit::Second, Some("   ".to_string())),
+            false
+        ),
         "tss:   ",
     );
 
     // Other time stamp types
     test_dt_conv!(
         test_timestamp_nanoseconds,
-        Field::new("example", DataType::Timestamp(TimeUnit::Nanosecond, None), false),
+        Field::new(
+            "example",
+            DataType::Timestamp(TimeUnit::Nanosecond, None),
+            false
+        ),
         "tsn:",
     );
 
     // Other time stamp types
     test_dt_conv!(
         test_list,
-        Field::new("example", DataType::List(Box::new(Field::new("example", DataType::Boolean, false))), false),
+        Field::new(
+            "example",
+            DataType::List(Box::new(Field::new("example", DataType::Boolean, false))),
+            false
+        ),
         "+l",
     );
-
 }
