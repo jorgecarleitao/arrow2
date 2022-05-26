@@ -66,15 +66,26 @@ pub fn get_write_value<'a, T: NativeType, F: Write>(
                     }
                     #[cfg(feature = "chrono-tz")]
                     Err(_) => {
-                        let timezone = temporal_conversions::parse_offset_tz(tz).unwrap();
-                        dyn_primitive!(array, i64, |time| {
-                            temporal_conversions::timestamp_to_datetime(time, *time_unit, &timezone)
-                        })
+                        let timezone = temporal_conversions::parse_offset_tz(tz);
+                        match timezone {
+                            Ok(timezone) => dyn_primitive!(array, i64, |time| {
+                                temporal_conversions::timestamp_to_datetime(
+                                    time, *time_unit, &timezone,
+                                )
+                            }),
+                            Err(_) => {
+                                let tz = tz.clone();
+                                Box::new(move |f, index| {
+                                    write!(f, "{} ({})", array.value(index), tz)
+                                })
+                            }
+                        }
                     }
                     #[cfg(not(feature = "chrono-tz"))]
-                    _ => panic!(
-                        "Invalid Offset format (must be [-]00:00) or chrono-tz feature not active"
-                    ),
+                    _ => {
+                        let tz = tz.clone();
+                        Box::new(move |f, index| write!(f, "{} ({})", array.value(index), tz))
+                    }
                 }
             } else {
                 dyn_primitive!(array, i64, |time| {

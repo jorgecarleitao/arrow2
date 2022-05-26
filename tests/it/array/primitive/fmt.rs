@@ -132,6 +132,18 @@ fn debug_timestamp_tz_ns() {
     );
 }
 
+#[test]
+fn debug_timestamp_tz_not_parsable() {
+    let array = Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Timestamp(
+        TimeUnit::Nanosecond,
+        Some("aa".to_string()),
+    ));
+    assert_eq!(
+        format!("{:?}", array),
+        "Timestamp(Nanosecond, Some(\"aa\"))[1 (aa), None, 2 (aa)]"
+    );
+}
+
 #[cfg(feature = "chrono-tz")]
 #[test]
 fn debug_timestamp_tz1_ns() {
