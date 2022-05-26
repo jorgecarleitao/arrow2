@@ -470,6 +470,15 @@ type IsValid<'a> = Box<dyn Fn(usize) -> bool + 'a>;
 pub fn build_comparator<'a>(
     pairs: &'a [(&'a [&'a dyn Array], &SortOptions)],
 ) -> Result<Comparator<'a>> {
+    build_comparator_impl(pairs, &build_compare)
+}
+
+/// returns a comparison function between any two arrays of each pair of arrays, according to `SortOptions`.
+/// Implementing custom `build_compare_fn` for unsupportd data types.
+pub fn build_comparator_impl<'a>(
+    pairs: &'a [(&'a [&'a dyn Array], &SortOptions)],
+    build_compare_fn: &dyn Fn(&dyn Array, &dyn Array) -> Result<DynComparator>,
+) -> Result<Comparator<'a>> {
     // prepare the comparison function of _values_ between all pairs of arrays
     let indices_pairs = (0..pairs[0].0.len())
         .combinations(2)
@@ -483,7 +492,7 @@ pub fn build_comparator<'a>(
                     Ok((
                         Box::new(move |row| arrays[lhs_index].is_valid(row)) as IsValid<'a>,
                         Box::new(move |row| arrays[rhs_index].is_valid(row)) as IsValid<'a>,
-                        build_compare(arrays[lhs_index], arrays[rhs_index])?,
+                        build_compare_fn(arrays[lhs_index], arrays[rhs_index])?,
                     ))
                 })
                 .collect::<Result<Vec<_>>>()?;

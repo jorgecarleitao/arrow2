@@ -18,7 +18,7 @@ mod primitive;
 mod utf8;
 
 pub(crate) use lex_sort::build_compare;
-pub use lex_sort::{lexsort, lexsort_to_indices, SortColumn};
+pub use lex_sort::{lexsort, lexsort_to_indices, lexsort_to_indices_impl, SortColumn};
 
 macro_rules! dyn_sort {
     ($ty:ty, $array:expr, $cmp:expr, $options:expr, $limit:expr) => {{
