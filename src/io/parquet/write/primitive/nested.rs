@@ -2,39 +2,34 @@ use parquet2::schema::types::PrimitiveType;
 use parquet2::statistics::serialize_statistics;
 use parquet2::{encoding::Encoding, page::DataPage, types::NativeType};
 
-use super::super::levels;
+use super::super::nested;
 use super::super::utils;
 use super::super::WriteOptions;
 use super::basic::{build_statistics, encode_plain};
 use crate::io::parquet::read::schema::is_nullable;
+use crate::io::parquet::write::Nested;
 use crate::{
-    array::{Array, Offset, PrimitiveArray},
+    array::{Array, PrimitiveArray},
     error::Result,
     types::NativeType as ArrowNativeType,
 };
 
-pub fn array_to_page<T, R, O>(
+pub fn array_to_page<T, R>(
     array: &PrimitiveArray<T>,
     options: WriteOptions,
     type_: PrimitiveType,
-    nested: levels::NestedInfo<O>,
+    nested: Vec<Nested>,
 ) -> Result<DataPage>
 where
     T: ArrowNativeType,
     R: NativeType,
     T: num_traits::AsPrimitive<R>,
-    O: Offset,
 {
     let is_optional = is_nullable(&type_.field_info);
 
-    let validity = array.validity();
-
     let mut buffer = vec![];
-    levels::write_rep_levels(&mut buffer, &nested, options.version)?;
-    let repetition_levels_byte_length = buffer.len();
-
-    levels::write_def_levels(&mut buffer, &nested, validity, is_optional, options.version)?;
-    let definition_levels_byte_length = buffer.len() - repetition_levels_byte_length;
+    let (repetition_levels_byte_length, definition_levels_byte_length) =
+        nested::write_rep_and_def(options.version, &nested, &mut buffer)?;
 
     encode_plain(array, is_optional, &mut buffer);
 
@@ -49,8 +44,8 @@ where
 
     utils::build_plain_page(
         buffer,
-        levels::num_values(nested.offsets()),
-        nested.offsets().len().saturating_sub(1),
+        nested::num_values(&nested),
+        nested[0].len(),
         array.null_count(),
         repetition_levels_byte_length,
         definition_levels_byte_length,

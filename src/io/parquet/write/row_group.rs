@@ -1,3 +1,4 @@
+use parquet2::error::Error as ParquetError;
 use parquet2::schema::types::ParquetType;
 use parquet2::write::Compressor;
 use parquet2::FallibleStreamingIterator;
@@ -10,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    array_to_pages, to_parquet_schema, DynIter, DynStreamingIterator, Encoding, RowGroupIter,
+    array_to_columns, to_parquet_schema, DynIter, DynStreamingIterator, Encoding, RowGroupIter,
     SchemaDescriptor, WriteOptions,
 };
 
@@ -18,7 +19,7 @@ use super::{
 /// write to parquet
 pub fn row_group_iter<A: AsRef<dyn Array> + 'static + Send + Sync>(
     chunk: Chunk<A>,
-    encodings: Vec<Encoding>,
+    encodings: Vec<Vec<Encoding>>,
     fields: Vec<ParquetType>,
     options: WriteOptions,
 ) -> RowGroupIter<'static, ArrowError> {
@@ -28,14 +29,24 @@ pub fn row_group_iter<A: AsRef<dyn Array> + 'static + Send + Sync>(
             .into_iter()
             .zip(fields.into_iter())
             .zip(encodings.into_iter())
-            .map(move |((array, type_), encoding)| {
-                array_to_pages(array.as_ref(), type_, options, encoding).map(move |pages| {
-                    let encoded_pages = DynIter::new(pages.map(|x| Ok(x?)));
-                    let compressed_pages =
-                        Compressor::new(encoded_pages, options.compression, vec![])
+            .flat_map(move |((array, type_), encoding)| {
+                let encoded_columns = array_to_columns(array, type_, options, encoding).unwrap();
+                encoded_columns
+                    .into_iter()
+                    .map(|encoded_pages| {
+                        let pages = encoded_pages;
+
+                        let pages = DynIter::new(
+                            pages
+                                .into_iter()
+                                .map(|x| x.map_err(|e| ParquetError::General(e.to_string()))),
+                        );
+
+                        let compressed_pages = Compressor::new(pages, options.compression, vec![])
                             .map_err(ArrowError::from);
-                    DynStreamingIterator::new(compressed_pages)
-                })
+                        Ok(DynStreamingIterator::new(compressed_pages))
+                    })
+                    .collect::<Vec<_>>()
             }),
     )
 }
@@ -47,7 +58,7 @@ pub struct RowGroupIterator<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Re
     iter: I,
     options: WriteOptions,
     parquet_schema: SchemaDescriptor,
-    encodings: Vec<Encoding>,
+    encodings: Vec<Vec<Encoding>>,
 }
 
 impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Chunk<A>>>> RowGroupIterator<A, I> {
@@ -56,10 +67,8 @@ impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Chunk<A>>>> RowGro
         iter: I,
         schema: &Schema,
         options: WriteOptions,
-        encodings: Vec<Encoding>,
+        encodings: Vec<Vec<Encoding>>,
     ) -> Result<Self> {
-        assert_eq!(schema.fields.len(), encodings.len());
-
         let parquet_schema = to_parquet_schema(schema)?;
 
         Ok(Self {

@@ -20,8 +20,12 @@ fn write_batch(path: &str, schema: Schema, columns: Chunk<Arc<dyn Array>>) -> Re
 
     let iter = vec![Ok(columns)];
 
-    let row_groups =
-        RowGroupIterator::try_new(iter.into_iter(), &schema, options, vec![Encoding::Plain])?;
+    let row_groups = RowGroupIterator::try_new(
+        iter.into_iter(),
+        &schema,
+        options,
+        vec![vec![Encoding::Plain]],
+    )?;
 
     // Create a new empty file
     let file = File::create(path)?;

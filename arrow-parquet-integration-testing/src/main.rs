@@ -175,15 +175,15 @@ fn main() -> Result<()> {
         .fields
         .iter()
         .map(|x| match x.data_type() {
-            DataType::Dictionary(..) => Encoding::RleDictionary,
+            DataType::Dictionary(..) => vec![Encoding::RleDictionary],
             DataType::Utf8 | DataType::LargeUtf8 => {
-                if args.encoding_utf8 == EncodingScheme::Delta {
+                vec![if args.encoding_utf8 == EncodingScheme::Delta {
                     Encoding::DeltaLengthByteArray
                 } else {
                     Encoding::Plain
-                }
+                }]
             }
-            _ => Encoding::Plain,
+            _ => vec![Encoding::Plain],
         })
         .collect();
 
