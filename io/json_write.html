@@ -141,11 +141,11 @@ The following example writes an array to JSON:</p>
 
 use arrow2::{
     array::{Array, Int32Array},
-    error::ArrowError,
+    error::Error,
     io::json::write,
 };
 
-fn write_array(path: &amp;str, array: Box&lt;dyn Array&gt;) -&gt; Result&lt;(), ArrowError&gt; {
+fn write_array(path: &amp;str, array: Box&lt;dyn Array&gt;) -&gt; Result&lt;(), Error&gt; {
     let mut writer = File::create(path)?;
 
     let arrays = vec![Ok(array)].into_iter();
@@ -159,7 +159,7 @@ fn write_array(path: &amp;str, array: Box&lt;dyn Array&gt;) -&gt; Result&lt;(), 
     Ok(())
 }
 
-fn main() -&gt; Result&lt;(), ArrowError&gt; {
+fn main() -&gt; Result&lt;(), Error&gt; {
     use std::env;
     let args: Vec&lt;String&gt; = env::args().collect();
 
