@@ -1,7 +1,7 @@
 use std::io::Cursor;
 use std::sync::Arc;
 
-use arrow2::error::ArrowError;
+use arrow2::error::Error;
 use arrow2::{array::*, datatypes::*, error::Result, io::parquet::read::*, io::parquet::write::*};
 use parquet2::indexes::{compute_rows, select_pages};
 use parquet2::read::IndexedPageReader;
@@ -85,7 +85,7 @@ fn read_with_indexes(
     let to_compressed = |pages: Vec<EncodedPage>| {
         let encoded_pages = DynIter::new(pages.into_iter().map(Ok));
         let compressed_pages =
-            Compressor::new(encoded_pages, options.compression, vec![]).map_err(ArrowError::from);
+            Compressor::new(encoded_pages, options.compression, vec![]).map_err(Error::from);
         Result::Ok(DynStreamingIterator::new(compressed_pages))
     };
 

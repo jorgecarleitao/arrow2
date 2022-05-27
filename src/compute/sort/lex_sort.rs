@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use crate::compute::take;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::{
     array::{ord, Array, PrimitiveArray},
     types::Index,
@@ -25,7 +25,7 @@ pub struct SortColumn<'a> {
 /// # Implementaqtion
 /// The sort is stable and lexicographical on values.
 ///
-/// Returns an [`ArrowError`] if any of the array type is either unsupported by
+/// Returns an [`Error`] if any of the array type is either unsupported by
 /// `lexsort_to_indices` or `take`.
 ///
 /// Example:
@@ -129,7 +129,7 @@ pub fn lexsort_to_indices<I: Index>(
     limit: Option<usize>,
 ) -> Result<PrimitiveArray<I>> {
     if columns.is_empty() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "Sort requires at least one column".to_string(),
         ));
     }
@@ -141,7 +141,7 @@ pub fn lexsort_to_indices<I: Index>(
 
     let row_count = columns[0].values.len();
     if columns.iter().any(|item| item.values.len() != row_count) {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "lexical sort columns have different row counts".to_string(),
         ));
     };

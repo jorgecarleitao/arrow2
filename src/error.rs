@@ -1,16 +1,14 @@
-//! Defines [`ArrowError`], representing all errors returned by this crate.
+//! Defines [`Error`], representing all errors returned by this crate.
 use std::fmt::{Debug, Display, Formatter};
-
-use std::error::Error;
 
 /// Enum with all errors in this crate.
 #[derive(Debug)]
 #[non_exhaustive]
-pub enum ArrowError {
+pub enum Error {
     /// Returned when functionality is not yet available.
     NotYetImplemented(String),
     /// Wrapper for an error triggered by a dependency
-    External(String, Box<dyn Error + Send + Sync>),
+    External(String, Box<dyn std::error::Error + Send + Sync>),
     /// Wrapper for IO errors
     Io(std::io::Error),
     /// When an invalid argument is passed to a function.
@@ -24,8 +22,8 @@ pub enum ArrowError {
     OutOfSpec(String),
 }
 
-impl ArrowError {
-    /// Wraps an external error in an `ArrowError`.
+impl Error {
+    /// Wraps an external error in an `Error`.
     pub fn from_external_error(error: impl std::error::Error + Send + Sync + 'static) -> Self {
         Self::External("".to_string(), Box::new(error))
     }
@@ -40,57 +38,57 @@ impl ArrowError {
     }
 }
 
-impl From<::std::io::Error> for ArrowError {
+impl From<::std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
-        ArrowError::Io(error)
+        Error::Io(error)
     }
 }
 
-impl From<std::str::Utf8Error> for ArrowError {
+impl From<std::str::Utf8Error> for Error {
     fn from(error: std::str::Utf8Error) -> Self {
-        ArrowError::External("".to_string(), Box::new(error))
+        Error::External("".to_string(), Box::new(error))
     }
 }
 
-impl From<std::string::FromUtf8Error> for ArrowError {
+impl From<std::string::FromUtf8Error> for Error {
     fn from(error: std::string::FromUtf8Error) -> Self {
-        ArrowError::External("".to_string(), Box::new(error))
+        Error::External("".to_string(), Box::new(error))
     }
 }
 
-impl From<simdutf8::basic::Utf8Error> for ArrowError {
+impl From<simdutf8::basic::Utf8Error> for Error {
     fn from(error: simdutf8::basic::Utf8Error) -> Self {
-        ArrowError::External("".to_string(), Box::new(error))
+        Error::External("".to_string(), Box::new(error))
     }
 }
 
-impl Display for ArrowError {
+impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ArrowError::NotYetImplemented(source) => {
+            Error::NotYetImplemented(source) => {
                 write!(f, "Not yet implemented: {}", &source)
             }
-            ArrowError::External(message, source) => {
+            Error::External(message, source) => {
                 write!(f, "External error{}: {}", message, &source)
             }
-            ArrowError::Io(desc) => write!(f, "Io error: {}", desc),
-            ArrowError::InvalidArgumentError(desc) => {
+            Error::Io(desc) => write!(f, "Io error: {}", desc),
+            Error::InvalidArgumentError(desc) => {
                 write!(f, "Invalid argument error: {}", desc)
             }
-            ArrowError::ExternalFormat(desc) => {
+            Error::ExternalFormat(desc) => {
                 write!(f, "External format error: {}", desc)
             }
-            ArrowError::Overflow => {
+            Error::Overflow => {
                 write!(f, "Operation overflew the backing container.")
             }
-            ArrowError::OutOfSpec(message) => {
+            Error::OutOfSpec(message) => {
                 write!(f, "{}", message)
             }
         }
     }
 }
 
-impl Error for ArrowError {}
+impl std::error::Error for Error {}
 
-/// Typedef for a [`std::result::Result`] of an [`ArrowError`].
-pub type Result<T> = std::result::Result<T, ArrowError>;
+/// Typedef for a [`std::result::Result`] of an [`Error`].
+pub type Result<T> = std::result::Result<T, Error>;

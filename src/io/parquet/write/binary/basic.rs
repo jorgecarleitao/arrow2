@@ -10,7 +10,7 @@ use super::super::WriteOptions;
 use crate::{
     array::{Array, BinaryArray, Offset},
     bitmap::Bitmap,
-    error::{ArrowError, Result},
+    error::{Error, Result},
     io::parquet::read::schema::is_nullable,
 };
 
@@ -69,7 +69,7 @@ pub fn array_to_page<O: Offset>(
             &mut buffer,
         ),
         _ => {
-            return Err(ArrowError::InvalidArgumentError(format!(
+            return Err(Error::InvalidArgumentError(format!(
                 "Datatype {:?} cannot be encoded by {:?} encoding",
                 array.data_type(),
                 encoding

@@ -10,7 +10,7 @@ use parquet2::{
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
     bitmap::MutableBitmap,
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use super::{
@@ -230,7 +230,7 @@ pub(super) fn next_dict<
             // consume the dictionary page
             match (&dict, page.dictionary_page()) {
                 (Dict::Empty, None) => {
-                    return MaybeNext::Some(Err(ArrowError::nyi(
+                    return MaybeNext::Some(Err(Error::nyi(
                         "dictionary arrays from non-dict-encoded pages",
                     )));
                 }

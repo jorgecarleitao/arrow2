@@ -8,7 +8,7 @@ use arrow2::{
     array::*,
     chunk::Chunk as AChunk,
     datatypes::*,
-    error::{ArrowError, Result},
+    error::{Error, Result},
     io::parquet::write::*,
 };
 
@@ -30,7 +30,7 @@ impl Bla {
 
 impl FallibleStreamingIterator for Bla {
     type Item = CompressedPage;
-    type Error = ArrowError;
+    type Error = Error;
 
     fn advance(&mut self) -> Result<()> {
         self.current = self.columns.pop_front();

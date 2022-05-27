@@ -13,7 +13,7 @@ mod sub;
 pub use sub::*;
 
 use crate::datatypes::DataType;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 /// Maximum value that can exist with a selected precision
 #[inline]
@@ -42,7 +42,7 @@ fn get_parameters(lhs: &DataType, rhs: &DataType) -> Result<(usize, usize)> {
         if lhs_p == rhs_p && lhs_s == rhs_s {
             Ok((*lhs_p, *lhs_s))
         } else {
-            Err(ArrowError::InvalidArgumentError(
+            Err(Error::InvalidArgumentError(
                 "Arrays must have the same precision and scale".to_string(),
             ))
         }

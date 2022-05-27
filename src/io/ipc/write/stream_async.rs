@@ -11,7 +11,7 @@ use super::common_async::{write_continuation, write_message};
 use super::{default_ipc_fields, schema_to_bytes, Record};
 
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 /// A sink that writes array [`chunks`](Chunk) as an IPC stream.
 ///
@@ -119,7 +119,7 @@ where
             );
             Ok(())
         } else {
-            Err(ArrowError::Io(std::io::Error::new(
+            Err(Error::Io(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
                 "writer closed".to_string(),
             )))
@@ -149,7 +149,7 @@ impl<'a, W> Sink<Record<'_>> for StreamSink<'a, W>
 where
     W: AsyncWrite + Unpin + Send,
 {
-    type Error = ArrowError;
+    type Error = Error;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Result<()>> {
         self.get_mut().poll_complete(cx)

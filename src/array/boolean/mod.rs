@@ -1,7 +1,7 @@
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, PhysicalType},
-    error::ArrowError,
+    error::Error,
 };
 use either::Either;
 
@@ -35,18 +35,18 @@ impl BooleanArray {
         data_type: DataType,
         values: Bitmap,
         validity: Option<Bitmap>,
-    ) -> Result<Self, ArrowError> {
+    ) -> Result<Self, Error> {
         if validity
             .as_ref()
             .map_or(false, |validity| validity.len() != values.len())
         {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "validity mask length must match the number of values",
             ));
         }
 
         if data_type.to_physical_type() != PhysicalType::Boolean {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "BooleanArray can only be initialized with a DataType whose physical type is Boolean",
             ));
         }

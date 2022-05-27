@@ -4,7 +4,7 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field, UnionMode},
-    error::ArrowError,
+    error::Error,
     scalar::{new_scalar, Scalar},
 };
 
@@ -50,11 +50,11 @@ impl UnionArray {
         types: Buffer<i8>,
         fields: Vec<Arc<dyn Array>>,
         offsets: Option<Buffer<i32>>,
-    ) -> Result<Self, ArrowError> {
+    ) -> Result<Self, Error> {
         let (f, ids, mode) = Self::try_get_all(&data_type)?;
 
         if f.len() != fields.len() {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "The number of `fields` must equal the number of children fields in DataType::Union",
             ));
         };
@@ -65,7 +65,7 @@ impl UnionArray {
             .enumerate()
             .try_for_each(|(index, (data_type, child))| {
                 if data_type != child {
-                    Err(ArrowError::oos(format!(
+                    Err(Error::oos(format!(
                         "The children DataTypes of a UnionArray must equal the children data types. 
                          However, the field {index} has data type {data_type:?} but the value has data type {child:?}"
                     )))
@@ -75,7 +75,7 @@ impl UnionArray {
             })?;
 
         if offsets.is_none() != mode.is_sparse() {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "The offsets must be set when the Union is dense and vice-versa",
             ));
         }
@@ -311,12 +311,12 @@ impl Array for UnionArray {
 }
 
 impl UnionArray {
-    fn try_get_all(data_type: &DataType) -> Result<UnionComponents, ArrowError> {
+    fn try_get_all(data_type: &DataType) -> Result<UnionComponents, Error> {
         match data_type.to_logical_type() {
             DataType::Union(fields, ids, mode) => {
                 Ok((fields, ids.as_ref().map(|x| x.as_ref()), *mode))
             }
-            _ => Err(ArrowError::oos(
+            _ => Err(Error::oos(
                 "The UnionArray requires a logical type of DataType::Union",
             )),
         }

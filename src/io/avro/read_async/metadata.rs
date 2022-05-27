@@ -6,7 +6,7 @@ use futures::AsyncRead;
 use futures::AsyncReadExt;
 
 use crate::datatypes::Schema;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::super::read::deserialize_header;
 use super::super::read::infer_schema;

@@ -4,7 +4,7 @@ use crate::{
     array::{Array, BinaryArray, BooleanArray, ListArray, Offset, PrimitiveArray, Utf8Array},
     bitmap::Bitmap,
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
     types::NativeType,
 };
 
@@ -18,12 +18,12 @@ where
     O: Offset,
 {
     if list.len() != values.len() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "Contains requires arrays of the same length".to_string(),
         ));
     }
     if list.values().data_type() != values.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "Contains requires the inner array to be of the same logical type".to_string(),
         ));
     }
@@ -52,12 +52,12 @@ where
     OO: Offset,
 {
     if list.len() != values.len() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "Contains requires arrays of the same length".to_string(),
         ));
     }
     if list.values().data_type() != values.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "Contains requires the inner array to be of the same logical type".to_string(),
         ));
     }
@@ -86,12 +86,12 @@ where
     OO: Offset,
 {
     if list.len() != values.len() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "Contains requires arrays of the same length".to_string(),
         ));
     }
     if list.values().data_type() != values.data_type() {
-        return Err(ArrowError::InvalidArgumentError(
+        return Err(Error::InvalidArgumentError(
             "Contains requires the inner array to be of the same logical type".to_string(),
         ));
     }
@@ -190,7 +190,7 @@ pub fn contains(list: &dyn Array, values: &dyn Array) -> Result<BooleanArray> {
         (DataType::LargeList(_), DataType::UInt64) => primitive!(list, values, i64, u64),
         (DataType::LargeList(_), DataType::Float32) => primitive!(list, values, i64, f32),
         (DataType::LargeList(_), DataType::Float64) => primitive!(list, values, i64, f64),
-        _ => Err(ArrowError::NotYetImplemented(format!(
+        _ => Err(Error::NotYetImplemented(format!(
             "Contains is not supported between logical types \"{:?}\" and \"{:?}\"",
             list_data_type, values_data_type
         ))),

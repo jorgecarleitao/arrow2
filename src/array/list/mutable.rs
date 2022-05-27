@@ -4,7 +4,7 @@ use crate::{
     array::{Array, MutableArray, Offset, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::{DataType, Field},
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use super::ListArray;
@@ -129,7 +129,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// This is a relatively low level function, prefer `try_push` when you can.
     pub fn try_push_valid(&mut self) -> Result<()> {
         let size = self.values.len();
-        let size = O::from_usize(size).ok_or(ArrowError::Overflow)?;
+        let size = O::from_usize(size).ok_or(Error::Overflow)?;
         assert!(size >= *self.offsets.last().unwrap());
 
         self.offsets.push(size);

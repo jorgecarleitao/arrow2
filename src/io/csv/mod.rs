@@ -1,6 +1,6 @@
 //! Convert data between the Arrow and CSV (comma-separated values).
 
-use crate::error::ArrowError;
+use crate::error::Error;
 
 #[cfg(any(feature = "io_csv_read_async", feature = "io_csv_read"))]
 mod read_utils;
@@ -8,15 +8,15 @@ mod read_utils;
 mod utils;
 
 #[cfg(feature = "io_csv_read")]
-impl From<csv::Error> for ArrowError {
+impl From<csv::Error> for Error {
     fn from(error: csv::Error) -> Self {
-        ArrowError::External("".to_string(), Box::new(error))
+        Error::External("".to_string(), Box::new(error))
     }
 }
 
-impl From<chrono::ParseError> for ArrowError {
+impl From<chrono::ParseError> for Error {
     fn from(error: chrono::ParseError) -> Self {
-        ArrowError::External("".to_string(), Box::new(error))
+        Error::External("".to_string(), Box::new(error))
     }
 }
 

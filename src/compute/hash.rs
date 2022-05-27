@@ -14,7 +14,7 @@ macro_rules! new_state {
 use crate::{
     array::{Array, BinaryArray, BooleanArray, Offset, PrimitiveArray, Utf8Array},
     datatypes::{DataType, PhysicalType, PrimitiveType},
-    error::{ArrowError, Result},
+    error::{Error, Result},
     types::NativeType,
 };
 
@@ -89,7 +89,7 @@ macro_rules! with_match_primitive_type {(
         UInt16 => __with_ty__! { u16 },
         UInt32 => __with_ty__! { u32 },
         UInt64 => __with_ty__! { u64 },
-        _ => return Err(ArrowError::NotYetImplemented(format!(
+        _ => return Err(Error::NotYetImplemented(format!(
             "Hash not implemented for type {:?}",
             $key_type
         )))
@@ -116,7 +116,7 @@ pub fn hash(array: &dyn Array) -> Result<PrimitiveArray<u64>> {
         Utf8 => hash_utf8::<i32>(array.as_any().downcast_ref().unwrap()),
         LargeUtf8 => hash_utf8::<i64>(array.as_any().downcast_ref().unwrap()),
         t => {
-            return Err(ArrowError::NotYetImplemented(format!(
+            return Err(Error::NotYetImplemented(format!(
                 "Hash not implemented for type {:?}",
                 t
             )))

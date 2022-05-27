@@ -9,7 +9,7 @@ use crate::{
         Buffer,
     },
     datatypes::{DataType, PhysicalType},
-    error::{ArrowError, Result},
+    error::{Error, Result},
     ffi::schema::get_child,
     types::NativeType,
 };
@@ -185,9 +185,7 @@ unsafe fn create_buffer<T: NativeType>(
     index: usize,
 ) -> Result<Buffer<T>> {
     if array.buffers.is_null() {
-        return Err(ArrowError::OutOfSpec(
-            "The array buffers are null".to_string(),
-        ));
+        return Err(Error::OutOfSpec("The array buffers are null".to_string()));
     }
 
     let buffers = array.buffers as *mut *const u8;
@@ -200,9 +198,7 @@ unsafe fn create_buffer<T: NativeType>(
     let offset = buffer_offset(array, data_type, index);
     let bytes = ptr
         .map(|ptr| Bytes::from_ffi(ptr, len, deallocation))
-        .ok_or_else(|| {
-            ArrowError::OutOfSpec(format!("The buffer at position {} is null", index))
-        })?;
+        .ok_or_else(|| Error::OutOfSpec(format!("The buffer at position {} is null", index)))?;
 
     Ok(Buffer::from_bytes(bytes).slice(offset, len - offset))
 }
@@ -220,9 +216,7 @@ unsafe fn create_bitmap(
     index: usize,
 ) -> Result<Bitmap> {
     if array.buffers.is_null() {
-        return Err(ArrowError::OutOfSpec(
-            "The array buffers are null".to_string(),
-        ));
+        return Err(Error::OutOfSpec("The array buffers are null".to_string()));
     }
     let len = array.length as usize;
     let offset = array.offset as usize;
@@ -236,7 +230,7 @@ unsafe fn create_bitmap(
     let bytes = ptr
         .map(|ptr| Bytes::from_ffi(ptr, bytes_len, deallocation))
         .ok_or_else(|| {
-            ArrowError::OutOfSpec(format!(
+            Error::OutOfSpec(format!(
                 "The buffer {} is a null pointer and cannot be interpreted as a bitmap",
                 index
             ))

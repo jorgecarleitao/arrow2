@@ -8,7 +8,7 @@ use chrono::{
 use crate::error::Result;
 use crate::{
     array::{Offset, PrimitiveArray, Utf8Array},
-    error::ArrowError,
+    error::Error,
 };
 use crate::{
     datatypes::{DataType, TimeUnit},
@@ -194,17 +194,17 @@ pub fn parse_offset(offset: &str) -> Result<FixedOffset> {
     let first = a
         .next()
         .map(Ok)
-        .unwrap_or_else(|| Err(ArrowError::InvalidArgumentError(error.to_string())))?;
+        .unwrap_or_else(|| Err(Error::InvalidArgumentError(error.to_string())))?;
     let last = a
         .next()
         .map(Ok)
-        .unwrap_or_else(|| Err(ArrowError::InvalidArgumentError(error.to_string())))?;
+        .unwrap_or_else(|| Err(Error::InvalidArgumentError(error.to_string())))?;
     let hours: i32 = first
         .parse()
-        .map_err(|_| ArrowError::InvalidArgumentError(error.to_string()))?;
+        .map_err(|_| Error::InvalidArgumentError(error.to_string()))?;
     let minutes: i32 = last
         .parse()
-        .map_err(|_| ArrowError::InvalidArgumentError(error.to_string()))?;
+        .map_err(|_| Error::InvalidArgumentError(error.to_string()))?;
 
     Ok(FixedOffset::east(hours * 60 * 60 + minutes * 60))
 }
@@ -263,7 +263,7 @@ fn utf8_to_timestamp_ns_impl<O: Offset, T: chrono::TimeZone>(
 #[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
 pub fn parse_offset_tz(timezone: &str) -> Result<chrono_tz::Tz> {
     timezone.parse::<chrono_tz::Tz>().map_err(|_| {
-        ArrowError::InvalidArgumentError(format!("timezone \"{}\" cannot be parsed", timezone))
+        Error::InvalidArgumentError(format!("timezone \"{}\" cannot be parsed", timezone))
     })
 }
 
@@ -284,7 +284,7 @@ fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
     _: &str,
     timezone: String,
 ) -> Result<PrimitiveArray<i64>> {
-    Err(ArrowError::InvalidArgumentError(format!(
+    Err(Error::InvalidArgumentError(format!(
         "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
         timezone
     )))

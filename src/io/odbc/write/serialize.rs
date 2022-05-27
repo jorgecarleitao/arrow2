@@ -3,7 +3,7 @@ use api::buffers::{BinColumnWriter, TextColumnWriter};
 use crate::array::*;
 use crate::bitmap::Bitmap;
 use crate::datatypes::DataType;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::types::NativeType;
 
 use super::super::api;
@@ -21,7 +21,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
                 bool_optional(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
-                Err(ArrowError::nyi("serialize bool to non-bool ODBC"))
+                Err(Error::nyi("serialize bool to non-bool ODBC"))
             }
         }
         DataType::Int16 => {
@@ -32,7 +32,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
                 primitive_optional(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
-                Err(ArrowError::nyi("serialize i16 to non-i16 ODBC"))
+                Err(Error::nyi("serialize i16 to non-i16 ODBC"))
             }
         }
         DataType::Int32 => {
@@ -43,7 +43,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
                 primitive_optional(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
-                Err(ArrowError::nyi("serialize i32 to non-i32 ODBC"))
+                Err(Error::nyi("serialize i32 to non-i32 ODBC"))
             }
         }
         DataType::Float32 => {
@@ -54,7 +54,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
                 primitive_optional(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
-                Err(ArrowError::nyi("serialize f32 to non-f32 ODBC"))
+                Err(Error::nyi("serialize f32 to non-f32 ODBC"))
             }
         }
         DataType::Float64 => {
@@ -65,7 +65,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
                 primitive_optional(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
-                Err(ArrowError::nyi("serialize f64 to non-f64 ODBC"))
+                Err(Error::nyi("serialize f64 to non-f64 ODBC"))
             }
         }
         DataType::Utf8 => {
@@ -73,7 +73,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
                 utf8::<i32>(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
-                Err(ArrowError::nyi("serialize utf8 to non-text ODBC"))
+                Err(Error::nyi("serialize utf8 to non-text ODBC"))
             }
         }
         DataType::LargeUtf8 => {
@@ -81,7 +81,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
                 utf8::<i64>(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
-                Err(ArrowError::nyi("serialize utf8 to non-text ODBC"))
+                Err(Error::nyi("serialize utf8 to non-text ODBC"))
             }
         }
         DataType::Binary => {
@@ -89,7 +89,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
                 binary::<i32>(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
-                Err(ArrowError::nyi("serialize utf8 to non-binary ODBC"))
+                Err(Error::nyi("serialize utf8 to non-binary ODBC"))
             }
         }
         DataType::LargeBinary => {
@@ -97,7 +97,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
                 binary::<i64>(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
-                Err(ArrowError::nyi("serialize utf8 to non-text ODBC"))
+                Err(Error::nyi("serialize utf8 to non-text ODBC"))
             }
         }
         DataType::FixedSizeBinary(_) => {
@@ -105,10 +105,10 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
                 fixed_binary(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
-                Err(ArrowError::nyi("serialize fixed to non-binary ODBC"))
+                Err(Error::nyi("serialize fixed to non-binary ODBC"))
             }
         }
-        other => Err(ArrowError::nyi(format!("{other:?} to ODBC"))),
+        other => Err(Error::nyi(format!("{other:?} to ODBC"))),
     }
 }
 

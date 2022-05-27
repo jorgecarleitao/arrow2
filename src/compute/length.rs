@@ -20,7 +20,7 @@
 use crate::{
     array::*,
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
     types::NativeType,
 };
 
@@ -55,7 +55,7 @@ pub fn length(array: &dyn Array) -> Result<Box<dyn Array>> {
             let array = array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
             Ok(Box::new(unary_offsets_string::<i64, _>(array, |x| x)))
         }
-        _ => Err(ArrowError::InvalidArgumentError(format!(
+        _ => Err(Error::InvalidArgumentError(format!(
             "length not supported for {:?}",
             array.data_type()
         ))),

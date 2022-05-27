@@ -9,7 +9,7 @@ use futures::Stream;
 
 use crate::array::*;
 use crate::chunk::Chunk;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::super::CONTINUATION_MARKER;
 use super::common::{read_dictionary, read_record_batch};
@@ -75,7 +75,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
                 // https://arrow.apache.org/docs/format/Columnar.html#ipc-streaming-format
                 Ok(Some(StreamState::Waiting(state)))
             } else {
-                Err(ArrowError::from(e))
+                Err(Error::from(e))
             };
         }
     }
@@ -98,16 +98,14 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
     state.message_buffer.resize(meta_length, 0);
     state.reader.read_exact(&mut state.message_buffer).await?;
 
-    let message =
-        arrow_format::ipc::MessageRef::read_as_root(&state.message_buffer).map_err(|err| {
-            ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
-        })?;
+    let message = arrow_format::ipc::MessageRef::read_as_root(&state.message_buffer)
+        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
     let header = message.header()?.ok_or_else(|| {
-        ArrowError::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
+        Error::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
     })?;
 
     match header {
-        arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(ArrowError::oos("A stream ")),
+        arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(Error::oos("A stream ")),
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
             // read the block that makes up the record batch into a buffer
             state.data_buffer.clear();
@@ -145,7 +143,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
             // read the next message until we encounter a Chunk<Arc<dyn Array>> message
             Ok(Some(StreamState::Waiting(state)))
         }
-        t => Err(ArrowError::OutOfSpec(format!(
+        t => Err(Error::OutOfSpec(format!(
             "Reading types other than record batches not yet supported, unable to read {:?} ",
             t
         ))),

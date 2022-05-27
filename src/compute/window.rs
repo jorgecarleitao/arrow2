@@ -22,7 +22,7 @@ use num_traits::{abs, clamp};
 
 use crate::{
     array::{new_null_array, Array},
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 /// Shifts array by defined number of items (to left or right)
@@ -40,7 +40,7 @@ use crate::{
 /// ```
 pub fn shift(array: &dyn Array, offset: i64) -> Result<Box<dyn Array>> {
     if abs(offset) as usize > array.len() {
-        return Err(ArrowError::InvalidArgumentError(format!(
+        return Err(Error::InvalidArgumentError(format!(
             "Shift's absolute offset must be smaller or equal to the arrays length. Offset is {}, length is {}",
             abs(offset), array.len()
         )));

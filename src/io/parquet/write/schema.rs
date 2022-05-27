@@ -11,7 +11,7 @@ use parquet2::{
 
 use crate::{
     datatypes::{DataType, Field, Schema, TimeUnit},
-    error::{ArrowError, Result},
+    error::{Error, Result},
     io::ipc::write::default_ipc_fields,
     io::ipc::write::schema_to_bytes,
     io::parquet::write::decimal_length_from_precision,
@@ -247,7 +247,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
         )?),
         DataType::Struct(fields) => {
             if fields.is_empty() {
-                return Err(ArrowError::InvalidArgumentError(
+                return Err(Error::InvalidArgumentError(
                     "Parquet does not support writing empty structs".to_string(),
                 ));
             }
@@ -319,7 +319,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 None,
             ))
         }
-        other => Err(ArrowError::NotYetImplemented(format!(
+        other => Err(Error::NotYetImplemented(format!(
             "Writing the data type {:?} is not yet implemented",
             other
         ))),

@@ -13,7 +13,7 @@ use crate::{
     array::*,
     chunk::Chunk,
     datatypes::*,
-    error::{ArrowError, Result},
+    error::{Error, Result},
     temporal_conversions,
     types::NativeType,
 };
@@ -249,7 +249,7 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
         Binary => deserialize_binary::<i32, _>(rows, column),
         LargeBinary => deserialize_binary::<i64, _>(rows, column),
         other => {
-            return Err(ArrowError::NotYetImplemented(format!(
+            return Err(Error::NotYetImplemented(format!(
                 "Deserializing type \"{:?}\" is not implemented",
                 other
             )))

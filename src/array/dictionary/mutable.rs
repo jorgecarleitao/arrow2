@@ -7,7 +7,7 @@ use crate::{
     array::{primitive::MutablePrimitiveArray, Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use super::{DictionaryArray, DictionaryKey};
@@ -91,7 +91,7 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
                 Ok(false)
             }
             None => {
-                let key = K::from_usize(self.map.len()).ok_or(ArrowError::Overflow)?;
+                let key = K::from_usize(self.map.len()).ok_or(Error::Overflow)?;
                 self.map.insert(hash, key);
                 self.keys.push(Some(key));
                 Ok(true)

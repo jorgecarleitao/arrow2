@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::{Field, Schema};
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::io::ipc::IpcSchema;
 
 use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
@@ -79,13 +79,12 @@ pub(crate) fn read_dictionaries<R: Read + Seek>(
         let length = block.meta_data_length as u64;
         read_dictionary_message(reader, offset, &mut data)?;
 
-        let message = arrow_format::ipc::MessageRef::read_as_root(&data).map_err(|err| {
-            ArrowError::OutOfSpec(format!("Unable to get root as message: {:?}", err))
-        })?;
+        let message = arrow_format::ipc::MessageRef::read_as_root(&data)
+            .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
 
         let header = message
             .header()?
-            .ok_or_else(|| ArrowError::oos("Message must have an header"))?;
+            .ok_or_else(|| Error::oos("Message must have an header"))?;
 
         match header {
             arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
@@ -100,7 +99,7 @@ pub(crate) fn read_dictionaries<R: Read + Seek>(
                 )?;
             }
             t => {
-                return Err(ArrowError::OutOfSpec(format!(
+                return Err(Error::OutOfSpec(format!(
                     "Expecting DictionaryBatch in dictionary blocks, found {:?}.",
                     t
                 )));
@@ -120,22 +119,22 @@ fn read_footer_len<R: Read + Seek>(reader: &mut R) -> Result<usize> {
     let footer_len = i32::from_le_bytes(footer[..4].try_into().unwrap());
 
     if footer[4..] != ARROW_MAGIC {
-        return Err(ArrowError::OutOfSpec(
+        return Err(Error::OutOfSpec(
             "Arrow file does not contain correct footer".to_string(),
         ));
     }
     footer_len
         .try_into()
-        .map_err(|_| ArrowError::oos("The footer's lenght must be a positive number"))
+        .map_err(|_| Error::oos("The footer's lenght must be a positive number"))
 }
 
 pub(super) fn deserialize_footer(footer_data: &[u8]) -> Result<FileMetadata> {
     let footer = arrow_format::ipc::FooterRef::read_as_root(footer_data)
-        .map_err(|err| ArrowError::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
+        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
 
-    let blocks = footer.record_batches()?.ok_or_else(|| {
-        ArrowError::OutOfSpec("Unable to get record batches from footer".to_string())
-    })?;
+    let blocks = footer
+        .record_batches()?
+        .ok_or_else(|| Error::OutOfSpec("Unable to get record batches from footer".to_string()))?;
 
     let blocks = blocks
         .iter()
@@ -144,7 +143,7 @@ pub(super) fn deserialize_footer(footer_data: &[u8]) -> Result<FileMetadata> {
 
     let ipc_schema = footer
         .schema()?
-        .ok_or_else(|| ArrowError::OutOfSpec("Unable to get the schema from footer".to_string()))?;
+        .ok_or_else(|| Error::OutOfSpec("Unable to get the schema from footer".to_string()))?;
     let (schema, ipc_schema) = fb_to_schema(ipc_schema)?;
 
     let dictionaries = footer
@@ -171,7 +170,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     let mut magic_buffer: [u8; 6] = [0; 6];
     reader.read_exact(&mut magic_buffer)?;
     if magic_buffer != ARROW_MAGIC {
-        return Err(ArrowError::OutOfSpec(
+        return Err(Error::OutOfSpec(
             "Arrow file does not contain correct header".to_string(),
         ));
     }
@@ -203,14 +202,14 @@ pub(super) fn get_serialized_batch<'a>(
     message: &'a arrow_format::ipc::MessageRef,
 ) -> Result<arrow_format::ipc::RecordBatchRef<'a>> {
     let header = message.header()?.ok_or_else(|| {
-        ArrowError::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
+        Error::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
     })?;
     match header {
-        arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(ArrowError::OutOfSpec(
+        arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(Error::OutOfSpec(
             "Not expecting a schema when messages are read".to_string(),
         )),
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => Ok(batch),
-        t => Err(ArrowError::OutOfSpec(format!(
+        t => Err(Error::OutOfSpec(format!(
             "Reading types other than record batches not yet supported, unable to read {:?}",
             t
         ))),
@@ -243,7 +242,7 @@ pub fn read_batch<R: Read + Seek>(
     reader.read_exact(block_data)?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(&block_data[..])
-        .map_err(|err| ArrowError::oos(format!("Unable parse message: {:?}", err)))?;
+        .map_err(|err| Error::oos(format!("Unable parse message: {:?}", err)))?;
 
     let batch = get_serialized_batch(&message)?;
 

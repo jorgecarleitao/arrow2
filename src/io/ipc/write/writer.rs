@@ -13,7 +13,7 @@ use super::{
 use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum State {
@@ -96,7 +96,7 @@ impl<W: Write> FileWriter<W> {
     /// Errors if the file has been started or has finished.
     pub fn start(&mut self) -> Result<()> {
         if self.state != State::None {
-            return Err(ArrowError::oos("The IPC file can only be started once"));
+            return Err(Error::oos("The IPC file can only be started once"));
         }
         // write magic to header
         self.writer.write_all(&ARROW_MAGIC[..])?;
@@ -122,7 +122,7 @@ impl<W: Write> FileWriter<W> {
         ipc_fields: Option<&[IpcField]>,
     ) -> Result<()> {
         if self.state != State::Started {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "The IPC file must be started before it can be written to. Call `start` before `write`",
             ));
         }
@@ -168,7 +168,7 @@ impl<W: Write> FileWriter<W> {
     /// Write footer and closing tag, then mark the writer as done
     pub fn finish(&mut self) -> Result<()> {
         if self.state != State::Started {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "The IPC file must be started before it can be finished. Call `start` before `finish`",
             ));
         }

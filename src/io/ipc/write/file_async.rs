@@ -10,7 +10,7 @@ use super::common_async::{write_continuation, write_message};
 use super::schema::serialize_schema;
 use super::{default_ipc_fields, schema_to_bytes, Record};
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::io::ipc::{IpcField, ARROW_MAGIC};
 
 type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
@@ -184,7 +184,7 @@ impl<'a, W> Sink<Record<'_>> for FileSink<'a, W>
 where
     W: AsyncWrite + Unpin + Send + 'a,
 {
-    type Error = ArrowError;
+    type Error = Error;
 
     fn poll_ready(
         self: std::pin::Pin<&mut Self>,
@@ -209,7 +209,7 @@ where
             this.task = Some(Self::write(writer, this.offset, record, dictionaries).boxed());
             Ok(())
         } else {
-            Err(ArrowError::Io(std::io::Error::new(
+            Err(Error::Io(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
                 "writer is closed",
             )))

@@ -7,7 +7,7 @@ use crate::datatypes::PhysicalType;
 use crate::io::parquet::read::schema::is_nullable;
 use crate::{
     array::Array,
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use super::{array_to_pages, Encoding, WriteOptions};
@@ -77,7 +77,7 @@ fn to_nested_recursive<'a>(
             let fields = if let ParquetType::GroupType { fields, .. } = type_ {
                 fields
             } else {
-                return Err(ArrowError::InvalidArgumentError(
+                return Err(Error::InvalidArgumentError(
                     "Parquet type must be a group for a struct array".to_string(),
                 ));
             };
@@ -94,12 +94,12 @@ fn to_nested_recursive<'a>(
                 if let ParquetType::GroupType { fields, .. } = &fields[0] {
                     &fields[0]
                 } else {
-                    return Err(ArrowError::InvalidArgumentError(
+                    return Err(Error::InvalidArgumentError(
                         "Parquet type must be a group for a list array".to_string(),
                     ));
                 }
             } else {
-                return Err(ArrowError::InvalidArgumentError(
+                return Err(Error::InvalidArgumentError(
                     "Parquet type must be a group for a list array".to_string(),
                 ));
             };
@@ -117,12 +117,12 @@ fn to_nested_recursive<'a>(
                 if let ParquetType::GroupType { fields, .. } = &fields[0] {
                     &fields[0]
                 } else {
-                    return Err(ArrowError::InvalidArgumentError(
+                    return Err(Error::InvalidArgumentError(
                         "Parquet type must be a group for a list array".to_string(),
                     ));
                 }
             } else {
-                return Err(ArrowError::InvalidArgumentError(
+                return Err(Error::InvalidArgumentError(
                     "Parquet type must be a group for a list array".to_string(),
                 ));
             };

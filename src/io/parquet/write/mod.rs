@@ -16,7 +16,7 @@ mod utils;
 
 use crate::array::*;
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::types::days_ms;
 use crate::types::NativeType;
 
@@ -153,7 +153,7 @@ pub fn array_to_page_simple(
 ) -> Result<EncodedPage> {
     let data_type = array.data_type();
     if !can_encode(data_type, encoding) {
-        return Err(ArrowError::InvalidArgumentError(format!(
+        return Err(Error::InvalidArgumentError(format!(
             "The datatype {:?} cannot be encoded by {:?}",
             data_type, encoding
         )));
@@ -360,7 +360,7 @@ pub fn array_to_page_simple(
                 fixed_len_bytes::array_to_page(&array, options, type_, statistics)
             }
         }
-        other => Err(ArrowError::NotYetImplemented(format!(
+        other => Err(Error::NotYetImplemented(format!(
             "Writing parquet pages for data type {:?}",
             other
         ))),
@@ -441,7 +441,7 @@ fn array_to_page_nested(
             let array = array.as_any().downcast_ref().unwrap();
             primitive::nested_array_to_page::<f64, f64>(array, options, type_, nested)
         }
-        other => Err(ArrowError::NotYetImplemented(format!(
+        other => Err(Error::NotYetImplemented(format!(
             "Writing nested parquet pages for data type {:?}",
             other
         ))),

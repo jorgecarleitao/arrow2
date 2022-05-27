@@ -2,7 +2,7 @@ use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::*,
-    error::ArrowError,
+    error::Error,
     types::{days_ms, months_days_ns, NativeType},
 };
 
@@ -48,18 +48,18 @@ impl<T: NativeType> PrimitiveArray<T> {
         data_type: DataType,
         values: Buffer<T>,
         validity: Option<Bitmap>,
-    ) -> Result<Self, ArrowError> {
+    ) -> Result<Self, Error> {
         if validity
             .as_ref()
             .map_or(false, |validity| validity.len() != values.len())
         {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "validity mask length must match the number of values",
             ));
         }
 
         if data_type.to_physical_type() != PhysicalType::Primitive(T::PRIMITIVE) {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "BooleanArray can only be initialized with a DataType whose physical type is Primitive",
             ));
         }
@@ -199,7 +199,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     #[inline]
     pub fn to(self, data_type: DataType) -> Self {
         if !data_type.to_physical_type().eq_primitive(T::PRIMITIVE) {
-            Err(ArrowError::InvalidArgumentError(format!(
+            Err(Error::InvalidArgumentError(format!(
                 "Type {} does not support logical type {:?}",
                 std::any::type_name::<T>(),
                 data_type

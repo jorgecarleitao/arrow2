@@ -7,7 +7,7 @@ use arrow_format;
 use crate::array::*;
 use crate::chunk::Chunk;
 use crate::datatypes::{DataType, Field};
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::io::ipc::{IpcField, IpcSchema};
 
 use super::deserialize::{read, skip};
@@ -90,12 +90,12 @@ pub fn read_record_batch<R: Read + Seek>(
     assert_eq!(fields.len(), ipc_schema.fields.len());
     let buffers = batch
         .buffers()?
-        .ok_or_else(|| ArrowError::oos("IPC RecordBatch must contain buffers"))?;
+        .ok_or_else(|| Error::oos("IPC RecordBatch must contain buffers"))?;
     let mut buffers: VecDeque<arrow_format::ipc::BufferRef> = buffers.iter().collect();
 
     let field_nodes = batch
         .nodes()?
-        .ok_or_else(|| ArrowError::oos("IPC RecordBatch must contain field nodes"))?;
+        .ok_or_else(|| Error::oos("IPC RecordBatch must contain field nodes"))?;
     let mut field_nodes = field_nodes.iter().collect::<VecDeque<_>>();
 
     let columns = if let Some(projection) = projection {
@@ -193,7 +193,7 @@ fn first_dict_field<'a>(
             return Ok(field);
         }
     }
-    Err(ArrowError::OutOfSpec(format!(
+    Err(Error::OutOfSpec(format!(
         "dictionary id {} not found in schema",
         id
     )))
@@ -210,7 +210,7 @@ pub fn read_dictionary<R: Read + Seek>(
     block_offset: u64,
 ) -> Result<()> {
     if batch.is_delta()? {
-        return Err(ArrowError::NotYetImplemented(
+        return Err(Error::NotYetImplemented(
             "delta dictionary batches not supported".to_string(),
         ));
     }
@@ -232,7 +232,7 @@ pub fn read_dictionary<R: Read + Seek>(
             let columns = read_record_batch(
                 batch
                     .data()?
-                    .ok_or_else(|| ArrowError::oos("The dictionary batch must have data."))?,
+                    .ok_or_else(|| Error::oos("The dictionary batch must have data."))?,
                 &fields,
                 &ipc_schema,
                 None,
@@ -246,9 +246,7 @@ pub fn read_dictionary<R: Read + Seek>(
         }
         _ => None,
     }
-    .ok_or_else(|| {
-        ArrowError::InvalidArgumentError("dictionary id not found in schema".to_string())
-    })?;
+    .ok_or_else(|| Error::InvalidArgumentError("dictionary id not found in schema".to_string()))?;
 
     dictionaries.insert(id, dictionary_values);
 

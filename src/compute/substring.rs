@@ -20,7 +20,7 @@
 use crate::{
     array::*,
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>) -> Utf8Array<O> {
@@ -153,7 +153,7 @@ pub fn substring(array: &dyn Array, start: i64, length: &Option<u64>) -> Result<
             start as i32,
             &length.map(|e| e as i32),
         ))),
-        _ => Err(ArrowError::InvalidArgumentError(format!(
+        _ => Err(Error::InvalidArgumentError(format!(
             "substring does not support type {:?}",
             array.data_type()
         ))),

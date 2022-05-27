@@ -147,7 +147,7 @@ fn timestamp_with_tz_default<'a>(
         }
         #[cfg(not(feature = "chrono-tz"))]
         _ => {
-            return Err(crate::error::ArrowError::InvalidArgumentError(
+            return Err(crate::error::Error::InvalidArgumentError(
                 "Invalid Offset format (must be [-]00:00) or chrono-tz feature not active"
                     .to_string(),
             ))
@@ -192,7 +192,7 @@ fn timestamp_with_tz_with_format<'a>(
         }
         #[cfg(not(feature = "chrono-tz"))]
         _ => {
-            return Err(crate::error::ArrowError::InvalidArgumentError(
+            return Err(crate::error::Error::InvalidArgumentError(
                 "Invalid Offset format (must be [-]00:00) or chrono-tz feature not active"
                     .to_string(),
             ))

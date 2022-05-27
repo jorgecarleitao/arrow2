@@ -1,7 +1,7 @@
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
 
-use crate::{array::Array, datatypes::Field, error::ArrowError};
+use crate::{array::Array, datatypes::Field, error::Error};
 
 use super::{export_array_to_c, export_field_to_c, import_array_from_c, import_field_from_c};
 use super::{ArrowArray, ArrowArrayStream, ArrowSchema};
@@ -28,24 +28,20 @@ impl ArrowArrayStream {
     }
 }
 
-unsafe fn handle_error(iter: &mut ArrowArrayStream) -> ArrowError {
+unsafe fn handle_error(iter: &mut ArrowArrayStream) -> Error {
     let error = unsafe { (iter.get_last_error.unwrap())(&mut *iter) };
 
     if error.is_null() {
-        return ArrowError::External(
+        return Error::External(
             "C stream".to_string(),
-            Box::new(ArrowError::ExternalFormat(
-                "an unspecified error".to_string(),
-            )),
+            Box::new(Error::ExternalFormat("an unspecified error".to_string())),
         );
     }
 
     let error = unsafe { CStr::from_ptr(error) };
-    ArrowError::External(
+    Error::External(
         "C stream".to_string(),
-        Box::new(ArrowError::ExternalFormat(
-            error.to_str().unwrap().to_string(),
-        )),
+        Box::new(Error::ExternalFormat(error.to_str().unwrap().to_string())),
     )
 }
 
@@ -65,17 +61,17 @@ impl ArrowArrayStreamReader {
     /// In particular:
     /// * The `ArrowArrayStream` fulfills the invariants of the C stream interface
     /// * The schema `get_schema` produces fulfills the C data interface
-    pub unsafe fn try_new(mut iter: Box<ArrowArrayStream>) -> Result<Self, ArrowError> {
+    pub unsafe fn try_new(mut iter: Box<ArrowArrayStream>) -> Result<Self, Error> {
         let mut field = Box::new(ArrowSchema::empty());
 
         if iter.get_next.is_none() {
-            return Err(ArrowError::OutOfSpec(
+            return Err(Error::OutOfSpec(
                 "The C stream MUST contain a non-null get_next".to_string(),
             ));
         };
 
         if iter.get_last_error.is_none() {
-            return Err(ArrowError::OutOfSpec(
+            return Err(Error::OutOfSpec(
                 "The C stream MUST contain a non-null get_last_error".to_string(),
             ));
         };
@@ -83,7 +79,7 @@ impl ArrowArrayStreamReader {
         let status = if let Some(f) = iter.get_schema {
             unsafe { (f)(&mut *iter, &mut *field) }
         } else {
-            return Err(ArrowError::OutOfSpec(
+            return Err(Error::OutOfSpec(
                 "The C stream MUST contain a non-null get_schema".to_string(),
             ));
         };
@@ -110,7 +106,7 @@ impl ArrowArrayStreamReader {
     /// # Safety
     /// Calling this iterator's `next` assumes that the [`ArrowArrayStream`] produces arrow arrays
     /// that fulfill the C data interface
-    pub unsafe fn next(&mut self) -> Option<Result<Box<dyn Array>, ArrowError>> {
+    pub unsafe fn next(&mut self) -> Option<Result<Box<dyn Array>, Error>> {
         let mut array = Box::new(ArrowArray::empty());
         let status = unsafe { (self.iter.get_next.unwrap())(&mut *self.iter, &mut *array) };
 
@@ -129,7 +125,7 @@ impl ArrowArrayStreamReader {
 }
 
 struct PrivateData {
-    iter: Box<dyn Iterator<Item = Result<Arc<dyn Array>, ArrowError>>>,
+    iter: Box<dyn Iterator<Item = Result<Arc<dyn Array>, Error>>>,
     field: Field,
     error: Option<CString>,
 }
@@ -203,7 +199,7 @@ unsafe extern "C" fn release(iter: *mut ArrowArrayStream) {
 /// # Safety
 /// The pointer `consumer` must be allocated
 pub unsafe fn export_iterator(
-    iter: Box<dyn Iterator<Item = Result<Arc<dyn Array>, ArrowError>>>,
+    iter: Box<dyn Iterator<Item = Result<Arc<dyn Array>, Error>>>,
     field: Field,
     consumer: *mut ArrowArrayStream,
 ) {

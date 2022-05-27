@@ -5,7 +5,7 @@ use crate::{
     array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
     trusted_len::TrustedLen,
     types::NativeType,
 };
@@ -60,7 +60,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     /// * The validity is not `None` and its length is different from the `values`'s length
     pub fn from_data(data_type: DataType, values: Vec<T>, validity: Option<MutableBitmap>) -> Self {
         if !data_type.to_physical_type().eq_primitive(T::PRIMITIVE) {
-            Err(ArrowError::InvalidArgumentError(format!(
+            Err(Error::InvalidArgumentError(format!(
                 "Type {} does not support logical type {:?}",
                 std::any::type_name::<T>(),
                 data_type

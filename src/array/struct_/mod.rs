@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
-    error::ArrowError,
+    error::Error,
 };
 
 use super::{new_empty_array, new_null_array, Array};
@@ -50,15 +50,13 @@ impl StructArray {
         data_type: DataType,
         values: Vec<Arc<dyn Array>>,
         validity: Option<Bitmap>,
-    ) -> Result<Self, ArrowError> {
+    ) -> Result<Self, Error> {
         let fields = Self::try_get_fields(&data_type)?;
         if fields.is_empty() {
-            return Err(ArrowError::oos(
-                "A StructArray must contain at least one field",
-            ));
+            return Err(Error::oos("A StructArray must contain at least one field"));
         }
         if fields.len() != values.len() {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "A StructArray must a number of fields in its DataType equal to the number of child values",
             ));
         }
@@ -69,7 +67,7 @@ impl StructArray {
             .enumerate()
             .try_for_each(|(index, (data_type, child))| {
                 if data_type != child {
-                    Err(ArrowError::oos(format!(
+                    Err(Error::oos(format!(
                         "The children DataTypes of a StructArray must equal the children data types. 
                          However, the field {index} has data type {data_type:?} but the value has data type {child:?}"
                     )))
@@ -85,7 +83,7 @@ impl StructArray {
             .enumerate()
             .try_for_each(|(index, a_len)| {
                 if a_len != len {
-                    Err(ArrowError::oos(format!(
+                    Err(Error::oos(format!(
                         "The children DataTypes of a StructArray must equal the children data types.
                          However, the values {index} has a length of {a_len}, which is different from values 0, {len}."
                     )))
@@ -98,7 +96,7 @@ impl StructArray {
             .as_ref()
             .map_or(false, |validity| validity.len() != len)
         {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "The validity length of a StructArray must match its number of elements",
             ));
         }
@@ -253,10 +251,10 @@ impl StructArray {
 
 impl StructArray {
     /// Returns the fields the `DataType::Struct`.
-    pub(crate) fn try_get_fields(data_type: &DataType) -> Result<&[Field], ArrowError> {
+    pub(crate) fn try_get_fields(data_type: &DataType) -> Result<&[Field], Error> {
         match data_type.to_logical_type() {
             DataType::Struct(fields) => Ok(fields),
-            _ => Err(ArrowError::oos(
+            _ => Err(Error::oos(
                 "Struct array must be created with a DataType whose physical type is Struct",
             )),
         }

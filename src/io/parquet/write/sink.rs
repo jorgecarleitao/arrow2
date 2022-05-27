@@ -5,7 +5,7 @@ use parquet2::metadata::KeyValue;
 use parquet2::write::FileStreamer;
 use parquet2::write::WriteOptions as ParquetWriteOptions;
 
-use crate::{array::Array, chunk::Chunk, datatypes::Schema, error::ArrowError};
+use crate::{array::Array, chunk::Chunk, datatypes::Schema, error::Error};
 
 use super::file::add_arrow_schema;
 use super::{Encoding, SchemaDescriptor, WriteOptions};
@@ -57,7 +57,7 @@ use super::{Encoding, SchemaDescriptor, WriteOptions};
 /// ```
 pub struct FileSink<'a, W: AsyncWrite + Send + Unpin> {
     writer: Option<FileStreamer<W>>,
-    task: Option<BoxFuture<'a, Result<Option<FileStreamer<W>>, ArrowError>>>,
+    task: Option<BoxFuture<'a, Result<Option<FileStreamer<W>>, Error>>>,
     options: WriteOptions,
     encoding: Vec<Vec<Encoding>>,
     schema: Schema,
@@ -79,7 +79,7 @@ where
         schema: Schema,
         encoding: Vec<Vec<Encoding>>,
         options: WriteOptions,
-    ) -> Result<Self, ArrowError> {
+    ) -> Result<Self, Error> {
         let parquet_schema = crate::io::parquet::write::to_parquet_schema(&schema)?;
         let created_by = Some("Arrow2 - Native Rust implementation of Arrow".to_string());
         let mut writer = FileStreamer::new(
@@ -127,7 +127,7 @@ where
     fn poll_complete(
         &mut self,
         cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Result<(), ArrowError>> {
+    ) -> std::task::Poll<Result<(), Error>> {
         if let Some(task) = &mut self.task {
             match futures::ready!(task.poll_unpin(cx)) {
                 Ok(writer) => {
@@ -150,7 +150,7 @@ impl<'a, W> Sink<Chunk<Arc<dyn Array>>> for FileSink<'a, W>
 where
     W: AsyncWrite + Send + Unpin + 'a,
 {
-    type Error = ArrowError;
+    type Error = Error;
 
     fn start_send(self: Pin<&mut Self>, item: Chunk<Arc<dyn Array>>) -> Result<(), Self::Error> {
         let this = self.get_mut();
@@ -167,7 +167,7 @@ where
             }));
             Ok(())
         } else {
-            Err(ArrowError::Io(std::io::Error::new(
+            Err(Error::Io(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
                 "writer closed".to_string(),
             )))
@@ -213,7 +213,7 @@ where
                         writer
                             .end(kv_meta)
                             .map_ok(|_| None)
-                            .map_err(ArrowError::from)
+                            .map_err(Error::from)
                             .boxed(),
                     );
                     this.poll_complete(cx)

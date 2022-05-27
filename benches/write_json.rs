@@ -1,11 +1,11 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::*;
-use arrow2::error::ArrowError;
+use arrow2::error::Error;
 use arrow2::io::json::write;
 use arrow2::util::bench_util::*;
 
-fn write_array(array: Box<dyn Array>) -> Result<(), ArrowError> {
+fn write_array(array: Box<dyn Array>) -> Result<(), Error> {
     let mut writer = vec![];
 
     let arrays = vec![Ok(array)].into_iter();

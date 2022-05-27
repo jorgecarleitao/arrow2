@@ -14,7 +14,7 @@ use parquet2::statistics::{
 use crate::array::*;
 use crate::datatypes::IntervalUnit;
 use crate::datatypes::{DataType, Field, PhysicalType};
-use crate::error::ArrowError;
+use crate::error::Error;
 use crate::error::Result;
 
 mod binary;
@@ -152,7 +152,7 @@ fn make_mutable(data_type: &DataType, capacity: usize) -> Result<Box<dyn Mutable
             capacity,
         )?),
         other => {
-            return Err(ArrowError::NotYetImplemented(format!(
+            return Err(Error::NotYetImplemented(format!(
                 "Deserializing parquet stats from {:?} is still not implemented",
                 other
             )))
@@ -377,7 +377,7 @@ fn push(
             ParquetPhysicalType::Int32 => primitive::push(from, min, max, |x: i32| Ok(x as i128)),
             ParquetPhysicalType::Int64 => primitive::push(from, min, max, |x: i64| Ok(x as i128)),
             ParquetPhysicalType::FixedLenByteArray(n) if *n > 16 => {
-                return Err(ArrowError::NotYetImplemented(format!(
+                return Err(Error::NotYetImplemented(format!(
                     "Can't decode Decimal128 type from Fixed Size Byte Array of len {:?}",
                     n
                 )))

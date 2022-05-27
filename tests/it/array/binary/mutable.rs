@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use arrow2::array::{BinaryArray, MutableArray, MutableBinaryArray};
 use arrow2::bitmap::Bitmap;
-use arrow2::error::ArrowError;
+use arrow2::error::Error;
 
 #[test]
 fn new() {
@@ -49,7 +49,7 @@ fn from_trusted_len_iter() {
     assert_eq!(a.validity(), None);
 
     let a = unsafe {
-        MutableBinaryArray::<i32>::try_from_trusted_len_iter_unchecked::<ArrowError, _, _>(
+        MutableBinaryArray::<i32>::try_from_trusted_len_iter_unchecked::<Error, _, _>(
             iter.clone().map(Some).map(Ok),
         )
     }

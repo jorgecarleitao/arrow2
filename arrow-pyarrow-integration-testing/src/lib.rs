@@ -11,41 +11,41 @@ use pyo3::ffi::Py_uintptr_t;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
-use arrow2::{array::Array, datatypes::Field, error::ArrowError, ffi};
+use arrow2::{array::Array, datatypes::Field, error::Error, ffi};
 
-/// an error that bridges ArrowError with a Python error
+/// an error that bridges Error with a Python error
 #[derive(Debug)]
-enum PyO3ArrowError {
-    ArrowError(ArrowError),
+enum PyO3Error {
+    Error(Error),
 }
 
-impl fmt::Display for PyO3ArrowError {
+impl fmt::Display for PyO3Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            PyO3ArrowError::ArrowError(ref e) => e.fmt(f),
+            PyO3Error::Error(ref e) => e.fmt(f),
         }
     }
 }
 
-impl error::Error for PyO3ArrowError {
+impl error::Error for PyO3Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
             // The cause is the underlying implementation error type. Is implicitly
             // cast to the trait object `&error::Error`. This works because the
             // underlying type already implements the `Error` trait.
-            PyO3ArrowError::ArrowError(ref e) => Some(e),
+            PyO3Error::Error(ref e) => Some(e),
         }
     }
 }
 
-impl From<ArrowError> for PyO3ArrowError {
-    fn from(err: ArrowError) -> PyO3ArrowError {
-        PyO3ArrowError::ArrowError(err)
+impl From<Error> for PyO3Error {
+    fn from(err: Error) -> PyO3Error {
+        PyO3Error::Error(err)
     }
 }
 
-impl From<PyO3ArrowError> for PyErr {
-    fn from(err: PyO3ArrowError) -> PyErr {
+impl From<PyO3Error> for PyErr {
+    fn from(err: PyO3Error) -> PyErr {
         PyOSError::new_err(err.to_string())
     }
 }
@@ -66,9 +66,9 @@ fn to_rust_array(ob: PyObject, py: Python) -> PyResult<Arc<dyn Array>> {
         (array_ptr as Py_uintptr_t, schema_ptr as Py_uintptr_t),
     )?;
 
-    let field = unsafe { ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)? };
+    let field = unsafe { ffi::import_field_from_c(schema.as_ref()).map_err(PyO3Error::from)? };
     let array =
-        unsafe { ffi::import_array_from_c(array, field.data_type).map_err(PyO3ArrowError::from)? };
+        unsafe { ffi::import_array_from_c(array, field.data_type).map_err(PyO3Error::from)? };
 
     Ok(array.into())
 }
@@ -110,7 +110,7 @@ fn to_rust_field(ob: PyObject, py: Python) -> PyResult<Field> {
     // this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
     ob.call_method1(py, "_export_to_c", (schema_ptr as Py_uintptr_t,))?;
 
-    let field = unsafe { ffi::import_field_from_c(schema.as_ref()).map_err(PyO3ArrowError::from)? };
+    let field = unsafe { ffi::import_field_from_c(schema.as_ref()).map_err(PyO3Error::from)? };
 
     Ok(field)
 }

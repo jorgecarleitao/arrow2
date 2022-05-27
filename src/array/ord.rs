@@ -3,7 +3,7 @@
 use std::cmp::Ordering;
 
 use crate::datatypes::*;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::{array::*, types::NativeType};
 
 /// Compare the values at two arbitrary indices in two arrays.
@@ -181,7 +181,7 @@ pub fn build_compare(left: &dyn Array, right: &dyn Array) -> Result<DynComparato
     use TimeUnit::*;
     Ok(match (left.data_type(), right.data_type()) {
         (a, b) if a != b => {
-            return Err(ArrowError::InvalidArgumentError(
+            return Err(Error::InvalidArgumentError(
                 "Can't compare arrays of different types".to_string(),
             ));
         }
@@ -227,7 +227,7 @@ pub fn build_compare(left: &dyn Array, right: &dyn Array) -> Result<DynComparato
                 (IntegerType::Int32, IntegerType::Int32) => dyn_dict!(i32, left, right),
                 (IntegerType::Int64, IntegerType::Int64) => dyn_dict!(i64, left, right),
                 (lhs, _) => {
-                    return Err(ArrowError::InvalidArgumentError(format!(
+                    return Err(Error::InvalidArgumentError(format!(
                         "Dictionaries do not support keys of type {:?}",
                         lhs
                     )))
@@ -235,7 +235,7 @@ pub fn build_compare(left: &dyn Array, right: &dyn Array) -> Result<DynComparato
             }
         }
         (lhs, _) => {
-            return Err(ArrowError::InvalidArgumentError(format!(
+            return Err(Error::InvalidArgumentError(format!(
                 "The data type type {:?} has no natural order",
                 lhs
             )))

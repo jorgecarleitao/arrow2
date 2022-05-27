@@ -14,8 +14,8 @@ pub use reader::*;
 
 pub use csv_async::Error as CSVError;
 
-impl From<CSVError> for crate::error::ArrowError {
+impl From<CSVError> for crate::error::Error {
     fn from(error: CSVError) -> Self {
-        crate::error::ArrowError::External("".to_string(), Box::new(error))
+        crate::error::Error::External("".to_string(), Box::new(error))
     }
 }

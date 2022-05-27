@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use std::io::{Read, Seek};
 
 use crate::array::{DictionaryArray, DictionaryKey};
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::super::Dictionaries;
 use super::super::{Compression, IpcBuffer, Node};
@@ -26,13 +26,13 @@ where
     let id = if let Some(id) = id {
         id
     } else {
-        return Err(ArrowError::OutOfSpec("Dictionary has no id.".to_string()));
+        return Err(Error::OutOfSpec("Dictionary has no id.".to_string()));
     };
     let values = dictionaries
         .get(&id)
         .ok_or_else(|| {
             let valid_ids = dictionaries.keys().collect::<HashSet<_>>();
-            ArrowError::OutOfSpec(format!(
+            Error::OutOfSpec(format!(
                 "Dictionary id {} not found. Valid ids: {:?}",
                 id, valid_ids
             ))

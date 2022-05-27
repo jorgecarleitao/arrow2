@@ -8,7 +8,7 @@ use crate::{
         utils::{check_same_len, combine_validities},
     },
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
@@ -192,7 +192,7 @@ pub fn adaptive_sub(
         {
             (*lhs_p, *lhs_s, *rhs_p, *rhs_s)
         } else {
-            return Err(ArrowError::InvalidArgumentError(
+            return Err(Error::InvalidArgumentError(
                 "Incorrect data type for the array".to_string(),
             ));
         };

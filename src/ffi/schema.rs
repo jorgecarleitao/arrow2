@@ -4,7 +4,7 @@ use crate::{
     datatypes::{
         DataType, Extension, Field, IntegerType, IntervalUnit, Metadata, TimeUnit, UnionMode,
     },
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use super::ArrowSchema;
@@ -229,7 +229,7 @@ fn to_integer_type(format: &str) -> Result<IntegerType> {
         "l" => Int64,
         "L" => UInt64,
         _ => {
-            return Err(ArrowError::OutOfSpec(
+            return Err(Error::OutOfSpec(
                 "Dictionary indices can only be integers".to_string(),
             ))
         }
@@ -303,16 +303,16 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
 
                 ["w", size_raw] => {
                     // Example: "w:42" fixed-width binary [42 bytes]
-                    let size = size_raw.parse::<usize>().map_err(|_| {
-                        ArrowError::OutOfSpec("size is not a valid integer".to_string())
-                    })?;
+                    let size = size_raw
+                        .parse::<usize>()
+                        .map_err(|_| Error::OutOfSpec("size is not a valid integer".to_string()))?;
                     DataType::FixedSizeBinary(size)
                 }
                 ["+w", size_raw] => {
                     // Example: "+w:123" fixed-sized list [123 items]
-                    let size = size_raw.parse::<usize>().map_err(|_| {
-                        ArrowError::OutOfSpec("size is not a valid integer".to_string())
-                    })?;
+                    let size = size_raw
+                        .parse::<usize>()
+                        .map_err(|_| Error::OutOfSpec("size is not a valid integer".to_string()))?;
                     let child = to_field(schema.child(0))?;
                     DataType::FixedSizeList(Box::new(child), size)
                 }
@@ -327,19 +327,19 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                             // Example: "d:19,10,NNN" decimal bitwidth = NNN [precision 19, scale 10]
                             // Only bitwdth of 128 currently supported
                             let bit_width = width_raw.parse::<usize>().map_err(|_| {
-                                ArrowError::OutOfSpec(
+                                Error::OutOfSpec(
                                     "Decimal bit width is not a valid integer".to_string(),
                                 )
                             })?;
                             if bit_width != 128 {
-                                return Err(ArrowError::OutOfSpec(
+                                return Err(Error::OutOfSpec(
                                     "Decimal256 is not supported".to_string(),
                                 ));
                             }
                             (precision_raw, scale_raw)
                         }
                         _ => {
-                            return Err(ArrowError::OutOfSpec(
+                            return Err(Error::OutOfSpec(
                                 "Decimal must contain 2 or 3 comma-separated values".to_string(),
                             ));
                         }
@@ -347,14 +347,10 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
 
                     DataType::Decimal(
                         precision.parse::<usize>().map_err(|_| {
-                            ArrowError::OutOfSpec(
-                                "Decimal precision is not a valid integer".to_string(),
-                            )
+                            Error::OutOfSpec("Decimal precision is not a valid integer".to_string())
                         })?,
                         scale.parse::<usize>().map_err(|_| {
-                            ArrowError::OutOfSpec(
-                                "Decimal scale is not a valid integer".to_string(),
-                            )
+                            Error::OutOfSpec("Decimal scale is not a valid integer".to_string())
                         })?,
                     )
                 }
@@ -367,9 +363,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                         .split(',')
                         .map(|x| {
                             x.parse::<i32>().map_err(|_| {
-                                ArrowError::OutOfSpec(
-                                    "Union type id is not a valid integer".to_string(),
-                                )
+                                Error::OutOfSpec("Union type id is not a valid integer".to_string())
                             })
                         })
                         .collect::<Result<Vec<_>>>()?;
@@ -379,7 +373,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                     DataType::Union(fields, Some(type_ids), mode)
                 }
                 _ => {
-                    return Err(ArrowError::OutOfSpec(format!(
+                    return Err(Error::OutOfSpec(format!(
                         "The datatype \"{}\" is still not supported in Rust implementation",
                         other
                     )));
@@ -476,7 +470,7 @@ pub(super) fn get_child(data_type: &DataType, index: usize) -> Result<DataType> 
         (0, DataType::Map(field, _)) => Ok(field.data_type().clone()),
         (index, DataType::Struct(fields)) => Ok(fields[index].data_type().clone()),
         (index, DataType::Union(fields, _, _)) => Ok(fields[index].data_type().clone()),
-        (child, data_type) => Err(ArrowError::OutOfSpec(format!(
+        (child, data_type) => Err(Error::OutOfSpec(format!(
             "Requested child {} to type {:?} that has no such child",
             child, data_type
         ))),

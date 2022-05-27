@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
-    error::ArrowError,
+    error::Error,
 };
 
 use super::{new_empty_array, new_null_array, Array};
@@ -38,19 +38,19 @@ impl FixedSizeListArray {
         data_type: DataType,
         values: Arc<dyn Array>,
         validity: Option<Bitmap>,
-    ) -> Result<Self, ArrowError> {
+    ) -> Result<Self, Error> {
         let (child, size) = Self::try_child_and_size(&data_type)?;
 
         let child_data_type = &child.data_type;
         let values_data_type = values.data_type();
         if child_data_type != values_data_type {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 format!("FixedSizeListArray's child's DataType must match. However, the expected DataType is {child_data_type:?} while it got {values_data_type:?}."),
             ));
         }
 
         if values.len() % size != 0 {
-            return Err(ArrowError::oos(format!(
+            return Err(Error::oos(format!(
                 "values (of len {}) must be a multiple of size ({}) in FixedSizeListArray.",
                 values.len(),
                 size
@@ -62,7 +62,7 @@ impl FixedSizeListArray {
             .as_ref()
             .map_or(false, |validity| validity.len() != len)
         {
-            return Err(ArrowError::oos(
+            return Err(Error::oos(
                 "validity mask length must be equal to the number of values divided by size",
             ));
         }
@@ -206,10 +206,10 @@ impl FixedSizeListArray {
 }
 
 impl FixedSizeListArray {
-    pub(crate) fn try_child_and_size(data_type: &DataType) -> Result<(&Field, usize), ArrowError> {
+    pub(crate) fn try_child_and_size(data_type: &DataType) -> Result<(&Field, usize), Error> {
         match data_type.to_logical_type() {
             DataType::FixedSizeList(child, size) => Ok((child.as_ref(), *size as usize)),
-            _ => Err(ArrowError::oos(
+            _ => Err(Error::oos(
                 "FixedSizeListArray expects DataType::FixedSizeList",
             )),
         }

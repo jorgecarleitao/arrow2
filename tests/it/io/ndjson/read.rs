@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::datatypes::{DataType, Field};
-use arrow2::error::{ArrowError, Result};
+use arrow2::error::{Error, Result};
 use arrow2::io::ndjson::read as ndjson_read;
 use arrow2::io::ndjson::read::FallibleStreamingIterator;
 
@@ -76,13 +76,10 @@ fn read_empty_reader() -> Result<()> {
     let ndjson = "";
 
     let infer_error = infer(ndjson);
-    assert!(matches!(infer_error, Err(ArrowError::ExternalFormat(_))));
+    assert!(matches!(infer_error, Err(Error::ExternalFormat(_))));
 
     let deserialize_error = ndjson_read::deserialize(&[], DataType::Null);
-    assert!(matches!(
-        deserialize_error,
-        Err(ArrowError::ExternalFormat(_))
-    ));
+    assert!(matches!(deserialize_error, Err(Error::ExternalFormat(_))));
     Ok(())
 }
 

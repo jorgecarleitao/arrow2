@@ -2,7 +2,7 @@ use std::io::{Read, Seek, SeekFrom};
 use std::{collections::VecDeque, convert::TryInto};
 
 use crate::buffer::Buffer;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 use crate::{bitmap::Bitmap, types::NativeType};
 
 use super::super::compression;
@@ -36,7 +36,7 @@ fn read_swapped<T: NativeType, R: Read + Seek>(
             })?;
     } else {
         // machine is big endian, file is little endian
-        return Err(ArrowError::NotYetImplemented(
+        return Err(Error::NotYetImplemented(
             "Reading little endian files from big endian machines".to_string(),
         ));
     }
@@ -51,7 +51,7 @@ fn read_uncompressed_buffer<T: NativeType, R: Read + Seek>(
 ) -> Result<Vec<T>> {
     let bytes = length * std::mem::size_of::<T>();
     if bytes > buffer_length {
-        return Err(ArrowError::OutOfSpec(
+        return Err(Error::OutOfSpec(
             format!("The slots of the array times the physical size must \
             be smaller or equal to the length of the IPC buffer. \
             However, this array reports {} slots, which, for physical type \"{}\", corresponds to {} bytes, \
@@ -86,7 +86,7 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
     compression: Compression,
 ) -> Result<Vec<T>> {
     if is_little_endian != is_native_little_endian() {
-        return Err(ArrowError::NotYetImplemented(
+        return Err(Error::NotYetImplemented(
             "Reading compressed and big endian IPC".to_string(),
         ));
     }
@@ -124,7 +124,7 @@ pub fn read_buffer<T: NativeType, R: Read + Seek>(
 ) -> Result<Buffer<T>> {
     let buf = buf
         .pop_front()
-        .ok_or_else(|| ArrowError::oos("IPC: unable to fetch a buffer. The file is corrupted."))?;
+        .ok_or_else(|| Error::oos("IPC: unable to fetch a buffer. The file is corrupted."))?;
 
     reader.seek(SeekFrom::Start(block_offset + buf.offset() as u64))?;
 
@@ -146,7 +146,7 @@ fn read_uncompressed_bitmap<R: Read + Seek>(
     reader: &mut R,
 ) -> Result<Vec<u8>> {
     if length > bytes * 8 {
-        return Err(ArrowError::OutOfSpec(format!(
+        return Err(Error::OutOfSpec(format!(
             "An array requires a bitmap with at least the same number of bits as slots. \
             However, this array reports {} slots but the the bitmap in IPC only contains \
             {} bits",
@@ -197,7 +197,7 @@ pub fn read_bitmap<R: Read + Seek>(
 ) -> Result<Bitmap> {
     let buf = buf
         .pop_front()
-        .ok_or_else(|| ArrowError::oos("IPC: unable to fetch a buffer. The file is corrupted."))?;
+        .ok_or_else(|| Error::oos("IPC: unable to fetch a buffer. The file is corrupted."))?;
 
     reader.seek(SeekFrom::Start(block_offset + buf.offset() as u64))?;
 
@@ -230,9 +230,9 @@ pub fn read_validity<R: Read + Seek>(
             compression,
         )?)
     } else {
-        let _ = buffers.pop_front().ok_or_else(|| {
-            ArrowError::oos("IPC: unable to fetch a buffer. The file is corrupted.")
-        })?;
+        let _ = buffers
+            .pop_front()
+            .ok_or_else(|| Error::oos("IPC: unable to fetch a buffer. The file is corrupted."))?;
         None
     })
 }

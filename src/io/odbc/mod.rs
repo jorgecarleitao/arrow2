@@ -4,8 +4,8 @@ pub use odbc_api as api;
 pub mod read;
 pub mod write;
 
-impl From<api::Error> for crate::error::ArrowError {
+impl From<api::Error> for crate::error::Error {
     fn from(error: api::Error) -> Self {
-        crate::error::ArrowError::External("".to_string(), Box::new(error))
+        crate::error::Error::External("".to_string(), Box::new(error))
     }
 }

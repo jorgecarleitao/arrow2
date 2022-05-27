@@ -3,7 +3,7 @@ use std::io::Read;
 
 use fallible_streaming_iterator::FallibleStreamingIterator;
 
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::super::CompressedBlock;
 use super::util;
@@ -11,12 +11,12 @@ use super::util;
 fn read_size<R: Read>(reader: &mut R) -> Result<(usize, usize)> {
     let rows = match util::zigzag_i64(reader) {
         Ok(a) => a,
-        Err(ArrowError::Io(io_err)) => {
+        Err(Error::Io(io_err)) => {
             if let std::io::ErrorKind::UnexpectedEof = io_err.kind() {
                 // end
                 return Ok((0, 0));
             } else {
-                return Err(ArrowError::Io(io_err));
+                return Err(Error::Io(io_err));
             }
         }
         Err(other) => return Err(other),
@@ -47,7 +47,7 @@ fn read_block<R: Read>(
     reader.read_exact(&mut marker)?;
 
     if marker != file_marker {
-        return Err(ArrowError::ExternalFormat(
+        return Err(Error::ExternalFormat(
             "Avro: the sync marker in the block does not correspond to the file marker".to_string(),
         ));
     }
@@ -83,7 +83,7 @@ impl<R: Read> BlockStreamIterator<R> {
 }
 
 impl<R: Read> FallibleStreamingIterator for BlockStreamIterator<R> {
-    type Error = ArrowError;
+    type Error = Error;
     type Item = CompressedBlock;
 
     fn advance(&mut self) -> Result<()> {

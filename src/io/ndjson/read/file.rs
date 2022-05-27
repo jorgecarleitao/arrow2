@@ -7,7 +7,7 @@ use serde_json::Value;
 
 use crate::{
     datatypes::DataType,
-    error::{ArrowError, Result},
+    error::{Error, Result},
 };
 
 use super::super::super::json::read::{coerce_data_type, infer as infer_json};
@@ -21,9 +21,9 @@ fn read_rows<R: BufRead>(reader: &mut R, rows: &mut [String], limit: usize) -> R
     for row in rows.iter_mut() {
         loop {
             row.clear();
-            let _ = reader.read_line(row).map_err(|e| {
-                ArrowError::External(format!(" at line {}", row_number), Box::new(e))
-            })?;
+            let _ = reader
+                .read_line(row)
+                .map_err(|e| Error::External(format!(" at line {}", row_number), Box::new(e)))?;
             if row.is_empty() {
                 break;
             }
@@ -77,7 +77,7 @@ impl<R: BufRead> FileReader<R> {
 }
 
 impl<R: BufRead> FallibleStreamingIterator for FileReader<R> {
-    type Error = ArrowError;
+    type Error = Error;
     type Item = [String];
 
     fn advance(&mut self) -> Result<()> {
@@ -105,7 +105,7 @@ pub fn infer<R: std::io::BufRead>(
     number_of_rows: Option<usize>,
 ) -> Result<DataType> {
     if reader.fill_buf().map(|b| b.is_empty())? {
-        return Err(ArrowError::ExternalFormat(
+        return Err(Error::ExternalFormat(
             "Cannot infer NDJSON types on empty reader because empty string is not a valid JSON value".to_string(),
         ));
     }

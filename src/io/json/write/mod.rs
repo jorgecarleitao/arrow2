@@ -5,7 +5,7 @@ pub use fallible_streaming_iterator::*;
 pub(crate) use serialize::new_serializer;
 use serialize::serialize;
 
-use crate::{array::Array, error::ArrowError};
+use crate::{array::Array, error::Error};
 
 /// [`FallibleStreamingIterator`] that serializes an [`Array`] to bytes of valid JSON
 /// # Implementation
@@ -14,7 +14,7 @@ use crate::{array::Array, error::ArrowError};
 pub struct Serializer<A, I>
 where
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<A, ArrowError>>,
+    I: Iterator<Item = Result<A, Error>>,
 {
     arrays: I,
     buffer: Vec<u8>,
@@ -23,7 +23,7 @@ where
 impl<A, I> Serializer<A, I>
 where
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<A, ArrowError>>,
+    I: Iterator<Item = Result<A, Error>>,
 {
     /// Creates a new [`Serializer`].
     pub fn new(arrays: I, buffer: Vec<u8>) -> Self {
@@ -34,13 +34,13 @@ where
 impl<A, I> FallibleStreamingIterator for Serializer<A, I>
 where
     A: AsRef<dyn Array>,
-    I: Iterator<Item = Result<A, ArrowError>>,
+    I: Iterator<Item = Result<A, Error>>,
 {
     type Item = [u8];
 
-    type Error = ArrowError;
+    type Error = Error;
 
-    fn advance(&mut self) -> Result<(), ArrowError> {
+    fn advance(&mut self) -> Result<(), Error> {
         self.buffer.clear();
         self.arrays
             .next()
@@ -59,10 +59,10 @@ where
 }
 
 /// Writes valid JSON from an iterator of (assumed JSON-encoded) bytes to `writer`
-pub fn write<W, I>(writer: &mut W, mut blocks: I) -> Result<(), ArrowError>
+pub fn write<W, I>(writer: &mut W, mut blocks: I) -> Result<(), Error>
 where
     W: std::io::Write,
-    I: FallibleStreamingIterator<Item = [u8], Error = ArrowError>,
+    I: FallibleStreamingIterator<Item = [u8], Error = Error>,
 {
     writer.write_all(&[b'['])?;
     let mut is_first_row = true;

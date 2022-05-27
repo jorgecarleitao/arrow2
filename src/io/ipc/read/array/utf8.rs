@@ -4,7 +4,7 @@ use std::io::{Read, Seek};
 use crate::array::{Offset, Utf8Array};
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
-use crate::error::{ArrowError, Result};
+use crate::error::{Error, Result};
 
 use super::super::read_basic::*;
 use super::super::{Compression, IpcBuffer, Node};
@@ -19,7 +19,7 @@ pub fn read_utf8<O: Offset, R: Read + Seek>(
     compression: Option<Compression>,
 ) -> Result<Utf8Array<O>> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
-        ArrowError::oos(format!(
+        Error::oos(format!(
             "IPC: unable to fetch the field for {:?}. The file or stream is corrupted.",
             data_type
         ))
@@ -63,17 +63,17 @@ pub fn skip_utf8(
     buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<()> {
     let _ = field_nodes.pop_front().ok_or_else(|| {
-        ArrowError::oos("IPC: unable to fetch the field for utf8. The file or stream is corrupted.")
+        Error::oos("IPC: unable to fetch the field for utf8. The file or stream is corrupted.")
     })?;
 
     let _ = buffers
         .pop_front()
-        .ok_or_else(|| ArrowError::oos("IPC: missing validity buffer."))?;
+        .ok_or_else(|| Error::oos("IPC: missing validity buffer."))?;
     let _ = buffers
         .pop_front()
-        .ok_or_else(|| ArrowError::oos("IPC: missing offsets buffer."))?;
+        .ok_or_else(|| Error::oos("IPC: missing offsets buffer."))?;
     let _ = buffers
         .pop_front()
-        .ok_or_else(|| ArrowError::oos("IPC: missing values buffer."))?;
+        .ok_or_else(|| Error::oos("IPC: missing values buffer."))?;
     Ok(())
 }
