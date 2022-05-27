@@ -271,7 +271,7 @@ where
         List(inner) | LargeList(inner) | FixedSizeList(inner, _) => {
             init.push(InitNested::List(field.is_nullable));
             let iter = columns_to_iter_recursive(
-                vec![columns.pop().unwrap()],
+                columns,
                 types,
                 inner.as_ref().clone(),
                 init,
@@ -291,13 +291,10 @@ where
                 .map(|f| {
                     let mut init = init.clone();
                     init.push(InitNested::Struct(field.is_nullable));
-                    columns_to_iter_recursive(
-                        vec![columns.pop().unwrap()],
-                        vec![types.pop().unwrap()],
-                        f.clone(),
-                        init,
-                        chunk_size,
-                    )
+                    let n = n_columns(f);
+                    let columns = columns.drain(columns.len() - n..).collect();
+                    let types = types.drain(types.len() - n..).collect();
+                    columns_to_iter_recursive(columns, types, f.clone(), init, chunk_size)
                 })
                 .collect::<Result<Vec<_>>>()?;
             let columns = columns.into_iter().rev().collect();
@@ -305,6 +302,34 @@ where
         }
         other => todo!("{other:?}"),
     })
+}
+
+fn n_columns(field: &Field) -> usize {
+    use crate::datatypes::PhysicalType::*;
+    match field.data_type.to_physical_type() {
+        Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
+        | Dictionary(_) | LargeUtf8 => 1,
+        List | FixedSizeList | LargeList => {
+            let a = field.data_type().to_logical_type();
+            if let DataType::List(inner) = a {
+                n_columns(inner)
+            } else if let DataType::LargeList(inner) = a {
+                n_columns(inner)
+            } else if let DataType::FixedSizeList(inner, _) = a {
+                n_columns(inner)
+            } else {
+                unreachable!()
+            }
+        }
+        Struct => {
+            if let DataType::Struct(fields) = field.data_type.to_logical_type() {
+                fields.iter().map(n_columns).sum()
+            } else {
+                unreachable!()
+            }
+        }
+        _ => todo!(),
+    }
 }
 
 /// An iterator adapter that maps multiple iterators of [`DataPages`] into an iterator of [`Array`]s.

@@ -191,7 +191,13 @@ where
     P: ParquetNativeType,
     F: Copy + Fn(P) -> T,
 {
-    pub fn new(iter: I, init: Vec<InitNested>, data_type: DataType, chunk_size: usize, op: F) -> Self {
+    pub fn new(
+        iter: I,
+        init: Vec<InitNested>,
+        data_type: DataType,
+        chunk_size: usize,
+        op: F,
+    ) -> Self {
         Self {
             iter,
             init,

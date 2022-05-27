@@ -18,6 +18,10 @@ pub trait Nested: std::fmt::Debug + Send + Sync {
 
     fn is_nullable(&self) -> bool;
 
+    fn is_repeated(&self) -> bool {
+        false
+    }
+
     /// number of rows
     fn len(&self) -> usize;
 
@@ -79,6 +83,10 @@ impl Nested for NestedOptional {
         true
     }
 
+    fn is_repeated(&self) -> bool {
+        true
+    }
+
     fn push(&mut self, value: i64, is_valid: bool) {
         self.offsets.push(value);
         self.validity.push(is_valid);
@@ -114,6 +122,10 @@ impl Nested for NestedValid {
 
     fn is_nullable(&self) -> bool {
         false
+    }
+
+    fn is_repeated(&self) -> bool {
+        true
     }
 
     fn push(&mut self, value: i64, _is_valid: bool) {
@@ -184,11 +196,11 @@ impl NestedStruct {
 
 impl Nested for NestedStruct {
     fn inner(&mut self) -> (Vec<i64>, Option<MutableBitmap>) {
-        (Default::default(), None)
+        (Default::default(), Some(std::mem::take(&mut self.validity)))
     }
 
     fn is_nullable(&self) -> bool {
-        false
+        true
     }
 
     fn push(&mut self, _value: i64, is_valid: bool) {
@@ -389,7 +401,7 @@ fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, addi
 
     let mut cum_sum = vec![0u32; nested.len() + 1];
     for (i, nest) in nested.iter().enumerate() {
-        let delta = if nest.is_nullable() { 2 } else { 1 };
+        let delta = nest.is_nullable() as u32 + nest.is_repeated() as u32;
         cum_sum[i + 1] = cum_sum[i] + delta;
     }
 
@@ -422,7 +434,7 @@ fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, addi
 #[derive(Debug)]
 pub struct Optional<'a> {
     iter: HybridRleDecoder<'a>,
-    max: u32,
+    max_def: u32,
 }
 
 impl<'a> Iterator for Optional<'a> {
@@ -430,10 +442,10 @@ impl<'a> Iterator for Optional<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().and_then(|x| {
-            if x == self.max {
+        self.iter.next().and_then(|def| {
+            if def == self.max_def {
                 Some(true)
-            } else if x == self.max - 1 {
+            } else if def == self.max_def - 1 {
                 Some(false)
             } else {
                 self.next()
@@ -450,7 +462,7 @@ impl<'a> Optional<'a> {
 
         Self {
             iter: HybridRleDecoder::new(def_levels, get_bit_width(max_def), page.num_values()),
-            max: max_def as u32,
+            max_def: max_def as u32,
         }
     }
 
