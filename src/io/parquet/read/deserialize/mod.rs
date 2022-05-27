@@ -13,7 +13,7 @@ mod utils;
 use crate::{
     array::{Array, BinaryArray, FixedSizeListArray, ListArray, Utf8Array},
     datatypes::{DataType, Field},
-    error::{Error, Result},
+    error::Result,
 };
 
 use self::nested_utils::{InitNested, NestedArrayIter, NestedState};
@@ -41,10 +41,10 @@ fn create_list(
     data_type: DataType,
     nested: &mut NestedState,
     values: Arc<dyn Array>,
-) -> Result<Arc<dyn Array>> {
-    Ok(match data_type {
+) -> Arc<dyn Array> {
+    let (mut offsets, validity) = nested.nested.pop().unwrap().inner();
+    match data_type.to_logical_type() {
         DataType::List(_) => {
-            let (mut offsets, validity) = nested.nested.pop().unwrap().inner();
             offsets.push(values.len() as i64);
 
             let offsets = offsets.iter().map(|x| *x as i32).collect::<Vec<_>>();
@@ -56,7 +56,6 @@ fn create_list(
             ))
         }
         DataType::LargeList(_) => {
-            let (mut offsets, validity) = nested.nested.pop().unwrap().inner();
             offsets.push(values.len() as i64);
 
             Arc::new(ListArray::<i64>::new(
@@ -66,22 +65,28 @@ fn create_list(
                 validity.and_then(|x| x.into()),
             ))
         }
-        DataType::FixedSizeList(_, _) => {
-            let (_, validity) = nested.nested.pop().unwrap().inner();
+        DataType::FixedSizeList(_, _) => Arc::new(FixedSizeListArray::new(
+            data_type,
+            values,
+            validity.and_then(|x| x.into()),
+        )),
+        _ => unreachable!(),
+    }
+}
 
-            Arc::new(FixedSizeListArray::new(
-                data_type,
-                values,
-                validity.and_then(|x| x.into()),
-            ))
-        }
-        _ => {
-            return Err(Error::NotYetImplemented(format!(
-                "Read nested datatype {:?}",
-                data_type
-            )))
-        }
-    })
+fn is_primitive(data_type: &DataType) -> bool {
+    matches!(
+        data_type.to_physical_type(),
+        crate::datatypes::PhysicalType::Primitive(_)
+            | crate::datatypes::PhysicalType::Null
+            | crate::datatypes::PhysicalType::Boolean
+            | crate::datatypes::PhysicalType::Utf8
+            | crate::datatypes::PhysicalType::LargeUtf8
+            | crate::datatypes::PhysicalType::Binary
+            | crate::datatypes::PhysicalType::LargeBinary
+            | crate::datatypes::PhysicalType::FixedSizeBinary
+            | crate::datatypes::PhysicalType::Dictionary(_)
+    )
 }
 
 fn columns_to_iter_recursive<'a, I: 'a>(
@@ -95,7 +100,7 @@ where
     I: DataPages,
 {
     use DataType::*;
-    if init.len() == 1 && init[0].is_primitive() {
+    if init.is_empty() && is_primitive(&field.data_type) {
         return Ok(Box::new(
             page_iter_to_arrays(
                 columns.pop().unwrap(),
@@ -109,148 +114,164 @@ where
 
     Ok(match field.data_type().to_logical_type() {
         Boolean => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
-            boolean::iter_to_arrays_nested(columns.pop().unwrap(), init.pop().unwrap(), chunk_size)
+            boolean::iter_to_arrays_nested(columns.pop().unwrap(), init, chunk_size)
         }
         Int8 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             primitive::iter_to_arrays_nested(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
                 |x: i32| x as i8,
             )
         }
         Int16 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             primitive::iter_to_arrays_nested(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
                 |x: i32| x as i16,
             )
         }
         Int32 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             primitive::iter_to_arrays_nested(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
                 |x: i32| x,
             )
         }
         Int64 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             primitive::iter_to_arrays_nested(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
                 |x: i64| x,
             )
         }
         UInt8 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             primitive::iter_to_arrays_nested(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
                 |x: i32| x as u8,
             )
         }
         UInt16 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             primitive::iter_to_arrays_nested(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
                 |x: i32| x as u16,
             )
         }
         UInt32 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             primitive::iter_to_arrays_nested(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
                 |x: i32| x as u32,
             )
         }
         UInt64 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             primitive::iter_to_arrays_nested(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
                 |x: i64| x as u64,
             )
         }
         Float32 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             primitive::iter_to_arrays_nested(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
                 |x: f32| x,
             )
         }
         Float64 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             primitive::iter_to_arrays_nested(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
                 |x: f64| x,
             )
         }
         Utf8 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             binary::iter_to_arrays_nested::<i32, Utf8Array<i32>, _>(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
             )
         }
         LargeUtf8 => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             binary::iter_to_arrays_nested::<i64, Utf8Array<i64>, _>(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
             )
         }
         Binary => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             binary::iter_to_arrays_nested::<i32, BinaryArray<i32>, _>(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
             )
         }
         LargeBinary => {
+            init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
             binary::iter_to_arrays_nested::<i64, BinaryArray<i64>, _>(
                 columns.pop().unwrap(),
-                init.pop().unwrap(),
+                init,
                 field.data_type().clone(),
                 chunk_size,
             )
         }
         List(inner) | LargeList(inner) | FixedSizeList(inner, _) => {
+            init.push(InitNested::List(field.is_nullable));
             let iter = columns_to_iter_recursive(
-                vec![columns.pop().unwrap()],
+                columns,
                 types,
                 inner.as_ref().clone(),
                 init,
@@ -258,7 +279,7 @@ where
             )?;
             let iter = iter.map(move |x| {
                 let (mut nested, array) = x?;
-                let array = create_list(field.data_type().clone(), &mut nested, array)?;
+                let array = create_list(field.data_type().clone(), &mut nested, array);
                 Ok((nested, array))
             });
             Box::new(iter) as _
@@ -268,13 +289,12 @@ where
                 .iter()
                 .rev()
                 .map(|f| {
-                    columns_to_iter_recursive(
-                        vec![columns.pop().unwrap()],
-                        vec![types.pop().unwrap()],
-                        f.clone(),
-                        vec![init.pop().unwrap()],
-                        chunk_size,
-                    )
+                    let mut init = init.clone();
+                    init.push(InitNested::Struct(field.is_nullable));
+                    let n = n_columns(f);
+                    let columns = columns.drain(columns.len() - n..).collect();
+                    let types = types.drain(types.len() - n..).collect();
+                    columns_to_iter_recursive(columns, types, f.clone(), init, chunk_size)
                 })
                 .collect::<Result<Vec<_>>>()?;
             let columns = columns.into_iter().rev().collect();
@@ -284,38 +304,29 @@ where
     })
 }
 
-fn field_to_init(field: &Field) -> Vec<InitNested> {
+fn n_columns(field: &Field) -> usize {
     use crate::datatypes::PhysicalType::*;
     match field.data_type.to_physical_type() {
         Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
-        | Dictionary(_) | LargeUtf8 => vec![InitNested::Primitive(field.is_nullable)],
+        | Dictionary(_) | LargeUtf8 => 1,
         List | FixedSizeList | LargeList => {
             let a = field.data_type().to_logical_type();
-            let inner = if let DataType::List(inner) = a {
-                field_to_init(inner)
+            if let DataType::List(inner) = a {
+                n_columns(inner)
             } else if let DataType::LargeList(inner) = a {
-                field_to_init(inner)
+                n_columns(inner)
             } else if let DataType::FixedSizeList(inner, _) = a {
-                field_to_init(inner)
+                n_columns(inner)
             } else {
                 unreachable!()
-            };
-            inner
-                .into_iter()
-                .map(|x| InitNested::List(Box::new(x), field.is_nullable))
-                .collect()
+            }
         }
         Struct => {
-            let inner = if let DataType::Struct(fields) = field.data_type.to_logical_type() {
-                fields.iter().rev().map(field_to_init).collect::<Vec<_>>()
+            if let DataType::Struct(fields) = field.data_type.to_logical_type() {
+                fields.iter().map(n_columns).sum()
             } else {
                 unreachable!()
-            };
-            inner
-                .into_iter()
-                .flatten()
-                .map(|x| InitNested::Struct(Box::new(x), field.is_nullable))
-                .collect()
+            }
         }
         _ => todo!(),
     }
@@ -333,9 +344,8 @@ pub fn column_iter_to_arrays<'a, I: 'a>(
 where
     I: DataPages,
 {
-    let init = field_to_init(&field);
-
     Ok(Box::new(
-        columns_to_iter_recursive(columns, types, field, init, chunk_size)?.map(|x| x.map(|x| x.1)),
+        columns_to_iter_recursive(columns, types, field, vec![], chunk_size)?
+            .map(|x| x.map(|x| x.1)),
     ))
 }

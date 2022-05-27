@@ -23,7 +23,7 @@ pub use dictionary::DictIter;
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
 pub fn iter_to_arrays_nested<'a, O, A, I>(
     iter: I,
-    init: InitNested,
+    init: Vec<InitNested>,
     data_type: DataType,
     chunk_size: usize,
 ) -> NestedArrayIter<'a>

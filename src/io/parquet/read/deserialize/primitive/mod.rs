@@ -16,7 +16,7 @@ use nested::ArrayIterator;
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
 pub fn iter_to_arrays_nested<'a, I, T, P, F>(
     iter: I,
-    init: InitNested,
+    init: Vec<InitNested>,
     data_type: DataType,
     chunk_size: usize,
     op: F,

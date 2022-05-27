@@ -31,21 +31,29 @@ impl<'a> Iterator for StructIterator<'a> {
         if values.iter().any(|x| x.is_none()) {
             return None;
         }
-        let values = values
-            .into_iter()
-            .map(|x| x.unwrap().map(|x| x.1))
-            .collect::<Result<Vec<_>, Error>>();
 
-        match values {
-            Ok(values) => Some(Ok((
-                NestedState::new(vec![]), // todo
-                Arc::new(StructArray::from_data(
-                    DataType::Struct(self.fields.clone()),
-                    values,
-                    None,
-                )),
-            ))),
-            Err(e) => Some(Err(e)),
+        // todo: unzip of Result not yet supportted in stable Rust
+        let mut nested = vec![];
+        let mut new_values = vec![];
+        for x in values {
+            match x.unwrap() {
+                Ok((nest, values)) => {
+                    new_values.push(values);
+                    nested.push(nest);
+                }
+                Err(e) => return Some(Err(e)),
+            }
         }
+        let mut nested = nested.pop().unwrap();
+        let (_, validity) = nested.nested.pop().unwrap().inner();
+
+        Some(Ok((
+            nested,
+            Arc::new(StructArray::from_data(
+                DataType::Struct(self.fields.clone()),
+                new_values,
+                validity.and_then(|x| x.into()),
+            )),
+        )))
     }
 }
