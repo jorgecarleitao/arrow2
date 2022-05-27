@@ -198,7 +198,7 @@ impl<O: Offset> BinaryArray<O> {
         Self::try_new_unchecked(data_type, offsets, values, validity).unwrap()
     }
 
-    /// Alias for [`new_unchecked`]
+    /// Alias for [`Self::new_unchecked`]
     /// # Safety
     /// This function is unsafe iff:
     /// * the offsets are not monotonically increasing
