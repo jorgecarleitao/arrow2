@@ -134,7 +134,7 @@ impl<O: Offset> Utf8Array<O> {
 
     /// Returns the value of the element at index `i`, ignoring the array's validity.
     /// # Panic
-    /// This function panics iff `i < self.len`.
+    /// This function panics iff `i >= self.len`.
     #[inline]
     pub fn value(&self, i: usize) -> &str {
         assert!(i < self.len());
