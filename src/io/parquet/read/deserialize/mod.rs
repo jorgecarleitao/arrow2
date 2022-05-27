@@ -13,7 +13,7 @@ mod utils;
 use crate::{
     array::{Array, BinaryArray, FixedSizeListArray, ListArray, Utf8Array},
     datatypes::{DataType, Field},
-    error::{Error, Result},
+    error::Result,
 };
 
 use self::nested_utils::{InitNested, NestedArrayIter, NestedState};
@@ -41,10 +41,10 @@ fn create_list(
     data_type: DataType,
     nested: &mut NestedState,
     values: Arc<dyn Array>,
-) -> Result<Arc<dyn Array>> {
-    Ok(match data_type {
+) -> Arc<dyn Array> {
+    let (mut offsets, validity) = nested.nested.pop().unwrap().inner();
+    match data_type.to_logical_type() {
         DataType::List(_) => {
-            let (mut offsets, validity) = nested.nested.pop().unwrap().inner();
             offsets.push(values.len() as i64);
 
             let offsets = offsets.iter().map(|x| *x as i32).collect::<Vec<_>>();
@@ -56,7 +56,6 @@ fn create_list(
             ))
         }
         DataType::LargeList(_) => {
-            let (mut offsets, validity) = nested.nested.pop().unwrap().inner();
             offsets.push(values.len() as i64);
 
             Arc::new(ListArray::<i64>::new(
@@ -66,22 +65,13 @@ fn create_list(
                 validity.and_then(|x| x.into()),
             ))
         }
-        DataType::FixedSizeList(_, _) => {
-            let (_, validity) = nested.nested.pop().unwrap().inner();
-
-            Arc::new(FixedSizeListArray::new(
-                data_type,
-                values,
-                validity.and_then(|x| x.into()),
-            ))
-        }
-        _ => {
-            return Err(Error::NotYetImplemented(format!(
-                "Read nested datatype {:?}",
-                data_type
-            )))
-        }
-    })
+        DataType::FixedSizeList(_, _) => Arc::new(FixedSizeListArray::new(
+            data_type,
+            values,
+            validity.and_then(|x| x.into()),
+        )),
+        _ => unreachable!(),
+    }
 }
 
 fn columns_to_iter_recursive<'a, I: 'a>(
@@ -258,7 +248,7 @@ where
             )?;
             let iter = iter.map(move |x| {
                 let (mut nested, array) = x?;
-                let array = create_list(field.data_type().clone(), &mut nested, array)?;
+                let array = create_list(field.data_type().clone(), &mut nested, array);
                 Ok((nested, array))
             });
             Box::new(iter) as _
