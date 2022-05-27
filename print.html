@@ -1291,8 +1291,12 @@ fn write_batch(path: &amp;str, schema: Schema, columns: Chunk&lt;Arc&lt;dyn Arra
 
     let iter = vec![Ok(columns)];
 
-    let row_groups =
-        RowGroupIterator::try_new(iter.into_iter(), &amp;schema, options, vec![Encoding::Plain])?;
+    let row_groups = RowGroupIterator::try_new(
+        iter.into_iter(),
+        &amp;schema,
+        options,
+        vec![vec![Encoding::Plain]],
+    )?;
 
     // Create a new empty file
     let file = File::create(path)?;
