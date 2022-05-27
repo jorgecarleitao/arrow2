@@ -142,7 +142,7 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
 pub struct ArrayIterator<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
     iter: I,
     data_type: DataType,
-    init: InitNested,
+    init: Vec<InitNested>,
     items: VecDeque<(Binary<O>, MutableBitmap)>,
     nested: VecDeque<NestedState>,
     chunk_size: usize,
@@ -150,7 +150,7 @@ pub struct ArrayIterator<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
 }
 
 impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> ArrayIterator<O, A, I> {
-    pub fn new(iter: I, init: InitNested, data_type: DataType, chunk_size: usize) -> Self {
+    pub fn new(iter: I, init: Vec<InitNested>, data_type: DataType, chunk_size: usize) -> Self {
         Self {
             iter,
             data_type,

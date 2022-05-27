@@ -113,7 +113,7 @@ impl<'a> Decoder<'a> for BooleanDecoder {
 #[derive(Debug)]
 pub struct ArrayIterator<I: DataPages> {
     iter: I,
-    init: InitNested,
+    init: Vec<InitNested>,
     // invariant: items.len() == nested.len()
     items: VecDeque<(MutableBitmap, MutableBitmap)>,
     nested: VecDeque<NestedState>,
@@ -121,7 +121,7 @@ pub struct ArrayIterator<I: DataPages> {
 }
 
 impl<I: DataPages> ArrayIterator<I> {
-    pub fn new(iter: I, init: InitNested, chunk_size: usize) -> Self {
+    pub fn new(iter: I, init: Vec<InitNested>, chunk_size: usize) -> Self {
         Self {
             iter,
             init,

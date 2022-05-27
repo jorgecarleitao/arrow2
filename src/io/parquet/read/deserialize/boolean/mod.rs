@@ -16,7 +16,7 @@ pub use self::basic::Iter;
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
 pub fn iter_to_arrays_nested<'a, I: 'a>(
     iter: I,
-    init: InitNested,
+    init: Vec<InitNested>,
     chunk_size: usize,
 ) -> NestedArrayIter<'a>
 where

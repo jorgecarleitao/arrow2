@@ -221,46 +221,36 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InitNested {
     Primitive(bool),
-    List(Box<InitNested>, bool),
-    Struct(Box<InitNested>, bool),
+    List(bool),
+    Struct(bool),
 }
 
-impl InitNested {
-    pub fn is_primitive(&self) -> bool {
-        matches!(self, Self::Primitive(_))
-    }
-}
-
-fn init_nested_recursive(init: &InitNested, capacity: usize, container: &mut Vec<Box<dyn Nested>>) {
-    match init {
-        InitNested::Primitive(is_nullable) => {
-            container.push(Box::new(NestedPrimitive::new(*is_nullable)) as Box<dyn Nested>)
-        }
-        InitNested::List(inner, is_nullable) => {
-            container.push(if *is_nullable {
-                Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>
-            } else {
-                Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>
-            });
-            init_nested_recursive(inner, capacity, container)
-        }
-        InitNested::Struct(inner, is_nullable) => {
-            if *is_nullable {
-                container.push(Box::new(NestedStruct::with_capacity(capacity)) as Box<dyn Nested>)
-            } else {
-                container.push(Box::new(NestedStructValid::new()) as Box<dyn Nested>)
+fn init_nested(init: &[InitNested], capacity: usize) -> NestedState {
+    let container = init
+        .iter()
+        .map(|init| match init {
+            InitNested::Primitive(is_nullable) => {
+                Box::new(NestedPrimitive::new(*is_nullable)) as Box<dyn Nested>
             }
-            init_nested_recursive(inner, capacity, container)
-        }
-    }
-}
-
-fn init_nested(init: &InitNested, capacity: usize) -> NestedState {
-    let mut container = vec![];
-    init_nested_recursive(init, capacity, &mut container);
+            InitNested::List(is_nullable) => {
+                if *is_nullable {
+                    Box::new(NestedOptional::with_capacity(capacity)) as Box<dyn Nested>
+                } else {
+                    Box::new(NestedValid::with_capacity(capacity)) as Box<dyn Nested>
+                }
+            }
+            InitNested::Struct(is_nullable) => {
+                if *is_nullable {
+                    Box::new(NestedStruct::with_capacity(capacity)) as Box<dyn Nested>
+                } else {
+                    Box::new(NestedStructValid::new()) as Box<dyn Nested>
+                }
+            }
+        })
+        .collect();
     NestedState::new(container)
 }
 
@@ -359,7 +349,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
 /// has less items than `chunk_size`
 pub fn extend_offsets1<'a>(
     page: &mut NestedPage<'a>,
-    init: &InitNested,
+    init: &[InitNested],
     items: &mut VecDeque<NestedState>,
     chunk_size: usize,
 ) {
@@ -475,7 +465,7 @@ pub(super) fn next<'a, I, D>(
     iter: &'a mut I,
     items: &mut VecDeque<D::DecodedState>,
     nested_items: &mut VecDeque<NestedState>,
-    init: &InitNested,
+    init: &[InitNested],
     chunk_size: usize,
     decoder: &D,
 ) -> MaybeNext<Result<(NestedState, D::DecodedState)>>
