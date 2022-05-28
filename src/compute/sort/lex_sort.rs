@@ -198,7 +198,12 @@ pub fn lexsort_to_indices_impl<I: Index>(
 
     if let Some(limit) = limit {
         let limit = limit.min(row_count);
-        let (before, _, _) = values.select_nth_unstable_by(limit, lex_comparator);
+        let before = if limit < row_count {
+            let (before, _, _) = values.select_nth_unstable_by(limit, lex_comparator);
+            before
+        } else {
+            &mut values[..]
+        };
         before.sort_unstable_by(lex_comparator);
         values.truncate(limit);
         values.shrink_to_fit();
