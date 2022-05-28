@@ -89,7 +89,7 @@ impl FixedSizeBinaryArray {
         let size = Self::maybe_get_size(&data_type).unwrap();
         Self::new(
             data_type,
-            Buffer::new_zeroed(length * size),
+            vec![0u8; length * size].into(),
             Some(Bitmap::new_zeroed(length)),
         )
     }

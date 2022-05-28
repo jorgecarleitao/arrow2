@@ -6,7 +6,7 @@ mod mutable;
 fn basics() {
     let array = FixedSizeBinaryArray::from_data(
         DataType::FixedSizeBinary(2),
-        Buffer::from_slice([1, 2, 3, 4, 5, 6]),
+        Buffer::from(vec![1, 2, 3, 4, 5, 6]),
         Some(Bitmap::from([true, false, true])),
     );
     assert_eq!(array.size(), 2);
@@ -23,7 +23,7 @@ fn basics() {
 
 #[test]
 fn with_validity() {
-    let values = Buffer::from_slice([1, 2, 3, 4, 5, 6]);
+    let values = Buffer::from(vec![1, 2, 3, 4, 5, 6]);
     let a = FixedSizeBinaryArray::new(DataType::FixedSizeBinary(2), values, None);
     let a = a.with_validity(Some(Bitmap::from([true, false, true])));
     assert!(a.validity().is_some());
@@ -31,7 +31,7 @@ fn with_validity() {
 
 #[test]
 fn debug() {
-    let values = Buffer::from_slice([1, 2, 3, 4, 5, 6]);
+    let values = Buffer::from(vec![1, 2, 3, 4, 5, 6]);
     let a = FixedSizeBinaryArray::from_data(
         DataType::FixedSizeBinary(2),
         values,
@@ -66,26 +66,26 @@ fn from_iter() {
 
 #[test]
 fn wrong_size() {
-    let values = Buffer::from_slice(b"abb");
+    let values = Buffer::from(b"abb".to_vec());
     assert!(FixedSizeBinaryArray::try_new(DataType::FixedSizeBinary(2), values, None).is_err());
 }
 
 #[test]
 fn wrong_len() {
-    let values = Buffer::from_slice(b"abba");
+    let values = Buffer::from(b"abba".to_vec());
     let validity = Some([true, false, false].into()); // it should be 2
     assert!(FixedSizeBinaryArray::try_new(DataType::FixedSizeBinary(2), values, validity).is_err());
 }
 
 #[test]
 fn wrong_data_type() {
-    let values = Buffer::from_slice(b"abba");
+    let values = Buffer::from(b"abba".to_vec());
     assert!(FixedSizeBinaryArray::try_new(DataType::Binary, values, None).is_err());
 }
 
 #[test]
 fn to() {
-    let values = Buffer::from_slice(b"abba");
+    let values = Buffer::from(b"abba".to_vec());
     let a = FixedSizeBinaryArray::new(DataType::FixedSizeBinary(2), values, None);
 
     let extension = DataType::Extension(

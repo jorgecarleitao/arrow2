@@ -52,7 +52,7 @@ pub trait Array: Send + Sync {
 
     /// The number of null slots on this [`Array`].
     /// # Implementation
-    /// This is `O(1)`.
+    /// This is `O(1)` since the number of null elements is pre-computed.
     #[inline]
     fn null_count(&self) -> usize {
         if self.data_type() == &DataType::Null {

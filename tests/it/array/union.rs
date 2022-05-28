@@ -69,7 +69,7 @@ fn slice() -> Result<()> {
         Field::new("b", DataType::Utf8, true),
     ];
     let data_type = DataType::Union(fields, None, UnionMode::Sparse);
-    let types = Buffer::from_slice([0, 0, 1]);
+    let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
         Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")])) as Arc<dyn Array>,
@@ -79,7 +79,7 @@ fn slice() -> Result<()> {
 
     let result = array.slice(1, 2);
 
-    let sliced_types = Buffer::from_slice([0, 1]);
+    let sliced_types = Buffer::from(vec![0, 1]);
     let sliced_fields = vec![
         Arc::new(Int32Array::from(&[None, Some(2)])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from(&[Some("b"), Some("c")])) as Arc<dyn Array>,
@@ -97,7 +97,7 @@ fn iter_sparse() -> Result<()> {
         Field::new("b", DataType::Utf8, true),
     ];
     let data_type = DataType::Union(fields, None, UnionMode::Sparse);
-    let types = Buffer::from_slice([0, 0, 1]);
+    let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
         Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")])) as Arc<dyn Array>,
@@ -130,8 +130,8 @@ fn iter_dense() -> Result<()> {
         Field::new("b", DataType::Utf8, true),
     ];
     let data_type = DataType::Union(fields, None, UnionMode::Dense);
-    let types = Buffer::from_slice([0, 0, 1]);
-    let offsets = Buffer::<i32>::from_slice([0, 1, 0]);
+    let types = Buffer::from(vec![0, 0, 1]);
+    let offsets = Buffer::<i32>::from(vec![0, 1, 0]);
     let fields = vec![
         Arc::new(Int32Array::from(&[Some(1), None])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from(&[Some("c")])) as Arc<dyn Array>,
@@ -164,7 +164,7 @@ fn iter_sparse_slice() -> Result<()> {
         Field::new("b", DataType::Utf8, true),
     ];
     let data_type = DataType::Union(fields, None, UnionMode::Sparse);
-    let types = Buffer::from_slice([0, 0, 1]);
+    let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
         Arc::new(Int32Array::from(&[Some(1), Some(3), Some(2)])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")])) as Arc<dyn Array>,
@@ -190,8 +190,8 @@ fn iter_dense_slice() -> Result<()> {
         Field::new("b", DataType::Utf8, true),
     ];
     let data_type = DataType::Union(fields, None, UnionMode::Dense);
-    let types = Buffer::from_slice([0, 0, 1]);
-    let offsets = Buffer::<i32>::from_slice([0, 1, 0]);
+    let types = Buffer::from(vec![0, 0, 1]);
+    let offsets = Buffer::<i32>::from(vec![0, 1, 0]);
     let fields = vec![
         Arc::new(Int32Array::from(&[Some(1), Some(3)])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from(&[Some("c")])) as Arc<dyn Array>,
@@ -217,8 +217,8 @@ fn scalar() -> Result<()> {
         Field::new("b", DataType::Utf8, true),
     ];
     let data_type = DataType::Union(fields, None, UnionMode::Dense);
-    let types = Buffer::from_slice([0, 0, 1]);
-    let offsets = Buffer::<i32>::from_slice([0, 1, 0]);
+    let types = Buffer::from(vec![0, 0, 1]);
+    let offsets = Buffer::<i32>::from(vec![0, 1, 0]);
     let fields = vec![
         Arc::new(Int32Array::from(&[Some(1), None])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from(&[Some("c")])) as Arc<dyn Array>,

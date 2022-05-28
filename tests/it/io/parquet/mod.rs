@@ -68,7 +68,7 @@ pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
 }
 
 pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
-    let offsets = Buffer::from_slice([0, 2, 2, 5, 8, 8, 11, 11, 12]);
+    let offsets = Buffer::from(vec![0, 2, 2, 5, 8, 8, 11, 11, 12]);
 
     let values = match column {
         "list_int64" => {

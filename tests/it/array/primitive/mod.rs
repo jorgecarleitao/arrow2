@@ -87,20 +87,20 @@ fn months_days_ns() {
 
 #[test]
 fn wrong_data_type() {
-    let values = Buffer::from_slice(b"abbb");
+    let values = Buffer::from(b"abbb".to_vec());
     assert!(PrimitiveArray::try_new(DataType::Utf8, values, None).is_err());
 }
 
 #[test]
 fn wrong_len() {
-    let values = Buffer::from_slice(b"abbb");
+    let values = Buffer::from(b"abbb".to_vec());
     let validity = Some([true, false].into());
     assert!(PrimitiveArray::try_new(DataType::Utf8, values, validity).is_err());
 }
 
 #[test]
 fn into_mut_1() {
-    let values = Buffer::<i32>::from_slice([0, 1]);
+    let values = Buffer::<i32>::from(vec![0, 1]);
     let a = values.clone(); // cloned values
     assert_eq!(a, values);
     let array = PrimitiveArray::new(DataType::Int32, values, None);
@@ -109,7 +109,7 @@ fn into_mut_1() {
 
 #[test]
 fn into_mut_2() {
-    let values = Buffer::<i32>::from_slice([0, 1]);
+    let values = Buffer::<i32>::from(vec![0, 1]);
     let validity = Some([true, false].into());
     let a = validity.clone(); // cloned values
     assert_eq!(a, validity);
@@ -119,7 +119,7 @@ fn into_mut_2() {
 
 #[test]
 fn into_mut_3() {
-    let values = Buffer::<i32>::from_slice([0, 1]);
+    let values = Buffer::<i32>::from(vec![0, 1]);
     let validity = Some([true, false].into());
     let array = PrimitiveArray::new(DataType::Int32, values, validity);
     assert!(array.into_mut().is_right());

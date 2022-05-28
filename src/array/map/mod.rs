@@ -106,7 +106,7 @@ impl MapArray {
         let field = new_empty_array(Self::get_field(&data_type).data_type().clone()).into();
         Self::new(
             data_type,
-            Buffer::new_zeroed(length + 1),
+            vec![0i32; 1 + length].into(),
             field,
             Some(Bitmap::new_zeroed(length)),
         )

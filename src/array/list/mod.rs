@@ -116,7 +116,7 @@ impl<O: Offset> ListArray<O> {
         let child = Self::get_child_type(&data_type).clone();
         Self::new(
             data_type,
-            Buffer::new_zeroed(length + 1),
+            vec![O::default(); 1 + length].into(),
             new_empty_array(child).into(),
             Some(Bitmap::new_zeroed(length)),
         )
