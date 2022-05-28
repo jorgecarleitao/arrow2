@@ -104,7 +104,7 @@ impl<T: BitChunk> Iterator for BitChunkIter<T> {
 unsafe impl<T: BitChunk> crate::trusted_len::TrustedLen for BitChunkIter<T> {}
 
 /// An [`Iterator<Item=usize>`] over a [`BitChunk`] returning the index of each bit set in the chunk
-/// Refer: https://lemire.me/blog/2018/03/08/iterating-over-set-bits-quickly-simd-edition/
+/// See <https://lemire.me/blog/2018/03/08/iterating-over-set-bits-quickly-simd-edition/> for details
 /// # Example
 /// ```
 /// use arrow2::types::BitChunkOnes;

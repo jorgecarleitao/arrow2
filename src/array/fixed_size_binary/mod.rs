@@ -186,7 +186,7 @@ impl FixedSizeBinaryArray {
             .get_unchecked(i * self.size..(i + 1) * self.size)
     }
 
-    /// Returns a new [`FixedSizeBinary`] with a different logical type.
+    /// Returns a new [`FixedSizeBinaryArray`] with a different logical type.
     /// This is `O(1)`.
     /// # Panics
     /// Panics iff the data_type is not supported for the physical type.

@@ -13,7 +13,7 @@ use super::{default_ipc_fields, schema_to_bytes, Record};
 use crate::datatypes::*;
 use crate::error::{Error, Result};
 
-/// A sink that writes array [`chunks`](Chunk) as an IPC stream.
+/// A sink that writes array [`chunks`](crate::chunk::Chunk) as an IPC stream.
 ///
 /// The stream header is automatically written before writing the first chunk.
 ///

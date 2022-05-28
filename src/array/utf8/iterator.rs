@@ -1,4 +1,4 @@
-use crate::bitmap::utils::{zip_validity, ZipValidity};
+use crate::bitmap::utils::ZipValidity;
 use crate::{array::Offset, trusted_len::TrustedLen};
 
 use super::Utf8Array;
@@ -71,21 +71,6 @@ impl<'a, O: Offset> IntoIterator for &'a Utf8Array<O> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
-    }
-}
-
-impl<'a, O: Offset> Utf8Array<O> {
-    /// Returns an iterator of `Option<&str>`
-    pub fn iter(&'a self) -> ZipValidity<'a, &'a str, Utf8ValuesIter<'a, O>> {
-        zip_validity(
-            Utf8ValuesIter::new(self),
-            self.validity.as_ref().map(|x| x.iter()),
-        )
-    }
-
-    /// Returns an iterator of `&str`
-    pub fn values_iter(&'a self) -> Utf8ValuesIter<'a, O> {
-        Utf8ValuesIter::new(self)
     }
 }
 

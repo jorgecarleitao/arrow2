@@ -16,17 +16,6 @@ impl<'a, T: NativeType> IntoIterator for &'a PrimitiveArray<T> {
     }
 }
 
-impl<'a, T: NativeType> PrimitiveArray<T> {
-    /// constructs a new iterator
-    #[inline]
-    pub fn iter(&'a self) -> ZipValidity<'a, &'a T, std::slice::Iter<'a, T>> {
-        zip_validity(
-            self.values().iter(),
-            self.validity.as_ref().map(|x| x.iter()),
-        )
-    }
-}
-
 impl<'a, T: NativeType> MutablePrimitiveArray<T> {
     /// Returns an iterator over `Option<T>`
     #[inline]
