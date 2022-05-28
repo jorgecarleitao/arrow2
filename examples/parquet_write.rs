@@ -7,7 +7,8 @@ use arrow2::{
     datatypes::{Field, Schema},
     error::Result,
     io::parquet::write::{
-        CompressionOptions, Encoding, FileWriter, RowGroupIterator, Version, WriteOptions,
+        transverse, CompressionOptions, Encoding, FileWriter, RowGroupIterator, Version,
+        WriteOptions,
     },
 };
 
@@ -20,12 +21,13 @@ fn write_batch(path: &str, schema: Schema, columns: Chunk<Arc<dyn Array>>) -> Re
 
     let iter = vec![Ok(columns)];
 
-    let row_groups = RowGroupIterator::try_new(
-        iter.into_iter(),
-        &schema,
-        options,
-        vec![vec![Encoding::Plain]],
-    )?;
+    let encodings = schema
+        .fields
+        .iter()
+        .map(|f| transverse(&f.data_type, |_| Encoding::Plain))
+        .collect();
+
+    let row_groups = RowGroupIterator::try_new(iter.into_iter(), &schema, options, encodings)?;
 
     // Create a new empty file
     let file = File::create(path)?;
