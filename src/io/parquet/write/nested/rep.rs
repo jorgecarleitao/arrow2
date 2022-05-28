@@ -15,7 +15,7 @@ fn iter<'a>(nested: &'a [Nested]) -> Vec<Box<dyn DebugIter + 'a>> {
                 Some(Box::new(to_length(nested.offsets)) as Box<dyn DebugIter>)
             }
             Nested::Struct(_, _, length) => {
-                Some(Box::new(std::iter::repeat(0usize).take(*length)) as Box<dyn DebugIter>)
+                Some(Box::new(std::iter::repeat(1usize).take(*length)) as Box<dyn DebugIter>)
             }
         })
         .collect()
@@ -199,6 +199,27 @@ mod tests {
             Nested::Primitive(None, false, 10),
         ];
         let expected = vec![0, 2, 2, 1, 2, 2, 2, 0, 0, 1, 2];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn list_of_struct() {
+        /*
+        [
+            [{"a": "b"}],[{"a": "c"}]
+        ]
+        */
+        let nested = vec![
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0i32, 1, 2],
+                validity: None,
+            }),
+            Nested::Struct(None, true, 2),
+            Nested::Primitive(None, true, 2),
+        ];
+        let expected = vec![0, 0];
 
         test(nested, expected)
     }
