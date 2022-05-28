@@ -59,10 +59,12 @@ pub unsafe fn set_bit_unchecked(data: &mut [u8], i: usize, value: bool) {
     *byte = set(*byte, i % 8, value);
 }
 
-/// Returns whether bit at position `i` in `data` is set or not
+/// Returns whether bit at position `i` in `data` is set
+/// # Panic
+/// This function panics iff `i / 8 >= bytes.len()`
 #[inline]
-pub fn get_bit(data: &[u8], i: usize) -> bool {
-    is_set(data[i / 8], i % 8)
+pub fn get_bit(bytes: &[u8], i: usize) -> bool {
+    is_set(bytes[i / 8], i % 8)
 }
 
 /// Returns whether bit at position `i` in `data` is set or not.

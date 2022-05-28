@@ -2,26 +2,51 @@ use either::Either;
 use std::iter::FromIterator;
 use std::sync::Arc;
 
-use crate::{buffer::bytes::Bytes, trusted_len::TrustedLen};
+use crate::{buffer::bytes::Bytes, error::Error, trusted_len::TrustedLen};
 
 use super::{
     utils::{count_zeros, fmt, get_bit, get_bit_unchecked, BitChunk, BitChunks, BitmapIter},
     MutableBitmap,
 };
 
-/// An immutable container whose API is optimized to handle bitmaps. All quantities on this
-/// container's API are measured in bits.
-/// # Implementation
-/// * memory on this container is sharable across thread boundaries
-/// * Cloning [`Bitmap`] is `O(1)`
-/// * Slicing [`Bitmap`] is `O(1)`
+/// An immutable container semantically equivalent to `Arc<Vec<bool>>` but represented as `Arc<Vec<u8>>` where
+/// each boolean is represented as a single bit.
+///
+/// # Examples
+/// ```
+/// use arrow2::bitmap::{Bitmap, MutableBitmap};
+///
+/// let bitmap = Bitmap::from([true, false, true]);
+/// assert_eq!(bitmap.iter().collect::<Vec<_>>(), vec![true, false, true]);
+///
+/// // creation directly from bytes
+/// let bitmap = Bitmap::try_new(vec![0b00001101], 5).unwrap();
+/// // note: the first bit is the left-most of the first byte
+/// assert_eq!(bitmap.iter().collect::<Vec<_>>(), vec![true, false, true, true, false]);
+/// // we can also get the slice:
+/// assert_eq!(bitmap.as_slice(), ([0b00001101u8].as_ref(), 0, 5));
+/// // debug helps :)
+/// assert_eq!(format!("{:?}", bitmap), "[0b___01101]".to_string());
+///
+/// // it supports copy-on-write semantics (to a `MutableBitmap`)
+/// let bitmap: MutableBitmap = bitmap.into_mut().right().unwrap();
+/// assert_eq!(bitmap, MutableBitmap::from([true, false, true, true, false]));
+///
+/// // slicing is 'O(1)' (data is shared)
+/// let bitmap = Bitmap::try_new(vec![0b00001101], 5).unwrap();
+/// let sliced = bitmap.slice(1, 4);
+/// assert_eq!(sliced.as_slice(), ([0b00001101u8].as_ref(), 1, 4)); // 1 here is the offset:
+/// assert_eq!(format!("{:?}", sliced), "[0b___0110_]".to_string());
+/// // when sliced (or cloned), it is no longer possible to `into_mut`.
+/// let same: Bitmap = sliced.into_mut().left().unwrap();
+/// ```
 #[derive(Clone)]
 pub struct Bitmap {
     bytes: Arc<Bytes<u8>>,
     // both are measured in bits. They are used to bound the bitmap to a region of Bytes.
     offset: usize,
     length: usize,
-    // this is a cache: it must be computed on initialization
+    // this is a cache: it is computed on initialization
     null_count: usize,
 }
 
@@ -45,10 +70,25 @@ impl Bitmap {
         Self::default()
     }
 
-    /// Initializes an new [`Bitmap`] filled with unset values.
+    /// Initializes a new [`Bitmap`] from vector of bytes and a length.
+    /// # Errors
+    /// This function errors iff `length > bytes.len() * 8`
     #[inline]
-    pub fn new_zeroed(length: usize) -> Self {
-        MutableBitmap::from_len_zeroed(length).into()
+    pub fn try_new(bytes: Vec<u8>, length: usize) -> Result<Self, Error> {
+        if length > bytes.len().saturating_mul(8) {
+            return Err(Error::InvalidArgumentError(format!(
+                "The length of the bitmap ({}) must be `<=` to the number of bytes times 8 ({})",
+                length,
+                bytes.len().saturating_mul(8)
+            )));
+        }
+        let null_count = count_zeros(&bytes, 0, length);
+        Ok(Self {
+            length,
+            offset: 0,
+            bytes: Arc::new(bytes.into()),
+            null_count,
+        })
     }
 
     /// Returns the length of the [`Bitmap`].
@@ -61,6 +101,18 @@ impl Bitmap {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    /// Returns a new iterator of `bool` over this bitmap
+    pub fn iter(&self) -> BitmapIter {
+        BitmapIter::new(&self.bytes, self.offset, self.length)
+    }
+
+    /// Returns an iterator over bits in bit chunks [`BitChunk`].
+    ///
+    /// This iterator is useful to operate over multiple bits via e.g. bitwise.
+    pub fn chunks<T: BitChunk>(&self) -> BitChunks<T> {
+        BitChunks::new(&self.bytes, self.offset, self.length)
     }
 
     /// Creates a new [`Bitmap`] from [`Bytes`] and a length.
@@ -78,28 +130,22 @@ impl Bitmap {
         }
     }
 
-    /// Creates a new [`Bitmap`] from [`Vec`] and a length.
-    /// This function is `O(1)`
-    /// # Panic
-    /// Panics iff `length <= buffer.len() * 8`
+    /// Returns the byte slice of this [`Bitmap`].
+    ///
+    /// The returned tuple contains:
+    /// * `.1`: The byte slice, truncated to the start of the first bit. So the start of the slice
+    ///       is within the first 8 bits.
+    /// * `.2`: The start offset in bits on a range `0 <= offsets < 8`.
+    /// * `.3`: The length in number of bits.
     #[inline]
-    pub fn from_u8_vec(vec: Vec<u8>, length: usize) -> Self {
-        Bitmap::from_bytes(vec.into(), length)
-    }
-
-    /// Creates a new [`Bitmap`] from a slice and length.
-    /// # Panic
-    /// Panics iff `length <= bytes.len() * 8`
-    #[inline]
-    pub fn from_u8_slice<T: AsRef<[u8]>>(buffer: T, length: usize) -> Self {
-        let buffer = Vec::<u8>::from(buffer.as_ref());
-        Bitmap::from_u8_vec(buffer, length)
-    }
-
-    /// Counts the nulls (unset bits) starting from `offset` bits and for `length` bits.
-    #[inline]
-    pub fn null_count_range(&self, offset: usize, length: usize) -> usize {
-        count_zeros(&self.bytes, self.offset + offset, length)
+    pub fn as_slice(&self) -> (&[u8], usize, usize) {
+        let start = self.offset / 8;
+        let len = (self.offset % 8 + self.length).saturating_add(7) / 8;
+        (
+            &self.bytes[start..start + len],
+            self.offset % 8,
+            self.length,
+        )
     }
 
     /// Returns the number of unset bits on this [`Bitmap`].
@@ -110,9 +156,10 @@ impl Bitmap {
 
     /// Slices `self`, offsetting by `offset` and truncating up to `length` bits.
     /// # Panic
-    /// Panics iff `self.offset + offset + length >= self.bytes.len() * 8`, i.e. if the offset and `length`
+    /// Panics iff `offset + length > self.length`, i.e. if the offset and `length`
     /// exceeds the allocated capacity of `self`.
     #[inline]
+    #[must_use]
     pub fn slice(self, offset: usize, length: usize) -> Self {
         assert!(offset + length <= self.length);
         unsafe { self.slice_unchecked(offset, length) }
@@ -145,16 +192,6 @@ impl Bitmap {
     #[inline]
     pub fn get_bit(&self, i: usize) -> bool {
         get_bit(&self.bytes, self.offset + i)
-    }
-
-    /// Returns whether the bit at position `i` is set.
-    #[inline]
-    pub fn get(&self, i: usize) -> Option<bool> {
-        if i < self.len() {
-            Some(unsafe { self.get_bit_unchecked(i) })
-        } else {
-            None
-        }
     }
 
     /// Unsafely returns whether the bit at position `i` is set.
@@ -196,6 +233,45 @@ impl Bitmap {
             _ => Either::Left(self),
         }
     }
+
+    /// Initializes an new [`Bitmap`] filled with unset values.
+    #[inline]
+    pub fn new_zeroed(length: usize) -> Self {
+        MutableBitmap::from_len_zeroed(length).into()
+    }
+
+    /// Counts the nulls (unset bits) starting from `offset` bits and for `length` bits.
+    #[inline]
+    pub fn null_count_range(&self, offset: usize, length: usize) -> usize {
+        count_zeros(&self.bytes, self.offset + offset, length)
+    }
+
+    /// Creates a new [`Bitmap`] from a slice and length.
+    /// # Panic
+    /// Panics iff `length <= bytes.len() * 8`
+    #[inline]
+    pub fn from_u8_slice<T: AsRef<[u8]>>(slice: T, length: usize) -> Self {
+        Bitmap::try_new(slice.as_ref().to_vec(), length).unwrap()
+    }
+
+    /// Alias for `Bitmap::try_new().unwrap()`
+    /// This function is `O(1)`
+    /// # Panic
+    /// This function panics iff `length <= bytes.len() * 8`
+    #[inline]
+    pub fn from_u8_vec(vec: Vec<u8>, length: usize) -> Self {
+        Bitmap::try_new(vec, length).unwrap()
+    }
+
+    /// Returns whether the bit at position `i` is set.
+    #[inline]
+    pub fn get(&self, i: usize) -> Option<bool> {
+        if i < self.len() {
+            Some(unsafe { self.get_bit_unchecked(i) })
+        } else {
+            None
+        }
+    }
 }
 
 impl<P: AsRef<[bool]>> From<P> for Bitmap {
@@ -210,14 +286,6 @@ impl FromIterator<bool> for Bitmap {
         I: IntoIterator<Item = bool>,
     {
         MutableBitmap::from_iter(iter).into()
-    }
-}
-
-impl Bitmap {
-    /// Returns an iterator over bits in chunks of `T`, which is useful for
-    /// bit operations.
-    pub fn chunks<T: BitChunk>(&self) -> BitChunks<T> {
-        BitChunks::new(&self.bytes, self.offset, self.length)
     }
 }
 
@@ -258,38 +326,11 @@ impl Bitmap {
     }
 }
 
-impl Bitmap {
-    /// Returns the byte slice of this Bitmap.
-    ///
-    /// The returned tuple contains:
-    /// .1 -> The byte slice, truncated to the start of the first bit. So the start of the slice
-    ///       is within the first 8 bits.
-    /// .2 -> The start offset in bits, given what described above `0 <= offsets < 8`.
-    /// .3 -> The length in bits.
-    #[inline]
-    pub fn as_slice(&self) -> (&[u8], usize, usize) {
-        let start = self.offset / 8;
-        let len = (self.offset % 8 + self.length).saturating_add(7) / 8;
-        (
-            &self.bytes[start..start + len],
-            self.offset % 8,
-            self.length,
-        )
-    }
-}
-
 impl<'a> IntoIterator for &'a Bitmap {
     type Item = bool;
     type IntoIter = BitmapIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        BitmapIter::<'a>::new(&self.bytes, self.offset, self.length)
-    }
-}
-
-impl<'a> Bitmap {
-    /// constructs a new iterator
-    pub fn iter(&'a self) -> BitmapIter<'a> {
         BitmapIter::<'a>::new(&self.bytes, self.offset, self.length)
     }
 }

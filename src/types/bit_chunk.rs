@@ -8,7 +8,7 @@ use num_traits::PrimInt;
 use super::NativeType;
 
 /// A chunk of bits. This is used to create masks of a given length
-/// whose width is `1` bit. In `simd_packed` notation, this corresponds to `m1xY`.
+/// whose width is `1` bit. In `portable_simd` notation, this corresponds to `m1xY`.
 pub trait BitChunk:
     super::private::Sealed
     + PrimInt

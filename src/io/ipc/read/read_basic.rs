@@ -209,7 +209,7 @@ pub fn read_bitmap<R: Read + Seek>(
         read_uncompressed_bitmap(length, bytes, reader)
     }?;
 
-    Ok(Bitmap::from_bytes(buffer.into(), length))
+    Bitmap::try_new(buffer, length)
 }
 
 pub fn read_validity<R: Read + Seek>(
