@@ -5,6 +5,13 @@ fn test_lex_sort_arrays(input: Vec<SortColumn>, expected: Vec<Box<dyn Array>>) {
     let sorted = lexsort::<i32>(&input, None).unwrap();
     assert_eq!(sorted, expected);
 
+    let sorted = lexsort::<i32>(&input, Some(4)).unwrap();
+    let expected = expected
+        .into_iter()
+        .map(|x| x.slice(0, 4))
+        .collect::<Vec<_>>();
+    assert_eq!(sorted, expected);
+
     let sorted = lexsort::<i32>(&input, Some(2)).unwrap();
     let expected = expected
         .into_iter()
