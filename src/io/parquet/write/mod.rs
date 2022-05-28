@@ -4,7 +4,6 @@ mod boolean;
 mod dictionary;
 mod file;
 mod fixed_len_bytes;
-//mod levels;
 mod nested;
 mod pages;
 mod primitive;
@@ -447,4 +446,61 @@ fn array_to_page_nested(
         ))),
     }
     .map(EncodedPage::Data)
+}
+
+fn transverse_recursive<T, F: Fn(&DataType) -> T + Clone>(
+    data_type: &DataType,
+    map: F,
+    encodings: &mut Vec<T>,
+) {
+    use crate::datatypes::PhysicalType::*;
+    match data_type.to_physical_type() {
+        Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
+        | Dictionary(_) | LargeUtf8 => encodings.push(map(data_type)),
+        List | FixedSizeList | LargeList => {
+            let a = data_type.to_logical_type();
+            if let DataType::List(inner) = a {
+                transverse_recursive(&inner.data_type, map, encodings)
+            } else if let DataType::LargeList(inner) = a {
+                transverse_recursive(&inner.data_type, map, encodings)
+            } else if let DataType::FixedSizeList(inner, _) = a {
+                transverse_recursive(&inner.data_type, map, encodings)
+            } else {
+                unreachable!()
+            }
+        }
+        Struct => {
+            if let DataType::Struct(fields) = data_type.to_logical_type() {
+                for field in fields {
+                    transverse_recursive(&field.data_type, map.clone(), encodings)
+                }
+            } else {
+                unreachable!()
+            }
+        }
+        Union => todo!(),
+        Map => todo!(),
+    }
+}
+
+/// Transverses the `data_type` up to its (parquet) columns and returns a vector of
+/// items based on `map`.
+/// This is used to assign an [`Encoding`] to every parquet column based on the columns' type (see example)
+/// # Example
+/// ```
+/// use arrow2::io::parquet::write::{transverse, Encoding};
+/// use arrow2::datatypes::{DataType, Field};
+///
+/// let dt = DataType::Struct(vec![
+///     Field::new("a", DataType::Int64, true),
+///     Field::new("b", DataType::List(Box::new(Field::new("item", DataType::Int32, true))), true),
+/// ]);
+///
+/// let encodings = transverse(&dt, |dt| Encoding::Plain);
+/// assert_eq!(encodings, vec![Encoding::Plain, Encoding::Plain]);
+/// ```
+pub fn transverse<T, F: Fn(&DataType) -> T + Clone>(data_type: &DataType, map: F) -> Vec<T> {
+    let mut encodings = vec![];
+    transverse_recursive(data_type, map, &mut encodings);
+    encodings
 }

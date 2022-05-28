@@ -291,7 +291,7 @@ where
                 .map(|f| {
                     let mut init = init.clone();
                     init.push(InitNested::Struct(field.is_nullable));
-                    let n = n_columns(f);
+                    let n = n_columns(&f.data_type);
                     let columns = columns.drain(columns.len() - n..).collect();
                     let types = types.drain(types.len() - n..).collect();
                     columns_to_iter_recursive(columns, types, f.clone(), init, chunk_size)
@@ -304,26 +304,27 @@ where
     })
 }
 
-fn n_columns(field: &Field) -> usize {
+/// Returns the number of (parquet) columns that a [`DataType`] contains.
+fn n_columns(data_type: &DataType) -> usize {
     use crate::datatypes::PhysicalType::*;
-    match field.data_type.to_physical_type() {
+    match data_type.to_physical_type() {
         Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
         | Dictionary(_) | LargeUtf8 => 1,
         List | FixedSizeList | LargeList => {
-            let a = field.data_type().to_logical_type();
+            let a = data_type.to_logical_type();
             if let DataType::List(inner) = a {
-                n_columns(inner)
+                n_columns(&inner.data_type)
             } else if let DataType::LargeList(inner) = a {
-                n_columns(inner)
+                n_columns(&inner.data_type)
             } else if let DataType::FixedSizeList(inner, _) = a {
-                n_columns(inner)
+                n_columns(&inner.data_type)
             } else {
                 unreachable!()
             }
         }
         Struct => {
-            if let DataType::Struct(fields) = field.data_type.to_logical_type() {
-                fields.iter().map(n_columns).sum()
+            if let DataType::Struct(fields) = data_type.to_logical_type() {
+                fields.iter().map(|inner| n_columns(&inner.data_type)).sum()
             } else {
                 unreachable!()
             }
