@@ -264,7 +264,7 @@ impl MutableBitmap {
 impl From<MutableBitmap> for Bitmap {
     #[inline]
     fn from(buffer: MutableBitmap) -> Self {
-        Bitmap::from_bytes(buffer.buffer.into(), buffer.length)
+        Bitmap::try_new(buffer.buffer, buffer.length).unwrap()
     }
 }
 
@@ -272,7 +272,7 @@ impl From<MutableBitmap> for Option<Bitmap> {
     #[inline]
     fn from(buffer: MutableBitmap) -> Self {
         if buffer.null_count() > 0 {
-            Some(Bitmap::from_bytes(buffer.buffer.into(), buffer.length))
+            Some(Bitmap::try_new(buffer.buffer, buffer.length).unwrap())
         } else {
             None
         }
