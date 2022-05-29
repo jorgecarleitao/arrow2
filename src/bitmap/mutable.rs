@@ -80,8 +80,8 @@ impl MutableBitmap {
     /// Reserves `additional` bits in the [`MutableBitmap`], potentially re-allocating its buffer.
     #[inline(always)]
     pub fn reserve(&mut self, additional: usize) {
-        self.buffer
-            .reserve((self.length + additional).saturating_add(7) / 8 - self.buffer.len())
+        let additional = (self.length + additional).saturating_add(7) / 8 - self.buffer.len();
+        self.buffer.reserve(additional)
     }
 
     /// Pushes a new bit to the [`MutableBitmap`], re-sizing it if necessary.
@@ -343,10 +343,11 @@ impl FromIterator<bool> for MutableBitmap {
     }
 }
 
+/// Consumes 64 items of the iterator into a u64
 // [7, 6, 5, 4, 3, 2, 1, 0], [15, 14, 13, 12, 11, 10, 9, 8]
 // [00000001_00000000_00000000_00000000_...] // u64
 /// # Safety
-/// The iterator must be trustedLen and its len must be least `len`.
+/// The iterator must be trustedLen and its len must be least `64`.
 #[inline]
 unsafe fn get_chunk_unchecked(iterator: &mut impl Iterator<Item = bool>) -> u64 {
     let mut byte = 0u64;
@@ -369,6 +370,7 @@ unsafe fn get_chunk_unchecked(iterator: &mut impl Iterator<Item = bool>) -> u64 
     byte
 }
 
+/// Consumes len items from the iterator into a u8
 /// # Safety
 /// The iterator must be trustedLen and its len must be least `len`.
 #[inline]
@@ -450,18 +452,17 @@ impl MutableBitmap {
         // the length of the iterator throughout this function.
         let mut length = iterator.size_hint().1.unwrap();
 
+        debug_assert_eq!(self.length.saturating_add(7) / 8, self.buffer.len());
         let bit_offset = self.length % 8;
 
         if length < 8 - bit_offset {
+            // case where the iterator does not fill the last byte
+            let new_bits = unsafe { get_byte_unchecked(length, &mut iterator) };
             if bit_offset == 0 {
-                self.buffer.push(0);
-            }
-            // the iterator will not fill the last byte
-            let byte = self.buffer.as_mut_slice().last_mut().unwrap();
-            let mut i = bit_offset;
-            for value in iterator {
-                *byte = set(*byte, i, value);
-                i += 1;
+                self.buffer.push(new_bits);
+            } else {
+                let byte = self.buffer.as_mut_slice().last_mut().unwrap();
+                *byte |= new_bits << bit_offset;
             }
             self.length += length;
             return;
@@ -471,10 +472,14 @@ impl MutableBitmap {
         // increase the buffer.
 
         if bit_offset != 0 {
-            // we are in the middle of a byte; lets finish it
+            // we are in the middle of the last byte; lets finish it
             let byte = self.buffer.as_mut_slice().last_mut().unwrap();
             (bit_offset..8).for_each(|i| {
-                *byte = set(*byte, i, iterator.next().unwrap());
+                let value = match iterator.next() {
+                    Some(value) => value,
+                    None => unsafe { unreachable_unchecked() },
+                };
+                *byte = set(*byte, i, value);
             });
             self.length += 8 - bit_offset;
             length -= 8 - bit_offset;

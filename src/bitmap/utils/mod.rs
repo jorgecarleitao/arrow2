@@ -47,7 +47,8 @@ pub fn set(byte: u8, i: usize, value: bool) -> u8 {
 /// panics if `i >= data.len() / 8`
 #[inline]
 pub fn set_bit(data: &mut [u8], i: usize, value: bool) {
-    data[i / 8] = set(data[i / 8], i % 8, value);
+    let byte = &mut data[i / 8];
+    *byte = set(*byte, i % 8, value);
 }
 
 /// Sets bit at position `i` in `data` without doing bound checks
