@@ -8,6 +8,15 @@ fn add_benchmark(c: &mut Criterion) {
     (10..=20).step_by(2).for_each(|log2_size| {
         let size = 2usize.pow(log2_size);
 
+        c.bench_function(&format!("bitmap push 2^{}", log2_size), |b| {
+            b.iter(|| {
+                let mut a = MutableBitmap::with_capacity(size);
+                for _ in 0..size {
+                    a.push(size % 10 == 0)
+                }
+            })
+        });
+
         let bitmap2 = Bitmap::from_iter((0..size).into_iter().map(|x| x % 3 == 0));
 
         c.bench_function(&format!("bitmap extend aligned 2^{}", log2_size), |b| {
@@ -23,6 +32,17 @@ fn add_benchmark(c: &mut Criterion) {
             b.iter(|| {
                 bitmap1.push(true);
                 bitmap1.extend_from_bitmap(&bitmap2);
+                bitmap1.clear();
+            })
+        });
+
+        let small = vec![true, false];
+        c.bench_function(&format!("bitmap extend small 2^{}", log2_size), |b| {
+            b.iter(|| {
+                let mut bitmap1 = MutableBitmap::new();
+                for _ in 0..size {
+                    bitmap1.extend_from_trusted_len_iter(small.iter().copied());
+                }
                 bitmap1.clear();
             })
         });
