@@ -364,7 +364,7 @@ where
 /// Compare two `Array`s based on the ordering defined in [ord](crate::array::ord).
 fn cmp_array(a: &dyn Array, b: &dyn Array) -> Ordering {
     let cmp_op = ord::build_compare(a, b).unwrap();
-    let length = a.len().max(b.len());
+    let length = a.len().min(b.len());
 
     for i in 0..length {
         let result = cmp_op(i, i);
@@ -372,5 +372,5 @@ fn cmp_array(a: &dyn Array, b: &dyn Array) -> Ordering {
             return result;
         }
     }
-    Ordering::Equal
+    a.len().cmp(&b.len())
 }
