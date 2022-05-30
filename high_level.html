@@ -284,13 +284,8 @@ contiguous memory regions or whether it does not.</p>
 <p>What this means is that certain operations can be performed irrespectively of whether a value
 is &quot;null&quot; or not (e.g. <code>PrimitiveArray&lt;i32&gt; + i32</code> can be applied to <em>all</em> values
 via SIMD and only copy the validity bitmap independently).</p>
-<p>When an operation benefits from such arrangement, it is advantageous to use</p>
-<ul>
-<li><code>Buffer::from_iter</code></li>
-<li><code>Buffer::from_trusted_len_iter</code></li>
-<li><code>Buffer::try_from_trusted_len_iter</code></li>
-</ul>
-<p>If not, then use the <code>MutableArray</code> API, such as
+<p>When an operation benefits from such arrangement, it is advantageous to use <code>Vec</code> and <code>Into&lt;Buffer&gt;</code>
+If not, then use the <code>MutableArray</code> API, such as
 <code>MutablePrimitiveArray&lt;T&gt;</code>, <code>MutableUtf8Array&lt;O&gt;</code> or <code>MutableListArray</code>.</p>
 <p>We have seen examples where the latter API was used. In the last example of this page
 you will be introduced to an example of using the former for SIMD.</p>
@@ -351,12 +346,11 @@ where
     O: NativeType,
     F: Fn(I) -&gt; O,
 {
-    // create the iterator over _all_ values
-    let values = array.values().iter().map(|v| op(*v));
-    let values = Buffer::from_trusted_len_iter(values);
+    // apply F over _all_ values
+    let values = array.values().iter().map(|v| op(*v)).collect::&lt;Vec&lt;_&gt;&gt;();
 
     // create the new array, cloning its validity
-    PrimitiveArray::&lt;O&gt;::from_data(data_type.clone(), values, array.validity().cloned())
+    PrimitiveArray::&lt;O&gt;::from_data(data_type.clone(), values.into(), array.validity().cloned())
 }
 <span class="boring">}
 </span></code></pre></pre>
