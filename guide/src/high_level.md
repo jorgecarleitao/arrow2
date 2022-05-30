@@ -180,12 +180,7 @@ What this means is that certain operations can be performed irrespectively of wh
 is "null" or not (e.g. `PrimitiveArray<i32> + i32` can be applied to _all_ values
 via SIMD and only copy the validity bitmap independently).
 
-When an operation benefits from such arrangement, it is advantageous to use
-
-* `Buffer::from_iter`
-* `Buffer::from_trusted_len_iter`
-* `Buffer::try_from_trusted_len_iter`
-
+When an operation benefits from such arrangement, it is advantageous to use `Vec` and `Into<Buffer>`
 If not, then use the `MutableArray` API, such as
 `MutablePrimitiveArray<T>`, `MutableUtf8Array<O>` or `MutableListArray`.
 
@@ -254,12 +249,11 @@ where
     O: NativeType,
     F: Fn(I) -> O,
 {
-    // create the iterator over _all_ values
-    let values = array.values().iter().map(|v| op(*v));
-    let values = Buffer::from_trusted_len_iter(values);
+    // apply F over _all_ values
+    let values = array.values().iter().map(|v| op(*v)).collect::<Vec<_>>();
 
     // create the new array, cloning its validity
-    PrimitiveArray::<O>::from_data(data_type.clone(), values, array.validity().cloned())
+    PrimitiveArray::<O>::from_data(data_type.clone(), values.into(), array.validity().cloned())
 }
 ```
 

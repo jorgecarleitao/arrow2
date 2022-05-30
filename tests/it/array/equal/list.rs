@@ -69,7 +69,7 @@ fn test_list_offsets() {
 
 #[test]
 fn test_bla() {
-    let offsets = Buffer::from_slice([0, 3, 3, 6]);
+    let offsets = Buffer::from(vec![0, 3, 3, 6]);
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let values = Arc::new(Int32Array::from([
         Some(1),
@@ -83,7 +83,7 @@ fn test_bla() {
     let lhs = ListArray::<i32>::from_data(data_type, offsets, values, Some(validity));
     let lhs = lhs.slice(1, 2);
 
-    let offsets = Buffer::from_slice([0, 0, 3]);
+    let offsets = Buffer::from(vec![0, 0, 3]);
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let values = Arc::new(Int32Array::from([Some(4), None, Some(6)]));
     let validity = Bitmap::from([false, true]);

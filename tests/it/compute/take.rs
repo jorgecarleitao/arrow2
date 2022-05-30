@@ -178,13 +178,13 @@ fn unsigned_take() {
 
 #[test]
 fn list_with_no_none() {
-    let values = Buffer::from_slice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    let values = Buffer::from(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
 
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from_slice([0, 2, 2, 6, 9, 10]),
+        Buffer::from(vec![0, 2, 2, 6, 9, 10]),
         Arc::new(values),
         None,
     );
@@ -192,12 +192,12 @@ fn list_with_no_none() {
     let indices = PrimitiveArray::from([Some(4i32), Some(1), Some(3)]);
     let result = take(&array, &indices).unwrap();
 
-    let expected_values = Buffer::from_slice([9, 6, 7, 8]);
+    let expected_values = Buffer::from(vec![9, 6, 7, 8]);
     let expected_values = PrimitiveArray::<i32>::from_data(DataType::Int32, expected_values, None);
     let expected_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let expected = ListArray::<i32>::from_data(
         expected_type,
-        Buffer::from_slice([0, 1, 1, 4]),
+        Buffer::from(vec![0, 1, 1, 4]),
         Arc::new(expected_values),
         None,
     );
@@ -207,7 +207,7 @@ fn list_with_no_none() {
 
 #[test]
 fn list_with_none() {
-    let values = Buffer::from_slice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    let values = Buffer::from(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
 
     let validity_values = vec![true, false, true, true, true];
@@ -216,7 +216,7 @@ fn list_with_none() {
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from_slice([0, 2, 2, 6, 9, 10]),
+        Buffer::from(vec![0, 2, 2, 6, 9, 10]),
         Arc::new(values),
         Some(validity),
     );
@@ -269,13 +269,13 @@ fn list_both_validity() {
 
 #[test]
 fn test_nested() {
-    let values = Buffer::from_slice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    let values = Buffer::from(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
 
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from_slice([0, 2, 4, 7, 7, 8, 10]),
+        Buffer::from(vec![0, 2, 4, 7, 7, 8, 10]),
         Arc::new(values),
         None,
     );
@@ -283,7 +283,7 @@ fn test_nested() {
     let data_type = ListArray::<i32>::default_datatype(array.data_type().clone());
     let nested = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from_slice([0, 2, 5, 6]),
+        Buffer::from(vec![0, 2, 5, 6]),
         Arc::new(array),
         None,
     );
@@ -292,13 +292,13 @@ fn test_nested() {
     let result = take(&nested, &indices).unwrap();
 
     // expected data
-    let expected_values = Buffer::from_slice([1, 2, 3, 4, 5, 6, 7, 8]);
+    let expected_values = Buffer::from(vec![1, 2, 3, 4, 5, 6, 7, 8]);
     let expected_values = PrimitiveArray::<i32>::from_data(DataType::Int32, expected_values, None);
 
     let expected_data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let expected_array = ListArray::<i32>::from_data(
         expected_data_type,
-        Buffer::from_slice([0, 2, 4, 7, 7, 8]),
+        Buffer::from(vec![0, 2, 4, 7, 7, 8]),
         Arc::new(expected_values),
         None,
     );
@@ -306,7 +306,7 @@ fn test_nested() {
     let expected_data_type = ListArray::<i32>::default_datatype(expected_array.data_type().clone());
     let expected = ListArray::<i32>::from_data(
         expected_data_type,
-        Buffer::from_slice([0, 2, 5]),
+        Buffer::from(vec![0, 2, 5]),
         Arc::new(expected_array),
         None,
     );

@@ -86,24 +86,24 @@ fn with_validity() {
 #[test]
 #[should_panic]
 fn wrong_offsets() {
-    let offsets = Buffer::from_slice([0, 5, 4]); // invalid offsets
-    let values = Buffer::from_slice(b"abbbbb");
+    let offsets = Buffer::from(vec![0, 5, 4]); // invalid offsets
+    let values = Buffer::from(b"abbbbb".to_vec());
     BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
 }
 
 #[test]
 #[should_panic]
 fn wrong_data_type() {
-    let offsets = Buffer::from_slice([0, 4]);
-    let values = Buffer::from_slice(b"abbb");
+    let offsets = Buffer::from(vec![0, 4]);
+    let values = Buffer::from(b"abbb".to_vec());
     BinaryArray::<i32>::from_data(DataType::Int8, offsets, values, None);
 }
 
 #[test]
 #[should_panic]
 fn value_with_wrong_offsets_panics() {
-    let offsets = Buffer::from_slice([0, 10, 11, 4]);
-    let values = Buffer::from_slice(b"abbb");
+    let offsets = Buffer::from(vec![0, 10, 11, 4]);
+    let values = Buffer::from(b"abbb".to_vec());
     // the 10-11 is not checked
     let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
 
@@ -115,8 +115,8 @@ fn value_with_wrong_offsets_panics() {
 #[test]
 #[should_panic]
 fn index_out_of_bounds_panics() {
-    let offsets = Buffer::from_slice([0, 1, 2, 4]);
-    let values = Buffer::from_slice(b"abbb");
+    let offsets = Buffer::from(vec![0, 1, 2, 4]);
+    let values = Buffer::from(b"abbb".to_vec());
     let array = BinaryArray::<i32>::from_data(DataType::Utf8, offsets, values, None);
 
     array.value(3);
@@ -125,8 +125,8 @@ fn index_out_of_bounds_panics() {
 #[test]
 #[should_panic]
 fn value_unchecked_with_wrong_offsets_panics() {
-    let offsets = Buffer::from_slice([0, 10, 11, 4]);
-    let values = Buffer::from_slice(b"abbb");
+    let offsets = Buffer::from(vec![0, 10, 11, 4]);
+    let values = Buffer::from(b"abbb".to_vec());
     // the 10-11 is not checked
     let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
 

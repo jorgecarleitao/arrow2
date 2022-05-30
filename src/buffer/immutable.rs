@@ -1,18 +1,38 @@
 use either::Either;
 use std::{iter::FromIterator, sync::Arc, usize};
 
-use crate::{trusted_len::TrustedLen, types::NativeType};
+use crate::types::NativeType;
 
 use super::bytes::Bytes;
 
-/// [`Buffer`] is a contiguous memory region that can
-/// be shared across thread boundaries.
+/// [`Buffer`] is a contiguous memory region that can be shared across thread boundaries.
+///
 /// The easiest way to think about `Buffer<T>` is being equivalent to
-/// an immutable `Vec<T>`, with the following differences:
+/// a `Arc<Vec<T>>`, with the following differences:
 /// * `T` must be [`NativeType`]
-/// * clone is `O(1)`
-/// * memory is sharable across thread boundaries (it is under an `Arc`)
-/// * it supports external allocated memory (FFI)
+/// * slicing the buffer is `O(1)`
+/// * it supports external allocated memory (via FFI)
+///
+/// The easiest way to create one is to use its implementation of `From` a `Vec`.
+///
+/// # Examples
+/// ```
+/// use arrow2::buffer::Buffer;
+///
+/// let buffer: Buffer<u32> = vec![1, 2, 3].into();
+/// assert_eq!(buffer.as_ref(), [1, 2, 3].as_ref());
+///
+/// // it supports copy-on-write semantics (i.e. back to a `Vec`)
+/// let vec: Vec<u32> = buffer.into_mut().right().unwrap();
+/// assert_eq!(vec, vec![1, 2, 3]);
+///
+/// // cloning and slicing is `O(1)` (data is shared)
+/// let buffer: Buffer<u32> = vec![1, 2, 3].into();
+/// let slice = buffer.clone().slice(1, 1);
+/// assert_eq!(slice.as_ref(), [2].as_ref());
+/// // no longer possible to get a vec since `slice` and `buffer` share data
+/// let same: Buffer<u32> = buffer.into_mut().left().unwrap();
+/// ```
 #[derive(Clone, PartialEq)]
 pub struct Buffer<T: NativeType> {
     /// the internal byte buffer.
@@ -44,20 +64,6 @@ impl<T: NativeType> Buffer<T> {
     #[inline]
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Creates a new [`Buffer`] filled with zeros.
-    #[inline]
-    pub fn new_zeroed(length: usize) -> Self {
-        vec![T::default(); length].into()
-    }
-
-    /// Takes ownership of [`Vec`].
-    /// # Implementation
-    /// This function is `O(1)`
-    #[inline]
-    pub fn from_slice<R: AsRef<[T]>>(data: R) -> Self {
-        data.as_ref().to_vec().into()
     }
 
     /// Auxiliary method to create a new Buffer
@@ -150,53 +156,6 @@ impl<T: NativeType> Buffer<T> {
                 None => Either::Left(self),
             }
         }
-    }
-}
-
-impl<T: NativeType> Buffer<T> {
-    /// Creates a [`Buffer`] from an [`Iterator`] with a trusted length.
-    /// Prefer this to `collect` whenever possible, as it often enables auto-vectorization.
-    /// # Example
-    /// ```
-    /// # use arrow2::buffer::Buffer;
-    /// let v = vec![1u32];
-    /// let iter = v.iter().map(|x| x * 2);
-    /// let buffer = unsafe { Buffer::from_trusted_len_iter(iter) };
-    /// assert_eq!(buffer.len(), 1)
-    /// ```
-    #[inline]
-    pub fn from_trusted_len_iter<I: TrustedLen<Item = T>>(iterator: I) -> Self {
-        iterator.collect::<Vec<_>>().into()
-    }
-
-    /// Creates a [`Buffer`] from an fallible [`Iterator`] with a trusted length.
-    #[inline]
-    pub fn try_from_trusted_len_iter<E, I: TrustedLen<Item = std::result::Result<T, E>>>(
-        iterator: I,
-    ) -> std::result::Result<Self, E> {
-        Ok(iterator.collect::<std::result::Result<Vec<_>, E>>()?.into())
-    }
-
-    /// Creates a [`Buffer`] from an [`Iterator`] with a trusted (upper) length.
-    /// # Safety
-    /// This method assumes that the iterator's size is correct and is undefined behavior
-    /// to use it on an iterator that reports an incorrect length.
-    #[inline]
-    pub unsafe fn from_trusted_len_iter_unchecked<I: Iterator<Item = T>>(iterator: I) -> Self {
-        iterator.collect::<Vec<_>>().into()
-    }
-
-    /// # Safety
-    /// This method assumes that the iterator's size is correct and is undefined behavior
-    /// to use it on an iterator that reports an incorrect length.
-    #[inline]
-    pub unsafe fn try_from_trusted_len_iter_unchecked<
-        E,
-        I: Iterator<Item = std::result::Result<T, E>>,
-    >(
-        iterator: I,
-    ) -> std::result::Result<Self, E> {
-        Ok(iterator.collect::<std::result::Result<Vec<_>, E>>()?.into())
     }
 }
 

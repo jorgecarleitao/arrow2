@@ -142,7 +142,7 @@ impl UnionArray {
             };
 
             // all from the same field
-            let types = Buffer::new_zeroed(length);
+            let types = vec![0i8; length].into();
 
             Self::new(data_type, types, fields, offsets)
         } else {

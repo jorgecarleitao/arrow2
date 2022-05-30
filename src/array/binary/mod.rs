@@ -116,7 +116,7 @@ impl<O: Offset> BinaryArray<O> {
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         Self::new(
             data_type,
-            Buffer::new_zeroed(length + 1),
+            vec![O::default(); 1 + length].into(),
             Buffer::new(),
             Some(Bitmap::new_zeroed(length)),
         )

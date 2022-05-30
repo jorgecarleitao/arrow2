@@ -305,7 +305,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         Self::new(
             data_type,
-            Buffer::new_zeroed(length),
+            vec![T::default(); length].into(),
             Some(Bitmap::new_zeroed(length)),
         )
     }
