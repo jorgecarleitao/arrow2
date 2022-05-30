@@ -2,18 +2,45 @@ use std::hint::unreachable_unchecked;
 use std::iter::FromIterator;
 
 use crate::bitmap::utils::{merge_reversed, set_bit_unchecked};
+use crate::error::Error;
 use crate::trusted_len::TrustedLen;
 
 use super::utils::{count_zeros, fmt, get_bit, set, set_bit, BitmapIter};
 use super::Bitmap;
 
-/// A container to store booleans. [`MutableBitmap`] is semantically equivalent
-/// to [`Vec<bool>`], but each value is stored as a single bit, thereby achieving a compression of 8x.
-/// This container is the counterpart of [`Vec`] for boolean values.
-/// [`MutableBitmap`] can be converted to a [`Bitmap`] at `O(1)`.
-/// The main difference against [`Vec<bool>`] is that a bitmap cannot be represented as `&[bool]`.
+/// A container of booleans. [`MutableBitmap`] is semantically equivalent
+/// to [`Vec<bool>`].
+///
+/// The two main differences against [`Vec<bool>`] is that each element stored as a single bit,
+/// thereby:
+/// * it uses 8x less memory
+/// * it cannot be represented as `&[bool]` (i.e. no pointer arithmetics).
+///
+/// A [`MutableBitmap`] can be converted to a [`Bitmap`] at `O(1)`.
+/// # Examples
+/// ```
+/// use arrow2::bitmap::MutableBitmap;
+///
+/// let bitmap = MutableBitmap::from([true, false, true]);
+/// assert_eq!(bitmap.iter().collect::<Vec<_>>(), vec![true, false, true]);
+///
+/// // creation directly from bytes
+/// let mut bitmap = MutableBitmap::try_new(vec![0b00001101], 5).unwrap();
+/// // note: the first bit is the left-most of the first byte
+/// assert_eq!(bitmap.iter().collect::<Vec<_>>(), vec![true, false, true, true, false]);
+/// // we can also get the slice:
+/// assert_eq!(bitmap.as_slice(), [0b00001101u8].as_ref());
+/// // debug helps :)
+/// assert_eq!(format!("{:?}", bitmap), "[0b___01101]".to_string());
+///
+/// // It supports mutation in place
+/// bitmap.set(0, false);
+/// assert_eq!(format!("{:?}", bitmap), "[0b___01100]".to_string());
+/// // and `O(1)` random access
+/// assert_eq!(bitmap.get(0), false);
+/// ```
 /// # Implementation
-/// This container is backed by [`Vec<u8>`].
+/// This container is internally a [`Vec<u8>`].
 #[derive(Clone)]
 pub struct MutableBitmap {
     buffer: Vec<u8>,
@@ -43,29 +70,31 @@ impl MutableBitmap {
         }
     }
 
-    /// Empties the [`MutableBitmap`].
+    /// Initializes a new [`MutableBitmap`] from a [`Vec<u8>`] and a length.
+    /// # Errors
+    /// This function errors iff `length > bytes.len() * 8`
     #[inline]
-    pub fn clear(&mut self) {
-        self.length = 0;
-        self.buffer.clear();
+    pub fn try_new(bytes: Vec<u8>, length: usize) -> Result<Self, Error> {
+        if length > bytes.len().saturating_mul(8) {
+            return Err(Error::InvalidArgumentError(format!(
+                "The length of the bitmap ({}) must be `<=` to the number of bytes times 8 ({})",
+                length,
+                bytes.len().saturating_mul(8)
+            )));
+        }
+        Ok(Self {
+            length,
+            buffer: bytes,
+        })
     }
 
-    /// Initializes a zeroed [`MutableBitmap`].
+    /// Initializes a [`MutableBitmap`] from a [`Vec<u8>`] and a length.
+    /// This function is `O(1)`.
+    /// # Panic
+    /// Panics iff the length is larger than the length of the buffer times 8.
     #[inline]
-    pub fn from_len_zeroed(length: usize) -> Self {
-        Self {
-            buffer: vec![0; length.saturating_add(7) / 8],
-            length,
-        }
-    }
-
-    /// Initializes a [`MutableBitmap`] with all values set to valid/ true.
-    #[inline]
-    pub fn from_len_set(length: usize) -> Self {
-        Self {
-            buffer: vec![u8::MAX; length.saturating_add(7) / 8],
-            length,
-        }
+    pub fn from_vec(buffer: Vec<u8>, length: usize) -> Self {
+        Self::try_new(buffer, length).unwrap()
     }
 
     /// Initializes a pre-allocated [`MutableBitmap`] with capacity for `capacity` bits.
@@ -75,13 +104,6 @@ impl MutableBitmap {
             buffer: Vec::with_capacity(capacity.saturating_add(7) / 8),
             length: 0,
         }
-    }
-
-    /// Reserves `additional` bits in the [`MutableBitmap`], potentially re-allocating its buffer.
-    #[inline(always)]
-    pub fn reserve(&mut self, additional: usize) {
-        self.buffer
-            .reserve((self.length + additional).saturating_add(7) / 8 - self.buffer.len())
     }
 
     /// Pushes a new bit to the [`MutableBitmap`], re-sizing it if necessary.
@@ -109,6 +131,75 @@ impl MutableBitmap {
             self.buffer.pop();
         }
         Some(value)
+    }
+
+    /// Returns whether the position `index` is set.
+    /// # Panics
+    /// Panics iff `index >= self.len()`.
+    #[inline]
+    pub fn get(&self, index: usize) -> bool {
+        get_bit(&self.buffer, index)
+    }
+
+    /// Sets the position `index` to `value`
+    /// # Panics
+    /// Panics iff `index >= self.len()`.
+    #[inline]
+    pub fn set(&mut self, index: usize, value: bool) {
+        set_bit(self.buffer.as_mut_slice(), index, value)
+    }
+
+    /// constructs a new iterator over the values of [`MutableBitmap`].
+    pub fn iter(&self) -> BitmapIter {
+        BitmapIter::new(&self.buffer, 0, self.length)
+    }
+
+    /// Empties the [`MutableBitmap`].
+    #[inline]
+    pub fn clear(&mut self) {
+        self.length = 0;
+        self.buffer.clear();
+    }
+
+    /// Extends [`MutableBitmap`] by `additional` values of constant `value`.
+    /// # Implementation
+    /// This function is an order of magnitude faster than pushing element by element.
+    #[inline]
+    pub fn extend_constant(&mut self, additional: usize, value: bool) {
+        if additional == 0 {
+            return;
+        }
+
+        if value {
+            self.extend_set(additional)
+        } else {
+            self.extend_unset(additional)
+        }
+    }
+
+    /// Initializes a zeroed [`MutableBitmap`].
+    #[inline]
+    pub fn from_len_zeroed(length: usize) -> Self {
+        Self {
+            buffer: vec![0; length.saturating_add(7) / 8],
+            length,
+        }
+    }
+
+    /// Initializes a [`MutableBitmap`] with all values set to valid/ true.
+    #[inline]
+    pub fn from_len_set(length: usize) -> Self {
+        Self {
+            buffer: vec![u8::MAX; length.saturating_add(7) / 8],
+            length,
+        }
+    }
+
+    /// Reserves `additional` bits in the [`MutableBitmap`], potentially re-allocating its buffer.
+    #[inline(always)]
+    pub fn reserve(&mut self, additional: usize) {
+        self.buffer
+            .reserve((self.length + additional).saturating_add(7) / 8 - self.buffer.len())
     }
 
     /// Returns the capacity of [`MutableBitmap`] in number of bits.
@@ -205,36 +296,6 @@ impl MutableBitmap {
         }
     }
 
-    /// Extends [`MutableBitmap`] by `additional` values of constant `value`.
-    #[inline]
-    pub fn extend_constant(&mut self, additional: usize, value: bool) {
-        if additional == 0 {
-            return;
-        }
-
-        if value {
-            self.extend_set(additional)
-        } else {
-            self.extend_unset(additional)
-        }
-    }
-
-    /// Returns whether the position `index` is set.
-    /// # Panics
-    /// Panics iff `index >= self.len()`.
-    #[inline]
-    pub fn get(&self, index: usize) -> bool {
-        get_bit(&self.buffer, index)
-    }
-
-    /// Sets the position `index` to `value`
-    /// # Panics
-    /// Panics iff `index >= self.len()`.
-    #[inline]
-    pub fn set(&mut self, index: usize, value: bool) {
-        set_bit(self.buffer.as_mut_slice(), index, value)
-    }
-
     /// Sets the position `index` to `value`
     /// # Safety
     /// Caller must ensure that `index < self.len()`
@@ -246,18 +307,6 @@ impl MutableBitmap {
     /// Shrinks the capacity of the [`MutableBitmap`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.buffer.shrink_to_fit();
-    }
-}
-
-impl MutableBitmap {
-    /// Initializes a [`MutableBitmap`] from a [`Vec<u8>`] and a length.
-    /// This function is `O(1)`.
-    /// # Panic
-    /// Panics iff the length is larger than the length of the buffer times 8.
-    #[inline]
-    pub fn from_vec(buffer: Vec<u8>, length: usize) -> Self {
-        assert!(length <= buffer.len() * 8);
-        Self { buffer, length }
     }
 }
 
@@ -607,7 +656,7 @@ impl MutableBitmap {
     /// This is the fastest way to extend a [`MutableBitmap`].
     /// # Implementation
     /// When both [`MutableBitmap`]'s length and `offset` are both multiples of 8,
-    /// this function performs a memcopy. Else, it extends [`MutableBitmap`] bit by bit.
+    /// this function performs a memcopy. Else, it first aligns bit by bit and then performs a memcopy.
     #[inline]
     pub fn extend_from_slice(&mut self, slice: &[u8], offset: usize, length: usize) {
         assert!(offset + length <= slice.len() * 8);
@@ -653,13 +702,6 @@ impl<'a> IntoIterator for &'a MutableBitmap {
     type IntoIter = BitmapIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        BitmapIter::<'a>::new(&self.buffer, 0, self.length)
-    }
-}
-
-impl<'a> MutableBitmap {
-    /// constructs a new iterator over the values of [`MutableBitmap`].
-    pub fn iter(&'a self) -> BitmapIter<'a> {
         BitmapIter::<'a>::new(&self.buffer, 0, self.length)
     }
 }
