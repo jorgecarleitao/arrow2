@@ -142,3 +142,23 @@ fn extend_trusted_len_values() {
     );
     assert_eq!(a.values(), &MutableBitmap::from([false, true, false]));
 }
+
+#[test]
+fn into_iter() {
+    let ve = MutableBitmap::from([true, false])
+        .into_iter()
+        .collect::<Vec<_>>();
+    assert_eq!(ve, vec![true, false]);
+    let ve = MutableBitmap::from([true, false])
+        .iter()
+        .collect::<Vec<_>>();
+    assert_eq!(ve, vec![true, false]);
+}
+
+#[test]
+fn shrink_to_fit() {
+    let mut a = MutableBitmap::with_capacity(100);
+    a.push(true);
+    a.shrink_to_fit();
+    assert_eq!(a.capacity(), 8);
+}

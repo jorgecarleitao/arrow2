@@ -67,6 +67,16 @@ fn from_trusted_len_iter() {
 }
 
 #[test]
+fn try_from_trusted_len_iter() {
+    let iter = std::iter::repeat(b"hello".as_ref())
+        .take(2)
+        .map(Some)
+        .map(arrow2::error::Result::Ok);
+    let a = BinaryArray::<i32>::try_from_trusted_len_iter(iter).unwrap();
+    assert_eq!(a.len(), 2);
+}
+
+#[test]
 fn from_iter() {
     let iter = std::iter::repeat(b"hello").take(2).map(Some);
     let a: BinaryArray<i32> = iter.collect();

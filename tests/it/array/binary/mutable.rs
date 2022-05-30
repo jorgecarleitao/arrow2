@@ -35,30 +35,26 @@ fn from_iter() {
 
 #[test]
 fn from_trusted_len_iter() {
-    let iter = (0..3u8).map(|x| vec![x; x as usize]);
-    let a: MutableBinaryArray<i32> = iter.clone().map(Some).collect();
+    let data = vec![vec![0; 0], vec![1; 1], vec![2; 2]];
+    let a: MutableBinaryArray<i32> = data.iter().cloned().map(Some).collect();
     assert_eq!(a.values().deref(), &[1u8, 2, 2]);
     assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
     assert_eq!(a.validity(), None);
 
-    let a = unsafe {
-        MutableBinaryArray::<i32>::from_trusted_len_iter_unchecked(iter.clone().map(Some))
-    };
+    let a = MutableBinaryArray::<i32>::from_trusted_len_iter(data.iter().cloned().map(Some));
     assert_eq!(a.values().deref(), &[1u8, 2, 2]);
     assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
     assert_eq!(a.validity(), None);
 
-    let a = unsafe {
-        MutableBinaryArray::<i32>::try_from_trusted_len_iter_unchecked::<Error, _, _>(
-            iter.clone().map(Some).map(Ok),
-        )
-    }
+    let a = MutableBinaryArray::<i32>::try_from_trusted_len_iter::<Error, _, _>(
+        data.iter().cloned().map(Some).map(Ok),
+    )
     .unwrap();
     assert_eq!(a.values().deref(), &[1u8, 2, 2]);
     assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
     assert_eq!(a.validity(), None);
 
-    let a = unsafe { MutableBinaryArray::<i32>::from_trusted_len_values_iter_unchecked(iter) };
+    let a = MutableBinaryArray::<i32>::from_trusted_len_values_iter(data.iter().cloned());
     assert_eq!(a.values().deref(), &[1u8, 2, 2]);
     assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
     assert_eq!(a.validity(), None);

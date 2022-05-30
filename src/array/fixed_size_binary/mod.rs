@@ -125,7 +125,7 @@ impl FixedSizeBinaryArray {
         let values = self
             .values
             .clone()
-            .slice_unchecked(offset * self.size as usize, length * self.size as usize);
+            .slice_unchecked(offset * self.size, length * self.size);
         Self {
             data_type: self.data_type.clone(),
             size: self.size,

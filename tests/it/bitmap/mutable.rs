@@ -8,6 +8,32 @@ fn from_slice() {
 }
 
 #[test]
+fn from_len_zeroed() {
+    let a = MutableBitmap::from_len_zeroed(10);
+    assert_eq!(a.len(), 10);
+    assert_eq!(a.null_count(), 10);
+}
+
+#[test]
+fn from_len_set() {
+    let a = MutableBitmap::from_len_set(10);
+    assert_eq!(a.len(), 10);
+    assert_eq!(a.null_count(), 0);
+}
+
+#[test]
+fn try_new_invalid() {
+    assert!(MutableBitmap::try_new(vec![], 2).is_err());
+}
+
+#[test]
+fn clear() {
+    let mut a = MutableBitmap::from_len_zeroed(10);
+    a.clear();
+    assert_eq!(a.len(), 0);
+}
+
+#[test]
 fn trusted_len() {
     let data = vec![true; 65];
     let bitmap = MutableBitmap::from_trusted_len_iter(data.into_iter());
