@@ -243,6 +243,13 @@ fn buffer_offset(array: &ArrowArray, data_type: &DataType, i: usize) -> usize {
     use PhysicalType::*;
     match (data_type.to_physical_type(), i) {
         (LargeUtf8, 2) | (LargeBinary, 2) | (Utf8, 2) | (Binary, 2) => 0,
+        (FixedSizeBinary, 1) => {
+            if let DataType::FixedSizeBinary(size) = data_type.to_logical_type() {
+                (array.offset as usize) * *size
+            } else {
+                unreachable!()
+            }
+        }
         _ => array.offset as usize,
     }
 }

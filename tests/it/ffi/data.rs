@@ -82,6 +82,18 @@ fn u32() -> Result<()> {
 }
 
 #[test]
+fn decimal() -> Result<()> {
+    let data = Int128Array::from_slice(&[1, 0, 2, 0]);
+    test_round_trip(data)
+}
+
+#[test]
+fn decimal_nullable() -> Result<()> {
+    let data = Int128Array::from(&[Some(1), None, Some(2), None]);
+    test_round_trip(data)
+}
+
+#[test]
 fn timestamp_tz() -> Result<()> {
     let data = Int64Array::from(&vec![Some(2), None, None]).to(DataType::Timestamp(
         TimeUnit::Second,
@@ -129,6 +141,26 @@ fn large_binary() -> Result<()> {
 }
 
 #[test]
+fn fixed_size_binary() -> Result<()> {
+    let data = FixedSizeBinaryArray::new(
+        DataType::FixedSizeBinary(2),
+        vec![1, 2, 3, 4, 5, 6].into(),
+        None,
+    );
+    test_round_trip(data)
+}
+
+#[test]
+fn fixed_size_binary_nullable() -> Result<()> {
+    let data = FixedSizeBinaryArray::new(
+        DataType::FixedSizeBinary(2),
+        vec![1, 2, 3, 4, 5, 6].into(),
+        Some([true, true, false].into()),
+    );
+    test_round_trip(data)
+}
+
+#[test]
 fn list() -> Result<()> {
     let data = vec![
         Some(vec![Some(1i32), Some(2), Some(3)]),
@@ -140,6 +172,22 @@ fn list() -> Result<()> {
     array.try_extend(data)?;
 
     let array: ListArray<i32> = array.into();
+
+    test_round_trip(array)
+}
+
+#[test]
+fn large_list() -> Result<()> {
+    let data = vec![
+        Some(vec![Some(1i32), Some(2), Some(3)]),
+        None,
+        Some(vec![Some(4), None, Some(6)]),
+    ];
+
+    let mut array = MutableListArray::<i64, MutablePrimitiveArray<i32>>::new();
+    array.try_extend(data)?;
+
+    let array: ListArray<i64> = array.into();
 
     test_round_trip(array)
 }
@@ -231,7 +279,11 @@ fn schema() -> Result<()> {
 fn extension() -> Result<()> {
     let field = Field::new(
         "a",
-        DataType::Extension("a".to_string(), Box::new(DataType::Int32), None),
+        DataType::Extension(
+            "a".to_string(),
+            Box::new(DataType::Int32),
+            Some("bla".to_string()),
+        ),
         true,
     );
     test_round_trip_schema(field)
