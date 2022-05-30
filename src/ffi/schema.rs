@@ -306,6 +306,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                     let size = size_raw
                         .parse::<usize>()
                         .map_err(|_| Error::OutOfSpec("size is not a valid integer".to_string()))?;
+                    println!("schema: {}", size);
                     DataType::FixedSizeBinary(size)
                 }
                 ["+w", size_raw] => {
