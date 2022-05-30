@@ -14,13 +14,15 @@ fn prep(array: impl Array + 'static) -> (Vec<u8>, DataType) {
     // the operation of writing is IO-bounded.
     write::write(&mut data, blocks).unwrap();
 
-    let dt = read::infer(&serde_json::from_slice(&data).unwrap()).unwrap();
+    let value = read::json_deserializer::parse(&data).unwrap();
+
+    let dt = read::infer(&value).unwrap();
     (data, dt)
 }
 
 fn bench_read(data: &[u8], dt: &DataType) {
-    let json = serde_json::from_slice(data).unwrap();
-    read::deserialize(&json, dt.clone()).unwrap();
+    let value = read::json_deserializer::parse(data).unwrap();
+    read::deserialize(&value, dt.clone()).unwrap();
 }
 
 fn add_benchmark(c: &mut Criterion) {

@@ -9,6 +9,7 @@ use super::super::{Block, CompressedBlock};
 use super::BlockStreamIterator;
 use super::Compression;
 
+#[cfg(feature = "io_avro_compression")]
 const CRC_TABLE: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
 
 /// Decompresses an Avro block.

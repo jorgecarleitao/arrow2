@@ -4,8 +4,7 @@ use std::{collections::hash_map::DefaultHasher, sync::Arc};
 
 use hash_hasher::HashedMap;
 use indexmap::map::IndexMap as HashMap;
-use num_traits::NumCast;
-use serde_json::Value;
+use json_deserializer::{Number, Value};
 
 use crate::{
     array::*,
@@ -17,7 +16,7 @@ use crate::{
 
 /// A function that converts a &Value into an optional tuple of a byte slice and a Value.
 /// This is used to create a dictionary, where the hashing depends on the DataType of the child object.
-type Extract = Box<dyn Fn(&Value) -> Option<(u64, &Value)>>;
+type Extract<'a> = Box<dyn Fn(&'a Value<'a>) -> Option<(u64, &'a Value<'a>)>>;
 
 fn build_extract(data_type: &DataType) -> Extract {
     match data_type {
@@ -27,11 +26,10 @@ fn build_extract(data_type: &DataType) -> Extract {
                 hasher.write(v.as_bytes());
                 Some((hasher.finish(), value))
             }
-            Value::Number(v) => v.as_f64().map(|x| {
-                let mut hasher = DefaultHasher::new();
-                hasher.write(&x.to_le_bytes());
-                (hasher.finish(), value)
-            }),
+            Value::Number(v) => match v {
+                Number::Float(_, _) => todo!(),
+                Number::Integer(_, _) => todo!(),
+            },
             Value::Bool(v) => {
                 let mut hasher = DefaultHasher::new();
                 hasher.write(&[*v as u8]);
@@ -40,25 +38,24 @@ fn build_extract(data_type: &DataType) -> Extract {
             _ => None,
         }),
         DataType::Int32 | DataType::Int64 | DataType::Int16 | DataType::Int8 => {
-            Box::new(move |value| match &value {
-                Value::Number(v) => v.as_f64().map(|x| {
+            Box::new(move |value| {
+                let integer = match value {
+                    Value::Number(number) => Some(deserialize_int_single::<i64>(*number)),
+                    Value::Bool(number) => Some(if *number { 1i64 } else { 0i64 }),
+                    _ => None,
+                };
+                integer.map(|integer| {
                     let mut hasher = DefaultHasher::new();
-                    hasher.write(&x.to_le_bytes());
+                    hasher.write(&integer.to_le_bytes());
                     (hasher.finish(), value)
-                }),
-                Value::Bool(v) => {
-                    let mut hasher = DefaultHasher::new();
-                    hasher.write(&[*v as u8]);
-                    Some((hasher.finish(), value))
-                }
-                _ => None,
+                })
             })
         }
         _ => Box::new(|_| None),
     }
 }
 
-fn deserialize_boolean<A: Borrow<Value>>(rows: &[A]) -> BooleanArray {
+fn deserialize_boolean<'a, A: Borrow<Value<'a>>>(rows: &[A]) -> BooleanArray {
     let iter = rows.iter().map(|row| match row.borrow() {
         Value::Bool(v) => Some(v),
         _ => None,
@@ -66,31 +63,125 @@ fn deserialize_boolean<A: Borrow<Value>>(rows: &[A]) -> BooleanArray {
     BooleanArray::from_trusted_len_iter(iter)
 }
 
-fn deserialize_int<T: NativeType + NumCast, A: Borrow<Value>>(
+fn deserialize_int_single<T>(number: Number) -> T
+where
+    T: NativeType + lexical_core::FromLexical + Pow10,
+{
+    match number {
+        Number::Float(fraction, exponent) => {
+            let integer = fraction.split(|x| *x == b'.').next().unwrap();
+            let mut integer: T = lexical_core::parse(integer).unwrap();
+            if !exponent.is_empty() {
+                let exponent: u32 = lexical_core::parse(exponent).unwrap();
+                integer = integer.pow10(exponent);
+            }
+            integer
+        }
+        Number::Integer(integer, exponent) => {
+            let mut integer: T = lexical_core::parse(integer).unwrap();
+            if !exponent.is_empty() {
+                let exponent: u32 = lexical_core::parse(exponent).unwrap();
+                integer = integer.pow10(exponent);
+            }
+            integer
+        }
+    }
+}
+
+trait Powi10: NativeType + num_traits::One + std::ops::Add {
+    fn powi10(self, exp: i32) -> Self;
+}
+
+impl Powi10 for f32 {
+    #[inline]
+    fn powi10(self, exp: i32) -> Self {
+        self * 10.0f32.powi(exp)
+    }
+}
+
+impl Powi10 for f64 {
+    #[inline]
+    fn powi10(self, exp: i32) -> Self {
+        self * 10.0f64.powi(exp)
+    }
+}
+
+trait Pow10: NativeType + num_traits::One + std::ops::Add {
+    fn pow10(self, exp: u32) -> Self;
+}
+
+macro_rules! impl_pow10 {
+    ($ty:ty) => {
+        impl Pow10 for $ty {
+            #[inline]
+            fn pow10(self, exp: u32) -> Self {
+                self * (10 as $ty).pow(exp)
+            }
+        }
+    };
+}
+impl_pow10!(u8);
+impl_pow10!(u16);
+impl_pow10!(u32);
+impl_pow10!(u64);
+impl_pow10!(i8);
+impl_pow10!(i16);
+impl_pow10!(i32);
+impl_pow10!(i64);
+
+fn deserialize_float_single<T>(number: &Number) -> T
+where
+    T: NativeType + lexical_core::FromLexical + Powi10,
+{
+    match number {
+        Number::Float(float, exponent) => {
+            let mut float: T = lexical_core::parse(float).unwrap();
+            if !exponent.is_empty() {
+                let exponent: i32 = lexical_core::parse(exponent).unwrap();
+                float = float.powi10(exponent);
+            }
+            float
+        }
+        Number::Integer(integer, exponent) => {
+            let mut float: T = lexical_core::parse(integer).unwrap();
+            if !exponent.is_empty() {
+                let exponent: i32 = lexical_core::parse(exponent).unwrap();
+                float = float.powi10(exponent);
+            }
+            float
+        }
+    }
+}
+
+fn deserialize_int<'a, T: NativeType + lexical_core::FromLexical + Pow10, A: Borrow<Value<'a>>>(
     rows: &[A],
     data_type: DataType,
 ) -> PrimitiveArray<T> {
     let iter = rows.iter().map(|row| match row.borrow() {
-        Value::Number(number) => number.as_i64().and_then(num_traits::cast::<i64, T>),
-        Value::Bool(number) => num_traits::cast::<i32, T>(*number as i32),
+        Value::Number(number) => Some(deserialize_int_single(*number)),
+        Value::Bool(number) => Some(if *number { T::one() } else { T::default() }),
         _ => None,
     });
     PrimitiveArray::from_trusted_len_iter(iter).to(data_type)
 }
 
-fn deserialize_float<T: NativeType + NumCast, A: Borrow<Value>>(
+fn deserialize_float<
+    'a,
+    T: NativeType + lexical_core::FromLexical + Powi10,
+    A: Borrow<Value<'a>>,
+>(
     rows: &[A],
     data_type: DataType,
 ) -> PrimitiveArray<T> {
     let iter = rows.iter().map(|row| match row.borrow() {
-        Value::Number(number) => number.as_f64().and_then(num_traits::cast::<f64, T>),
-        Value::Bool(number) => num_traits::cast::<i32, T>(*number as i32),
+        Value::Number(number) => Some(deserialize_float_single(number)),
+        Value::Bool(number) => Some(if *number { T::one() } else { T::default() }),
         _ => None,
     });
     PrimitiveArray::from_trusted_len_iter(iter).to(data_type)
 }
 
-fn deserialize_binary<O: Offset, A: Borrow<Value>>(rows: &[A]) -> BinaryArray<O> {
+fn deserialize_binary<'a, O: Offset, A: Borrow<Value<'a>>>(rows: &[A]) -> BinaryArray<O> {
     let iter = rows.iter().map(|row| match row.borrow() {
         Value::String(v) => Some(v.as_bytes()),
         _ => None,
@@ -98,17 +189,31 @@ fn deserialize_binary<O: Offset, A: Borrow<Value>>(rows: &[A]) -> BinaryArray<O>
     BinaryArray::from_trusted_len_iter(iter)
 }
 
-fn deserialize_utf8<O: Offset, A: Borrow<Value>>(rows: &[A]) -> Utf8Array<O> {
-    let iter = rows.iter().map(|row| match row.borrow() {
-        Value::String(v) => Some(v.clone()),
-        Value::Number(v) => Some(v.to_string()),
-        Value::Bool(v) => Some(v.to_string()),
-        _ => None,
-    });
-    Utf8Array::<O>::from_trusted_len_iter(iter)
+fn deserialize_utf8<'a, O: Offset, A: Borrow<Value<'a>>>(rows: &[A]) -> Utf8Array<O> {
+    let mut array = MutableUtf8Array::<O>::with_capacity(rows.len());
+    let mut scratch = vec![];
+    for row in rows {
+        match row.borrow() {
+            Value::String(v) => array.push(Some(v.as_ref())),
+            Value::Number(number) => match number {
+                Number::Integer(number, exponent) | Number::Float(number, exponent) => {
+                    scratch.clear();
+                    scratch.extend_from_slice(*number);
+                    scratch.push(b'e');
+                    scratch.extend_from_slice(*exponent);
+                }
+            },
+            Value::Bool(v) => array.push(Some(if *v { "true" } else { "false" })),
+            _ => array.push_null(),
+        }
+    }
+    array.into()
 }
 
-fn deserialize_list<O: Offset, A: Borrow<Value>>(rows: &[A], data_type: DataType) -> ListArray<O> {
+fn deserialize_list<'a, O: Offset, A: Borrow<Value<'a>>>(
+    rows: &[A],
+    data_type: DataType,
+) -> ListArray<O> {
     let child = ListArray::<O>::get_child_type(&data_type);
 
     let mut validity = MutableBitmap::with_capacity(rows.len());
@@ -138,7 +243,7 @@ fn deserialize_list<O: Offset, A: Borrow<Value>>(rows: &[A], data_type: DataType
     ListArray::<O>::new(data_type, offsets.into(), values, validity.into())
 }
 
-fn deserialize_struct<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> StructArray {
+fn deserialize_struct<'a, A: Borrow<Value<'a>>>(rows: &[A], data_type: DataType) -> StructArray {
     let fields = StructArray::get_fields(&data_type);
 
     let mut values = fields
@@ -173,7 +278,7 @@ fn deserialize_struct<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Stru
     StructArray::new(data_type, values, validity.into())
 }
 
-fn deserialize_dictionary<K: DictionaryKey, A: Borrow<Value>>(
+fn deserialize_dictionary<'a, K: DictionaryKey, A: Borrow<Value<'a>>>(
     rows: &[A],
     data_type: DataType,
 ) -> DictionaryArray<K> {
@@ -206,7 +311,10 @@ fn deserialize_dictionary<K: DictionaryKey, A: Borrow<Value>>(
     DictionaryArray::<K>::from_data(keys, values)
 }
 
-pub(crate) fn _deserialize<A: Borrow<Value>>(rows: &[A], data_type: DataType) -> Arc<dyn Array> {
+pub(crate) fn _deserialize<'a, A: Borrow<Value<'a>>>(
+    rows: &[A],
+    data_type: DataType,
+) -> Arc<dyn Array> {
     match &data_type {
         DataType::Null => Arc::new(NullArray::new(data_type, rows.len())),
         DataType::Boolean => Arc::new(deserialize_boolean(rows)),

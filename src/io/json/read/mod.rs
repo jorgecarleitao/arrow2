@@ -6,3 +6,5 @@ pub(crate) use deserialize::_deserialize;
 pub use deserialize::deserialize;
 pub(crate) use infer_schema::coerce_data_type;
 pub use infer_schema::infer;
+
+pub use json_deserializer;

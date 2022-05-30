@@ -2,8 +2,7 @@ use std::io::BufRead;
 
 use fallible_streaming_iterator::FallibleStreamingIterator;
 use indexmap::set::IndexSet as HashSet;
-use serde_json;
-use serde_json::Value;
+use json_deserializer::parse;
 
 use crate::{
     datatypes::DataType,
@@ -115,7 +114,7 @@ pub fn infer<R: std::io::BufRead>(
 
     let mut data_types = HashSet::new();
     while let Some(rows) = reader.next()? {
-        let value: Value = serde_json::from_str(&rows[0])?; // 0 because it is row by row
+        let value = parse(rows[0].as_bytes())?; // 0 because it is row by row
         let data_type = infer_json(&value)?;
         if data_type != DataType::Null {
             data_types.insert(data_type);
@@ -134,7 +133,7 @@ pub fn infer<R: std::io::BufRead>(
 pub fn infer_iter<A: AsRef<str>>(rows: impl Iterator<Item = A>) -> Result<DataType> {
     let mut data_types = HashSet::new();
     for row in rows {
-        let v: Value = serde_json::from_str(row.as_ref())?;
+        let v = parse(row.as_ref().as_bytes())?;
         let data_type = infer_json(&v)?;
         if data_type != DataType::Null {
             data_types.insert(data_type);

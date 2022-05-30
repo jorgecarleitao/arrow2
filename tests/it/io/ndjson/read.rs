@@ -156,7 +156,7 @@ fn invalid_infer_schema() -> Result<()> {
     let re = ndjson_read::infer(&mut Cursor::new("city,lat,lng"), None);
     assert_eq!(
         re.err().unwrap().to_string(),
-        "External error: expected value at line 1 column 1",
+        "External format error: InvalidToken(99)",
     );
     Ok(())
 }
@@ -249,7 +249,7 @@ fn invalid_read_record() -> Result<()> {
 
     assert_eq!(
         arrays.err().unwrap().to_string(),
-        "External error: expected value at line 1 column 1",
+        "External format error: InvalidToken(99)",
     );
     Ok(())
 }

@@ -5,8 +5,8 @@ pub mod write;
 
 use crate::error::Error;
 
-impl From<serde_json::error::Error> for Error {
-    fn from(error: serde_json::error::Error) -> Self {
-        Error::External("".to_string(), Box::new(error))
+impl From<json_deserializer::Error> for Error {
+    fn from(error: json_deserializer::Error) -> Self {
+        Error::ExternalFormat(error.to_string())
     }
 }

@@ -7,7 +7,7 @@ use super::*;
 
 #[test]
 fn read_json() -> Result<()> {
-    let data = r#"[
+    let data = br#"[
         {
             "a": 1
         },
@@ -19,7 +19,7 @@ fn read_json() -> Result<()> {
         }
     ]"#;
 
-    let json = serde_json::from_slice(data.as_bytes())?;
+    let json = json_deserializer::parse(data)?;
 
     let data_type = read::infer(&json)?;
 
