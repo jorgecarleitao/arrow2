@@ -314,5 +314,9 @@ name = "write_json"
 harness = false
 
 [[bench]]
+name = "read_json"
+harness = false
+
+[[bench]]
 name = "slices_iterator"
 harness = false
