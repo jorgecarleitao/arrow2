@@ -25,7 +25,9 @@ pub mod stream_async;
 pub mod file_async;
 
 pub use common::{read_dictionary, read_record_batch};
-pub use reader::{read_file_metadata, FileMetadata, FileReader};
+pub use reader::{
+    read_batch, read_file_dictionaries, read_file_metadata, FileMetadata, FileReader,
+};
 pub use schema::deserialize_schema;
 pub use stream::{read_stream_metadata, StreamMetadata, StreamReader, StreamState};
 

@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::array::Array;
 use crate::chunk::Chunk;
-use crate::datatypes::{Field, Schema};
+use crate::datatypes::Schema;
 use crate::error::{Error, Result};
 use crate::io::ipc::IpcSchema;
 
@@ -65,46 +65,63 @@ fn read_dictionary_message<R: Read + Seek>(
     Ok(())
 }
 
-pub(crate) fn read_dictionaries<R: Read + Seek>(
+fn read_dictionary_block<R: Read + Seek>(
     reader: &mut R,
-    fields: &[Field],
-    ipc_schema: &IpcSchema,
-    blocks: &[arrow_format::ipc::Block],
+    metadata: &FileMetadata,
+    block: &arrow_format::ipc::Block,
+    dictionaries: &mut Dictionaries,
+    scratch: &mut Vec<u8>,
+) -> Result<()> {
+    let offset = block.offset as u64;
+    let length = block.meta_data_length as u64;
+    read_dictionary_message(reader, offset, scratch)?;
+
+    let message = arrow_format::ipc::MessageRef::read_as_root(scratch)
+        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
+
+    let header = message
+        .header()?
+        .ok_or_else(|| Error::oos("Message must have an header"))?;
+
+    match header {
+        arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
+            let block_offset = offset + length;
+            read_dictionary(
+                batch,
+                &metadata.schema.fields,
+                &metadata.ipc_schema,
+                dictionaries,
+                reader,
+                block_offset,
+            )?;
+        }
+        t => {
+            return Err(Error::OutOfSpec(format!(
+                "Expecting DictionaryBatch in dictionary blocks, found {:?}.",
+                t
+            )));
+        }
+    };
+    Ok(())
+}
+
+/// Reads all file's dictionaries, if any
+/// This function is IO-bounded
+pub fn read_file_dictionaries<R: Read + Seek>(
+    reader: &mut R,
+    metadata: &FileMetadata,
 ) -> Result<Dictionaries> {
     let mut dictionaries = Default::default();
     let mut data = vec![];
 
+    let blocks = if let Some(blocks) = metadata.dictionaries.as_deref() {
+        blocks
+    } else {
+        return Ok(HashMap::new());
+    };
+
     for block in blocks {
-        let offset = block.offset as u64;
-        let length = block.meta_data_length as u64;
-        read_dictionary_message(reader, offset, &mut data)?;
-
-        let message = arrow_format::ipc::MessageRef::read_as_root(&data)
-            .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
-
-        let header = message
-            .header()?
-            .ok_or_else(|| Error::oos("Message must have an header"))?;
-
-        match header {
-            arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
-                let block_offset = offset + length;
-                read_dictionary(
-                    batch,
-                    fields,
-                    ipc_schema,
-                    &mut dictionaries,
-                    reader,
-                    block_offset,
-                )?;
-            }
-            t => {
-                return Err(Error::OutOfSpec(format!(
-                    "Expecting DictionaryBatch in dictionary blocks, found {:?}.",
-                    t
-                )));
-            }
-        };
+        read_dictionary_block(reader, metadata, block, &mut dictionaries, &mut data)?;
     }
     Ok(dictionaries)
 }
@@ -183,19 +200,6 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     reader.read_exact(&mut footer_data)?;
 
     deserialize_footer(&footer_data)
-
-    /*
-    // read dictionaries
-    metadata.dictionaries = if let Some(blocks) = dictionary_blocks {
-        read_dictionaries(
-            reader,
-            &metadata.schema.fields,
-            &metadata.ipc_schema,
-            blocks,
-        )?
-    } else {
-        Default::default()
-    };*/
 }
 
 pub(super) fn get_serialized_batch<'a>(
@@ -216,16 +220,22 @@ pub(super) fn get_serialized_batch<'a>(
     }
 }
 
-/// Read a batch from the reader.
+/// Reads the record batch at position `index` from the reader.
+///
+/// This function is useful for random access to the file. For example, if
+/// you have indexed the file somewhere else, this allows pruning
+/// certain parts of the file.
+/// # Panics
+/// This function panics iff `index >= metadata.blocks.len()`
 pub fn read_batch<R: Read + Seek>(
     reader: &mut R,
     dictionaries: &Dictionaries,
     metadata: &FileMetadata,
     projection: Option<&[usize]>,
-    block: usize,
-    block_data: &mut Vec<u8>,
+    index: usize,
+    stratch: &mut Vec<u8>,
 ) -> Result<Chunk<Arc<dyn Array>>> {
-    let block = metadata.blocks[block];
+    let block = metadata.blocks[index];
 
     // read length
     reader.seek(SeekFrom::Start(block.offset as u64))?;
@@ -237,11 +247,11 @@ pub fn read_batch<R: Read + Seek>(
     }
     let meta_len = i32::from_le_bytes(meta_buf) as usize;
 
-    block_data.clear();
-    block_data.resize(meta_len, 0);
-    reader.read_exact(block_data)?;
+    stratch.clear();
+    stratch.resize(meta_len, 0);
+    reader.read_exact(stratch)?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(&block_data[..])
+    let message = arrow_format::ipc::MessageRef::read_as_root(stratch)
         .map_err(|err| Error::oos(format!("Unable parse message: {:?}", err)))?;
 
     let batch = get_serialized_batch(&message)?;
@@ -300,23 +310,8 @@ impl<R: Read + Seek> FileReader<R> {
     }
 
     fn read_dictionaries(&mut self) -> Result<()> {
-        match (
-            &mut self.dictionaries,
-            self.metadata.dictionaries.as_deref(),
-        ) {
-            (None, Some(blocks)) => {
-                let dictionaries = read_dictionaries(
-                    &mut self.reader,
-                    &self.metadata.schema.fields,
-                    &self.metadata.ipc_schema,
-                    blocks,
-                )?;
-                self.dictionaries = Some(dictionaries);
-            }
-            (None, None) => {
-                self.dictionaries = Some(Default::default());
-            }
-            _ => {}
+        if self.dictionaries.is_none() {
+            self.dictionaries = Some(read_file_dictionaries(&mut self.reader, &self.metadata)?);
         };
         Ok(())
     }

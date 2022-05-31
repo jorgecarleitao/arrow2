@@ -5,22 +5,49 @@ use arrow2::array::Array;
 use arrow2::chunk::Chunk;
 use arrow2::datatypes::Schema;
 use arrow2::error::Result;
-use arrow2::io::ipc::read::{read_file_metadata, FileReader};
+use arrow2::io::ipc::read;
 use arrow2::io::print;
 
+/// Simplest way: read all record batches from the file. This can be used e.g. for random access.
 fn read_batches(path: &str) -> Result<(Schema, Vec<Chunk<Arc<dyn Array>>>)> {
     let mut file = File::open(path)?;
 
     // read the files' metadata. At this point, we can distribute the read whatever we like.
-    let metadata = read_file_metadata(&mut file)?;
+    let metadata = read::read_file_metadata(&mut file)?;
 
     let schema = metadata.schema.clone();
 
     // Simplest way: use the reader, an iterator over batches.
-    let reader = FileReader::new(file, metadata, None);
+    let reader = read::FileReader::new(file, metadata, None);
 
     let columns = reader.collect::<Result<Vec<_>>>()?;
     Ok((schema, columns))
+}
+
+/// Random access way: read a single record batch from the file. This can be used e.g. for random access.
+fn read_batch(path: &str) -> Result<(Schema, Chunk<Arc<dyn Array>>)> {
+    let mut file = File::open(path)?;
+
+    // read the files' metadata. At this point, we can distribute the read whatever we like.
+    let metadata = read::read_file_metadata(&mut file)?;
+
+    let schema = metadata.schema.clone();
+
+    // advanced way: read the dictionary
+    let dictionaries = read::read_file_dictionaries(&mut file, &metadata)?;
+
+    let chunk_index = 0;
+
+    let chunk = read::read_batch(
+        &mut file,
+        &dictionaries,
+        &metadata,
+        None,
+        chunk_index,
+        &mut vec![],
+    )?;
+
+    Ok((schema, chunk))
 }
 
 fn main() -> Result<()> {
@@ -32,5 +59,9 @@ fn main() -> Result<()> {
     let (schema, batches) = read_batches(file_path)?;
     let names = schema.fields.iter().map(|f| &f.name).collect::<Vec<_>>();
     println!("{}", print::write(&batches, &names));
+
+    let (schema, batch) = read_batch(file_path)?;
+    let names = schema.fields.iter().map(|f| &f.name).collect::<Vec<_>>();
+    println!("{}", print::write(&[batch], &names));
     Ok(())
 }
