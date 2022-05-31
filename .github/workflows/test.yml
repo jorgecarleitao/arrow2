@@ -111,34 +111,6 @@ jobs:
       - name: Run
         run: MIRIFLAGS="-Zmiri-disable-isolation" cargo miri test --tests --features io_ipc,io_json_integration io::ipc::write::write_sliced_list
 
-  coverage:
-    name: Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: true
-      - name: Install Rust
-        run: rustup update stable
-      - name: Setup parquet files
-        run: |
-          apt update && apt install python3-pip python3-venv -y -q
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install pip --upgrade
-          pip install pyarrow==6
-          python parquet_integration/write_parquet.py
-          deactivate
-      - uses: Swatinem/rust-cache@v1
-      - name: Install tarpaulin
-        run: cargo install cargo-tarpaulin
-      - name: Run coverage
-        run: |
-          cargo tarpaulin --features full --ignore-tests --out Xml
-      - name: Report coverage
-        continue-on-error: true
-        run: bash <(curl -s https://codecov.io/bash)
-
   feature-compilation:
     name: Feature coverage
     runs-on: ubuntu-latest
