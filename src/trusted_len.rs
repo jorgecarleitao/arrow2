@@ -21,6 +21,12 @@ where
     T: Copy,
 {
 }
+unsafe impl<'a, I, T: 'a> TrustedLen for std::iter::Cloned<I>
+where
+    I: TrustedLen<Item = &'a T>,
+    T: Clone,
+{
+}
 
 unsafe impl<I> TrustedLen for std::iter::Enumerate<I> where I: TrustedLen {}
 

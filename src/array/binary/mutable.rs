@@ -163,6 +163,7 @@ impl<O: Offset> MutableBinaryArray<O> {
         let a: BinaryArray<O> = self.into();
         Arc::new(a)
     }
+
     /// Shrinks the capacity of the [`MutableBinaryArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
