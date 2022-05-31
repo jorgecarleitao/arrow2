@@ -22,6 +22,7 @@ jobs:
           pip install pyarrow==6
           python parquet_integration/write_parquet.py
           deactivate
+      - uses: Swatinem/rust-cache@v1
       - name: Generate code coverage
         run: cargo llvm-cov --features full --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
