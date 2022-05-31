@@ -32,16 +32,7 @@ impl<R: Read + Seek + Write> FileWriter<R> {
             ));
         }
 
-        let dictionaries = if let Some(blocks) = &metadata.dictionaries {
-            read::reader::read_dictionaries(
-                &mut writer,
-                &metadata.schema.fields,
-                &metadata.ipc_schema,
-                blocks,
-            )?
-        } else {
-            Default::default()
-        };
+        let dictionaries = read::read_file_dictionaries(&mut writer, &metadata)?;
 
         let last_block = metadata.blocks.last().ok_or_else(|| {
             Error::oos("An Arrow IPC file must have at least 1 message (the schema message)")
