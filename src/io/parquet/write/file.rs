@@ -72,11 +72,6 @@ impl<W: Write> FileWriter<W> {
         })
     }
 
-    /// Writes the header of the file
-    pub fn start(&mut self) -> Result<()> {
-        Ok(self.writer.start()?)
-    }
-
     /// Writes a row group to the file.
     pub fn write(&mut self, row_group: RowGroupIter<'_, Error>) -> Result<()> {
         Ok(self.writer.write(row_group)?)

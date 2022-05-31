@@ -815,7 +815,6 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Resu
 
     let mut writer = FileWriter::try_new(writer, schema.clone(), options)?;
 
-    writer.start()?;
     for group in row_groups {
         writer.write(group?)?;
     }

@@ -47,7 +47,6 @@ fn round_trip(
     let writer = Cursor::new(vec![]);
     let mut writer = FileWriter::try_new(writer, schema, options)?;
 
-    writer.start()?;
     for group in row_groups {
         writer.write(group?)?;
     }

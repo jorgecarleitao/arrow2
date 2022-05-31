@@ -32,7 +32,6 @@ fn write(array: &dyn Array, encoding: Encoding) -> Result<()> {
 
     let mut writer = FileWriter::try_new(writer, schema, options)?;
 
-    writer.start()?;
     for group in row_groups {
         writer.write(group?)?;
     }

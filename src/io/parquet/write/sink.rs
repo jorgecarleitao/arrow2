@@ -82,7 +82,7 @@ where
     ) -> Result<Self, Error> {
         let parquet_schema = crate::io::parquet::write::to_parquet_schema(&schema)?;
         let created_by = Some("Arrow2 - Native Rust implementation of Arrow".to_string());
-        let mut writer = FileStreamer::new(
+        let writer = FileStreamer::new(
             writer,
             parquet_schema.clone(),
             ParquetWriteOptions {
@@ -91,16 +91,9 @@ where
             },
             created_by,
         );
-        let task = Some(
-            async move {
-                writer.start().await?;
-                Ok(Some(writer))
-            }
-            .boxed(),
-        );
         Ok(Self {
-            writer: None,
-            task,
+            writer: Some(writer),
+            task: None,
             options,
             schema,
             encoding,
@@ -196,7 +189,7 @@ where
         match futures::ready!(this.poll_complete(cx)) {
             Ok(()) => {
                 let writer = this.writer.take();
-                if let Some(writer) = writer {
+                if let Some(mut writer) = writer {
                     let meta = std::mem::take(&mut this.metadata);
                     let metadata = if meta.is_empty() {
                         None
@@ -209,13 +202,10 @@ where
                     };
                     let kv_meta = add_arrow_schema(&this.schema, metadata);
 
-                    this.task = Some(
-                        writer
-                            .end(kv_meta)
-                            .map_ok(|_| None)
-                            .map_err(Error::from)
-                            .boxed(),
-                    );
+                    this.task = Some(Box::pin(async move {
+                        writer.end(kv_meta).map_err(Error::from).await?;
+                        Ok(None)
+                    }));
                     this.poll_complete(cx)
                 } else {
                     Poll::Ready(Ok(()))
