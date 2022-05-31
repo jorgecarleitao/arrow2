@@ -21,6 +21,12 @@ fn from_and_into_data() {
 }
 
 #[test]
+fn from_vec() {
+    let a = MutablePrimitiveArray::from_vec(Vec::from([1i32, 0]));
+    assert_eq!(a.len(), 2);
+}
+
+#[test]
 fn to() {
     let a = MutablePrimitiveArray::from_data(
         DataType::Int32,
@@ -152,9 +158,10 @@ fn as_box() {
 fn shrink_to_fit_and_capacity() {
     let mut a = MutablePrimitiveArray::<i32>::with_capacity(100);
     a.push(Some(1));
+    a.try_push(None).unwrap();
     assert!(a.capacity() >= 100);
-    a.shrink_to_fit();
-    assert_eq!(a.capacity(), 1);
+    (&mut a as &mut dyn MutableArray).shrink_to_fit();
+    assert_eq!(a.capacity(), 2);
 }
 
 #[test]
@@ -168,7 +175,16 @@ fn only_nulls() {
 
 #[test]
 fn from_trusted_len() {
-    let a = MutablePrimitiveArray::<i32>::from_trusted_len_iter(vec![Some(1), None].into_iter());
+    let a =
+        MutablePrimitiveArray::<i32>::from_trusted_len_iter(vec![Some(1), None, None].into_iter());
+    let a: PrimitiveArray<i32> = a.into();
+    assert_eq!(a.validity(), Some(&Bitmap::from([true, false, false])));
+
+    let a = unsafe {
+        MutablePrimitiveArray::<i32>::from_trusted_len_iter_unchecked(
+            vec![Some(1), None].into_iter(),
+        )
+    };
     let a: PrimitiveArray<i32> = a.into();
     assert_eq!(a.validity(), Some(&Bitmap::from([true, false])));
 }

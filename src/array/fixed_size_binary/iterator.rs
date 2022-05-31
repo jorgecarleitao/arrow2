@@ -32,10 +32,9 @@ impl<'a, T: FixedSizeBinaryValues> Iterator for FixedSizeBinaryValuesIter<'a, T>
         }
         let index = self.index;
         let r = Some(unsafe {
-            std::slice::from_raw_parts(
-                self.array.values().as_ptr().add(index * self.array.size()),
-                self.array.size(),
-            )
+            self.array
+                .values()
+                .get_unchecked(index * self.array.size()..(index + 1) * self.array.size())
         });
         self.index += 1;
         r
