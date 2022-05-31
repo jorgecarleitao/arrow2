@@ -288,7 +288,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
             DataType::Struct(children)
         }
         other => {
-            match other.split(':').collect::<Vec<_>>()[..] {
+            match other.splitn(2, ':').collect::<Vec<_>>()[..] {
                 // Timestamps with no timezone
                 ["tss", ""] => DataType::Timestamp(TimeUnit::Second, None),
                 ["tsm", ""] => DataType::Timestamp(TimeUnit::Millisecond, None),
@@ -537,79 +537,95 @@ unsafe fn metadata_from_bytes(data: *const ::std::os::raw::c_char) -> (Metadata,
 
 #[cfg(test)]
 mod tests {
-    use crate::datatypes::{DataType, Field, TimeUnit};
+    use super::*;
 
-    macro_rules! test_dt_conv {
-        ($name:ident, $field:expr, $expected:expr,) => {
-            #[test]
-            fn $name() {
-                use crate::ffi::ArrowSchema;
-
-                let field = $field;
-                let schema = ArrowSchema::new(&field);
-                let dt = unsafe { super::to_data_type(&schema).unwrap() };
-                let result = super::to_format(&dt);
-                assert_eq!(result, $expected);
-            }
-        };
-    }
-
-    test_dt_conv!(
-        test_bool,
-        Field::new("example", DataType::Boolean, false),
-        "b",
-    );
-
-    // Timezone handling
-    test_dt_conv!(
-        test_timestamp_none,
-        Field::new(
-            "example",
-            DataType::Timestamp(TimeUnit::Second, None),
-            false
-        ),
-        "tss:",
-    );
-
-    test_dt_conv!(
-        test_timestamp_something,
-        Field::new(
-            "example",
-            DataType::Timestamp(TimeUnit::Second, Some("Nonsense timezone!!".to_string())),
-            false
-        ),
-        "tss:Nonsense timezone!!",
-    );
-
-    test_dt_conv!(
-        test_timestamp_empty,
-        Field::new(
-            "example",
-            DataType::Timestamp(TimeUnit::Second, Some("   ".to_string())),
-            false
-        ),
-        "tss:   ",
-    );
-
-    // Other time stamp types
-    test_dt_conv!(
-        test_timestamp_nanoseconds,
-        Field::new(
-            "example",
-            DataType::Timestamp(TimeUnit::Nanosecond, None),
-            false
-        ),
-        "tsn:",
-    );
-
-    // Other time stamp types
-    test_dt_conv!(
-        test_list,
-        Field::new(
-            "example",
+    #[test]
+    fn test_all() {
+        let mut dts = vec![
+            DataType::Null,
+            DataType::Boolean,
+            DataType::UInt8,
+            DataType::UInt16,
+            DataType::UInt32,
+            DataType::UInt64,
+            DataType::Int8,
+            DataType::Int16,
+            DataType::Int32,
+            DataType::Int64,
+            DataType::Float32,
+            DataType::Float64,
+            DataType::Date32,
+            DataType::Date64,
+            DataType::Time32(TimeUnit::Second),
+            DataType::Time32(TimeUnit::Millisecond),
+            DataType::Time64(TimeUnit::Microsecond),
+            DataType::Time64(TimeUnit::Nanosecond),
+            DataType::Decimal(5, 5),
+            DataType::Utf8,
+            DataType::LargeUtf8,
+            DataType::Binary,
+            DataType::LargeBinary,
+            DataType::FixedSizeBinary(2),
             DataType::List(Box::new(Field::new("example", DataType::Boolean, false))),
-            false
-        ),
-        "+l",
-    );
+            DataType::FixedSizeList(Box::new(Field::new("example", DataType::Boolean, false)), 2),
+            DataType::LargeList(Box::new(Field::new("example", DataType::Boolean, false))),
+            DataType::Struct(vec![
+                Field::new("a", DataType::Int64, true),
+                Field::new(
+                    "b",
+                    DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+                    true,
+                ),
+            ]),
+            DataType::Map(Box::new(Field::new("a", DataType::Int64, true)), true),
+            DataType::Union(
+                vec![
+                    Field::new("a", DataType::Int64, true),
+                    Field::new(
+                        "b",
+                        DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+                        true,
+                    ),
+                ],
+                Some(vec![1, 2]),
+                UnionMode::Dense,
+            ),
+            DataType::Union(
+                vec![
+                    Field::new("a", DataType::Int64, true),
+                    Field::new(
+                        "b",
+                        DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+                        true,
+                    ),
+                ],
+                Some(vec![0, 1]),
+                UnionMode::Sparse,
+            ),
+        ];
+        for time_unit in [
+            TimeUnit::Second,
+            TimeUnit::Millisecond,
+            TimeUnit::Microsecond,
+            TimeUnit::Nanosecond,
+        ] {
+            dts.push(DataType::Timestamp(time_unit, None));
+            dts.push(DataType::Timestamp(time_unit, Some("00:00".to_string())));
+            dts.push(DataType::Duration(time_unit));
+        }
+        for interval_type in [
+            IntervalUnit::DayTime,
+            IntervalUnit::YearMonth,
+            //IntervalUnit::MonthDayNano, // not yet defined on the C data interface
+        ] {
+            dts.push(DataType::Interval(interval_type));
+        }
+
+        for expected in dts {
+            let field = Field::new("a", expected.clone(), true);
+            let schema = ArrowSchema::new(&field);
+            let result = unsafe { super::to_data_type(&schema).unwrap() };
+            assert_eq!(result, expected);
+        }
+    }
 }
