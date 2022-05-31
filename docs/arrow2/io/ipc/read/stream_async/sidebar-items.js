@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["read_stream_metadata_async","Reads the [`StreamMetadata`] of the Arrow stream asynchronously"]],"struct":[["AsyncStreamReader","A [`Stream`] over an Arrow IPC stream that asynchronously yields [`Chunk`]s."]]});
