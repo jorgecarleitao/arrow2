@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::datatypes::DataType;
 
 use super::Scalar;
@@ -7,7 +5,7 @@ use super::Scalar;
 /// A single entry of a [`crate::array::StructArray`].
 #[derive(Debug, Clone)]
 pub struct StructScalar {
-    values: Vec<Arc<dyn Scalar>>,
+    values: Vec<Box<dyn Scalar>>,
     is_valid: bool,
     data_type: DataType,
 }
@@ -23,7 +21,7 @@ impl PartialEq for StructScalar {
 impl StructScalar {
     /// Returns a new [`StructScalar`]
     #[inline]
-    pub fn new(data_type: DataType, values: Option<Vec<Arc<dyn Scalar>>>) -> Self {
+    pub fn new(data_type: DataType, values: Option<Vec<Box<dyn Scalar>>>) -> Self {
         let is_valid = values.is_some();
         Self {
             values: values.unwrap_or_default(),
@@ -34,7 +32,7 @@ impl StructScalar {
 
     /// Returns the values irrespectively of the validity.
     #[inline]
-    pub fn values(&self) -> &[Arc<dyn Scalar>] {
+    pub fn values(&self) -> &[Box<dyn Scalar>] {
         &self.values
     }
 }

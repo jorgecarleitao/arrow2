@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, io::Read, sync::Arc};
+use std::{collections::HashMap, fs::File, io::Read};
 
 use arrow2::{
     array::Array, chunk::Chunk, datatypes::Schema, error::Result,
@@ -8,7 +8,7 @@ use arrow2::{
 
 use flate2::read::GzDecoder;
 
-type IpcRead = (Schema, Vec<IpcField>, Vec<Chunk<Arc<dyn Array>>>);
+type IpcRead = (Schema, Vec<IpcField>, Vec<Chunk<Box<dyn Array>>>);
 
 /// Read gzipped JSON file
 pub fn read_gzip_json(version: &str, file_name: &str) -> Result<IpcRead> {

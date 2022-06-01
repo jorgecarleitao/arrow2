@@ -1,5 +1,4 @@
 use std::any::Any;
-use std::sync::Arc;
 
 use crate::{array::*, datatypes::DataType};
 
@@ -9,7 +8,7 @@ use super::Scalar;
 /// [`Array`]. The only difference is that this has only one element.
 #[derive(Debug, Clone)]
 pub struct ListScalar<O: Offset> {
-    values: Arc<dyn Array>,
+    values: Box<dyn Array>,
     is_valid: bool,
     phantom: std::marker::PhantomData<O>,
     data_type: DataType,
@@ -30,14 +29,14 @@ impl<O: Offset> ListScalar<O> {
     /// * the `data_type` is not `List` or `LargeList` (depending on this scalar's offset `O`)
     /// * the child of the `data_type` is not equal to the `values`
     #[inline]
-    pub fn new(data_type: DataType, values: Option<Arc<dyn Array>>) -> Self {
+    pub fn new(data_type: DataType, values: Option<Box<dyn Array>>) -> Self {
         let inner_data_type = ListArray::<O>::get_child_type(&data_type);
         let (is_valid, values) = match values {
             Some(values) => {
                 assert_eq!(inner_data_type, values.data_type());
                 (true, values)
             }
-            None => (false, new_empty_array(inner_data_type.clone()).into()),
+            None => (false, new_empty_array(inner_data_type.clone())),
         };
         Self {
             values,
@@ -48,7 +47,7 @@ impl<O: Offset> ListScalar<O> {
     }
 
     /// The values of the [`ListScalar`]
-    pub fn values(&self) -> &Arc<dyn Array> {
+    pub fn values(&self) -> &Box<dyn Array> {
         &self.values
     }
 }

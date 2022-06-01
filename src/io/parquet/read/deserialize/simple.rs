@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use parquet2::{
     schema::types::{
         PhysicalType, PrimitiveLogicalType, PrimitiveType, TimeUnit as ParquetTimeUnit,
@@ -25,10 +23,10 @@ use super::primitive;
 #[inline]
 fn dyn_iter<'a, A, I>(iter: I) -> ArrayIter<'a>
 where
-    A: Array + 'static,
+    A: Array,
     I: Iterator<Item = Result<A>> + Send + Sync + 'a,
 {
-    Box::new(iter.map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>)))
+    Box::new(iter.map(|x| x.map(|x| Box::new(x) as Box<dyn Array>)))
 }
 
 /// Converts an iterator of [MutablePrimitiveArray] into an iterator of [PrimitiveArray]
@@ -165,7 +163,7 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                     PrimitiveArray::<i128>::try_new(data_type.clone(), values.into(), validity)
                 });
 
-                let arrays = pages.map(|x| x.map(|x| x.arced()));
+                let arrays = pages.map(|x| x.map(|x| x.boxed()));
 
                 Box::new(arrays) as _
             }

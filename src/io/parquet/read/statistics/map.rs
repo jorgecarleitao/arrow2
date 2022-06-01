@@ -41,7 +41,7 @@ impl MutableArray for DynMutableMapArray {
         Box::new(MapArray::new(
             self.data_type.clone(),
             vec![0, self.inner.len() as i32].into(),
-            self.inner.as_arc(),
+            self.inner.as_box(),
             None,
         ))
     }

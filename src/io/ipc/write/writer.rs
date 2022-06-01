@@ -1,4 +1,4 @@
-use std::{io::Write, sync::Arc};
+use std::io::Write;
 
 use arrow_format::ipc::planus::Builder;
 
@@ -118,7 +118,7 @@ impl<W: Write> FileWriter<W> {
     /// Writes [`Chunk`] to the file
     pub fn write(
         &mut self,
-        columns: &Chunk<Arc<dyn Array>>,
+        columns: &Chunk<Box<dyn Array>>,
         ipc_fields: Option<&[IpcField]>,
     ) -> Result<()> {
         if self.state != State::Started {

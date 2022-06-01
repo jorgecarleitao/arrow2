@@ -1,8 +1,5 @@
 use std::collections::VecDeque;
-use std::{
-    io::{Read, Seek},
-    sync::Arc,
-};
+use std::io::{Read, Seek};
 
 use arrow_format::ipc::BodyCompressionRef;
 use arrow_format::ipc::MetadataVersion;
@@ -27,12 +24,12 @@ pub fn read<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<BodyCompressionRef>,
     version: MetadataVersion,
-) -> Result<Arc<dyn Array>> {
+) -> Result<Box<dyn Array>> {
     use PhysicalType::*;
     let data_type = field.data_type.clone();
 
     match data_type.to_physical_type() {
-        Null => read_null(field_nodes, data_type).map(|x| x.arced()),
+        Null => read_null(field_nodes, data_type).map(|x| x.boxed()),
         Boolean => read_boolean(
             field_nodes,
             data_type,
@@ -42,7 +39,7 @@ pub fn read<R: Read + Seek>(
             is_little_endian,
             compression,
         )
-        .map(|x| x.arced()),
+        .map(|x| x.boxed()),
         Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
             read_primitive::<$T, _>(
                 field_nodes,
@@ -53,7 +50,7 @@ pub fn read<R: Read + Seek>(
                 is_little_endian,
                 compression,
             )
-            .map(|x| x.arced())
+            .map(|x| x.boxed())
         }),
         Binary => {
             let array = read_binary::<i32, _>(
@@ -65,7 +62,7 @@ pub fn read<R: Read + Seek>(
                 is_little_endian,
                 compression,
             )?;
-            Ok(Arc::new(array))
+            Ok(Box::new(array))
         }
         LargeBinary => {
             let array = read_binary::<i64, _>(
@@ -77,7 +74,7 @@ pub fn read<R: Read + Seek>(
                 is_little_endian,
                 compression,
             )?;
-            Ok(Arc::new(array))
+            Ok(Box::new(array))
         }
         FixedSizeBinary => {
             let array = read_fixed_size_binary(
@@ -89,7 +86,7 @@ pub fn read<R: Read + Seek>(
                 is_little_endian,
                 compression,
             )?;
-            Ok(Arc::new(array))
+            Ok(Box::new(array))
         }
         Utf8 => {
             let array = read_utf8::<i32, _>(
@@ -101,7 +98,7 @@ pub fn read<R: Read + Seek>(
                 is_little_endian,
                 compression,
             )?;
-            Ok(Arc::new(array))
+            Ok(Box::new(array))
         }
         LargeUtf8 => {
             let array = read_utf8::<i64, _>(
@@ -113,7 +110,7 @@ pub fn read<R: Read + Seek>(
                 is_little_endian,
                 compression,
             )?;
-            Ok(Arc::new(array))
+            Ok(Box::new(array))
         }
         List => read_list::<i32, _>(
             field_nodes,
@@ -127,7 +124,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| x.arced()),
+        .map(|x| x.boxed()),
         LargeList => read_list::<i64, _>(
             field_nodes,
             data_type,
@@ -140,7 +137,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| x.arced()),
+        .map(|x| x.boxed()),
         FixedSizeList => read_fixed_size_list(
             field_nodes,
             data_type,
@@ -153,7 +150,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| x.arced()),
+        .map(|x| x.boxed()),
         Struct => read_struct(
             field_nodes,
             data_type,
@@ -166,7 +163,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| x.arced()),
+        .map(|x| x.boxed()),
         Dictionary(key_type) => {
             match_integer_type!(key_type, |$T| {
                 read_dictionary::<$T, _>(
@@ -179,7 +176,7 @@ pub fn read<R: Read + Seek>(
                     compression,
                     is_little_endian,
                 )
-                .map(|x| x.arced())
+                .map(|x| x.boxed())
             })
         }
         Union => read_union(
@@ -194,7 +191,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| x.arced()),
+        .map(|x| x.boxed()),
         Map => read_map(
             field_nodes,
             data_type,
@@ -207,7 +204,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| x.arced()),
+        .map(|x| x.boxed()),
     }
 }
 

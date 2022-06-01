@@ -28,9 +28,12 @@ pub(self) mod physical_binary;
 
 /// A trait representing an immutable Arrow array. Arrow arrays are trait objects
 /// that are infallibly downcasted to concrete types according to the [`Array::data_type`].
-pub trait Array: Send + Sync {
-    /// Convert to trait object.
+pub trait Array: Send + Sync + dyn_clone::DynClone + 'static {
+    /// Converts itself to a reference of [`Any`], which enables downcasting to concrete types.
     fn as_any(&self) -> &dyn Any;
+
+    /// Converts itself to a mutable reference of [`Any`], which enables mutable downcasting to concrete types.
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 
     /// The length of the [`Array`]. Every array has a length corresponding to the number of
     /// elements (slots).
@@ -108,6 +111,8 @@ pub trait Array: Send + Sync {
     fn to_boxed(&self) -> Box<dyn Array>;
 }
 
+dyn_clone::clone_trait_object!(Array);
+
 /// A trait describing a mutable array; i.e. an array whose values can be changed.
 /// Mutable arrays cannot be cloned but can be mutated in place,
 /// thereby making them useful to perform numeric operations without allocations.
@@ -134,7 +139,7 @@ pub trait MutableArray: std::fmt::Debug + Send + Sync {
     // This provided implementation has an extra allocation as it first
     // boxes `self`, then converts the box into an `Arc`. Implementors may wish
     // to avoid an allocation by skipping the box completely.
-    fn as_arc(&mut self) -> Arc<dyn Array> {
+    fn as_arc(&mut self) -> std::sync::Arc<dyn Array> {
         self.as_box().into()
     }
 
@@ -422,9 +427,3 @@ pub unsafe trait GenericBinaryArray<O: Offset>: Array {
     /// The offsets of the array
     fn offsets(&self) -> &[O];
 }
-
-// backward compatibility
-use std::sync::Arc;
-
-/// A type def of [`Array`].
-pub type ArrayRef = Arc<dyn Array>;

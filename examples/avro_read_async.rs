@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use futures::pin_mut;
 use futures::StreamExt;
 use tokio::fs::File;
@@ -19,8 +17,8 @@ async fn main() -> Result<()> {
     let mut reader = File::open(file_path).await?.compat();
 
     let (avro_schemas, schema, compression, marker) = read_metadata(&mut reader).await?;
-    let avro_schemas = Arc::new(avro_schemas);
-    let projection = Arc::new(schema.fields.iter().map(|_| true).collect::<Vec<_>>());
+    let avro_schemas = Box::new(avro_schemas);
+    let projection = Box::new(schema.fields.iter().map(|_| true).collect::<Vec<_>>());
 
     let blocks = block_stream(&mut reader, marker).await;
 

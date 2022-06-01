@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use chrono::Datelike;
 
 // Ideally this trait should not be needed and both `csv` and `csv_async` crates would share
@@ -31,7 +29,7 @@ fn deserialize_primitive<T, B: ByteRecordGeneric, F>(
     column: usize,
     datatype: DataType,
     op: F,
-) -> Arc<dyn Array>
+) -> Box<dyn Array>
 where
     T: NativeType + lexical_core::FromLexical,
     F: Fn(&[u8]) -> Option<T>,
@@ -45,7 +43,7 @@ where
         }
         None => None,
     });
-    Arc::new(PrimitiveArray::<T>::from_trusted_len_iter(iter).to(datatype))
+    Box::new(PrimitiveArray::<T>::from_trusted_len_iter(iter).to(datatype))
 }
 
 #[inline]
@@ -93,7 +91,7 @@ fn deserialize_decimal(bytes: &[u8], precision: usize, scale: usize) -> Option<i
 }
 
 #[inline]
-fn deserialize_boolean<B, F>(rows: &[B], column: usize, op: F) -> Arc<dyn Array>
+fn deserialize_boolean<B, F>(rows: &[B], column: usize, op: F) -> Box<dyn Array>
 where
     B: ByteRecordGeneric,
     F: Fn(&[u8]) -> Option<bool>,
@@ -107,25 +105,25 @@ where
         }
         None => None,
     });
-    Arc::new(BooleanArray::from_trusted_len_iter(iter))
+    Box::new(BooleanArray::from_trusted_len_iter(iter))
 }
 
 #[inline]
-fn deserialize_utf8<O: Offset, B: ByteRecordGeneric>(rows: &[B], column: usize) -> Arc<dyn Array> {
+fn deserialize_utf8<O: Offset, B: ByteRecordGeneric>(rows: &[B], column: usize) -> Box<dyn Array> {
     let iter = rows.iter().map(|row| match row.get(column) {
         Some(bytes) => to_utf8(bytes),
         None => None,
     });
-    Arc::new(Utf8Array::<O>::from_trusted_len_iter(iter))
+    Box::new(Utf8Array::<O>::from_trusted_len_iter(iter))
 }
 
 #[inline]
 fn deserialize_binary<O: Offset, B: ByteRecordGeneric>(
     rows: &[B],
     column: usize,
-) -> Arc<dyn Array> {
+) -> Box<dyn Array> {
     let iter = rows.iter().map(|row| row.get(column));
-    Arc::new(BinaryArray::<O>::from_trusted_len_iter(iter))
+    Box::new(BinaryArray::<O>::from_trusted_len_iter(iter))
 }
 
 #[inline]
@@ -151,7 +149,7 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
     column: usize,
     datatype: DataType,
     _line_number: usize,
-) -> Result<Arc<dyn Array>> {
+) -> Result<Box<dyn Array>> {
     use DataType::*;
     Ok(match datatype {
         Boolean => deserialize_boolean(rows, column, |bytes| {
@@ -266,9 +264,9 @@ pub(crate) fn deserialize_batch<F, B: ByteRecordGeneric>(
     projection: Option<&[usize]>,
     line_number: usize,
     deserialize_column: F,
-) -> Result<Chunk<Arc<dyn Array>>>
+) -> Result<Chunk<Box<dyn Array>>>
 where
-    F: Fn(&[B], usize, DataType, usize) -> Result<Arc<dyn Array>>,
+    F: Fn(&[B], usize, DataType, usize) -> Result<Box<dyn Array>>,
 {
     let projection: Vec<usize> = match projection {
         Some(v) => v.to_vec(),

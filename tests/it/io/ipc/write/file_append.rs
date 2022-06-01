@@ -10,7 +10,7 @@ use super::file::write;
 #[test]
 fn basic() -> Result<()> {
     // prepare some data
-    let array = BooleanArray::from([Some(true), Some(false), None, Some(true)]).arced();
+    let array = BooleanArray::from([Some(true), Some(false), None, Some(true)]).boxed();
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
 

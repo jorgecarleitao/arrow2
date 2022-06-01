@@ -1,5 +1,4 @@
 use std::io::Cursor;
-use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
@@ -17,7 +16,7 @@ fn data() -> Chunk<Box<dyn Array>> {
     let c6 = PrimitiveArray::<i32>::from_vec(vec![1234, 24680, 85563])
         .to(DataType::Time32(TimeUnit::Second));
     let keys = UInt32Array::from_slice(&[2, 0, 1]);
-    let c7 = DictionaryArray::from_data(keys, Arc::new(c1.clone()));
+    let c7 = DictionaryArray::from_data(keys, Box::new(c1.clone()));
 
     Chunk::new(vec![
         Box::new(c1) as Box<dyn Array>,
@@ -85,57 +84,57 @@ d|-556132.25|1||2019-04-18 02:45:55.555|11:46:03 PM|c
     Ok(())
 }
 
-fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
+fn data_array(column: usize) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
     let (array, expected) = match column {
         0 => (
-            Utf8Array::<i64>::from_slice(["a b", "c", "d"]).arced(),
+            Utf8Array::<i64>::from_slice(["a b", "c", "d"]).boxed(),
             vec!["a b", "c", "d"],
         ),
         1 => (
-            BinaryArray::<i32>::from_slice(["a b", "c", "d"]).arced(),
+            BinaryArray::<i32>::from_slice(["a b", "c", "d"]).boxed(),
             vec!["a b", "c", "d"],
         ),
         2 => (
-            BinaryArray::<i64>::from_slice(["a b", "c", "d"]).arced(),
+            BinaryArray::<i64>::from_slice(["a b", "c", "d"]).boxed(),
             vec!["a b", "c", "d"],
         ),
         3 => (
-            Int8Array::from_slice(&[3, 2, 1]).arced(),
+            Int8Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         4 => (
-            Int16Array::from_slice(&[3, 2, 1]).arced(),
+            Int16Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         5 => (
-            Int32Array::from_slice(&[3, 2, 1]).arced(),
+            Int32Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         6 => (
-            Int64Array::from_slice(&[3, 2, 1]).arced(),
+            Int64Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         7 => (
-            UInt8Array::from_slice(&[3, 2, 1]).arced(),
+            UInt8Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         8 => (
-            UInt16Array::from_slice(&[3, 2, 1]).arced(),
+            UInt16Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         9 => (
-            UInt32Array::from_slice(&[3, 2, 1]).arced(),
+            UInt32Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         10 => (
-            UInt64Array::from_slice(&[3, 2, 1]).arced(),
+            UInt64Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         11 => {
             let array = PrimitiveArray::<i32>::from_vec(vec![1_234_001, 24_680_001, 85_563_001])
                 .to(DataType::Time32(TimeUnit::Millisecond));
             (
-                array.arced(),
+                array.boxed(),
                 vec!["00:20:34.001", "06:51:20.001", "23:46:03.001"],
             )
         }
@@ -147,7 +146,7 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
             ])
             .to(DataType::Time64(TimeUnit::Microsecond));
             (
-                array.arced(),
+                array.boxed(),
                 vec!["00:20:34.000001", "06:51:20.000001", "23:46:03.000001"],
             )
         }
@@ -159,7 +158,7 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
             ])
             .to(DataType::Time64(TimeUnit::Nanosecond));
             (
-                array.arced(),
+                array.boxed(),
                 vec![
                     "00:20:34.000000001",
                     "06:51:20.000000001",
@@ -174,7 +173,7 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
             ])
             .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
             (
-                array.arced(),
+                array.boxed(),
                 vec![
                     "2019-04-18 10:54:47.378000001",
                     "2019-04-18 02:45:55.555000001",
@@ -191,7 +190,7 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
                 Some("+01:00".to_string()),
             ));
             (
-                array.arced(),
+                array.boxed(),
                 vec![
                     "2019-04-18 11:54:47.378000001 +01:00",
                     "2019-04-18 03:45:55.555000001 +01:00",
@@ -200,9 +199,9 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
         }
         16 => {
             let keys = UInt32Array::from_slice(&[2, 1, 0]);
-            let values = Utf8Array::<i64>::from_slice(["a b", "c", "d"]).arced();
+            let values = Utf8Array::<i64>::from_slice(["a b", "c", "d"]).boxed();
             let array = DictionaryArray::from_data(keys, values);
-            (array.arced(), vec!["d", "c", "a b"])
+            (array.boxed(), vec!["d", "c", "a b"])
         }
         17 => {
             let array = PrimitiveArray::<i64>::from_slice([
@@ -214,7 +213,7 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
                 Some("Europe/Lisbon".to_string()),
             ));
             (
-                array.arced(),
+                array.boxed(),
                 vec![
                     "2019-04-18 11:54:47.378000001 WEST",
                     "2019-04-18 03:45:55.555000001 WEST",
@@ -228,7 +227,7 @@ fn data_array(column: usize) -> (Chunk<Arc<dyn Array>>, Vec<&'static str>) {
 }
 
 fn test_array(
-    columns: Chunk<Arc<dyn Array>>,
+    columns: Chunk<Box<dyn Array>>,
     data: Vec<&'static str>,
     options: SerializeOptions,
 ) -> Result<()> {
@@ -276,7 +275,7 @@ fn write_tz_timezone_formatted_offset() -> Result<()> {
                 Some("+01:00".to_string()),
             ));
 
-    let columns = Chunk::new(vec![array.arced()]);
+    let columns = Chunk::new(vec![array.boxed()]);
     let expected = vec![
         "2019-04-18T11:54:47.378000001+01:00",
         "2019-04-18T03:45:55.555000001+01:00",
@@ -301,7 +300,7 @@ fn write_tz_timezone_formatted_tz() -> Result<()> {
                 Some("Europe/Lisbon".to_string()),
             ));
 
-    let columns = Chunk::new(vec![array.arced()]);
+    let columns = Chunk::new(vec![array.boxed()]);
     let expected = vec![
         "2019-04-18T11:54:47.378000001+01:00",
         "2019-04-18T03:45:55.555000001+01:00",
@@ -320,7 +319,7 @@ fn write_tz_timezone_formatted_tz() -> Result<()> {
 fn write_empty_and_missing() {
     let a = Utf8Array::<i32>::from(&[Some(""), None]);
     let b = Utf8Array::<i32>::from(&[None, Some("")]);
-    let columns = Chunk::new(vec![a.arced(), b.arced()]);
+    let columns = Chunk::new(vec![a.boxed(), b.boxed()]);
 
     let mut writer = vec![];
     let options = SerializeOptions::default();
@@ -333,7 +332,7 @@ fn write_empty_and_missing() {
 #[test]
 fn write_escaping() {
     let a = Utf8Array::<i32>::from_slice(&["Acme co., Ltd."]);
-    let columns = Chunk::new(vec![a.arced()]);
+    let columns = Chunk::new(vec![a.boxed()]);
 
     let mut writer = vec![];
     let options = SerializeOptions::default();
@@ -353,7 +352,7 @@ fn write_escaping_resize_local_buf() {
         let a = Utf8Array::<i32>::from_slice(&[
             payload
         ]);
-        let columns = Chunk::new(vec![a.arced()]);
+        let columns = Chunk::new(vec![a.boxed()]);
 
         let mut writer = vec![];
         let options = SerializeOptions::default();

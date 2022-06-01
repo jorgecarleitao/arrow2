@@ -53,7 +53,7 @@ impl<'a> GrowableUnion<'a> {
         let types = std::mem::take(&mut self.types);
         let fields = std::mem::take(&mut self.fields);
         let offsets = std::mem::take(&mut self.offsets);
-        let fields = fields.into_iter().map(|mut x| x.as_arc()).collect();
+        let fields = fields.into_iter().map(|mut x| x.as_box()).collect();
 
         UnionArray::new(
             self.arrays[0].data_type().clone(),
@@ -99,7 +99,7 @@ impl<'a> Growable<'a> for GrowableUnion<'a> {
 
 impl<'a> From<GrowableUnion<'a>> for UnionArray {
     fn from(val: GrowableUnion<'a>) -> Self {
-        let fields = val.fields.into_iter().map(|mut x| x.as_arc()).collect();
+        let fields = val.fields.into_iter().map(|mut x| x.as_box()).collect();
 
         UnionArray::new(
             val.arrays[0].data_type().clone(),

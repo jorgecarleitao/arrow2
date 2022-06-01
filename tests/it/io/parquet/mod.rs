@@ -1,5 +1,4 @@
 use std::io::{Cursor, Read, Seek};
-use std::sync::Arc;
 
 use arrow2::{
     array::*, bitmap::Bitmap, buffer::Buffer, chunk::Chunk, datatypes::*, error::Result,
@@ -13,7 +12,7 @@ mod read_indexes;
 mod write;
 mod write_async;
 
-type ArrayStats = (Arc<dyn Array>, Statistics);
+type ArrayStats = (Box<dyn Array>, Statistics);
 
 pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayStats> {
     let metadata = read_metadata(&mut reader)?;
@@ -87,7 +86,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 Some(9),
                 Some(10),
             ])
-            .arced()
+            .boxed()
         }
         "list_int64_required" | "list_int64_optional_required" | "list_int64_required_required" => {
             // [[0, 1], None, [2, 0, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
@@ -105,7 +104,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 Some(9),
                 Some(10),
             ])
-            .arced()
+            .boxed()
         }
         "list_int16" => PrimitiveArray::<i16>::from(&[
             Some(0),
@@ -121,7 +120,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             Some(9),
             Some(10),
         ])
-        .arced(),
+        .boxed(),
         "list_bool" => BooleanArray::from(&[
             Some(false),
             Some(true),
@@ -136,7 +135,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             Some(false),
             Some(true),
         ])
-        .arced(),
+        .boxed(),
         /*
             string = [
                 ["Hello", "bbb"],
@@ -149,7 +148,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 [""],
             ]
         */
-        "list_utf8" => Arc::new(Utf8Array::<i32>::from(&[
+        "list_utf8" => Box::new(Utf8Array::<i32>::from(&[
             Some("Hello".to_string()),
             Some("bbb".to_string()),
             Some("aa".to_string()),
@@ -163,7 +162,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             Some("bbb".to_string()),
             Some("".to_string()),
         ])),
-        "list_large_binary" => Arc::new(BinaryArray::<i64>::from(&[
+        "list_large_binary" => Box::new(BinaryArray::<i64>::from(&[
             Some(b"Hello".to_vec()),
             Some(b"bbb".to_vec()),
             Some(b"aa".to_vec()),
@@ -180,7 +179,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
         "list_nested_i64"
         | "list_nested_inner_required_i64"
         | "list_nested_inner_required_required_i64" => {
-            Arc::new(NullArray::from_data(DataType::Null, 1))
+            Box::new(NullArray::from_data(DataType::Null, 1))
         }
         other => unreachable!("{}", other),
     };
@@ -351,7 +350,7 @@ pub fn pyarrow_nullable(column: &str) -> Box<dyn Array> {
         "uint32" => Box::new(PrimitiveArray::<u32>::from(u32_values)),
         "int32_dict" => {
             let keys = PrimitiveArray::<i32>::from([Some(0), Some(1), None, Some(1)]);
-            let values = Arc::new(PrimitiveArray::<i32>::from_slice([10, 200]));
+            let values = Box::new(PrimitiveArray::<i32>::from_slice([10, 200]));
             Box::new(DictionaryArray::<i32>::from_data(keys, values))
         }
         "decimal_9" => {
@@ -432,7 +431,7 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
             max_value: Box::new(UInt32Array::from_slice([9])),
         },
         "int32_dict" => {
-            let new_dict = |array: Arc<dyn Array>| -> Box<dyn Array> {
+            let new_dict = |array: Box<dyn Array>| -> Box<dyn Array> {
                 Box::new(DictionaryArray::<i32>::from_data(
                     vec![Some(0)].into(),
                     array,
@@ -442,8 +441,8 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
             Statistics {
                 distinct_count: Count::Single(UInt64Array::from([None])),
                 null_count: Count::Single(UInt64Array::from([Some(0)])),
-                min_value: new_dict(Arc::new(Int32Array::from_slice([10]))),
-                max_value: new_dict(Arc::new(Int32Array::from_slice([200]))),
+                min_value: new_dict(Box::new(Int32Array::from_slice([10]))),
+                max_value: new_dict(Box::new(Int32Array::from_slice([200]))),
             }
         }
         "decimal_9" => Statistics {
@@ -555,7 +554,7 @@ pub fn pyarrow_required_statistics(column: &str) -> Statistics {
 }
 
 pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
-    let new_list = |array: Arc<dyn Array>, nullable: bool| {
+    let new_list = |array: Box<dyn Array>, nullable: bool| {
         Box::new(ListArray::<i32>::new(
             DataType::List(Box::new(Field::new(
                 "item",
@@ -572,87 +571,69 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
         "list_int16" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single(UInt64Array::from([Some(1)])),
-            min_value: new_list(Arc::new(Int16Array::from_slice([0])), true),
-            max_value: new_list(Arc::new(Int16Array::from_slice([10])), true),
+            min_value: new_list(Box::new(Int16Array::from_slice([0])), true),
+            max_value: new_list(Box::new(Int16Array::from_slice([10])), true),
         },
         "list_bool" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single(UInt64Array::from([Some(1)])),
-            min_value: new_list(Arc::new(BooleanArray::from_slice([false])), true),
-            max_value: new_list(Arc::new(BooleanArray::from_slice([true])), true),
+            min_value: new_list(Box::new(BooleanArray::from_slice([false])), true),
+            max_value: new_list(Box::new(BooleanArray::from_slice([true])), true),
         },
         "list_utf8" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single([Some(1)].into()),
-            min_value: new_list(Arc::new(Utf8Array::<i32>::from_slice([""])), true),
-            max_value: new_list(Arc::new(Utf8Array::<i32>::from_slice(["ccc"])), true),
+            min_value: new_list(Box::new(Utf8Array::<i32>::from_slice([""])), true),
+            max_value: new_list(Box::new(Utf8Array::<i32>::from_slice(["ccc"])), true),
         },
         "list_large_binary" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single([Some(1)].into()),
-            min_value: new_list(Arc::new(BinaryArray::<i64>::from_slice([b""])), true),
-            max_value: new_list(Arc::new(BinaryArray::<i64>::from_slice([b"ccc"])), true),
+            min_value: new_list(Box::new(BinaryArray::<i64>::from_slice([b""])), true),
+            max_value: new_list(Box::new(BinaryArray::<i64>::from_slice([b"ccc"])), true),
         },
         "list_int64" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single([Some(1)].into()),
-            min_value: new_list(Arc::new(Int64Array::from_slice([0])), true),
-            max_value: new_list(Arc::new(Int64Array::from_slice([10])), true),
+            min_value: new_list(Box::new(Int64Array::from_slice([0])), true),
+            max_value: new_list(Box::new(Int64Array::from_slice([10])), true),
         },
         "list_int64_required" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single([Some(1)].into()),
-            min_value: new_list(Arc::new(Int64Array::from_slice([0])), false),
-            max_value: new_list(Arc::new(Int64Array::from_slice([10])), false),
+            min_value: new_list(Box::new(Int64Array::from_slice([0])), false),
+            max_value: new_list(Box::new(Int64Array::from_slice([10])), false),
         },
         "list_int64_required_required" | "list_int64_optional_required" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single([Some(0)].into()),
-            min_value: new_list(Arc::new(Int64Array::from_slice([0])), false),
-            max_value: new_list(Arc::new(Int64Array::from_slice([10])), false),
+            min_value: new_list(Box::new(Int64Array::from_slice([0])), false),
+            max_value: new_list(Box::new(Int64Array::from_slice([10])), false),
         },
         "list_nested_i64" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single([Some(2)].into()),
-            min_value: new_list(
-                new_list(Arc::new(Int64Array::from_slice([0])), true).into(),
-                true,
-            ),
-            max_value: new_list(
-                new_list(Arc::new(Int64Array::from_slice([10])), true).into(),
-                true,
-            ),
+            min_value: new_list(new_list(Box::new(Int64Array::from_slice([0])), true), true),
+            max_value: new_list(new_list(Box::new(Int64Array::from_slice([10])), true), true),
         },
         "list_nested_inner_required_required_i64" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single([Some(0)].into()),
-            min_value: new_list(
-                new_list(Arc::new(Int64Array::from_slice([0])), true).into(),
-                true,
-            ),
-            max_value: new_list(
-                new_list(Arc::new(Int64Array::from_slice([10])), true).into(),
-                true,
-            ),
+            min_value: new_list(new_list(Box::new(Int64Array::from_slice([0])), true), true),
+            max_value: new_list(new_list(Box::new(Int64Array::from_slice([10])), true), true),
         },
         "list_nested_inner_required_i64" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single([Some(0)].into()),
-            min_value: new_list(
-                new_list(Arc::new(Int64Array::from_slice([0])), true).into(),
-                true,
-            ),
-            max_value: new_list(
-                new_list(Arc::new(Int64Array::from_slice([10])), true).into(),
-                true,
-            ),
+            min_value: new_list(new_list(Box::new(Int64Array::from_slice([0])), true), true),
+            max_value: new_list(new_list(Box::new(Int64Array::from_slice([10])), true), true),
         },
         other => todo!("{}", other),
     }
 }
 
 pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
-    let new_list = |array: Arc<dyn Array>| {
+    let new_list = |array: Box<dyn Array>| {
         Box::new(ListArray::<i32>::new(
             DataType::List(Box::new(Field::new(
                 "item",
@@ -669,14 +650,14 @@ pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
         "simple" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single(UInt64Array::from([Some(0)])),
-            min_value: new_list(Arc::new(Int64Array::from([Some(0)]))),
-            max_value: new_list(Arc::new(Int64Array::from([Some(1)]))),
+            min_value: new_list(Box::new(Int64Array::from([Some(0)]))),
+            max_value: new_list(Box::new(Int64Array::from([Some(1)]))),
         },
         "null" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single(UInt64Array::from([Some(1)])),
-            min_value: new_list(Arc::new(Int64Array::from([None]))),
-            max_value: new_list(Arc::new(Int64Array::from([None]))),
+            min_value: new_list(Box::new(Int64Array::from([None]))),
+            max_value: new_list(Box::new(Int64Array::from([None]))),
         },
         _ => unreachable!(),
     }
@@ -695,7 +676,7 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
         Some(true),
         Some(true),
     ];
-    let boolean = BooleanArray::from(boolean).arced();
+    let boolean = BooleanArray::from(boolean).boxed();
     let fields = vec![
         Field::new("f1", DataType::Utf8, true),
         Field::new("f2", DataType::Boolean, true),
@@ -714,15 +695,11 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
                 Some("def"),
                 Some("aaa"),
             ];
-            let values = vec![Utf8Array::<i32>::from(string).arced(), boolean];
-            Box::new(StructArray::from_data(
-                DataType::Struct(fields),
-                values,
-                None,
-            ))
+            let values = vec![Utf8Array::<i32>::from(string).boxed(), boolean];
+            StructArray::from_data(DataType::Struct(fields), values, None).boxed()
         }
         "struct_struct" => {
-            let struct_ = pyarrow_struct("struct").into();
+            let struct_ = pyarrow_struct("struct");
             let values = vec![struct_, boolean];
             Box::new(StructArray::from_data(
                 DataType::Struct(vec![
@@ -738,7 +715,7 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
 }
 
 pub fn pyarrow_struct_statistics(column: &str) -> Statistics {
-    let new_struct = |arrays: Vec<Arc<dyn Array>>, names: Vec<String>| {
+    let new_struct = |arrays: Vec<Box<dyn Array>>, names: Vec<String>| {
         let fields = names
             .into_iter()
             .zip(arrays.iter())
@@ -753,29 +730,29 @@ pub fn pyarrow_struct_statistics(column: &str) -> Statistics {
         "struct" => Statistics {
             distinct_count: Count::Struct(new_struct(
                 vec![
-                    Arc::new(UInt64Array::from([None])),
-                    Arc::new(UInt64Array::from([None])),
+                    Box::new(UInt64Array::from([None])),
+                    Box::new(UInt64Array::from([None])),
                 ],
                 names.clone(),
             )),
             null_count: Count::Struct(new_struct(
                 vec![
-                    Arc::new(UInt64Array::from([Some(4)])),
-                    Arc::new(UInt64Array::from([Some(4)])),
+                    Box::new(UInt64Array::from([Some(4)])),
+                    Box::new(UInt64Array::from([Some(4)])),
                 ],
                 names.clone(),
             )),
             min_value: Box::new(new_struct(
                 vec![
-                    Arc::new(Utf8Array::<i32>::from_slice([""])),
-                    Arc::new(BooleanArray::from_slice([false])),
+                    Box::new(Utf8Array::<i32>::from_slice([""])),
+                    Box::new(BooleanArray::from_slice([false])),
                 ],
                 names.clone(),
             )),
             max_value: Box::new(new_struct(
                 vec![
-                    Arc::new(Utf8Array::<i32>::from_slice(["def"])),
-                    Arc::new(BooleanArray::from_slice([true])),
+                    Box::new(Utf8Array::<i32>::from_slice(["def"])),
+                    Box::new(BooleanArray::from_slice([true])),
                 ],
                 names,
             )),
@@ -805,13 +782,13 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
                 StructArray::try_new(
                     dt,
                     vec![
-                        Utf8Array::<i32>::from(s1).arced(),
-                        Utf8Array::<i32>::from(s2).arced(),
+                        Utf8Array::<i32>::from(s1).boxed(),
+                        Utf8Array::<i32>::from(s2).boxed(),
                     ],
                     None,
                 )
                 .unwrap()
-                .arced(),
+                .boxed(),
                 None,
             )
             .unwrap()
@@ -830,13 +807,13 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
                 StructArray::try_new(
                     dt,
                     vec![
-                        Utf8Array::<i32>::from(s1).arced(),
-                        Utf8Array::<i32>::from(s2).arced(),
+                        Utf8Array::<i32>::from(s1).boxed(),
+                        Utf8Array::<i32>::from(s2).boxed(),
                     ],
                     None,
                 )
                 .unwrap()
-                .arced(),
+                .boxed(),
                 None,
             )
             .unwrap()
@@ -847,7 +824,7 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
 }
 
 pub fn pyarrow_map_statistics(column: &str) -> Statistics {
-    let new_map = |arrays: Vec<Arc<dyn Array>>, names: Vec<String>| {
+    let new_map = |arrays: Vec<Box<dyn Array>>, names: Vec<String>| {
         let fields = names
             .into_iter()
             .zip(arrays.iter())
@@ -859,7 +836,7 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
                 false,
             ),
             vec![0, arrays[0].len() as i32].into(),
-            StructArray::new(DataType::Struct(fields), arrays, None).arced(),
+            StructArray::new(DataType::Struct(fields), arrays, None).boxed(),
             None,
         )
     };
@@ -870,29 +847,29 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
         "map" => Statistics {
             distinct_count: Count::Map(new_map(
                 vec![
-                    Arc::new(UInt64Array::from([None])),
-                    Arc::new(UInt64Array::from([None])),
+                    UInt64Array::from([None]).boxed(),
+                    UInt64Array::from([None]).boxed(),
                 ],
                 names.clone(),
             )),
             null_count: Count::Map(new_map(
                 vec![
-                    Arc::new(UInt64Array::from([Some(0)])),
-                    Arc::new(UInt64Array::from([Some(0)])),
+                    UInt64Array::from([Some(0)]).boxed(),
+                    UInt64Array::from([Some(0)]).boxed(),
                 ],
                 names.clone(),
             )),
             min_value: Box::new(new_map(
                 vec![
-                    Arc::new(Utf8Array::<i32>::from_slice(["a1"])),
-                    Arc::new(Utf8Array::<i32>::from_slice(["b1"])),
+                    Utf8Array::<i32>::from_slice(["a1"]).boxed(),
+                    Utf8Array::<i32>::from_slice(["b1"]).boxed(),
                 ],
                 names.clone(),
             )),
             max_value: Box::new(new_map(
                 vec![
-                    Arc::new(Utf8Array::<i32>::from_slice(["a2"])),
-                    Arc::new(Utf8Array::<i32>::from_slice(["b2"])),
+                    Utf8Array::<i32>::from_slice(["a2"]).boxed(),
+                    Utf8Array::<i32>::from_slice(["b2"]).boxed(),
                 ],
                 names,
             )),
@@ -900,29 +877,29 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
         "map_nullable" => Statistics {
             distinct_count: Count::Map(new_map(
                 vec![
-                    Arc::new(UInt64Array::from([None])),
-                    Arc::new(UInt64Array::from([None])),
+                    UInt64Array::from([None]).boxed(),
+                    UInt64Array::from([None]).boxed(),
                 ],
                 names.clone(),
             )),
             null_count: Count::Map(new_map(
                 vec![
-                    Arc::new(UInt64Array::from([Some(0)])),
-                    Arc::new(UInt64Array::from([Some(1)])),
+                    UInt64Array::from([Some(0)]).boxed(),
+                    UInt64Array::from([Some(1)]).boxed(),
                 ],
                 names.clone(),
             )),
             min_value: Box::new(new_map(
                 vec![
-                    Arc::new(Utf8Array::<i32>::from_slice(["a1"])),
-                    Arc::new(Utf8Array::<i32>::from_slice(["b1"])),
+                    Utf8Array::<i32>::from_slice(["a1"]).boxed(),
+                    Utf8Array::<i32>::from_slice(["b1"]).boxed(),
                 ],
                 names.clone(),
             )),
             max_value: Box::new(new_map(
                 vec![
-                    Arc::new(Utf8Array::<i32>::from_slice(["a2"])),
-                    Arc::new(Utf8Array::<i32>::from_slice(["b1"])),
+                    Utf8Array::<i32>::from_slice(["a2"]).boxed(),
+                    Utf8Array::<i32>::from_slice(["b1"]).boxed(),
                 ],
                 names,
             )),
@@ -931,7 +908,7 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
     }
 }
 
-fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Result<Vec<u8>> {
+fn integration_write(schema: &Schema, batches: &[Chunk<Box<dyn Array>>]) -> Result<Vec<u8>> {
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
@@ -965,7 +942,7 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Resu
     Ok(writer.into_inner().into_inner())
 }
 
-type IntegrationRead = (Schema, Vec<Chunk<Arc<dyn Array>>>);
+type IntegrationRead = (Schema, Vec<Chunk<Box<dyn Array>>>);
 
 fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
     let reader = Cursor::new(data);
@@ -991,17 +968,17 @@ fn arrow_type() -> Result<()> {
 
     let indices = PrimitiveArray::from_values((0..3u64).map(|x| x % 2));
     let values = PrimitiveArray::from_slice([1.0f32, 3.0]);
-    let array3 = DictionaryArray::from_data(indices.clone(), std::sync::Arc::new(values));
+    let array3 = DictionaryArray::from_data(indices.clone(), Box::new(values));
 
     let values = BinaryArray::<i32>::from_slice([b"ab", b"ac"]);
-    let array4 = DictionaryArray::from_data(indices.clone(), std::sync::Arc::new(values));
+    let array4 = DictionaryArray::from_data(indices.clone(), Box::new(values));
 
     let values = FixedSizeBinaryArray::from_data(
         DataType::FixedSizeBinary(2),
         vec![b'a', b'b', b'a', b'c'].into(),
         None,
     );
-    let array5 = DictionaryArray::from_data(indices, std::sync::Arc::new(values));
+    let array5 = DictionaryArray::from_data(indices, Box::new(values));
 
     let schema = Schema::from(vec![
         Field::new("a1", dt1, true),
@@ -1012,12 +989,12 @@ fn arrow_type() -> Result<()> {
         Field::new("a6", array5.data_type().clone(), false),
     ]);
     let batch = Chunk::try_new(vec![
-        array.arced(),
-        Arc::new(array2),
-        Arc::new(array3),
-        Arc::new(array4),
-        Arc::new(array5.clone()),
-        Arc::new(array5),
+        array.boxed(),
+        array2.boxed(),
+        array3.boxed(),
+        array4.boxed(),
+        array5.clone().boxed(),
+        array5.boxed(),
     ])?;
 
     let r = integration_write(&schema, &[batch.clone()])?;
@@ -1057,7 +1034,7 @@ fn list_array_generic(inner_is_nullable: bool, is_nullable: bool) -> Result<()> 
         array.data_type().clone(),
         is_nullable,
     )]);
-    let batch = Chunk::try_new(vec![array.arced()])?;
+    let batch = Chunk::try_new(vec![array.boxed()])?;
 
     let r = integration_write(&schema, &[batch.clone()])?;
 

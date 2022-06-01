@@ -28,7 +28,6 @@ fn round_trip(
         "struct" => (pyarrow_struct(column), pyarrow_struct_statistics(column)),
         _ => unreachable!(),
     };
-    let array: Arc<dyn Array> = array.into();
 
     let field = Field::new("a1", array.data_type().clone(), true);
     let schema = Schema::from(vec![field]);

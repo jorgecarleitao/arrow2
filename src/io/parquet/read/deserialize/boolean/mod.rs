@@ -21,7 +21,7 @@ where
     Box::new(ArrayIterator::new(iter, init, chunk_size).map(|x| {
         x.map(|(mut nested, array)| {
             let _ = nested.nested.pop().unwrap(); // the primitive
-            let values = array.arced();
+            let values = array.boxed();
             (nested, values)
         })
     }))

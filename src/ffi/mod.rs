@@ -20,10 +20,10 @@ use self::schema::to_field;
 pub use generated::{ArrowArray, ArrowArrayStream, ArrowSchema};
 pub use stream::{export_iterator, ArrowArrayStreamReader};
 
-/// Exports an [`Arc<dyn Array>`] to the C data interface.
+/// Exports an [`Box<dyn Array>`] to the C data interface.
 /// # Safety
 /// The pointer `ptr` must be allocated and valid
-pub unsafe fn export_array_to_c(array: Arc<dyn Array>, ptr: *mut ArrowArray) {
+pub unsafe fn export_array_to_c(array: Box<dyn Array>, ptr: *mut ArrowArray) {
     let array = bridge::align_to_c_data_interface(array);
 
     std::ptr::write_unaligned(ptr, ArrowArray::new(array));

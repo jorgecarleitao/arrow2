@@ -268,3 +268,16 @@ Some notes:
    and cloned its validity. This approach is suitable for operations whose branching off
    is more expensive than operating over all values. If the operation is expensive,
    then using `PrimitiveArray::<O>::from_trusted_len_iter` is likely faster.
+
+## Clone on write semantics
+
+We support the mutation of arrays in-place via clone-on-write semantics.
+Essentially, all data is under an `Arc`, but it can be taken via `Arc::get_mut`
+and operated in place.
+
+Below is a complete example of how to operate on a `Box<dyn Array>` without 
+extra allocations.
+
+```rust,ignore
+{{#include ../examples/cow.rs}}
+```

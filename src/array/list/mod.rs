@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
@@ -25,7 +23,7 @@ pub use mutable::*;
 pub struct ListArray<O: Offset> {
     data_type: DataType,
     offsets: Buffer<O>,
-    values: Arc<dyn Array>,
+    values: Box<dyn Array>,
     validity: Option<Bitmap>,
 }
 
@@ -44,7 +42,7 @@ impl<O: Offset> ListArray<O> {
     pub fn try_new(
         data_type: DataType,
         offsets: Buffer<O>,
-        values: Arc<dyn Array>,
+        values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
         try_check_offsets(&offsets, values.len())?;
@@ -88,7 +86,7 @@ impl<O: Offset> ListArray<O> {
     pub fn new(
         data_type: DataType,
         offsets: Buffer<O>,
-        values: Arc<dyn Array>,
+        values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
         Self::try_new(data_type, offsets, values, validity).unwrap()
@@ -98,7 +96,7 @@ impl<O: Offset> ListArray<O> {
     pub fn from_data(
         data_type: DataType,
         offsets: Buffer<O>,
-        values: Arc<dyn Array>,
+        values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
         Self::new(data_type, offsets, values, validity)
@@ -106,7 +104,7 @@ impl<O: Offset> ListArray<O> {
 
     /// Returns a new empty [`ListArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        let values = new_empty_array(Self::get_child_type(&data_type).clone()).into();
+        let values = new_empty_array(Self::get_child_type(&data_type).clone());
         Self::new(data_type, Buffer::from(vec![O::zero()]), values, None)
     }
 
@@ -117,7 +115,7 @@ impl<O: Offset> ListArray<O> {
         Self::new(
             data_type,
             vec![O::default(); 1 + length].into(),
-            new_empty_array(child).into(),
+            new_empty_array(child),
             Some(Bitmap::new_zeroed(length)),
         )
     }
@@ -151,7 +149,7 @@ impl<O: Offset> ListArray<O> {
     pub unsafe fn try_new_unchecked(
         data_type: DataType,
         offsets: Buffer<O>,
-        values: Arc<dyn Array>,
+        values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
         try_check_offsets_bounds(&offsets, values.len())?;
@@ -197,7 +195,7 @@ impl<O: Offset> ListArray<O> {
     pub unsafe fn new_unchecked(
         data_type: DataType,
         offsets: Buffer<O>,
-        values: Arc<dyn Array>,
+        values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
         Self::try_new_unchecked(data_type, offsets, values, validity).unwrap()
@@ -293,7 +291,7 @@ impl<O: Offset> ListArray<O> {
 
     /// The values.
     #[inline]
-    pub fn values(&self) -> &Arc<dyn Array> {
+    pub fn values(&self) -> &Box<dyn Array> {
         &self.values
     }
 }
@@ -344,6 +342,11 @@ impl<O: Offset> ListArray<O> {
 impl<O: Offset> Array for ListArray<O> {
     #[inline]
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 

@@ -1,7 +1,6 @@
 //! Example demonstrating how to read from parquet in parallel using rayon
 use std::fs::File;
 use std::io::BufReader;
-use std::sync::Arc;
 use std::time::SystemTime;
 
 use log::trace;
@@ -18,7 +17,7 @@ mod logger;
 
 /// # Panic
 /// If the iterators are empty
-fn deserialize_parallel(columns: &mut [ArrayIter<'static>]) -> Result<Chunk<Arc<dyn Array>>> {
+fn deserialize_parallel(columns: &mut [ArrayIter<'static>]) -> Result<Chunk<Box<dyn Array>>> {
     // CPU-bounded
     let columns = columns
         .par_iter_mut()

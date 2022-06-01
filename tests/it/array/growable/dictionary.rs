@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::array::growable::{Growable, GrowableDictionary};
 use arrow2::array::*;
 use arrow2::datatypes::DataType;
@@ -17,7 +15,7 @@ fn test_single() -> Result<()> {
     // same values, less keys
     let expected = DictionaryArray::<i32>::from_data(
         PrimitiveArray::from(vec![Some(1), Some(0)]),
-        Arc::new(Utf8Array::<i32>::from(&original_data)),
+        Box::new(Utf8Array::<i32>::from(&original_data)),
     );
 
     let mut growable = GrowableDictionary::new(&[&array], false, 0);
@@ -41,7 +39,7 @@ fn test_negative_keys() {
         Some(vec![true, true, true, false].into()),
     );
 
-    let arr = DictionaryArray::from_data(keys, Arc::new(Utf8Array::<i32>::from(vals)));
+    let arr = DictionaryArray::from_data(keys, Box::new(Utf8Array::<i32>::from(vals)));
     // check that we don't panic with negative keys to usize conversion
     let mut growable = GrowableDictionary::new(&[&arr], false, 0);
     growable.extend(0, 0, 4);
@@ -69,7 +67,7 @@ fn test_multi() -> Result<()> {
     original_data1.extend(original_data2.iter().cloned());
     let expected = DictionaryArray::<i32>::from_data(
         PrimitiveArray::from(vec![Some(1), None, Some(3), None]),
-        Arc::new(Utf8Array::<i32>::from_slice(&["a", "b", "c", "b", "a"])),
+        Box::new(Utf8Array::<i32>::from_slice(&["a", "b", "c", "b", "a"])),
     );
 
     let mut growable = GrowableDictionary::new(&[&array1, &array2], false, 0);

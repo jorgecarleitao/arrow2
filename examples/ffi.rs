@@ -2,10 +2,9 @@ use arrow2::array::{Array, PrimitiveArray};
 use arrow2::datatypes::Field;
 use arrow2::error::Result;
 use arrow2::ffi;
-use std::sync::Arc;
 
 unsafe fn export(
-    array: Arc<dyn Array>,
+    array: Box<dyn Array>,
     array_ptr: *mut ffi::ArrowArray,
     schema_ptr: *mut ffi::ArrowSchema,
 ) {
@@ -22,7 +21,7 @@ unsafe fn import(array: Box<ffi::ArrowArray>, schema: &ffi::ArrowSchema) -> Resu
 
 fn main() -> Result<()> {
     // let's assume that we have an array:
-    let array = PrimitiveArray::<i32>::from([Some(1), None, Some(123)]).arced();
+    let array = PrimitiveArray::<i32>::from([Some(1), None, Some(123)]).boxed();
 
     // the goal is to export this array and import it back via FFI.
     // to import, we initialize the structs that will receive the data

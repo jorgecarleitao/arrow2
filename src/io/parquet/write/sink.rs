@@ -1,4 +1,4 @@
-use std::{collections::HashMap, pin::Pin, sync::Arc, task::Poll};
+use std::{collections::HashMap, pin::Pin, task::Poll};
 
 use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink, TryFutureExt};
 use parquet2::metadata::KeyValue;
@@ -18,7 +18,6 @@ use super::{Encoding, SchemaDescriptor, WriteOptions};
 /// # Examples
 ///
 /// ```
-/// use std::sync::Arc;
 /// use futures::SinkExt;
 /// use arrow2::array::{Array, Int32Array};
 /// use arrow2::datatypes::{DataType, Field, Schema};
@@ -47,7 +46,7 @@ use super::{Encoding, SchemaDescriptor, WriteOptions};
 ///
 /// for i in 0..3 {
 ///     let values = Int32Array::from(&[Some(i), None]);
-///     let chunk = Chunk::new(vec![values.arced()]);
+///     let chunk = Chunk::new(vec![values.boxed()]);
 ///     sink.feed(chunk).await?;
 /// }
 /// sink.metadata.insert(String::from("key"), Some(String::from("value")));
@@ -147,13 +146,13 @@ where
     }
 }
 
-impl<'a, W> Sink<Chunk<Arc<dyn Array>>> for FileSink<'a, W>
+impl<'a, W> Sink<Chunk<Box<dyn Array>>> for FileSink<'a, W>
 where
     W: AsyncWrite + Send + Unpin + 'a,
 {
     type Error = Error;
 
-    fn start_send(self: Pin<&mut Self>, item: Chunk<Arc<dyn Array>>) -> Result<(), Self::Error> {
+    fn start_send(self: Pin<&mut Self>, item: Chunk<Box<dyn Array>>) -> Result<(), Self::Error> {
         if self.schema.fields.len() != item.arrays().len() {
             return Err(Error::InvalidArgumentError(
                 "The number of arrays in the chunk must equal the number of fields in the schema"

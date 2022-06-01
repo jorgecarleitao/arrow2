@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use super::FixedSizeListArray;
 use crate::{
     array::{
@@ -15,8 +13,8 @@ unsafe impl ToFfi for FixedSizeListArray {
         vec![self.validity.as_ref().map(|x| x.as_ptr())]
     }
 
-    fn children(&self) -> Vec<Arc<dyn Array>> {
-        vec![self.values().clone()]
+    fn children(&self) -> Vec<Box<dyn Array>> {
+        vec![self.values.clone()]
     }
 
     fn offset(&self) -> Option<usize> {
@@ -38,7 +36,7 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for FixedSizeListArray {
         let data_type = array.data_type().clone();
         let validity = unsafe { array.validity() }?;
         let child = unsafe { array.child(0)? };
-        let values = ffi::try_from(child)?.into();
+        let values = ffi::try_from(child)?;
 
         Self::try_new(data_type, values, validity)
     }

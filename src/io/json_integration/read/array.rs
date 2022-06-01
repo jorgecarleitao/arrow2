@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use num_traits::NumCast;
 use serde_json::Value;
@@ -162,7 +162,7 @@ fn to_primitive<T: NativeType + NumCast>(
     PrimitiveArray::<T>::new(data_type, values, validity)
 }
 
-fn to_binary<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dyn Array> {
+fn to_binary<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Box<dyn Array> {
     let validity = to_validity(&json_col.validity);
     let offsets = to_offsets::<O>(json_col.offset.as_ref());
     let values = json_col
@@ -172,10 +172,10 @@ fn to_binary<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<
         .iter()
         .flat_map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
         .collect();
-    Arc::new(BinaryArray::new(data_type, offsets, values, validity))
+    Box::new(BinaryArray::new(data_type, offsets, values, validity))
 }
 
-fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dyn Array> {
+fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Box<dyn Array> {
     let validity = to_validity(&json_col.validity);
     let offsets = to_offsets::<O>(json_col.offset.as_ref());
     let values = json_col
@@ -185,7 +185,7 @@ fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dy
         .iter()
         .flat_map(|value| value.as_str().unwrap().as_bytes().to_vec())
         .collect();
-    Arc::new(Utf8Array::new(data_type, offsets, values, validity))
+    Box::new(Utf8Array::new(data_type, offsets, values, validity))
 }
 
 fn to_list<O: Offset>(
@@ -193,7 +193,7 @@ fn to_list<O: Offset>(
     data_type: DataType,
     field: &IpcField,
     dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
-) -> Result<Arc<dyn Array>> {
+) -> Result<Box<dyn Array>> {
     let validity = to_validity(&json_col.validity);
 
     let child_field = ListArray::<O>::get_child_field(&data_type);
@@ -205,7 +205,7 @@ fn to_list<O: Offset>(
         dictionaries,
     )?;
     let offsets = to_offsets::<O>(json_col.offset.as_ref());
-    Ok(Arc::new(ListArray::<O>::new(
+    Ok(Box::new(ListArray::<O>::new(
         data_type, offsets, values, validity,
     )))
 }
@@ -215,7 +215,7 @@ fn to_map(
     data_type: DataType,
     field: &IpcField,
     dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
-) -> Result<Arc<dyn Array>> {
+) -> Result<Box<dyn Array>> {
     let validity = to_validity(&json_col.validity);
 
     let child_field = MapArray::get_field(&data_type);
@@ -227,7 +227,7 @@ fn to_map(
         dictionaries,
     )?;
     let offsets = to_offsets::<i32>(json_col.offset.as_ref());
-    Ok(Arc::new(MapArray::new(data_type, offsets, field, validity)))
+    Ok(Box::new(MapArray::new(data_type, offsets, field, validity)))
 }
 
 fn to_dictionary<K: DictionaryKey>(
@@ -235,7 +235,7 @@ fn to_dictionary<K: DictionaryKey>(
     field: &IpcField,
     json_col: &ArrowJsonColumn,
     dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
-) -> Result<Arc<dyn Array>> {
+) -> Result<Box<dyn Array>> {
     // find dictionary
     let dict_id = field.dictionary_id.unwrap();
     let dictionary = dictionaries
@@ -252,7 +252,7 @@ fn to_dictionary<K: DictionaryKey>(
         dictionaries,
     )?;
 
-    Ok(Arc::new(DictionaryArray::<K>::from_data(keys, values)))
+    Ok(Box::new(DictionaryArray::<K>::from_data(keys, values)))
 }
 
 /// Construct an [`Array`] from the JSON integration format
@@ -261,10 +261,10 @@ pub fn to_array(
     field: &IpcField,
     json_col: &ArrowJsonColumn,
     dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
-) -> Result<Arc<dyn Array>> {
+) -> Result<Box<dyn Array>> {
     use PhysicalType::*;
     match data_type.to_physical_type() {
-        Null => Ok(Arc::new(NullArray::new(data_type, json_col.count))),
+        Null => Ok(Box::new(NullArray::new(data_type, json_col.count))),
         Boolean => {
             let validity = to_validity(&json_col.validity);
             let values = json_col
@@ -274,23 +274,23 @@ pub fn to_array(
                 .iter()
                 .map(|value| value.as_bool().unwrap())
                 .collect::<Bitmap>();
-            Ok(Arc::new(BooleanArray::new(data_type, values, validity)))
+            Ok(Box::new(BooleanArray::new(data_type, values, validity)))
         }
-        Primitive(PrimitiveType::Int8) => Ok(Arc::new(to_primitive::<i8>(json_col, data_type))),
-        Primitive(PrimitiveType::Int16) => Ok(Arc::new(to_primitive::<i16>(json_col, data_type))),
-        Primitive(PrimitiveType::Int32) => Ok(Arc::new(to_primitive::<i32>(json_col, data_type))),
-        Primitive(PrimitiveType::Int64) => Ok(Arc::new(to_primitive::<i64>(json_col, data_type))),
-        Primitive(PrimitiveType::Int128) => Ok(Arc::new(to_decimal(json_col, data_type))),
-        Primitive(PrimitiveType::DaysMs) => Ok(Arc::new(to_primitive_days_ms(json_col, data_type))),
+        Primitive(PrimitiveType::Int8) => Ok(Box::new(to_primitive::<i8>(json_col, data_type))),
+        Primitive(PrimitiveType::Int16) => Ok(Box::new(to_primitive::<i16>(json_col, data_type))),
+        Primitive(PrimitiveType::Int32) => Ok(Box::new(to_primitive::<i32>(json_col, data_type))),
+        Primitive(PrimitiveType::Int64) => Ok(Box::new(to_primitive::<i64>(json_col, data_type))),
+        Primitive(PrimitiveType::Int128) => Ok(Box::new(to_decimal(json_col, data_type))),
+        Primitive(PrimitiveType::DaysMs) => Ok(Box::new(to_primitive_days_ms(json_col, data_type))),
         Primitive(PrimitiveType::MonthDayNano) => {
-            Ok(Arc::new(to_primitive_months_days_ns(json_col, data_type)))
+            Ok(Box::new(to_primitive_months_days_ns(json_col, data_type)))
         }
-        Primitive(PrimitiveType::UInt8) => Ok(Arc::new(to_primitive::<u8>(json_col, data_type))),
-        Primitive(PrimitiveType::UInt16) => Ok(Arc::new(to_primitive::<u16>(json_col, data_type))),
-        Primitive(PrimitiveType::UInt32) => Ok(Arc::new(to_primitive::<u32>(json_col, data_type))),
-        Primitive(PrimitiveType::UInt64) => Ok(Arc::new(to_primitive::<u64>(json_col, data_type))),
-        Primitive(PrimitiveType::Float32) => Ok(Arc::new(to_primitive::<f32>(json_col, data_type))),
-        Primitive(PrimitiveType::Float64) => Ok(Arc::new(to_primitive::<f64>(json_col, data_type))),
+        Primitive(PrimitiveType::UInt8) => Ok(Box::new(to_primitive::<u8>(json_col, data_type))),
+        Primitive(PrimitiveType::UInt16) => Ok(Box::new(to_primitive::<u16>(json_col, data_type))),
+        Primitive(PrimitiveType::UInt32) => Ok(Box::new(to_primitive::<u32>(json_col, data_type))),
+        Primitive(PrimitiveType::UInt64) => Ok(Box::new(to_primitive::<u64>(json_col, data_type))),
+        Primitive(PrimitiveType::Float32) => Ok(Box::new(to_primitive::<f32>(json_col, data_type))),
+        Primitive(PrimitiveType::Float64) => Ok(Box::new(to_primitive::<f64>(json_col, data_type))),
         Binary => Ok(to_binary::<i32>(json_col, data_type)),
         LargeBinary => Ok(to_binary::<i64>(json_col, data_type)),
         Utf8 => Ok(to_utf8::<i32>(json_col, data_type)),
@@ -305,7 +305,7 @@ pub fn to_array(
                 .iter()
                 .flat_map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
                 .collect();
-            Ok(Arc::new(FixedSizeBinaryArray::new(
+            Ok(Box::new(FixedSizeBinaryArray::new(
                 data_type, values, validity,
             )))
         }
@@ -324,7 +324,7 @@ pub fn to_array(
                 dictionaries,
             )?;
 
-            Ok(Arc::new(FixedSizeListArray::new(
+            Ok(Box::new(FixedSizeListArray::new(
                 data_type, values, validity,
             )))
         }
@@ -343,7 +343,7 @@ pub fn to_array(
                 .collect::<Result<Vec<_>>>()?;
 
             let array = StructArray::new(data_type, values, validity);
-            Ok(Arc::new(array))
+            Ok(Box::new(array))
         }
         Dictionary(key_type) => {
             match_integer_type!(key_type, |$T| {
@@ -397,7 +397,7 @@ pub fn to_array(
                 .unwrap_or_default();
 
             let array = UnionArray::new(data_type, types, fields, offsets);
-            Ok(Arc::new(array))
+            Ok(Box::new(array))
         }
         Map => to_map(json_col, data_type, field, dictionaries),
     }
@@ -409,7 +409,7 @@ pub fn deserialize_chunk(
     ipc_fields: &[IpcField],
     json_batch: &ArrowJsonBatch,
     json_dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
-) -> Result<Chunk<Arc<dyn Array>>> {
+) -> Result<Chunk<Box<dyn Array>>> {
     let arrays = schema
         .fields
         .iter()

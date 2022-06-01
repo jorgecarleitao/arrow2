@@ -3,8 +3,6 @@ use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::json::read;
 
-use super::*;
-
 #[test]
 fn read_json() -> Result<()> {
     let data = br#"[
@@ -27,7 +25,7 @@ fn read_json() -> Result<()> {
 
     let expected = StructArray::from_data(
         DataType::Struct(vec![Field::new("a", DataType::Int64, true)]),
-        vec![Arc::new(Int64Array::from_slice([1, 2, 3])) as _],
+        vec![Box::new(Int64Array::from_slice([1, 2, 3])) as _],
         None,
     );
 

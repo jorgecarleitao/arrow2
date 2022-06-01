@@ -20,7 +20,7 @@ pub struct GrowableDictionary<'a, K: DictionaryKey> {
     key_values: Vec<K>,
     key_validity: MutableBitmap,
     offsets: Vec<usize>,
-    values: Arc<dyn Array>,
+    values: Box<dyn Array>,
     extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
@@ -28,7 +28,7 @@ fn concatenate_values<K: DictionaryKey>(
     arrays_keys: &[&PrimitiveArray<K>],
     arrays_values: &[&dyn Array],
     capacity: usize,
-) -> (Arc<dyn Array>, Vec<usize>) {
+) -> (Box<dyn Array>, Vec<usize>) {
     let mut mutable = make_growable(arrays_values, false, capacity);
     let mut offsets = Vec::with_capacity(arrays_keys.len() + 1);
     offsets.push(0);
@@ -36,7 +36,7 @@ fn concatenate_values<K: DictionaryKey>(
         mutable.extend(i, 0, values.len());
         offsets.push(offsets[i] + values.len());
     }
-    (mutable.as_arc(), offsets)
+    (mutable.as_box(), offsets)
 }
 
 impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
@@ -81,10 +81,10 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
     #[inline]
     fn to(&mut self) -> DictionaryArray<T> {
         let validity = std::mem::take(&mut self.key_validity);
-        let values = std::mem::take(&mut self.key_values);
+        let key_values = std::mem::take(&mut self.key_values);
 
         let data_type = T::PRIMITIVE.into();
-        let keys = PrimitiveArray::<T>::from_data(data_type, values.into(), validity.into());
+        let keys = PrimitiveArray::<T>::from_data(data_type, key_values.into(), validity.into());
 
         DictionaryArray::<T>::from_data(keys, self.values.clone())
     }

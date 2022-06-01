@@ -32,7 +32,7 @@ pub fn dictionary_to_dictionary_values<K: DictionaryKey>(
     let keys = from.keys();
     let values = from.values();
 
-    let values = cast(values.as_ref(), values_type, CastOptions::default())?.into();
+    let values = cast(values.as_ref(), values_type, CastOptions::default())?;
     Ok(DictionaryArray::from_data(keys.clone(), values))
 }
 
@@ -51,8 +51,7 @@ pub fn wrapping_dictionary_to_dictionary_values<K: DictionaryKey>(
             wrapped: true,
             partial: false,
         },
-    )?
-    .into();
+    )?;
     Ok(DictionaryArray::from_data(keys.clone(), values))
 }
 
@@ -111,7 +110,7 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
 
     match to_type {
         DataType::Dictionary(to_keys_type, to_values_type, _) => {
-            let values = cast(values.as_ref(), to_values_type, options)?.into();
+            let values = cast(values.as_ref(), to_values_type, options)?;
 
             // create the appropriate array type
             let data_type = (*to_keys_type).into();

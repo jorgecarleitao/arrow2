@@ -66,7 +66,7 @@ impl<'a> GrowableStruct<'a> {
     fn to(&mut self) -> StructArray {
         let validity = std::mem::take(&mut self.validity);
         let values = std::mem::take(&mut self.values);
-        let values = values.into_iter().map(|mut x| x.as_arc()).collect();
+        let values = values.into_iter().map(|mut x| x.as_box()).collect();
 
         StructArray::new(
             DataType::Struct(self.arrays[0].fields().to_vec()),
@@ -118,7 +118,7 @@ impl<'a> Growable<'a> for GrowableStruct<'a> {
 
 impl<'a> From<GrowableStruct<'a>> for StructArray {
     fn from(val: GrowableStruct<'a>) -> Self {
-        let values = val.values.into_iter().map(|mut x| x.as_arc()).collect();
+        let values = val.values.into_iter().map(|mut x| x.as_box()).collect();
 
         StructArray::new(
             DataType::Struct(val.arrays[0].fields().to_vec()),

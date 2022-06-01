@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::compute::take::{can_take, take};
 use arrow2::datatypes::{DataType, Field, IntervalUnit};
 use arrow2::error::Result;
@@ -75,7 +73,7 @@ fn create_test_struct() -> StructArray {
     ];
     StructArray::from_data(
         DataType::Struct(fields),
-        vec![boolean.arced(), int.arced()],
+        vec![boolean.boxed(), int.boxed()],
         validity,
     )
 }
@@ -96,7 +94,7 @@ fn test_struct_with_nulls() {
         .into();
     let expected = StructArray::from_data(
         array.data_type().clone(),
-        vec![boolean.arced(), int.arced()],
+        vec![boolean.boxed(), int.boxed()],
         validity,
     );
     assert_eq!(expected, output.as_ref());
@@ -179,7 +177,7 @@ fn list_with_no_none() {
     let array = ListArray::<i32>::from_data(
         data_type,
         Buffer::from(vec![0, 2, 2, 6, 9, 10]),
-        Arc::new(values),
+        Box::new(values),
         None,
     );
 
@@ -192,7 +190,7 @@ fn list_with_no_none() {
     let expected = ListArray::<i32>::from_data(
         expected_type,
         Buffer::from(vec![0, 1, 1, 4]),
-        Arc::new(expected_values),
+        Box::new(expected_values),
         None,
     );
 
@@ -211,7 +209,7 @@ fn list_with_none() {
     let array = ListArray::<i32>::from_data(
         data_type,
         Buffer::from(vec![0, 2, 2, 6, 9, 10]),
-        Arc::new(values),
+        Box::new(values),
         Some(validity),
     );
 
@@ -270,7 +268,7 @@ fn test_nested() {
     let array = ListArray::<i32>::from_data(
         data_type,
         Buffer::from(vec![0, 2, 4, 7, 7, 8, 10]),
-        Arc::new(values),
+        Box::new(values),
         None,
     );
 
@@ -278,7 +276,7 @@ fn test_nested() {
     let nested = ListArray::<i32>::from_data(
         data_type,
         Buffer::from(vec![0, 2, 5, 6]),
-        Arc::new(array),
+        Box::new(array),
         None,
     );
 
@@ -293,7 +291,7 @@ fn test_nested() {
     let expected_array = ListArray::<i32>::from_data(
         expected_data_type,
         Buffer::from(vec![0, 2, 4, 7, 7, 8]),
-        Arc::new(expected_values),
+        Box::new(expected_values),
         None,
     );
 
@@ -301,7 +299,7 @@ fn test_nested() {
     let expected = ListArray::<i32>::from_data(
         expected_data_type,
         Buffer::from(vec![0, 2, 5]),
-        Arc::new(expected_array),
+        Box::new(expected_array),
         None,
     );
 

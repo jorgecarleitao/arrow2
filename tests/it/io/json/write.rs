@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::{
     array::*,
     bitmap::Bitmap,
@@ -64,7 +62,7 @@ fn struct_() -> Result<()> {
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
     ]);
-    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
+    let array = StructArray::from_data(data_type, vec![Box::new(c1) as _, Box::new(c2)], None);
 
     let expected = r#"[{"c1":1,"c2":"a"},{"c1":2,"c2":"b"},{"c1":3,"c2":"c"},{"c1":null,"c2":"d"},{"c1":5,"c2":null}]"#;
 
@@ -85,12 +83,12 @@ fn nested_struct_with_validity() -> Result<()> {
     let c1 = StructArray::from_data(
         DataType::Struct(fields),
         vec![
-            Arc::new(Int32Array::from(&[Some(1), None, Some(5)])),
-            Arc::new(StructArray::from_data(
+            Box::new(Int32Array::from(&[Some(1), None, Some(5)])),
+            Box::new(StructArray::from_data(
                 DataType::Struct(inner),
                 vec![
-                    Arc::new(Utf8Array::<i32>::from(&vec![None, Some("f"), Some("g")])),
-                    Arc::new(Int32Array::from(&[Some(20), None, Some(43)])),
+                    Box::new(Utf8Array::<i32>::from(&vec![None, Some("f"), Some("g")])),
+                    Box::new(Int32Array::from(&[Some(20), None, Some(43)])),
                 ],
                 Some(Bitmap::from([false, true, true])),
             )),
@@ -103,7 +101,7 @@ fn nested_struct_with_validity() -> Result<()> {
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
     ]);
-    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
+    let array = StructArray::from_data(data_type, vec![Box::new(c1) as _, Box::new(c2)], None);
 
     let expected = r#"[{"c1":{"c11":1,"c12":null},"c2":"a"},{"c1":{"c11":null,"c12":{"c121":"f","c122":null}},"c2":"b"},{"c1":null,"c2":"c"}]"#;
 
@@ -121,10 +119,10 @@ fn nested_struct() -> Result<()> {
     let c1 = StructArray::from_data(
         DataType::Struct(fields),
         vec![
-            Arc::new(Int32Array::from(&[Some(1), None, Some(5)])),
-            Arc::new(StructArray::from_data(
+            Box::new(Int32Array::from(&[Some(1), None, Some(5)])),
+            Box::new(StructArray::from_data(
                 DataType::Struct(vec![c121]),
-                vec![Arc::new(Utf8Array::<i32>::from(&vec![
+                vec![Box::new(Utf8Array::<i32>::from(&vec![
                     Some("e"),
                     Some("f"),
                     Some("g"),
@@ -141,7 +139,7 @@ fn nested_struct() -> Result<()> {
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
     ]);
-    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
+    let array = StructArray::from_data(data_type, vec![Box::new(c1) as _, Box::new(c2)], None);
 
     let expected = r#"[{"c1":{"c11":1,"c12":{"c121":"e"}},"c2":"a"},{"c1":{"c11":null,"c12":{"c121":"f"}},"c2":"b"},{"c1":{"c11":5,"c12":{"c121":"g"}},"c2":"c"}]"#;
 
@@ -170,7 +168,7 @@ fn struct_with_list_field() -> Result<()> {
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
     ]);
-    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
+    let array = StructArray::from_data(data_type, vec![Box::new(c1) as _, Box::new(c2)], None);
 
     let expected = r#"[{"c1":["a","a1"],"c2":1},{"c1":["b"],"c2":2},{"c1":["c"],"c2":3},{"c1":["d"],"c2":4},{"c1":["e"],"c2":5}]"#;
 
@@ -205,7 +203,7 @@ fn nested_list() -> Result<()> {
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
     ]);
-    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
+    let array = StructArray::from_data(data_type, vec![Box::new(c1) as _, Box::new(c2)], None);
 
     let expected =
         r#"[{"c1":[[1,2],[3]],"c2":"foo"},{"c1":[],"c2":"bar"},{"c1":[[4,5,6]],"c2":null}]"#;
@@ -229,10 +227,10 @@ fn list_of_struct() -> Result<()> {
     let s = StructArray::from_data(
         DataType::Struct(fields),
         vec![
-            Arc::new(Int32Array::from(&[Some(1), None, Some(5)])),
-            Arc::new(StructArray::from_data(
+            Box::new(Int32Array::from(&[Some(1), None, Some(5)])),
+            Box::new(StructArray::from_data(
                 DataType::Struct(inner),
-                vec![Arc::new(Utf8Array::<i32>::from(&vec![
+                vec![Box::new(Utf8Array::<i32>::from(&vec![
                     Some("e"),
                     Some("f"),
                     Some("g"),
@@ -250,7 +248,7 @@ fn list_of_struct() -> Result<()> {
     let c1 = ListArray::<i32>::from_data(
         c1_datatype,
         Buffer::from(vec![0, 2, 2, 3]),
-        Arc::new(s),
+        Box::new(s),
         Some(Bitmap::from_u8_slice([0b00000101], 3)),
     );
 
@@ -260,7 +258,7 @@ fn list_of_struct() -> Result<()> {
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
     ]);
-    let array = StructArray::from_data(data_type, vec![Arc::new(c1) as _, Arc::new(c2)], None);
+    let array = StructArray::from_data(data_type, vec![Box::new(c1) as _, Box::new(c2)], None);
 
     let expected = r#"[{"c1":[{"c11":1,"c12":null},{"c11":null,"c12":{"c121":"f"}}],"c2":1},{"c1":null,"c2":2},{"c1":[null],"c2":3}]"#;
 

@@ -137,7 +137,7 @@ impl<T: NativeType> Buffer<T> {
         self.offset
     }
 
-    /// Converts this [`Buffer`] to [`Vec`], returning itself if the conversion
+    /// Converts this [`Buffer`] to either a [`Buffer`] or a [`Vec`], returning itself if the conversion
     /// is not possible
     ///
     /// This operation returns a [`Vec`] iff this [`Buffer`]:

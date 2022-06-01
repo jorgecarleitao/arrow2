@@ -34,14 +34,12 @@ pub fn from_rust_iterator(py: Python) -> PyResult<PyObject> {
     let array = Int32Array::from(&[Some(2), None, Some(1), None]);
     let array = StructArray::from_data(
         DataType::Struct(vec![Field::new("a", array.data_type().clone(), true)]),
-        vec![Arc::new(array)],
+        vec![array.boxed()],
         None,
-    );
+    )
+    .boxed();
     // and a field with its datatype
     let field = Field::new("a", array.data_type().clone(), true);
-
-    // Arc it, since it will be shared with an external program
-    let array: Arc<dyn Array> = Arc::new(array.clone());
 
     // create an iterator of arrays
     let arrays = vec![array.clone(), array.clone(), array];

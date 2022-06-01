@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::sync::Arc;
 
 use arrow2::{
     array::{Array, Int32Array},
@@ -12,7 +11,7 @@ use arrow2::{
     },
 };
 
-fn write_batch(path: &str, schema: Schema, columns: Chunk<Arc<dyn Array>>) -> Result<()> {
+fn write_batch(path: &str, schema: Schema, columns: Chunk<Box<dyn Array>>) -> Result<()> {
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
@@ -53,7 +52,7 @@ fn main() -> Result<()> {
     ]);
     let field = Field::new("c1", array.data_type().clone(), true);
     let schema = Schema::from(vec![field]);
-    let columns = Chunk::new(vec![array.arced()]);
+    let columns = Chunk::new(vec![array.boxed()]);
 
     write_batch("test.parquet", schema, columns)
 }

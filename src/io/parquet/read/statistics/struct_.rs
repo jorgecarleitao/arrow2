@@ -38,7 +38,7 @@ impl MutableArray for DynMutableStructArray {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        let inner = self.inner.iter_mut().map(|x| x.as_arc()).collect();
+        let inner = self.inner.iter_mut().map(|x| x.as_box()).collect();
 
         Box::new(StructArray::new(self.data_type.clone(), inner, None))
     }

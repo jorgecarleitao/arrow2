@@ -1,5 +1,4 @@
 use std::io::Cursor;
-use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
@@ -7,11 +6,12 @@ use arrow2::datatypes::{Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::read::{read_file_metadata, FileReader};
 use arrow2::io::ipc::{write::*, IpcField};
+use arrow2::types::months_days_ns;
 
 use crate::io::ipc::common::read_gzip_json;
 
 pub(crate) fn write(
-    batches: &[Chunk<Arc<dyn Array>>],
+    batches: &[Chunk<Box<dyn Array>>],
     schema: &Schema,
     ipc_fields: Option<Vec<IpcField>>,
     compression: Option<Compression>,
@@ -27,7 +27,7 @@ pub(crate) fn write(
 }
 
 fn round_trip(
-    columns: Chunk<Arc<dyn Array>>,
+    columns: Chunk<Box<dyn Array>>,
     schema: Schema,
     ipc_fields: Option<Vec<IpcField>>,
     compression: Option<Compression>,
@@ -327,7 +327,7 @@ fn write_generated_017_union() -> Result<()> {
 #[test]
 #[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
 fn write_boolean() -> Result<()> {
-    let array = BooleanArray::from([Some(true), Some(false), None, Some(true)]).arced();
+    let array = BooleanArray::from([Some(true), Some(false), None, Some(true)]).boxed();
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None, Some(Compression::ZSTD))
@@ -338,7 +338,7 @@ fn write_boolean() -> Result<()> {
 fn write_sliced_utf8() -> Result<()> {
     let array = Utf8Array::<i32>::from_slice(["aa", "bb"])
         .slice(1, 1)
-        .arced();
+        .boxed();
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None, Some(Compression::ZSTD))
@@ -354,8 +354,21 @@ fn write_sliced_list() -> Result<()> {
 
     let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
     array.try_extend(data).unwrap();
-    let array: Arc<dyn Array> = array.into_arc().slice(1, 2).into();
+    let array: Box<dyn Array> = array.into_box().slice(1, 2);
 
+    let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
+    let columns = Chunk::try_new(vec![array])?;
+    round_trip(columns, schema, None, None)
+}
+
+#[test]
+fn write_months_days_ns() -> Result<()> {
+    let array = Box::new(MonthsDaysNsArray::from([
+        Some(months_days_ns::new(1, 1, 0)),
+        Some(months_days_ns::new(1, 1, 1)),
+        None,
+        Some(months_days_ns::new(1, 1, 2)),
+    ])) as Box<dyn Array>;
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None, None)

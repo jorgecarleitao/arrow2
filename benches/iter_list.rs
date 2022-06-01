@@ -1,5 +1,4 @@
 use std::iter::FromIterator;
-use std::sync::Arc;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
@@ -28,7 +27,7 @@ fn add_benchmark(c: &mut Criterion) {
         let array = ListArray::<i32>::from_data(
             data_type,
             offsets.into(),
-            Arc::new(values),
+            Box::new(values),
             Some(validity),
         );
 

@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, sync::Arc};
+use std::collections::VecDeque;
 
 use parquet2::{
     page::{DictPage, PrimitivePageDict},
@@ -18,7 +18,7 @@ use super::super::utils::MaybeNext;
 use super::super::DataPages;
 
 #[inline]
-fn read_dict<P, T, F>(data_type: DataType, op: F, dict: &dyn DictPage) -> Arc<dyn Array>
+fn read_dict<P, T, F>(data_type: DataType, op: F, dict: &dyn DictPage) -> Box<dyn Array>
 where
     T: NativeType,
     P: ParquetNativeType,
@@ -30,7 +30,7 @@ where
         .unwrap();
     let values = dict.values().iter().map(|x| (op)(*x)).collect::<Vec<_>>();
 
-    Arc::new(PrimitiveArray::new(data_type, values.into(), None))
+    Box::new(PrimitiveArray::new(data_type, values.into(), None))
 }
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays

@@ -296,8 +296,7 @@ fn cast_list<O: Offset>(
         values.as_ref(),
         ListArray::<O>::get_child_type(to_type),
         options,
-    )?
-    .into();
+    )?;
 
     Ok(ListArray::<O>::new(
         to_type.clone(),
@@ -398,7 +397,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
 
         (_, List(to)) => {
             // cast primitive to list's primitive
-            let values = cast(array, &to.data_type, options)?.into();
+            let values = cast(array, &to.data_type, options)?;
             // create offsets, where if array.len() = 2, we have [0,1,2]
             let offsets = (0..=array.len() as i32).collect::<Vec<_>>();
 

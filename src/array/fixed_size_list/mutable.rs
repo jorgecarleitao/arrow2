@@ -22,7 +22,7 @@ impl<M: MutableArray> From<MutableFixedSizeListArray<M>> for FixedSizeListArray 
     fn from(mut other: MutableFixedSizeListArray<M>) -> Self {
         FixedSizeListArray::new(
             other.data_type,
-            other.values.as_arc(),
+            other.values.as_box(),
             other.validity.map(|x| x.into()),
         )
     }
@@ -117,7 +117,7 @@ impl<M: MutableArray + 'static> MutableArray for MutableFixedSizeListArray<M> {
     fn as_box(&mut self) -> Box<dyn Array> {
         Box::new(FixedSizeListArray::new(
             self.data_type.clone(),
-            self.values.as_arc(),
+            self.values.as_box(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
         ))
     }
@@ -125,7 +125,7 @@ impl<M: MutableArray + 'static> MutableArray for MutableFixedSizeListArray<M> {
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(FixedSizeListArray::new(
             self.data_type.clone(),
-            self.values.as_arc(),
+            self.values.as_box(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
         ))
     }

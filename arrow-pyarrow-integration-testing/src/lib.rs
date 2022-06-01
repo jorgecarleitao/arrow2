@@ -4,7 +4,6 @@ mod c_stream;
 
 use std::error;
 use std::fmt;
-use std::sync::Arc;
 
 use pyo3::exceptions::PyOSError;
 use pyo3::ffi::Py_uintptr_t;
@@ -50,7 +49,7 @@ impl From<PyO3Error> for PyErr {
     }
 }
 
-fn to_rust_array(ob: PyObject, py: Python) -> PyResult<Arc<dyn Array>> {
+fn to_rust_array(ob: PyObject, py: Python) -> PyResult<Box<dyn Array>> {
     // prepare a pointer to receive the Array struct
     let array = Box::new(ffi::ArrowArray::empty());
     let schema = Box::new(ffi::ArrowSchema::empty());
@@ -73,7 +72,7 @@ fn to_rust_array(ob: PyObject, py: Python) -> PyResult<Arc<dyn Array>> {
     Ok(array.into())
 }
 
-fn to_py_array(array: Arc<dyn Array>, py: Python) -> PyResult<PyObject> {
+fn to_py_array(array: Box<dyn Array>, py: Python) -> PyResult<PyObject> {
     let array_ptr = Box::new(ffi::ArrowArray::empty());
     let schema_ptr = Box::new(ffi::ArrowSchema::empty());
 

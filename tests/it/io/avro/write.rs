@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
@@ -82,7 +80,7 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
         Box::new(ListArray::<i32>::new(
             list_dt,
             vec![0, 2, 5].into(),
-            Arc::new(PrimitiveArray::<i32>::from([
+            Box::new(PrimitiveArray::<i32>::from([
                 None,
                 Some(1),
                 None,
@@ -94,7 +92,7 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
         Box::new(ListArray::<i32>::new(
             list_dt1,
             vec![0, 2, 2].into(),
-            Arc::new(PrimitiveArray::<i32>::from([None, Some(1)])),
+            Box::new(PrimitiveArray::<i32>::from([None, Some(1)])),
             Some([true, false].into()),
         )),
     ];
@@ -262,16 +260,16 @@ fn struct_data() -> Chunk<Box<dyn Array>> {
         Box::new(StructArray::new(
             struct_dt.clone(),
             vec![
-                Arc::new(PrimitiveArray::<i32>::from_slice([1, 2])),
-                Arc::new(PrimitiveArray::<i32>::from([None, Some(1)])),
+                Box::new(PrimitiveArray::<i32>::from_slice([1, 2])),
+                Box::new(PrimitiveArray::<i32>::from([None, Some(1)])),
             ],
             None,
         )),
         Box::new(StructArray::new(
             struct_dt,
             vec![
-                Arc::new(PrimitiveArray::<i32>::from_slice([1, 2])),
-                Arc::new(PrimitiveArray::<i32>::from([None, Some(1)])),
+                Box::new(PrimitiveArray::<i32>::from_slice([1, 2])),
+                Box::new(PrimitiveArray::<i32>::from([None, Some(1)])),
             ],
             Some([true, false].into()),
         )),

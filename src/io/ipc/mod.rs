@@ -31,7 +31,6 @@
 //! ```
 //! use arrow2::io::ipc::{{read::{FileReader, read_file_metadata}}, {write::{FileWriter, WriteOptions}}};
 //! # use std::fs::File;
-//! # use std::sync::Arc;
 //! # use arrow2::datatypes::{Field, Schema, DataType};
 //! # use arrow2::array::{Int32Array, Array};
 //! # use arrow2::chunk::Chunk;
@@ -48,7 +47,7 @@
 //! // Setup the data
 //! let x_data = Int32Array::from_slice([-1i32, 1]);
 //! let y_data = Int32Array::from_slice([1i32, -1]);
-//! let chunk = Chunk::try_new(vec![x_data.arced(), y_data.arced()])?;
+//! let chunk = Chunk::try_new(vec![x_data.boxed(), y_data.boxed()])?;
 //!
 //! // Write the messages and finalize the stream
 //! for _ in 0..5 {

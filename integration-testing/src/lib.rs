@@ -29,7 +29,6 @@ use arrow2::io::json_integration::{read, ArrowJsonBatch, ArrowJsonDictionaryBatc
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
-use std::sync::Arc;
 
 /// The expected username for the basic auth integration test.
 pub const AUTH_USERNAME: &str = "arrow";
@@ -45,7 +44,7 @@ pub struct ArrowFile {
     // we can evolve this into a concrete Arrow type
     // this is temporarily not being read from
     pub _dictionaries: HashMap<i64, ArrowJsonDictionaryBatch>,
-    pub batches: Vec<Chunk<Arc<dyn Array>>>,
+    pub batches: Vec<Chunk<Box<dyn Array>>>,
 }
 
 pub fn read_json_file(json_name: &str) -> Result<ArrowFile> {

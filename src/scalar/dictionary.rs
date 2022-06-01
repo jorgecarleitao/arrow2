@@ -1,5 +1,4 @@
 use std::any::Any;
-use std::sync::Arc;
 
 use crate::{array::*, datatypes::DataType};
 
@@ -8,7 +7,7 @@ use super::Scalar;
 /// The [`DictionaryArray`] equivalent of [`Array`] for [`Scalar`].
 #[derive(Debug, Clone)]
 pub struct DictionaryScalar<K: DictionaryKey> {
-    value: Option<Arc<dyn Scalar>>,
+    value: Option<Box<dyn Scalar>>,
     phantom: std::marker::PhantomData<K>,
     data_type: DataType,
 }
@@ -26,7 +25,7 @@ impl<K: DictionaryKey> DictionaryScalar<K> {
     /// * the `data_type` is not `List` or `LargeList` (depending on this scalar's offset `O`)
     /// * the child of the `data_type` is not equal to the `values`
     #[inline]
-    pub fn new(data_type: DataType, value: Option<Arc<dyn Scalar>>) -> Self {
+    pub fn new(data_type: DataType, value: Option<Box<dyn Scalar>>) -> Self {
         Self {
             value,
             phantom: std::marker::PhantomData,
@@ -35,7 +34,7 @@ impl<K: DictionaryKey> DictionaryScalar<K> {
     }
 
     /// The values of the [`DictionaryScalar`]
-    pub fn value(&self) -> Option<&Arc<dyn Scalar>> {
+    pub fn value(&self) -> Option<&Box<dyn Scalar>> {
         self.value.as_ref()
     }
 }

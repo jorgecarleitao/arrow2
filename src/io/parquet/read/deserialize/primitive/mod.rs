@@ -29,7 +29,7 @@ where
         ArrayIterator::<T, I, P, F>::new(iter, init, data_type, chunk_size, op).map(|x| {
             x.map(|(mut nested, array)| {
                 let _ = nested.nested.pop().unwrap(); // the primitive
-                (nested, array.arced())
+                (nested, array.boxed())
             })
         }),
     )

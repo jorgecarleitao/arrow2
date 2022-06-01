@@ -1,3 +1,6 @@
+use std::fs::File;
+use std::{collections::HashMap, io::Read};
+
 use arrow2::array::Array;
 use arrow2::io::ipc::IpcField;
 use arrow2::{
@@ -15,15 +18,12 @@ use arrow2::{
 };
 use clap::Parser;
 use flate2::read::GzDecoder;
-use std::fs::File;
-use std::sync::Arc;
-use std::{collections::HashMap, io::Read};
 
 /// Read gzipped JSON file
 pub fn read_gzip_json(
     version: &str,
     file_name: &str,
-) -> Result<(Schema, Vec<IpcField>, Vec<Chunk<Arc<dyn Array>>>)> {
+) -> Result<(Schema, Vec<IpcField>, Vec<Chunk<Box<dyn Array>>>)> {
     let path = format!(
         "../testing/arrow-testing/data/arrow-ipc-stream/integration/{}/{}.json.gz",
         version, file_name

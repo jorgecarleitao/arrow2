@@ -20,7 +20,7 @@ This document describes the overall design of this module.
 
 * The trait `Array` MUST only be implemented by structs in this module.
 
-* Every child array on the struct MUST be `Arc<dyn Array>`. This enables the struct to be clonable.
+* Every child array on the struct MUST be `Box<dyn Array>`.
 
 * An array MUST implement `try_new(...) -> Self`. This method MUST error iff
   the data does not follow the arrow specification, including any sentinel types such as utf8.

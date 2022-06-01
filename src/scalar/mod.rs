@@ -30,7 +30,7 @@ pub use union::UnionScalar;
 
 /// Trait object declaring an optional value with a [`DataType`].
 /// This strait is often used in APIs that accept multiple scalar types.
-pub trait Scalar: std::fmt::Debug + Send + Sync {
+pub trait Scalar: std::fmt::Debug + Send + Sync + dyn_clone::DynClone + 'static {
     /// convert itself to
     fn as_any(&self) -> &dyn Any;
 
@@ -40,6 +40,8 @@ pub trait Scalar: std::fmt::Debug + Send + Sync {
     /// the logical type.
     fn data_type(&self) -> &DataType;
 }
+
+dyn_clone::clone_trait_object!(Scalar);
 
 macro_rules! dyn_new_utf8 {
     ($array:expr, $index:expr, $type:ty) => {{
@@ -118,7 +120,7 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
                 let values = array
                     .values()
                     .iter()
-                    .map(|x| new_scalar(x.as_ref(), index).into())
+                    .map(|x| new_scalar(x.as_ref(), index))
                     .collect();
                 Box::new(StructScalar::new(array.data_type().clone(), Some(values)))
             } else {
@@ -140,7 +142,7 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
         FixedSizeList => {
             let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
             let value = if array.is_valid(index) {
-                Some(array.value(index).into())
+                Some(array.value(index))
             } else {
                 None
             };
@@ -151,7 +153,7 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
             Box::new(UnionScalar::new(
                 array.data_type().clone(),
                 array.types()[index],
-                array.value(index).into(),
+                array.value(index),
             ))
         }
         Map => todo!(),

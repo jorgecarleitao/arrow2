@@ -1,5 +1,4 @@
 use std::io::Cursor;
-use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::datatypes::{DataType, Field};
@@ -29,7 +28,7 @@ pub fn read_and_deserialize(
     ndjson: &str,
     data_type: &DataType,
     batch_size: usize,
-) -> Result<Vec<Arc<dyn Array>>> {
+) -> Result<Vec<Box<dyn Array>>> {
     let reader = Cursor::new(ndjson);
 
     let mut reader = ndjson_read::FileReader::new(reader, vec!["".to_string(); batch_size], None);
@@ -83,7 +82,7 @@ fn read_empty_reader() -> Result<()> {
     Ok(())
 }
 
-fn case_nested_struct() -> (String, Arc<dyn Array>) {
+fn case_nested_struct() -> (String, Box<dyn Array>) {
     let ndjson = r#"{"a": {"a": 2.0, "b": 2}}
     {"a": {"b": 2}}
     {"a": {"a": 2.0, "b": 2, "c": true}}
@@ -99,14 +98,14 @@ fn case_nested_struct() -> (String, Arc<dyn Array>) {
     let data_type = DataType::Struct(vec![Field::new("a", inner.clone(), true)]);
 
     let values = vec![
-        Float64Array::from([Some(2.0), None, Some(2.0), Some(2.0)]).arced(),
-        Arc::new(Int64Array::from([Some(2), Some(2), Some(2), Some(2)])),
-        Arc::new(BooleanArray::from([None, None, Some(true), None])),
+        Float64Array::from([Some(2.0), None, Some(2.0), Some(2.0)]).boxed(),
+        Int64Array::from([Some(2), Some(2), Some(2), Some(2)]).boxed(),
+        BooleanArray::from([None, None, Some(true), None]).boxed(),
     ];
 
-    let values = vec![StructArray::from_data(inner, values, None).arced()];
+    let values = vec![StructArray::from_data(inner, values, None).boxed()];
 
-    let array = Arc::new(StructArray::from_data(data_type, values, None));
+    let array = Box::new(StructArray::from_data(data_type, values, None));
 
     (ndjson.to_string(), array)
 }
@@ -139,8 +138,8 @@ fn read_nested_struct_batched() -> Result<()> {
     let batch_size = 2;
 
     // create a chunked array by batch_size from the (un-chunked) expected
-    let expected: Vec<Arc<dyn Array>> = (0..(expected.len() + batch_size - 1) / batch_size)
-        .map(|offset| expected.slice(offset * batch_size, batch_size).into())
+    let expected: Vec<Box<dyn Array>> = (0..(expected.len() + batch_size - 1) / batch_size)
+        .map(|offset| expected.slice(offset * batch_size, batch_size))
         .collect();
 
     let data_type = infer(&ndjson)?;

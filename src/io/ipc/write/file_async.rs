@@ -23,7 +23,6 @@ type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 /// # Examples
 ///
 /// ```
-/// use std::sync::Arc;
 /// use futures::{SinkExt, TryStreamExt, io::Cursor};
 /// use arrow2::array::{Array, Int32Array};
 /// use arrow2::datatypes::{DataType, Field, Schema};
@@ -46,7 +45,7 @@ type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 /// // Write chunks to file
 /// for i in 0..3 {
 ///     let values = Int32Array::from(&[Some(i), None]);
-///     let chunk = Chunk::new(vec![values.arced()]);
+///     let chunk = Chunk::new(vec![values.boxed()]);
 ///     sink.feed(chunk.into()).await?;
 /// }
 /// sink.close().await?;

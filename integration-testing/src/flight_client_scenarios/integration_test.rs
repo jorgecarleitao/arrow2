@@ -41,14 +41,12 @@ use arrow_format::{
 use futures::{channel::mpsc, sink::SinkExt, stream, StreamExt};
 use tonic::{Request, Streaming};
 
-use std::sync::Arc;
-
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 type Result<T = (), E = Error> = std::result::Result<T, E>;
 
 type Client = FlightServiceClient<tonic::transport::Channel>;
 
-type ChunkArc = Chunk<Arc<dyn Array>>;
+type ChunkBox = Chunk<Box<dyn Array>>;
 
 pub async fn run_scenario(host: &str, port: u16, path: &str) -> Result {
     let url = format!("http://{}:{}", host, port);
@@ -66,7 +64,7 @@ pub async fn run_scenario(host: &str, port: u16, path: &str) -> Result {
         is_little_endian: true,
     };
 
-    let schema = Arc::new(schema);
+    let schema = Box::new(schema);
 
     let mut descriptor = FlightDescriptor::default();
     descriptor.set_type(DescriptorType::Path);
@@ -90,7 +88,7 @@ async fn upload_data(
     schema: &Schema,
     fields: &[IpcField],
     descriptor: FlightDescriptor,
-    original_data: Vec<ChunkArc>,
+    original_data: Vec<ChunkBox>,
 ) -> Result {
     let (mut upload_tx, upload_rx) = mpsc::channel(10);
 
@@ -145,7 +143,7 @@ async fn upload_data(
 async fn send_batch(
     upload_tx: &mut mpsc::Sender<FlightData>,
     metadata: &[u8],
-    batch: &ChunkArc,
+    batch: &ChunkBox,
     fields: &[IpcField],
     options: &write::WriteOptions,
 ) -> Result {
@@ -166,7 +164,7 @@ async fn verify_data(
     descriptor: FlightDescriptor,
     expected_schema: &Schema,
     ipc_schema: &IpcSchema,
-    expected_data: &[ChunkArc],
+    expected_data: &[ChunkBox],
 ) -> Result {
     let resp = client.get_flight_info(Request::new(descriptor)).await?;
     let info = resp.into_inner();
@@ -202,7 +200,7 @@ async fn verify_data(
 async fn consume_flight_location(
     location: Location,
     ticket: Ticket,
-    expected_data: &[ChunkArc],
+    expected_data: &[ChunkBox],
     schema: &Schema,
     ipc_schema: &IpcSchema,
 ) -> Result {

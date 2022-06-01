@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, sync::Arc};
+use std::collections::VecDeque;
 
 use parquet2::{
     encoding::hybrid_rle::HybridRleDecoder, page::DataPage, read::levels::get_bit_width,
@@ -529,4 +529,4 @@ where
 }
 
 pub type NestedArrayIter<'a> =
-    Box<dyn Iterator<Item = Result<(NestedState, Arc<dyn Array>)>> + Send + Sync + 'a>;
+    Box<dyn Iterator<Item = Result<(NestedState, Box<dyn Array>)>> + Send + Sync + 'a>;

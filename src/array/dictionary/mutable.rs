@@ -37,7 +37,7 @@ pub struct MutableDictionaryArray<K: DictionaryKey, M: MutableArray> {
 
 impl<K: DictionaryKey, M: MutableArray> From<MutableDictionaryArray<K, M>> for DictionaryArray<K> {
     fn from(mut other: MutableDictionaryArray<K, M>) -> Self {
-        DictionaryArray::<K>::from_data(other.keys.into(), other.values.as_arc())
+        DictionaryArray::<K>::from_data(other.keys.into(), other.values.as_box())
     }
 }
 
@@ -155,14 +155,14 @@ impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictio
     fn as_box(&mut self) -> Box<dyn Array> {
         Box::new(DictionaryArray::<K>::from_data(
             std::mem::take(&mut self.keys).into(),
-            self.values.as_arc(),
+            self.values.as_box(),
         ))
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(DictionaryArray::<K>::from_data(
             std::mem::take(&mut self.keys).into(),
-            self.values.as_arc(),
+            self.values.as_box(),
         ))
     }
 

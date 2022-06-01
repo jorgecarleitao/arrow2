@@ -11,5 +11,5 @@ mod utf8;
 // check that `PartialEq` can be derived
 #[derive(PartialEq)]
 struct A {
-    array: std::sync::Arc<dyn arrow2::scalar::Scalar>,
+    array: Box<dyn arrow2::scalar::Scalar>,
 }

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
@@ -21,7 +19,7 @@ pub use mutable::*;
 pub struct FixedSizeListArray {
     size: usize, // this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
     data_type: DataType,
-    values: Arc<dyn Array>,
+    values: Box<dyn Array>,
     validity: Option<Bitmap>,
 }
 
@@ -36,7 +34,7 @@ impl FixedSizeListArray {
     /// * the validity's length is not equal to `values.len() / size`.
     pub fn try_new(
         data_type: DataType,
-        values: Arc<dyn Array>,
+        values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
         let (child, size) = Self::try_child_and_size(&data_type)?;
@@ -82,14 +80,14 @@ impl FixedSizeListArray {
     /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
     /// * The length of `values` is not a multiple of `size` in `data_type`
     /// * the validity's length is not equal to `values.len() / size`.
-    pub fn new(data_type: DataType, values: Arc<dyn Array>, validity: Option<Bitmap>) -> Self {
+    pub fn new(data_type: DataType, values: Box<dyn Array>, validity: Option<Bitmap>) -> Self {
         Self::try_new(data_type, values, validity).unwrap()
     }
 
     /// Alias for `new`
     pub fn from_data(
         data_type: DataType,
-        values: Arc<dyn Array>,
+        values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
         Self::new(data_type, values, validity)
@@ -97,8 +95,7 @@ impl FixedSizeListArray {
 
     /// Returns a new empty [`FixedSizeListArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        let values =
-            new_empty_array(Self::get_child_and_size(&data_type).0.data_type().clone()).into();
+        let values = new_empty_array(Self::get_child_and_size(&data_type).0.data_type().clone());
         Self::new(data_type, values, None)
     }
 
@@ -107,8 +104,7 @@ impl FixedSizeListArray {
         let values = new_null_array(
             Self::get_child_and_size(&data_type).0.data_type().clone(),
             length,
-        )
-        .into();
+        );
         Self::new(data_type, values, Some(Bitmap::new_zeroed(length)))
     }
 
@@ -153,8 +149,7 @@ impl FixedSizeListArray {
         let values = self
             .values
             .clone()
-            .slice_unchecked(offset * self.size as usize, length * self.size as usize)
-            .into();
+            .slice_unchecked(offset * self.size as usize, length * self.size as usize);
         Self {
             data_type: self.data_type.clone(),
             size: self.size,
@@ -192,7 +187,7 @@ impl FixedSizeListArray {
     }
 
     /// Returns the inner array.
-    pub fn values(&self) -> &Arc<dyn Array> {
+    pub fn values(&self) -> &Box<dyn Array> {
         &self.values
     }
 
@@ -239,6 +234,11 @@ impl FixedSizeListArray {
 impl Array for FixedSizeListArray {
     #[inline]
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 

@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::SystemTime;
 
 use futures::future::BoxFuture;
@@ -15,7 +14,7 @@ async fn main() -> Result<()> {
 
     use std::env;
     let args: Vec<String> = env::args().collect();
-    let file_path = Arc::new(args[1].clone());
+    let file_path = Box::new(args[1].clone());
 
     // # Read metadata
     let mut reader = BufReader::new(File::open(file_path.as_ref()).await?).compat();

@@ -1,5 +1,4 @@
 //! APIs to read Arrow streams asynchronously
-use std::sync::Arc;
 
 use arrow_format::ipc::planus::ReadAsRoot;
 use futures::future::BoxFuture;
@@ -33,7 +32,7 @@ enum StreamState<R> {
     /// The stream does not contain new chunks (and it has not been closed)
     Waiting(ReadState<R>),
     /// The stream contain a new chunk
-    Some((ReadState<R>, Chunk<Arc<dyn Array>>)),
+    Some((ReadState<R>, Chunk<Box<dyn Array>>)),
 }
 
 /// Reads the [`StreamMetadata`] of the Arrow stream asynchronously
@@ -140,7 +139,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
                 0,
             )?;
 
-            // read the next message until we encounter a Chunk<Arc<dyn Array>> message
+            // read the next message until we encounter a Chunk<Box<dyn Array>> message
             Ok(Some(StreamState::Waiting(state)))
         }
         t => Err(Error::OutOfSpec(format!(
@@ -177,7 +176,7 @@ impl<'a, R: AsyncRead + Unpin + Send + 'a> AsyncStreamReader<'a, R> {
 }
 
 impl<'a, R: AsyncRead + Unpin + Send> Stream for AsyncStreamReader<'a, R> {
-    type Item = Result<Chunk<Arc<dyn Array>>>;
+    type Item = Result<Chunk<Box<dyn Array>>>;
 
     fn poll_next(
         self: std::pin::Pin<&mut Self>,

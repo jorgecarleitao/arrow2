@@ -1,7 +1,6 @@
 use proptest::prelude::*;
 
 use std::io::Cursor;
-use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::datatypes::*;
@@ -89,7 +88,7 @@ fn infer_ints() -> Result<()> {
     Ok(())
 }
 
-fn test_deserialize(input: &str, data_type: DataType) -> Result<Arc<dyn Array>> {
+fn test_deserialize(input: &str, data_type: DataType) -> Result<Box<dyn Array>> {
     let reader = std::io::Cursor::new(input);
     let mut reader = ReaderBuilder::new().has_headers(false).from_reader(reader);
 

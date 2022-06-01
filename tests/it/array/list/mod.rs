@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::array::*;
 use arrow2::buffer::Buffer;
 use arrow2::datatypes::DataType;
@@ -15,7 +13,7 @@ fn debug() {
     let array = ListArray::<i32>::from_data(
         data_type,
         Buffer::from(vec![0, 2, 2, 3, 5]),
-        Arc::new(values),
+        Box::new(values),
         None,
     );
 
@@ -32,7 +30,7 @@ fn test_nested_panic() {
     let array = ListArray::<i32>::from_data(
         data_type.clone(),
         Buffer::from(vec![0, 2, 2, 3, 5]),
-        Arc::new(values),
+        Box::new(values),
         None,
     );
 
@@ -41,7 +39,7 @@ fn test_nested_panic() {
     let _ = ListArray::<i32>::from_data(
         data_type,
         Buffer::from(vec![0, 2, 4]),
-        Arc::new(array),
+        Box::new(array),
         None,
     );
 }
@@ -55,7 +53,7 @@ fn test_nested_display() {
     let array = ListArray::<i32>::from_data(
         data_type,
         Buffer::from(vec![0, 2, 4, 7, 7, 8, 10]),
-        Arc::new(values),
+        Box::new(values),
         None,
     );
 
@@ -63,7 +61,7 @@ fn test_nested_display() {
     let nested = ListArray::<i32>::from_data(
         data_type,
         Buffer::from(vec![0, 2, 5, 6]),
-        Arc::new(array),
+        Box::new(array),
         None,
     );
 

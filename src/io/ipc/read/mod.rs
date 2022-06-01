@@ -5,7 +5,6 @@
 //! [`StreamReader`](stream::StreamReader), which only supports reading
 //! data in the order it was written in.
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::array::Array;
 
@@ -32,7 +31,7 @@ pub use schema::deserialize_schema;
 pub use stream::{read_stream_metadata, StreamMetadata, StreamReader, StreamState};
 
 /// how dictionaries are tracked in this crate
-pub type Dictionaries = HashMap<i64, Arc<dyn Array>>;
+pub type Dictionaries = HashMap<i64, Box<dyn Array>>;
 
 pub(crate) type Node<'a> = arrow_format::ipc::FieldNodeRef<'a>;
 pub(crate) type IpcBuffer<'a> = arrow_format::ipc::BufferRef<'a>;

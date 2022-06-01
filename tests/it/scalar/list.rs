@@ -10,13 +10,13 @@ fn equal() {
     let dt = DataType::List(Box::new(Field::new("a", DataType::Boolean, true)));
     let a = ListScalar::<i32>::new(
         dt.clone(),
-        Some(BooleanArray::from_slice([true, false]).arced()),
+        Some(BooleanArray::from_slice([true, false]).boxed()),
     );
     let b = ListScalar::<i32>::new(dt.clone(), None);
     assert_eq!(a, a);
     assert_eq!(b, b);
     assert!(a != b);
-    let b = ListScalar::<i32>::new(dt, Some(BooleanArray::from_slice([true, true]).arced()));
+    let b = ListScalar::<i32>::new(dt, Some(BooleanArray::from_slice([true, true]).boxed()));
     assert!(a != b);
     assert_eq!(b, b);
 }
@@ -26,7 +26,7 @@ fn basics() {
     let dt = DataType::List(Box::new(Field::new("a", DataType::Boolean, true)));
     let a = ListScalar::<i32>::new(
         dt.clone(),
-        Some(BooleanArray::from_slice([true, false]).arced()),
+        Some(BooleanArray::from_slice([true, false]).boxed()),
     );
 
     assert_eq!(BooleanArray::from_slice([true, false]), a.values().as_ref());

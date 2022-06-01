@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::*;
@@ -8,9 +6,9 @@ use arrow2::error::Result;
 use arrow2::io::csv::write;
 use arrow2::util::bench_util::*;
 
-type ChunkArc = Chunk<Arc<dyn Array>>;
+type ChunkBox = Chunk<Box<dyn Array>>;
 
-fn write_batch(columns: &ChunkArc) -> Result<()> {
+fn write_batch(columns: &ChunkBox) -> Result<()> {
     let mut writer = vec![];
 
     assert_eq!(columns.arrays().len(), 1);
@@ -20,8 +18,8 @@ fn write_batch(columns: &ChunkArc) -> Result<()> {
     write::write_chunk(&mut writer, columns, &options)
 }
 
-fn make_chunk(array: impl Array + 'static) -> Chunk<Arc<dyn Array>> {
-    Chunk::new(vec![Arc::new(array)])
+fn make_chunk(array: impl Array + 'static) -> Chunk<Box<dyn Array>> {
+    Chunk::new(vec![Box::new(array)])
 }
 
 fn add_benchmark(c: &mut Criterion) {

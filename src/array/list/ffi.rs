@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{array::FromFfi, bitmap::align, error::Result, ffi};
 
 use super::super::{ffi::ToFfi, Array, Offset};
@@ -13,7 +11,7 @@ unsafe impl<O: Offset> ToFfi for ListArray<O> {
         ]
     }
 
-    fn children(&self) -> Vec<Arc<dyn Array>> {
+    fn children(&self) -> Vec<Box<dyn Array>> {
         vec![self.values.clone()]
     }
 
@@ -56,7 +54,7 @@ impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for ListArray<O> {
         let validity = unsafe { array.validity() }?;
         let offsets = unsafe { array.buffer::<O>(1) }?;
         let child = unsafe { array.child(0)? };
-        let values = ffi::try_from(child)?.into();
+        let values = ffi::try_from(child)?;
 
         Ok(Self::from_data(data_type, offsets, values, validity))
     }

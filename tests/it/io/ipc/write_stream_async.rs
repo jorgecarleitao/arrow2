@@ -1,5 +1,4 @@
 use std::io::Cursor;
-use std::sync::Arc;
 
 use arrow2::array::Array;
 use arrow2::chunk::Chunk;
@@ -18,7 +17,7 @@ use crate::io::ipc::common::read_gzip_json;
 async fn write_(
     schema: &Schema,
     ipc_fields: &[IpcField],
-    batches: &[Chunk<Arc<dyn Array>>],
+    batches: &[Chunk<Box<dyn Array>>],
 ) -> Result<Vec<u8>> {
     let mut result = AsyncCursor::new(vec![]);
 

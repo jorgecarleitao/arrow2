@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::{
     array::*,
     bitmap::Bitmap,
@@ -99,7 +97,7 @@ fn write_dictionary() -> Result<()> {
 fn dictionary_validities() -> Result<()> {
     let keys = PrimitiveArray::<i32>::from([Some(1), None, Some(0)]);
     let values = PrimitiveArray::<i32>::from([None, Some(10)]);
-    let array = DictionaryArray::<i32>::from_data(keys, Arc::new(values));
+    let array = DictionaryArray::<i32>::from_data(keys, Box::new(values));
 
     let columns = Chunk::new(vec![&array as &dyn Array]);
 
@@ -323,8 +321,8 @@ fn write_struct() -> Result<()> {
         Field::new("b", DataType::Utf8, true),
     ];
     let values = vec![
-        Int32Array::from(&[Some(1), None, Some(2)]).arced(),
-        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).arced(),
+        Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
+        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
     let validity = Some(Bitmap::from(&[true, false, true]));
@@ -361,8 +359,8 @@ fn write_union() -> Result<()> {
     let data_type = DataType::Union(fields, None, UnionMode::Sparse);
     let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
-        Int32Array::from(&[Some(1), None, Some(2)]).arced(),
-        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).arced(),
+        Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
+        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
     let array = UnionArray::from_data(data_type, types, fields, None);

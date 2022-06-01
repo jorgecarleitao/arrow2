@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use csv_async::ByteRecord;
 
 use crate::{
@@ -27,7 +25,7 @@ pub fn deserialize_column(
     column: usize,
     datatype: DataType,
     line_number: usize,
-) -> Result<Arc<dyn Array>> {
+) -> Result<Box<dyn Array>> {
     deserialize_column_gen(rows, column, datatype, line_number)
 }
 
@@ -40,9 +38,9 @@ pub fn deserialize_batch<F>(
     projection: Option<&[usize]>,
     line_number: usize,
     deserialize_column: F,
-) -> Result<Chunk<Arc<dyn Array>>>
+) -> Result<Chunk<Box<dyn Array>>>
 where
-    F: Fn(&[ByteRecord], usize, DataType, usize) -> Result<Arc<dyn Array>>,
+    F: Fn(&[ByteRecord], usize, DataType, usize) -> Result<Box<dyn Array>>,
 {
     deserialize_batch_gen(rows, fields, projection, line_number, deserialize_column)
 }

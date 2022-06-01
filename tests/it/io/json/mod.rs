@@ -1,8 +1,6 @@
 mod read;
 mod write;
 
-use std::sync::Arc;
-
 use arrow2::array::*;
 use arrow2::error::Result;
 use arrow2::io::json::write as json_write;

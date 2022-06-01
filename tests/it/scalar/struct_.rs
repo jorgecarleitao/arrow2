@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::{
     datatypes::{DataType, Field},
     scalar::{BooleanScalar, Scalar, StructScalar},
@@ -12,7 +10,7 @@ fn equal() {
     let a = StructScalar::new(
         dt.clone(),
         Some(vec![
-            Arc::new(BooleanScalar::from(Some(true))) as Arc<dyn Scalar>
+            Box::new(BooleanScalar::from(Some(true))) as Box<dyn Scalar>
         ]),
     );
     let b = StructScalar::new(dt.clone(), None);
@@ -22,7 +20,7 @@ fn equal() {
     let b = StructScalar::new(
         dt,
         Some(vec![
-            Arc::new(BooleanScalar::from(Some(false))) as Arc<dyn Scalar>
+            Box::new(BooleanScalar::from(Some(false))) as Box<dyn Scalar>
         ]),
     );
     assert!(a != b);
@@ -33,7 +31,7 @@ fn equal() {
 fn basics() {
     let dt = DataType::Struct(vec![Field::new("a", DataType::Boolean, true)]);
 
-    let values = vec![Arc::new(BooleanScalar::from(Some(true))) as Arc<dyn Scalar>];
+    let values = vec![Box::new(BooleanScalar::from(Some(true))) as Box<dyn Scalar>];
 
     let a = StructScalar::new(dt.clone(), Some(values.clone()));
 

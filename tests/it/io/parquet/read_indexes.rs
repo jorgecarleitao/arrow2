@@ -1,5 +1,4 @@
 use std::io::Cursor;
-use std::sync::Arc;
 
 use arrow2::error::Error;
 use arrow2::{array::*, datatypes::*, error::Result, io::parquet::read::*, io::parquet::write::*};
@@ -74,7 +73,7 @@ fn pages(
 /// Tests reading pages while skipping indexes
 fn read_with_indexes(
     (pages1, pages2, schema): (Vec<EncodedPage>, Vec<EncodedPage>, Schema),
-    expected: Arc<dyn Array>,
+    expected: Box<dyn Array>,
 ) -> Result<()> {
     let options = WriteOptions {
         write_statistics: true,
@@ -138,7 +137,7 @@ fn read_with_indexes(
 fn indexed_required_utf8() -> Result<()> {
     let array21 = Utf8Array::<i32>::from_slice(["a", "b", "c"]);
     let array22 = Utf8Array::<i32>::from_slice(["d", "e", "f"]);
-    let expected = Utf8Array::<i32>::from_slice(["e"]).arced();
+    let expected = Utf8Array::<i32>::from_slice(["e"]).boxed();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -147,7 +146,7 @@ fn indexed_required_utf8() -> Result<()> {
 fn indexed_required_i32() -> Result<()> {
     let array21 = Int32Array::from_slice([1, 2, 3]);
     let array22 = Int32Array::from_slice([4, 5, 6]);
-    let expected = Int32Array::from_slice([5]).arced();
+    let expected = Int32Array::from_slice([5]).boxed();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -156,7 +155,7 @@ fn indexed_required_i32() -> Result<()> {
 fn indexed_optional_i32() -> Result<()> {
     let array21 = Int32Array::from([Some(1), Some(2), None]);
     let array22 = Int32Array::from([None, Some(5), Some(6)]);
-    let expected = Int32Array::from_slice([5]).arced();
+    let expected = Int32Array::from_slice([5]).boxed();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -165,7 +164,7 @@ fn indexed_optional_i32() -> Result<()> {
 fn indexed_optional_utf8() -> Result<()> {
     let array21 = Utf8Array::<i32>::from([Some("a"), Some("b"), None]);
     let array22 = Utf8Array::<i32>::from([None, Some("e"), Some("f")]);
-    let expected = Utf8Array::<i32>::from_slice(["e"]).arced();
+    let expected = Utf8Array::<i32>::from_slice(["e"]).boxed();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -174,7 +173,7 @@ fn indexed_optional_utf8() -> Result<()> {
 fn indexed_required_fixed_len() -> Result<()> {
     let array21 = FixedSizeBinaryArray::from_slice([[127], [128], [129]]);
     let array22 = FixedSizeBinaryArray::from_slice([[130], [131], [132]]);
-    let expected = FixedSizeBinaryArray::from_slice([[131]]).arced();
+    let expected = FixedSizeBinaryArray::from_slice([[131]]).boxed();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -183,7 +182,7 @@ fn indexed_required_fixed_len() -> Result<()> {
 fn indexed_optional_fixed_len() -> Result<()> {
     let array21 = FixedSizeBinaryArray::from([Some([127]), Some([128]), None]);
     let array22 = FixedSizeBinaryArray::from([None, Some([131]), Some([132])]);
-    let expected = FixedSizeBinaryArray::from_slice([[131]]).arced();
+    let expected = FixedSizeBinaryArray::from_slice([[131]]).boxed();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -192,7 +191,7 @@ fn indexed_optional_fixed_len() -> Result<()> {
 fn indexed_required_boolean() -> Result<()> {
     let array21 = BooleanArray::from_slice([true, false, true]);
     let array22 = BooleanArray::from_slice([false, false, true]);
-    let expected = BooleanArray::from_slice([false]).arced();
+    let expected = BooleanArray::from_slice([false]).boxed();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -201,7 +200,7 @@ fn indexed_required_boolean() -> Result<()> {
 fn indexed_optional_boolean() -> Result<()> {
     let array21 = BooleanArray::from([Some(true), Some(false), None]);
     let array22 = BooleanArray::from([None, Some(false), Some(true)]);
-    let expected = BooleanArray::from_slice([false]).arced();
+    let expected = BooleanArray::from_slice([false]).boxed();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -210,13 +209,13 @@ fn indexed_optional_boolean() -> Result<()> {
 fn indexed_dict() -> Result<()> {
     let indices = PrimitiveArray::from_values((0..6u64).map(|x| x % 2));
     let values = PrimitiveArray::from_slice([4i32, 6i32]);
-    let array = DictionaryArray::from_data(indices, std::sync::Arc::new(values));
+    let array = DictionaryArray::from_data(indices, Box::new(values));
 
     let indices = PrimitiveArray::from_slice(&[0u64]);
     let values = PrimitiveArray::from_slice([4i32, 6i32]);
-    let expected = DictionaryArray::from_data(indices, std::sync::Arc::new(values));
+    let expected = DictionaryArray::from_data(indices, Box::new(values));
 
-    let expected = expected.arced();
+    let expected = expected.boxed();
 
     read_with_indexes(pages(&[&array], Encoding::RleDictionary)?, expected)
 }

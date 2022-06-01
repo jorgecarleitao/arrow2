@@ -1,13 +1,12 @@
 use std::fs::File;
 use std::io::{BufReader, Seek};
-use std::sync::Arc;
 
 use arrow2::array::Array;
 use arrow2::error::Result;
 use arrow2::io::ndjson::read;
 use arrow2::io::ndjson::read::FallibleStreamingIterator;
 
-fn read_path(path: &str) -> Result<Vec<Arc<dyn Array>>> {
+fn read_path(path: &str) -> Result<Vec<Box<dyn Array>>> {
     let batch_size = 1024; // number of rows per array
     let mut reader = BufReader::new(File::open(path)?);
 

@@ -102,5 +102,5 @@ fn test_with_validity() {
 // check that `PartialEq` can be derived
 #[derive(PartialEq)]
 struct A {
-    array: std::sync::Arc<dyn Array>,
+    array: Box<dyn Array>,
 }

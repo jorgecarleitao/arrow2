@@ -21,7 +21,7 @@ impl PartialEq for dyn Array + '_ {
     }
 }
 
-impl PartialEq<dyn Array> for Arc<dyn Array + '_> {
+impl PartialEq<dyn Array> for std::sync::Arc<dyn Array + '_> {
     fn eq(&self, that: &dyn Array) -> bool {
         equal(&**self, that)
     }
@@ -48,6 +48,12 @@ impl PartialEq<&dyn Array> for NullArray {
 impl<T: NativeType> PartialEq<&dyn Array> for PrimitiveArray<T> {
     fn eq(&self, other: &&dyn Array) -> bool {
         equal(self, *other)
+    }
+}
+
+impl<T: NativeType> PartialEq<PrimitiveArray<T>> for &dyn Array {
+    fn eq(&self, other: &PrimitiveArray<T>) -> bool {
+        equal(*self, other)
     }
 }
 
