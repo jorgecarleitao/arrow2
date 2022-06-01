@@ -194,7 +194,7 @@ fn to_parquet_leafs_recursive(type_: ParquetType, leafs: &mut Vec<ParquetPrimiti
 }
 
 /// Returns a vector of iterators of [`EncodedPage`], one per leaf column in the array
-pub fn array_to_columns<A: AsRef<dyn Array> + 'static + Send + Sync>(
+pub fn array_to_columns<A: AsRef<dyn Array> + Send + Sync>(
     array: A,
     type_: ParquetType,
     options: WriteOptions,
