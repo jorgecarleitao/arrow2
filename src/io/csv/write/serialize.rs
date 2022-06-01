@@ -236,7 +236,7 @@ fn new_utf8_serializer<'a, O: Offset>(
                 // in a delimited field
                 Some("") => buf.extend_from_slice(b"\"\""),
                 Some(s) => {
-                    if s.len() < local_buf.len() * 3 {
+                    if s.len() * 3 > local_buf.len() {
                         resize(&mut local_buf, s.len() * 3)
                     }
                     match ser_writer.field(s.as_bytes(), &mut local_buf) {
