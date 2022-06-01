@@ -183,7 +183,6 @@ fn write_batch(path: &amp;str, schema: Schema, columns: Chunk&lt;Arc&lt;dyn Arra
 
     let mut writer = FileWriter::try_new(file, schema, options)?;
 
-    writer.start()?;
     for group in row_groups {
         writer.write(group?)?;
     }
@@ -315,7 +314,6 @@ fn parallel_write(path: &amp;str, schema: &amp;Schema, batches: &amp;[Chunk]) -&
     let mut writer = FileWriter::try_new(file, schema, options)?;
 
     // Write the file.
-    writer.start()?;
     for group in row_groups {
         writer.write(group?)?;
     }
