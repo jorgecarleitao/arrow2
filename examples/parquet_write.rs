@@ -34,7 +34,6 @@ fn write_batch(path: &str, schema: Schema, columns: Chunk<Arc<dyn Array>>) -> Re
 
     let mut writer = FileWriter::try_new(file, schema, options)?;
 
-    writer.start()?;
     for group in row_groups {
         writer.write(group?)?;
     }

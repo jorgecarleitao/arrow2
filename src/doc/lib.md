@@ -60,7 +60,6 @@ fn main() -> Result<()> {
     let mut writer = FileWriter::try_new(file, schema, options)?;
 
     // Write the file.
-    writer.start()?;
     for group in row_groups {
         writer.write(group?)?;
     }

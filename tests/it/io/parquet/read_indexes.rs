@@ -94,7 +94,6 @@ fn read_with_indexes(
     let writer = vec![];
     let mut writer = FileWriter::try_new(writer, schema, options)?;
 
-    writer.start()?;
     writer.write(row_group)?;
     writer.end(None)?;
     let data = writer.into_inner();
