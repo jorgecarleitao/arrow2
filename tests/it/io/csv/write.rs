@@ -350,18 +350,22 @@ fn write_escaping() {
 #[test]
 fn write_escaping_resize_local_buf() {
     // tests if local buffer reallocates properly
-    let a = Utf8Array::<i32>::from_slice(&[
-        "bar,123456789012345678901234567890123456789012345678901234567890",
-    ]);
-    let columns = Chunk::new(vec![Arc::new(a) as Arc<dyn Array>]);
+    for payload in [
+        "bar,1234567890123456789012345678901234567890123456789012345678900293480293847",
+        "This is the mail system at host smtp.sciprofiles.com.I'm sorry to have to inform you that your message could notbe delivered to one or more recipients. It's attached below.For further assistance,bar",
+    ] {
+        let a = Utf8Array::<i32>::from_slice(&[
+            payload
+        ]);
+        let columns = Chunk::new(vec![Arc::new(a) as Arc<dyn Array>]);
 
-    let mut writer = vec![];
-    let options = SerializeOptions::default();
-    write_chunk(&mut writer, &columns, &options).unwrap();
-    let csv = std::str::from_utf8(&writer).unwrap();
-
-    assert_eq!(
-        csv,
-        "\"bar,123456789012345678901234567890123456789012345678901234567890\"\n"
-    );
+        let mut writer = vec![];
+        let options = SerializeOptions::default();
+        write_chunk(&mut writer, &columns, &options).unwrap();
+        let csv = std::str::from_utf8(&writer).unwrap();
+        assert_eq!(
+            csv,
+            format!("\"{}\"\n", payload)
+        );
+    }
 }
