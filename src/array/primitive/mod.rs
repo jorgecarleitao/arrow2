@@ -356,6 +356,16 @@ impl<T: NativeType> PrimitiveArray<T> {
         MutablePrimitiveArray::<T>::from_trusted_len_iter_unchecked(iter).into()
     }
 
+    /// Boxes self into a [`Box<dyn Array>`].
+    pub fn boxed(self) -> Box<dyn Array> {
+        Box::new(self)
+    }
+
+    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
+    pub fn arced(self) -> std::sync::Arc<dyn Array> {
+        std::sync::Arc::new(self)
+    }
+
     /// Alias for `Self::try_new(..).unwrap()`.
     /// # Panics
     /// This function errors iff:

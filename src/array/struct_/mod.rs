@@ -19,8 +19,8 @@ mod iterator;
 /// use std::sync::Arc;
 /// use arrow2::array::*;
 /// use arrow2::datatypes::*;
-/// let boolean = Arc::new(BooleanArray::from_slice(&[false, false, true, true])) as Arc<dyn Array>;
-/// let int = Arc::new(Int32Array::from_slice(&[42, 28, 19, 31])) as Arc<dyn Array>;
+/// let boolean = BooleanArray::from_slice(&[false, false, true, true]).arced();
+/// let int = Int32Array::from_slice(&[42, 28, 19, 31]).arced();
 ///
 /// let fields = vec![
 ///     Field::new("b", DataType::Boolean, false),
@@ -222,6 +222,16 @@ impl StructArray {
         let mut arr = self.clone();
         arr.validity = validity;
         arr
+    }
+
+    /// Boxes self into a [`Box<dyn Array>`].
+    pub fn boxed(self) -> Box<dyn Array> {
+        Box::new(self)
+    }
+
+    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
+    pub fn arced(self) -> std::sync::Arc<dyn Array> {
+        std::sync::Arc::new(self)
     }
 }
 

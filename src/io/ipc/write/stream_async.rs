@@ -41,7 +41,7 @@ use crate::error::{Error, Result};
 ///
 /// for i in 0..3 {
 ///     let values = Int32Array::from(&[Some(i), None]);
-///     let chunk = Chunk::new(vec![Arc::new(values) as Arc<dyn Array>]);
+///     let chunk = Chunk::new(vec![values.arced()]);
 ///     sink.feed(chunk.into()).await?;
 /// }
 /// sink.close().await?;

@@ -93,7 +93,7 @@ pub(super) fn data() -> Chunk<Arc<dyn Array>> {
     array.try_extend(data).unwrap();
 
     let columns = vec![
-        Arc::new(Int64Array::from_slice([27, 47])) as Arc<dyn Array>,
+        Int64Array::from_slice([27, 47]).arced(),
         Arc::new(Utf8Array::<i32>::from_slice(["foo", "bar"])),
         Arc::new(Int32Array::from_slice([1, 1])),
         Arc::new(Int32Array::from_slice([1, 2]).to(DataType::Date32)),

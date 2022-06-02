@@ -1,7 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use arrow2::{
-    array::{Array, Float32Array, Int32Array},
+    array::{Float32Array, Int32Array},
     chunk::Chunk,
     datatypes::{DataType, Field, Schema},
     error::Result,
@@ -20,10 +20,7 @@ async fn test_parquet_async_roundtrip() {
     for i in 0..5 {
         let a1 = Int32Array::from(&[Some(i), None, Some(i + 1)]);
         let a2 = Float32Array::from(&[None, Some(i as f32), None]);
-        let chunk = Chunk::new(vec![
-            Arc::new(a1) as Arc<dyn Array>,
-            Arc::new(a2) as Arc<dyn Array>,
-        ]);
+        let chunk = Chunk::new(vec![a1.arced(), a2.arced()]);
         data.push(chunk);
     }
     let schema = Schema::from(vec![

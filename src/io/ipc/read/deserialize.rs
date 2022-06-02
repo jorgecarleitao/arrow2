@@ -32,7 +32,7 @@ pub fn read<R: Read + Seek>(
     let data_type = field.data_type.clone();
 
     match data_type.to_physical_type() {
-        Null => read_null(field_nodes, data_type).map(|x| Arc::new(x) as Arc<dyn Array>),
+        Null => read_null(field_nodes, data_type).map(|x| x.arced()),
         Boolean => read_boolean(
             field_nodes,
             data_type,
@@ -42,7 +42,7 @@ pub fn read<R: Read + Seek>(
             is_little_endian,
             compression,
         )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
+        .map(|x| x.arced()),
         Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
             read_primitive::<$T, _>(
                 field_nodes,
@@ -53,7 +53,7 @@ pub fn read<R: Read + Seek>(
                 is_little_endian,
                 compression,
             )
-            .map(|x| Arc::new(x) as Arc<dyn Array>)
+            .map(|x| x.arced())
         }),
         Binary => {
             let array = read_binary::<i32, _>(
@@ -127,7 +127,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
+        .map(|x| x.arced()),
         LargeList => read_list::<i64, _>(
             field_nodes,
             data_type,
@@ -140,7 +140,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
+        .map(|x| x.arced()),
         FixedSizeList => read_fixed_size_list(
             field_nodes,
             data_type,
@@ -153,7 +153,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
+        .map(|x| x.arced()),
         Struct => read_struct(
             field_nodes,
             data_type,
@@ -166,7 +166,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
+        .map(|x| x.arced()),
         Dictionary(key_type) => {
             match_integer_type!(key_type, |$T| {
                 read_dictionary::<$T, _>(
@@ -179,7 +179,7 @@ pub fn read<R: Read + Seek>(
                     compression,
                     is_little_endian,
                 )
-                .map(|x| Arc::new(x) as Arc<dyn Array>)
+                .map(|x| x.arced())
             })
         }
         Union => read_union(
@@ -194,7 +194,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
+        .map(|x| x.arced()),
         Map => read_map(
             field_nodes,
             data_type,
@@ -207,7 +207,7 @@ pub fn read<R: Read + Seek>(
             compression,
             version,
         )
-        .map(|x| Arc::new(x) as Arc<dyn Array>),
+        .map(|x| x.arced()),
     }
 }
 

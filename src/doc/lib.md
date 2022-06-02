@@ -34,10 +34,7 @@ fn main() -> Result<()> {
     ]);
 
     // declare chunk
-    let chunk = Chunk::new(vec![
-        Arc::new(a) as Arc<dyn Array>,
-        Arc::new(b) as Arc<dyn Array>,
-    ]);
+    let chunk = Chunk::new(vec![a.arced(), b.arced()]);
 
     // write to parquet (probably the fastest implementation of writing to parquet out there)
 

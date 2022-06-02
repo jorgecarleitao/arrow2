@@ -308,7 +308,7 @@ fn list_list() -> Result<()> {
 #[test]
 fn struct_() -> Result<()> {
     let data_type = DataType::Struct(vec![Field::new("a", DataType::Int32, true)]);
-    let values = vec![Arc::new(Int32Array::from([Some(1), None, Some(3)])) as Arc<dyn Array>];
+    let values = vec![Int32Array::from([Some(1), None, Some(3)]).arced()];
     let validity = Bitmap::from([true, false, true]);
 
     let array = StructArray::from_data(data_type, values, validity.into());

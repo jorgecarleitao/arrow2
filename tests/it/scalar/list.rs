@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
 use arrow2::{
-    array::{Array, BooleanArray},
+    array::BooleanArray,
     datatypes::{DataType, Field},
     scalar::{ListScalar, Scalar},
 };
@@ -12,16 +10,13 @@ fn equal() {
     let dt = DataType::List(Box::new(Field::new("a", DataType::Boolean, true)));
     let a = ListScalar::<i32>::new(
         dt.clone(),
-        Some(Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>),
+        Some(BooleanArray::from_slice([true, false]).arced()),
     );
     let b = ListScalar::<i32>::new(dt.clone(), None);
     assert_eq!(a, a);
     assert_eq!(b, b);
     assert!(a != b);
-    let b = ListScalar::<i32>::new(
-        dt,
-        Some(Arc::new(BooleanArray::from_slice([true, true])) as Arc<dyn Array>),
-    );
+    let b = ListScalar::<i32>::new(dt, Some(BooleanArray::from_slice([true, true]).arced()));
     assert!(a != b);
     assert_eq!(b, b);
 }
@@ -31,7 +26,7 @@ fn basics() {
     let dt = DataType::List(Box::new(Field::new("a", DataType::Boolean, true)));
     let a = ListScalar::<i32>::new(
         dt.clone(),
-        Some(Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>),
+        Some(BooleanArray::from_slice([true, false]).arced()),
     );
 
     assert_eq!(BooleanArray::from_slice([true, false]), a.values().as_ref());

@@ -111,6 +111,16 @@ impl FixedSizeListArray {
         .into();
         Self::new(data_type, values, Some(Bitmap::new_zeroed(length)))
     }
+
+    /// Boxes self into a [`Box<dyn Array>`].
+    pub fn boxed(self) -> Box<dyn Array> {
+        Box::new(self)
+    }
+
+    /// Boxes self into a [`Arc<dyn Array>`].
+    pub fn arced(self) -> std::sync::Arc<dyn Array> {
+        std::sync::Arc::new(self)
+    }
 }
 
 // must use

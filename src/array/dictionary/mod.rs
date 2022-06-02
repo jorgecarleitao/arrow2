@@ -161,6 +161,16 @@ impl<K: DictionaryKey> DictionaryArray<K> {
             new_scalar(self.values.as_ref(), index)
         }
     }
+
+    /// Boxes self into a [`Box<dyn Array>`].
+    pub fn boxed(self) -> Box<dyn Array> {
+        Box::new(self)
+    }
+
+    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
+    pub fn arced(self) -> std::sync::Arc<dyn Array> {
+        std::sync::Arc::new(self)
+    }
 }
 
 impl<K: DictionaryKey> DictionaryArray<K> {

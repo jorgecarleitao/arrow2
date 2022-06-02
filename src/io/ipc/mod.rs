@@ -48,9 +48,7 @@
 //! // Setup the data
 //! let x_data = Int32Array::from_slice([-1i32, 1]);
 //! let y_data = Int32Array::from_slice([1i32, -1]);
-//! let chunk = Chunk::try_new(
-//!     vec![Arc::new(x_data) as Arc<dyn Array>, Arc::new(y_data)]
-//! )?;
+//! let chunk = Chunk::try_new(vec![x_data.arced(), y_data.arced()])?;
 //!
 //! // Write the messages and finalize the stream
 //! for _ in 0..5 {

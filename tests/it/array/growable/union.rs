@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::{
     array::{
         growable::{Growable, GrowableUnion},
@@ -18,8 +16,8 @@ fn sparse() -> Result<()> {
     let data_type = DataType::Union(fields, None, UnionMode::Sparse);
     let types = vec![0, 0, 1].into();
     let fields = vec![
-        Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
-        Arc::new(Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")])) as Arc<dyn Array>,
+        Int32Array::from(&[Some(1), None, Some(2)]).arced(),
+        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).arced(),
     ];
     let array = UnionArray::from_data(data_type, types, fields, None);
 
@@ -48,8 +46,8 @@ fn dense() -> Result<()> {
     let data_type = DataType::Union(fields, None, UnionMode::Dense);
     let types = vec![0, 0, 1].into();
     let fields = vec![
-        Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
-        Arc::new(Utf8Array::<i32>::from(&[Some("c")])) as Arc<dyn Array>,
+        Int32Array::from(&[Some(1), None, Some(2)]).arced(),
+        Utf8Array::<i32>::from(&[Some("c")]).arced(),
     ];
     let offsets = Some(vec![0, 1, 0].into());
 

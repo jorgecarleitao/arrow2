@@ -73,7 +73,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
     let values = match column {
         "list_int64" => {
             // [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
-            Arc::new(PrimitiveArray::<i64>::from(&[
+            PrimitiveArray::<i64>::from(&[
                 Some(0),
                 Some(1),
                 Some(2),
@@ -86,11 +86,12 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 Some(8),
                 Some(9),
                 Some(10),
-            ])) as Arc<dyn Array>
+            ])
+            .arced()
         }
         "list_int64_required" | "list_int64_optional_required" | "list_int64_required_required" => {
             // [[0, 1], None, [2, 0, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
-            Arc::new(PrimitiveArray::<i64>::from(&[
+            PrimitiveArray::<i64>::from(&[
                 Some(0),
                 Some(1),
                 Some(2),
@@ -103,9 +104,10 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 Some(8),
                 Some(9),
                 Some(10),
-            ])) as Arc<dyn Array>
+            ])
+            .arced()
         }
-        "list_int16" => Arc::new(PrimitiveArray::<i16>::from(&[
+        "list_int16" => PrimitiveArray::<i16>::from(&[
             Some(0),
             Some(1),
             Some(2),
@@ -118,8 +120,9 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             Some(8),
             Some(9),
             Some(10),
-        ])) as Arc<dyn Array>,
-        "list_bool" => Arc::new(BooleanArray::from(&[
+        ])
+        .arced(),
+        "list_bool" => BooleanArray::from(&[
             Some(false),
             Some(true),
             Some(true),
@@ -132,7 +135,8 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             Some(false),
             Some(false),
             Some(true),
-        ])) as Arc<dyn Array>,
+        ])
+        .arced(),
         /*
             string = [
                 ["Hello", "bbb"],
@@ -691,7 +695,7 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
         Some(true),
         Some(true),
     ];
-    let boolean = Arc::new(BooleanArray::from(boolean)) as Arc<dyn Array>;
+    let boolean = BooleanArray::from(boolean).arced();
     let fields = vec![
         Field::new("f1", DataType::Utf8, true),
         Field::new("f2", DataType::Boolean, true),
@@ -710,10 +714,7 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
                 Some("def"),
                 Some("aaa"),
             ];
-            let values = vec![
-                Arc::new(Utf8Array::<i32>::from(string)) as Arc<dyn Array>,
-                boolean,
-            ];
+            let values = vec![Utf8Array::<i32>::from(string).arced(), boolean];
             Box::new(StructArray::from_data(
                 DataType::Struct(fields),
                 values,
@@ -870,7 +871,7 @@ fn arrow_type() -> Result<()> {
         Field::new("a6", array5.data_type().clone(), false),
     ]);
     let batch = Chunk::try_new(vec![
-        Arc::new(array) as Arc<dyn Array>,
+        array.arced(),
         Arc::new(array2),
         Arc::new(array3),
         Arc::new(array4),
@@ -915,7 +916,7 @@ fn list_array_generic(inner_is_nullable: bool, is_nullable: bool) -> Result<()> 
         array.data_type().clone(),
         is_nullable,
     )]);
-    let batch = Chunk::try_new(vec![Arc::new(array) as Arc<dyn Array>])?;
+    let batch = Chunk::try_new(vec![array.arced()])?;
 
     let r = integration_write(&schema, &[batch.clone()])?;
 

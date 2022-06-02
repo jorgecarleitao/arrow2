@@ -216,6 +216,16 @@ impl<O: Offset> Utf8Array<O> {
         }
     }
 
+    /// Boxes self into a [`Box<dyn Array>`].
+    pub fn boxed(self) -> Box<dyn Array> {
+        Box::new(self)
+    }
+
+    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
+    pub fn arced(self) -> std::sync::Arc<dyn Array> {
+        std::sync::Arc::new(self)
+    }
+
     /// Clones this [`Utf8Array`] and assigns it a new validity
     /// # Panic
     /// This function panics iff `validity.len() != self.len()`.

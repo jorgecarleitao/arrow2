@@ -35,7 +35,7 @@ fn main() -> Result<()> {
     let a = Int32Array::from_slice(&[1, 2, 3, 4, 5]);
     let b = Utf8Array::<i32>::from_slice(&["a", "b", "c", "d", "e"]);
 
-    let batch = Chunk::try_new(vec![Arc::new(a) as Arc<dyn Array>, Arc::new(b)])?;
+    let batch = Chunk::try_new(vec![a.arced(), b.arced()])?;
 
     // write it
     write_batches(file_path, schema, &[batch])?;

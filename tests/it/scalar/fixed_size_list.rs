@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
 use arrow2::{
-    array::{Array, BooleanArray},
+    array::BooleanArray,
     datatypes::{DataType, Field},
     scalar::{FixedSizeListScalar, Scalar},
 };
@@ -12,7 +10,7 @@ fn equal() {
     let dt = DataType::FixedSizeList(Box::new(Field::new("a", DataType::Boolean, true)), 2);
     let a = FixedSizeListScalar::new(
         dt.clone(),
-        Some(Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>),
+        Some(BooleanArray::from_slice([true, false]).arced()),
     );
 
     let b = FixedSizeListScalar::new(dt.clone(), None);
@@ -21,10 +19,7 @@ fn equal() {
     assert_eq!(b, b);
     assert!(a != b);
 
-    let b = FixedSizeListScalar::new(
-        dt,
-        Some(Arc::new(BooleanArray::from_slice([true, true])) as Arc<dyn Array>),
-    );
+    let b = FixedSizeListScalar::new(dt, Some(BooleanArray::from_slice([true, true]).arced()));
     assert!(a != b);
     assert_eq!(b, b);
 }
@@ -34,7 +29,7 @@ fn basics() {
     let dt = DataType::FixedSizeList(Box::new(Field::new("a", DataType::Boolean, true)), 2);
     let a = FixedSizeListScalar::new(
         dt.clone(),
-        Some(Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>),
+        Some(BooleanArray::from_slice([true, false]).arced()),
     );
 
     assert_eq!(

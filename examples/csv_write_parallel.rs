@@ -59,7 +59,7 @@ fn main() -> Result<()> {
         Some(5),
         Some(6),
     ]);
-    let columns = Chunk::new(vec![Arc::new(array) as Arc<dyn Array>]);
+    let columns = Chunk::new(vec![array.arced()]);
 
     parallel_write("example.csv", [columns.clone(), columns])
 }

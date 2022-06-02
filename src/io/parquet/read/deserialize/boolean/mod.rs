@@ -1,10 +1,6 @@
 mod basic;
 mod nested;
 
-use std::sync::Arc;
-
-use crate::array::Array;
-
 use self::nested::ArrayIterator;
 use super::{
     nested_utils::{InitNested, NestedArrayIter},
@@ -25,7 +21,7 @@ where
     Box::new(ArrayIterator::new(iter, init, chunk_size).map(|x| {
         x.map(|(mut nested, array)| {
             let _ = nested.nested.pop().unwrap(); // the primitive
-            let values = Arc::new(array) as Arc<dyn Array>;
+            let values = array.arced();
             (nested, values)
         })
     }))

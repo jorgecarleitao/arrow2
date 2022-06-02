@@ -99,12 +99,12 @@ fn case_nested_struct() -> (String, Arc<dyn Array>) {
     let data_type = DataType::Struct(vec![Field::new("a", inner.clone(), true)]);
 
     let values = vec![
-        Arc::new(Float64Array::from([Some(2.0), None, Some(2.0), Some(2.0)])) as Arc<dyn Array>,
+        Float64Array::from([Some(2.0), None, Some(2.0), Some(2.0)]).arced(),
         Arc::new(Int64Array::from([Some(2), Some(2), Some(2), Some(2)])),
         Arc::new(BooleanArray::from([None, None, Some(true), None])),
     ];
 
-    let values = vec![Arc::new(StructArray::from_data(inner, values, None)) as Arc<dyn Array>];
+    let values = vec![StructArray::from_data(inner, values, None).arced()];
 
     let array = Arc::new(StructArray::from_data(data_type, values, None));
 
