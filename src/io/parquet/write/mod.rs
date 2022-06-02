@@ -21,7 +21,7 @@ use crate::types::NativeType;
 
 use parquet2::schema::types::PrimitiveType as ParquetPrimitiveType;
 pub use parquet2::{
-    compression::CompressionOptions,
+    compression::{BrotliLevel, CompressionLevel, CompressionOptions, GzipLevel, ZstdLevel},
     encoding::Encoding,
     fallible_streaming_iterator,
     metadata::{Descriptor, KeyValue, SchemaDescriptor},
