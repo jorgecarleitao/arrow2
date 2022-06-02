@@ -75,10 +75,7 @@ fn create_test_struct() -> StructArray {
     ];
     StructArray::from_data(
         DataType::Struct(fields),
-        vec![
-            Arc::new(boolean) as Arc<dyn Array>,
-            Arc::new(int) as Arc<dyn Array>,
-        ],
+        vec![boolean.arced(), int.arced()],
         validity,
     )
 }
@@ -99,10 +96,7 @@ fn test_struct_with_nulls() {
         .into();
     let expected = StructArray::from_data(
         array.data_type().clone(),
-        vec![
-            Arc::new(boolean) as Arc<dyn Array>,
-            Arc::new(int) as Arc<dyn Array>,
-        ],
+        vec![boolean.arced(), int.arced()],
         validity,
     );
     assert_eq!(expected, output.as_ref());

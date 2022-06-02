@@ -323,8 +323,8 @@ fn write_struct() -> Result<()> {
         Field::new("b", DataType::Utf8, true),
     ];
     let values = vec![
-        Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
-        Arc::new(Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")])) as Arc<dyn Array>,
+        Int32Array::from(&[Some(1), None, Some(2)]).arced(),
+        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).arced(),
     ];
 
     let validity = Some(Bitmap::from(&[true, false, true]));
@@ -361,8 +361,8 @@ fn write_union() -> Result<()> {
     let data_type = DataType::Union(fields, None, UnionMode::Sparse);
     let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
-        Arc::new(Int32Array::from(&[Some(1), None, Some(2)])) as Arc<dyn Array>,
-        Arc::new(Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")])) as Arc<dyn Array>,
+        Int32Array::from(&[Some(1), None, Some(2)]).arced(),
+        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).arced(),
     ];
 
     let array = UnionArray::from_data(data_type, types, fields, None);

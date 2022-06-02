@@ -1,9 +1,4 @@
-use std::sync::Arc;
-
-use crate::{
-    array::{Array, NullArray},
-    datatypes::DataType,
-};
+use crate::{array::NullArray, datatypes::DataType};
 
 use super::super::{ArrayIter, DataPages};
 
@@ -21,13 +16,12 @@ where
     let complete_chunks = chunk_size / len;
     let remainder = chunk_size % len;
     let i_data_type = data_type.clone();
-    let complete = (0..complete_chunks).map(move |_| {
-        Ok(Arc::new(NullArray::new(i_data_type.clone(), chunk_size)) as Arc<dyn Array>)
-    });
+    let complete = (0..complete_chunks)
+        .map(move |_| Ok(NullArray::new(i_data_type.clone(), chunk_size).arced()));
     if len % chunk_size == 0 {
         Box::new(complete)
     } else {
         let array = NullArray::new(data_type, remainder);
-        Box::new(complete.chain(std::iter::once(Ok(Arc::new(array) as Arc<dyn Array>))))
+        Box::new(complete.chain(std::iter::once(Ok(array.arced()))))
     }
 }

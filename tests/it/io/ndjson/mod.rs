@@ -87,16 +87,11 @@ fn case_list() -> (String, Arc<dyn Array>) {
 
     let array = StructArray::from_data(
         data_type,
-        vec![
-            Arc::new(a) as Arc<dyn Array>,
-            Arc::new(b),
-            Arc::new(c),
-            Arc::new(d),
-        ],
+        vec![a.arced(), b.arced(), c.arced(), d.arced()],
         None,
     );
 
-    (data, Arc::new(array))
+    (data, array.arced())
 }
 
 fn case_dict() -> (String, Arc<dyn Array>) {
@@ -140,7 +135,7 @@ fn case_dict() -> (String, Arc<dyn Array>) {
         data,
         Arc::new(StructArray::from_data(
             DataType::Struct(fields),
-            vec![Arc::new(array) as Arc<dyn Array>],
+            vec![array.arced()],
             None,
         )),
     )
@@ -160,7 +155,7 @@ fn case_basics() -> (String, Arc<dyn Array>) {
     let array = StructArray::from_data(
         data_type,
         vec![
-            Arc::new(Int64Array::from_slice(&[1, -10, 100000000])) as Arc<dyn Array>,
+            Int64Array::from_slice(&[1, -10, 100000000]).arced(),
             Arc::new(Float64Array::from_slice(&[2.0, -3.5, 0.6])),
             Arc::new(BooleanArray::from(&[Some(false), Some(true), None])),
             Arc::new(Utf8Array::<i32>::from(&[Some("4"), None, Some("text")])),
@@ -185,7 +180,7 @@ fn case_projection() -> (String, Arc<dyn Array>) {
     let array = StructArray::from_data(
         data_type,
         vec![
-            Arc::new(UInt32Array::from_slice(&[1, 10, 100000000])) as Arc<dyn Array>,
+            UInt32Array::from_slice(&[1, 10, 100000000]).arced(),
             Arc::new(Float32Array::from_slice(&[2.0, -3.5, 0.6])),
             Arc::new(BooleanArray::from(&[Some(false), Some(true), None])),
             Arc::new(BinaryArray::<i32>::from(&[
@@ -240,7 +235,7 @@ fn case_struct() -> (String, Arc<dyn Array>) {
         data,
         Arc::new(StructArray::from_data(
             data_type,
-            vec![Arc::new(expected) as Arc<dyn Array>],
+            vec![expected.arced()],
             None,
         )),
     )
@@ -292,13 +287,13 @@ fn case_nested_list() -> (String, Arc<dyn Array>) {
     ]);
     let a_struct = StructArray::from_data(
         DataType::Struct(vec![b_field, c_field]),
-        vec![Arc::new(b) as Arc<dyn Array>, Arc::new(c) as Arc<dyn Array>],
+        vec![b.arced(), c.arced()],
         None,
     );
     let expected = ListArray::from_data(
         a_list_data_type,
         Buffer::from(vec![0i32, 2, 3, 6, 6, 6]),
-        Arc::new(a_struct) as Arc<dyn Array>,
+        a_struct.arced(),
         Some(Bitmap::from_u8_slice([0b00010111], 5)),
     );
 

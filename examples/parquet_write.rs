@@ -53,7 +53,7 @@ fn main() -> Result<()> {
     ]);
     let field = Field::new("c1", array.data_type().clone(), true);
     let schema = Schema::from(vec![field]);
-    let columns = Chunk::new(vec![Arc::new(array) as Arc<dyn Array>]);
+    let columns = Chunk::new(vec![array.arced()]);
 
     write_batch("test.parquet", schema, columns)
 }

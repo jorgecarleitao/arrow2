@@ -47,7 +47,7 @@ use super::{Encoding, SchemaDescriptor, WriteOptions};
 ///
 /// for i in 0..3 {
 ///     let values = Int32Array::from(&[Some(i), None]);
-///     let chunk = Chunk::new(vec![Arc::new(values) as Arc<dyn Array>]);
+///     let chunk = Chunk::new(vec![values.arced()]);
 ///     sink.feed(chunk).await?;
 /// }
 /// sink.metadata.insert(String::from("key"), Some(String::from("value")));

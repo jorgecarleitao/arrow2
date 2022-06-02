@@ -327,13 +327,7 @@ fn write_generated_017_union() -> Result<()> {
 #[test]
 #[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
 fn write_boolean() -> Result<()> {
-    use std::sync::Arc;
-    let array = Arc::new(BooleanArray::from([
-        Some(true),
-        Some(false),
-        None,
-        Some(true),
-    ])) as Arc<dyn Array>;
+    let array = BooleanArray::from([Some(true), Some(false), None, Some(true)]).arced();
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None, Some(Compression::ZSTD))
@@ -342,8 +336,9 @@ fn write_boolean() -> Result<()> {
 #[test]
 #[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
 fn write_sliced_utf8() -> Result<()> {
-    use std::sync::Arc;
-    let array = Arc::new(Utf8Array::<i32>::from_slice(["aa", "bb"]).slice(1, 1)) as Arc<dyn Array>;
+    let array = Utf8Array::<i32>::from_slice(["aa", "bb"])
+        .slice(1, 1)
+        .arced();
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None, Some(Compression::ZSTD))

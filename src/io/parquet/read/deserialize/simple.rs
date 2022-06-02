@@ -165,7 +165,7 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                     PrimitiveArray::<i128>::try_new(data_type.clone(), values.into(), validity)
                 });
 
-                let arrays = pages.map(|x| x.map(|x| Arc::new(x) as Arc<dyn Array>));
+                let arrays = pages.map(|x| x.map(|x| x.arced()));
 
                 Box::new(arrays) as _
             }

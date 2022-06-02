@@ -234,10 +234,8 @@ mod tests {
 
     #[test]
     fn test_struct() {
-        use std::sync::Arc;
-        let boolean =
-            Arc::new(BooleanArray::from_slice(&[false, false, true, true])) as Arc<dyn Array>;
-        let int = Arc::new(Int32Array::from_slice(&[42, 28, 19, 31])) as Arc<dyn Array>;
+        let boolean = BooleanArray::from_slice(&[false, false, true, true]).arced();
+        let int = Int32Array::from_slice(&[42, 28, 19, 31]).arced();
 
         let fields = vec![
             Field::new("b", DataType::Boolean, false),
@@ -301,9 +299,8 @@ mod tests {
     #[test]
     fn test_struct_struct() {
         use std::sync::Arc;
-        let boolean =
-            Arc::new(BooleanArray::from_slice(&[false, false, true, true])) as Arc<dyn Array>;
-        let int = Arc::new(Int32Array::from_slice(&[42, 28, 19, 31])) as Arc<dyn Array>;
+        let boolean = BooleanArray::from_slice(&[false, false, true, true]).arced();
+        let int = Int32Array::from_slice(&[42, 28, 19, 31]).arced();
 
         let fields = vec![
             Field::new("b", DataType::Boolean, false),
@@ -406,9 +403,8 @@ mod tests {
     #[test]
     fn test_list_struct() {
         use std::sync::Arc;
-        let boolean =
-            Arc::new(BooleanArray::from_slice(&[false, false, true, true])) as Arc<dyn Array>;
-        let int = Arc::new(Int32Array::from_slice(&[42, 28, 19, 31])) as Arc<dyn Array>;
+        let boolean = BooleanArray::from_slice(&[false, false, true, true]).arced();
+        let int = Int32Array::from_slice(&[42, 28, 19, 31]).arced();
 
         let fields = vec![
             Field::new("b", DataType::Boolean, false),

@@ -134,10 +134,7 @@ fn create_batch(size: usize) -> Result<Chunk> {
         })
         .collect();
 
-    Chunk::try_new(vec![
-        Arc::new(c1) as Arc<dyn Array>,
-        Arc::new(c2) as Arc<dyn Array>,
-    ])
+    Chunk::try_new(vec![c1.arced(), c2.arced()])
 }
 
 fn main() -> Result<()> {

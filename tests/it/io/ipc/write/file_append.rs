@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
@@ -12,12 +10,7 @@ use super::file::write;
 #[test]
 fn basic() -> Result<()> {
     // prepare some data
-    let array = Arc::new(BooleanArray::from([
-        Some(true),
-        Some(false),
-        None,
-        Some(true),
-    ])) as Arc<dyn Array>;
+    let array = BooleanArray::from([Some(true), Some(false), None, Some(true)]).arced();
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
 

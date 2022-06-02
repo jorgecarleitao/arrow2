@@ -4,9 +4,7 @@ mod nested;
 
 pub use dictionary::DictIter;
 
-use std::sync::Arc;
-
-use crate::{array::Array, datatypes::DataType};
+use crate::datatypes::DataType;
 
 use super::{nested_utils::*, DataPages};
 
@@ -31,8 +29,7 @@ where
         ArrayIterator::<T, I, P, F>::new(iter, init, data_type, chunk_size, op).map(|x| {
             x.map(|(mut nested, array)| {
                 let _ = nested.nested.pop().unwrap(); // the primitive
-                let values = Arc::new(array) as Arc<dyn Array>;
-                (nested, values)
+                (nested, array.arced())
             })
         }),
     )

@@ -22,7 +22,7 @@ unsafe fn import(array: Box<ffi::ArrowArray>, schema: &ffi::ArrowSchema) -> Resu
 
 fn main() -> Result<()> {
     // let's assume that we have an array:
-    let array = Arc::new(PrimitiveArray::<i32>::from([Some(1), None, Some(123)])) as Arc<dyn Array>;
+    let array = PrimitiveArray::<i32>::from([Some(1), None, Some(123)]).arced();
 
     // the goal is to export this array and import it back via FFI.
     // to import, we initialize the structs that will receive the data

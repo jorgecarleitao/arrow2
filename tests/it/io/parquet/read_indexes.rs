@@ -138,7 +138,7 @@ fn read_with_indexes(
 fn indexed_required_utf8() -> Result<()> {
     let array21 = Utf8Array::<i32>::from_slice(["a", "b", "c"]);
     let array22 = Utf8Array::<i32>::from_slice(["d", "e", "f"]);
-    let expected = Arc::new(Utf8Array::<i32>::from_slice(["e"])) as Arc<dyn Array>;
+    let expected = Utf8Array::<i32>::from_slice(["e"]).arced();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -147,7 +147,7 @@ fn indexed_required_utf8() -> Result<()> {
 fn indexed_required_i32() -> Result<()> {
     let array21 = Int32Array::from_slice([1, 2, 3]);
     let array22 = Int32Array::from_slice([4, 5, 6]);
-    let expected = Arc::new(Int32Array::from_slice([5])) as Arc<dyn Array>;
+    let expected = Int32Array::from_slice([5]).arced();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -156,7 +156,7 @@ fn indexed_required_i32() -> Result<()> {
 fn indexed_optional_i32() -> Result<()> {
     let array21 = Int32Array::from([Some(1), Some(2), None]);
     let array22 = Int32Array::from([None, Some(5), Some(6)]);
-    let expected = Arc::new(Int32Array::from_slice([5])) as Arc<dyn Array>;
+    let expected = Int32Array::from_slice([5]).arced();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -165,7 +165,7 @@ fn indexed_optional_i32() -> Result<()> {
 fn indexed_optional_utf8() -> Result<()> {
     let array21 = Utf8Array::<i32>::from([Some("a"), Some("b"), None]);
     let array22 = Utf8Array::<i32>::from([None, Some("e"), Some("f")]);
-    let expected = Arc::new(Utf8Array::<i32>::from_slice(["e"])) as Arc<dyn Array>;
+    let expected = Utf8Array::<i32>::from_slice(["e"]).arced();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -174,7 +174,7 @@ fn indexed_optional_utf8() -> Result<()> {
 fn indexed_required_fixed_len() -> Result<()> {
     let array21 = FixedSizeBinaryArray::from_slice([[127], [128], [129]]);
     let array22 = FixedSizeBinaryArray::from_slice([[130], [131], [132]]);
-    let expected = Arc::new(FixedSizeBinaryArray::from_slice([[131]])) as Arc<dyn Array>;
+    let expected = FixedSizeBinaryArray::from_slice([[131]]).arced();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -183,7 +183,7 @@ fn indexed_required_fixed_len() -> Result<()> {
 fn indexed_optional_fixed_len() -> Result<()> {
     let array21 = FixedSizeBinaryArray::from([Some([127]), Some([128]), None]);
     let array22 = FixedSizeBinaryArray::from([None, Some([131]), Some([132])]);
-    let expected = Arc::new(FixedSizeBinaryArray::from_slice([[131]])) as Arc<dyn Array>;
+    let expected = FixedSizeBinaryArray::from_slice([[131]]).arced();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -192,7 +192,7 @@ fn indexed_optional_fixed_len() -> Result<()> {
 fn indexed_required_boolean() -> Result<()> {
     let array21 = BooleanArray::from_slice([true, false, true]);
     let array22 = BooleanArray::from_slice([false, false, true]);
-    let expected = Arc::new(BooleanArray::from_slice([false])) as Arc<dyn Array>;
+    let expected = BooleanArray::from_slice([false]).arced();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -201,7 +201,7 @@ fn indexed_required_boolean() -> Result<()> {
 fn indexed_optional_boolean() -> Result<()> {
     let array21 = BooleanArray::from([Some(true), Some(false), None]);
     let array22 = BooleanArray::from([None, Some(false), Some(true)]);
-    let expected = Arc::new(BooleanArray::from_slice([false])) as Arc<dyn Array>;
+    let expected = BooleanArray::from_slice([false]).arced();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }
@@ -216,7 +216,7 @@ fn indexed_dict() -> Result<()> {
     let values = PrimitiveArray::from_slice([4i32, 6i32]);
     let expected = DictionaryArray::from_data(indices, std::sync::Arc::new(values));
 
-    let expected = Arc::new(expected) as Arc<dyn Array>;
+    let expected = expected.arced();
 
     read_with_indexes(pages(&[&array], Encoding::RleDictionary)?, expected)
 }
