@@ -202,7 +202,7 @@ fn main() -&gt; Result&lt;()&gt; {
     ]);
     let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
     let schema = Schema::from(vec![field]);
-    let columns = Chunk::new(vec![Arc::new(array) as Arc&lt;dyn Array&gt;]);
+    let columns = Chunk::new(vec![array.arced()]);
 
     write_batch(&quot;test.parquet&quot;, schema, columns)
 }
@@ -351,10 +351,7 @@ fn create_batch(size: usize) -&gt; Result&lt;Chunk&gt; {
         })
         .collect();
 
-    Chunk::try_new(vec![
-        Arc::new(c1) as Arc&lt;dyn Array&gt;,
-        Arc::new(c2) as Arc&lt;dyn Array&gt;,
-    ])
+    Chunk::try_new(vec![c1.arced(), c2.arced()])
 }
 
 fn main() -&gt; Result&lt;()&gt; {
