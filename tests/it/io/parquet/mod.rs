@@ -790,6 +790,147 @@ pub fn pyarrow_struct_statistics(column: &str) -> Statistics {
     }
 }
 
+pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
+    match column {
+        "map" => {
+            let s1 = [Some("a1"), Some("a2")];
+            let s2 = [Some("b1"), Some("b2")];
+            let dt = DataType::Struct(vec![
+                Field::new("key", DataType::Utf8, false),
+                Field::new("value", DataType::Utf8, true),
+            ]);
+            MapArray::try_new(
+                DataType::Map(Box::new(Field::new("entries", dt.clone(), false)), false),
+                vec![0, 2].into(),
+                StructArray::try_new(
+                    dt,
+                    vec![
+                        Utf8Array::<i32>::from(s1).arced(),
+                        Utf8Array::<i32>::from(s2).arced(),
+                    ],
+                    None,
+                )
+                .unwrap()
+                .arced(),
+                None,
+            )
+            .unwrap()
+            .boxed()
+        }
+        "map_nullable" => {
+            let s1 = [Some("a1"), Some("a2")];
+            let s2 = [Some("b1"), None];
+            let dt = DataType::Struct(vec![
+                Field::new("key", DataType::Utf8, false),
+                Field::new("value", DataType::Utf8, true),
+            ]);
+            MapArray::try_new(
+                DataType::Map(Box::new(Field::new("entries", dt.clone(), false)), false),
+                vec![0, 2].into(),
+                StructArray::try_new(
+                    dt,
+                    vec![
+                        Utf8Array::<i32>::from(s1).arced(),
+                        Utf8Array::<i32>::from(s2).arced(),
+                    ],
+                    None,
+                )
+                .unwrap()
+                .arced(),
+                None,
+            )
+            .unwrap()
+            .boxed()
+        }
+        _ => unreachable!(),
+    }
+}
+
+pub fn pyarrow_map_statistics(column: &str) -> Statistics {
+    let new_map = |arrays: Vec<Arc<dyn Array>>, names: Vec<String>| {
+        let fields = names
+            .into_iter()
+            .zip(arrays.iter())
+            .map(|(n, a)| Field::new(n, a.data_type().clone(), true))
+            .collect::<Vec<_>>();
+        MapArray::new(
+            DataType::Map(
+                Box::new(Field::new("items", DataType::Struct(fields.clone()), false)),
+                false,
+            ),
+            vec![0, arrays[0].len() as i32].into(),
+            StructArray::new(DataType::Struct(fields), arrays, None).arced(),
+            None,
+        )
+    };
+
+    let names = vec!["key".to_string(), "value".to_string()];
+
+    match column {
+        "map" => Statistics {
+            distinct_count: Count::Map(new_map(
+                vec![
+                    Arc::new(UInt64Array::from([None])),
+                    Arc::new(UInt64Array::from([None])),
+                ],
+                names.clone(),
+            )),
+            null_count: Count::Map(new_map(
+                vec![
+                    Arc::new(UInt64Array::from([Some(0)])),
+                    Arc::new(UInt64Array::from([Some(0)])),
+                ],
+                names.clone(),
+            )),
+            min_value: Box::new(new_map(
+                vec![
+                    Arc::new(Utf8Array::<i32>::from_slice(["a1"])),
+                    Arc::new(Utf8Array::<i32>::from_slice(["b1"])),
+                ],
+                names.clone(),
+            )),
+            max_value: Box::new(new_map(
+                vec![
+                    Arc::new(Utf8Array::<i32>::from_slice(["a2"])),
+                    Arc::new(Utf8Array::<i32>::from_slice(["b2"])),
+                ],
+                names,
+            )),
+        },
+        "map_nullable" => Statistics {
+            distinct_count: Count::Map(new_map(
+                vec![
+                    Arc::new(UInt64Array::from([None])),
+                    Arc::new(UInt64Array::from([None])),
+                ],
+                names.clone(),
+            )),
+            null_count: Count::Map(new_map(
+                vec![
+                    Arc::new(UInt64Array::from([Some(0)])),
+                    Arc::new(UInt64Array::from([Some(1)])),
+                ],
+                names.clone(),
+            )),
+            min_value: Box::new(new_map(
+                vec![
+                    Arc::new(Utf8Array::<i32>::from_slice(["a1"])),
+                    Arc::new(Utf8Array::<i32>::from_slice(["b1"])),
+                ],
+                names.clone(),
+            )),
+            max_value: Box::new(new_map(
+                vec![
+                    Arc::new(Utf8Array::<i32>::from_slice(["a2"])),
+                    Arc::new(Utf8Array::<i32>::from_slice(["b1"])),
+                ],
+                names,
+            )),
+        },
+        _ => unreachable!(),
+    }
+}
+
 fn integration_write(schema: &Schema, batches: &[Chunk<Arc<dyn Array>>]) -> Result<Vec<u8>> {
     let options = WriteOptions {
         write_statistics: true,

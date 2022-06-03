@@ -38,6 +38,7 @@ fn test_pyarrow_integration(
         ("nested", false) => pyarrow_nested_nullable(column),
         ("nested_edge", false) => pyarrow_nested_edge(column),
         ("struct", false) => pyarrow_struct(column),
+        ("map", true) => pyarrow_map(column),
         _ => unreachable!(),
     };
 
@@ -47,11 +48,13 @@ fn test_pyarrow_integration(
         ("nested", false) => pyarrow_nested_nullable_statistics(column),
         ("nested_edge", false) => pyarrow_nested_edge_statistics(column),
         ("struct", false) => pyarrow_struct_statistics(column),
+        ("map", true) => pyarrow_map_statistics(column),
         _ => unreachable!(),
     };
 
     assert_eq!(expected.as_ref(), array.as_ref());
     if ![
+        // pyarrow outputs an incorrect number of null count for nested types - ARROW-16299
         "list_int16",
         "list_large_binary",
         "list_int64",
@@ -62,10 +65,12 @@ fn test_pyarrow_integration(
         "list_bool",
         "list_nested_inner_required_required_i64",
         "list_nested_inner_required_i64",
+        // pyarrow reports an incorrect min/max for MapArray
+        "map",
+        "map_nullable",
     ]
     .contains(&column)
     {
-        // pyarrow outputs an incorrect number of null count for nested types - ARROW-16299
         assert_eq!(expected_statistics, statistics);
     }
 
@@ -456,6 +461,16 @@ fn v1_nested_edge_1() -> Result<()> {
 #[test]
 fn v1_nested_edge_2() -> Result<()> {
     test_pyarrow_integration("null", 1, "nested_edge", false, false, None)
+}
+
+#[test]
+fn v1_map() -> Result<()> {
+    test_pyarrow_integration("map", 1, "map", false, true, None)
+}
+
+#[test]
+fn v1_map_nullable() -> Result<()> {
+    test_pyarrow_integration("map_nullable", 1, "map", false, true, None)
 }
 
 #[cfg(feature = "io_parquet_compression")]

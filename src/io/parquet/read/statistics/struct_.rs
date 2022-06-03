@@ -30,7 +30,7 @@ impl MutableArray for DynMutableStructArray {
     }
 
     fn len(&self) -> usize {
-        self.inner.len()
+        self.inner[0].len()
     }
 
     fn validity(&self) -> Option<&crate::bitmap::MutableBitmap> {
