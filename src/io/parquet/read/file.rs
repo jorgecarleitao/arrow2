@@ -80,7 +80,7 @@ impl<R: Read + Seek> FileReader<R> {
             metadata: schema_metadata,
         };
 
-        let row_groups = RowGroupReader::new(
+        let mut row_groups = RowGroupReader::new(
             reader,
             schema,
             groups_filter,
@@ -88,12 +88,13 @@ impl<R: Read + Seek> FileReader<R> {
             chunk_size,
             limit,
         );
+        let current_row_group = row_groups.next().transpose()?;
 
         Ok(Self {
             row_groups,
             metadata,
             remaining_rows: limit.unwrap_or(usize::MAX),
-            current_row_group: None,
+            current_row_group,
         })
     }
 
