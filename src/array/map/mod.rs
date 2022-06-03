@@ -10,11 +10,12 @@ use crate::{
 use super::{new_empty_array, specification::try_check_offsets, Array};
 
 mod ffi;
+mod fmt;
 mod iterator;
 pub use iterator::*;
 
 /// An array representing a (key, value), both of arbitrary logical types.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct MapArray {
     data_type: DataType,
     // invariant: field.len() == offsets.len() - 1

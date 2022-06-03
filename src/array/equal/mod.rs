@@ -165,6 +165,18 @@ impl PartialEq<&dyn Array> for UnionArray {
     }
 }
 
+impl PartialEq<MapArray> for MapArray {
+    fn eq(&self, other: &Self) -> bool {
+        map::equal(self, other)
+    }
+}
+
+impl PartialEq<&dyn Array> for MapArray {
+    fn eq(&self, other: &&dyn Array) -> bool {
+        equal(self, *other)
+    }
+}
+
 /// Logically compares two [`Array`]s.
 /// Two arrays are logically equal if and only if:
 /// * their data types are equal
