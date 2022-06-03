@@ -25,8 +25,9 @@ struct Required<'a> {
 
 impl<'a> Required<'a> {
     pub fn new(page: &'a DataPage) -> Self {
+        let (_, _, values) = utils::split_buffer(page);
         Self {
-            values: page.buffer(),
+            values,
             offset: 0,
             length: page.num_values(),
         }

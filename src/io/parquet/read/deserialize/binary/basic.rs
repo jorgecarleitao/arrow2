@@ -68,7 +68,8 @@ pub(super) struct Required<'a> {
 
 impl<'a> Required<'a> {
     pub fn new(page: &'a DataPage) -> Self {
-        let values = SizedBinaryIter::new(page.buffer(), page.num_values());
+        let (_, _, values) = utils::split_buffer(page);
+        let values = SizedBinaryIter::new(values, page.num_values());
 
         Self { values }
     }

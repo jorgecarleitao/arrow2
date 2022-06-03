@@ -55,8 +55,9 @@ struct FilteredRequired<'a> {
 
 impl<'a> FilteredRequired<'a> {
     pub fn new(page: &'a DataPage) -> Self {
+        let (_, _, values) = utils::split_buffer(page);
         // todo: replace this by an iterator over slices, for faster deserialization
-        let values = BitmapIter::new(page.buffer(), 0, page.num_values());
+        let values = BitmapIter::new(values, 0, page.num_values());
 
         let rows = get_selected_rows(page);
         let values = SliceFilteredIter::new(values, rows);
