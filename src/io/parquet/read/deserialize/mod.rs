@@ -11,9 +11,9 @@ mod struct_;
 mod utils;
 
 use crate::{
-    array::{Array, BinaryArray, FixedSizeListArray, ListArray, Utf8Array},
+    array::{Array, BinaryArray, FixedSizeListArray, ListArray, MapArray, Utf8Array},
     datatypes::{DataType, Field},
-    error::Result,
+    error::{Error, Result},
 };
 
 use self::nested_utils::{InitNested, NestedArrayIter, NestedState};
@@ -300,7 +300,33 @@ where
             let columns = columns.into_iter().rev().collect();
             Box::new(struct_::StructIterator::new(columns, fields.clone()))
         }
-        other => todo!("{other:?}"),
+        Map(inner, _) => {
+            println!("{:?}", init);
+            init.push(InitNested::List(field.is_nullable));
+            let iter = columns_to_iter_recursive(
+                columns,
+                types,
+                inner.as_ref().clone(),
+                init,
+                chunk_size,
+            )?;
+            Box::new(iter.map(move |x| {
+                let (nested, inner) = x?;
+                println!("{:?}", inner);
+                let array = MapArray::new(
+                    field.data_type().clone(),
+                    vec![0, inner.len() as i32].into(),
+                    inner,
+                    None,
+                );
+                Ok((nested, array.arced()))
+            }))
+        }
+        other => {
+            return Err(Error::nyi(format!(
+                "Deserializing type {other:?} from parquet"
+            )))
+        }
     })
 }
 

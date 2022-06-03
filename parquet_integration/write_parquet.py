@@ -261,6 +261,32 @@ def case_nested_edge():
     )
 
 
+def case_map() -> Tuple[dict, pa.Schema, str]:
+    s1 = ["a1", "a2"]
+    s2 = ["b1", "b2"]
+    schema = pa.schema(
+        [
+            pa.field(
+                "map",
+                pa.map_(pa.string(), pa.string()),
+            ),
+            pa.field(
+                "map_nullable",
+                pa.map_(pa.string(), pa.string()),
+            ),
+        ]
+    )
+
+    return (
+        {
+            "map": pa.MapArray.from_arrays([0, 2], s1, s2),
+            "map_nullable": pa.MapArray.from_arrays([0, 2], s1, ["b1", None]),
+        },
+        schema,
+        f"map_required_10.parquet",
+    )
+
+
 def write_pyarrow(
     case,
     page_version: int,
@@ -299,7 +325,7 @@ def write_pyarrow(
     )
 
 
-for case in [case_basic_nullable, case_basic_required, case_nested, case_struct, case_nested_edge]:
+for case in [case_basic_nullable, case_basic_required, case_nested, case_struct, case_nested_edge, case_map]:
     for version in [1, 2]:
         for use_dict in [True, False]:
             for compression in ["lz4", None, "snappy"]:

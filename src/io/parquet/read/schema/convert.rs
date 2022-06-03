@@ -219,6 +219,10 @@ fn non_repeated_group(
     match (logical_type, converted_type) {
         (Some(GroupLogicalType::List), _) => to_list(fields, parent_name),
         (None, Some(GroupConvertedType::List)) => to_list(fields, parent_name),
+        (Some(GroupLogicalType::Map), _) => to_list(fields, parent_name),
+        (None, Some(GroupConvertedType::Map) | Some(GroupConvertedType::MapKeyValue)) => {
+            to_map(fields)
+        }
         _ => to_struct(fields),
     }
 }
@@ -232,6 +236,13 @@ fn to_struct(fields: &[ParquetType]) -> Option<DataType> {
     } else {
         Some(DataType::Struct(fields))
     }
+}
+
+/// Converts a parquet group type to an arrow [`DataType::Struct`].
+/// Returns [`None`] if all its fields are empty
+fn to_map(fields: &[ParquetType]) -> Option<DataType> {
+    let inner = to_field(&fields[0])?;
+    Some(DataType::Map(Box::new(inner), false))
 }
 
 /// Entry point for converting parquet group type.

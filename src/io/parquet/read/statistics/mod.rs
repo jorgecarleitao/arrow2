@@ -22,6 +22,7 @@ mod boolean;
 mod dictionary;
 mod fixlen;
 mod list;
+mod map;
 mod primitive;
 mod struct_;
 mod utf8;
@@ -37,6 +38,8 @@ pub enum Count {
     Single(UInt64Array),
     /// struct arrays have a count as a struct of UInt64
     Struct(StructArray),
+    /// map arrays have a count as a map of UInt64
+    Map(MapArray),
 }
 
 /// Arrow-deserialized parquet Statistics of a file
@@ -76,6 +79,15 @@ impl From<MutableStatistics> for Statistics {
                 .unwrap()
                 .clone();
             Count::Struct(a)
+        } else if let PhysicalType::Map = s.null_count.data_type().to_physical_type() {
+            let a = s
+                .null_count
+                .as_box()
+                .as_any()
+                .downcast_ref::<MapArray>()
+                .unwrap()
+                .clone();
+            Count::Map(a)
         } else {
             let a = s
                 .null_count
@@ -96,6 +108,15 @@ impl From<MutableStatistics> for Statistics {
                     .unwrap()
                     .clone();
                 Count::Struct(a)
+            } else if let PhysicalType::Map = s.null_count.data_type().to_physical_type() {
+                let a = s
+                    .null_count
+                    .as_box()
+                    .as_any()
+                    .downcast_ref::<MapArray>()
+                    .unwrap()
+                    .clone();
+                Count::Map(a)
             } else {
                 let a = s
                     .distinct_count
@@ -151,6 +172,10 @@ fn make_mutable(data_type: &DataType, capacity: usize) -> Result<Box<dyn Mutable
             data_type.clone(),
             capacity,
         )?),
+        PhysicalType::Map => Box::new(map::DynMutableMapArray::try_with_capacity(
+            data_type.clone(),
+            capacity,
+        )?),
         other => {
             return Err(Error::NotYetImplemented(format!(
                 "Deserializing parquet stats from {:?} is still not implemented",
@@ -167,6 +192,11 @@ fn create_dt(data_type: &DataType) -> DataType {
                 .iter()
                 .map(|f| Field::new(&f.name, create_dt(&f.data_type), f.is_nullable))
                 .collect(),
+        )
+    } else if let DataType::Map(f, ordered) = data_type.to_logical_type() {
+        DataType::Map(
+            Box::new(Field::new(&f.name, create_dt(&f.data_type), f.is_nullable)),
+            *ordered,
         )
     } else {
         DataType::UInt64
@@ -328,6 +358,31 @@ fn push(
                         null_count.as_mut(),
                     )
                 });
+        }
+        Map(_, _) => {
+            let min = min
+                .as_mut_any()
+                .downcast_mut::<map::DynMutableMapArray>()
+                .unwrap();
+            let max = max
+                .as_mut_any()
+                .downcast_mut::<map::DynMutableMapArray>()
+                .unwrap();
+            let distinct_count = distinct_count
+                .as_mut_any()
+                .downcast_mut::<map::DynMutableMapArray>()
+                .unwrap();
+            let null_count = null_count
+                .as_mut_any()
+                .downcast_mut::<map::DynMutableMapArray>()
+                .unwrap();
+            return push(
+                stats,
+                min.inner.as_mut(),
+                max.inner.as_mut(),
+                distinct_count.inner.as_mut(),
+                null_count.inner.as_mut(),
+            );
         }
         _ => {}
     }
