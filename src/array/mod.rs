@@ -240,7 +240,7 @@ impl std::fmt::Debug for dyn Array + '_ {
                     fmt_dyn!(self, DictionaryArray::<$T>, f)
                 })
             }
-            Map => todo!(),
+            Map => fmt_dyn!(self, MapArray, f),
         }
     }
 }
