@@ -80,7 +80,7 @@ impl<R: Read + Seek> FileReader<R> {
             metadata: schema_metadata,
         };
 
-        let mut row_groups = RowGroupReader::new(
+        let row_groups = RowGroupReader::new(
             reader,
             schema,
             groups_filter,
@@ -88,13 +88,12 @@ impl<R: Read + Seek> FileReader<R> {
             chunk_size,
             limit,
         );
-        let current_row_group = row_groups.next().transpose()?;
 
         Ok(Self {
             row_groups,
             metadata,
             remaining_rows: limit.unwrap_or(usize::MAX),
-            current_row_group,
+            current_row_group: None,
         })
     }
 
@@ -116,12 +115,15 @@ impl<R: Read + Seek> FileReader<R> {
     fn next_row_group(&mut self) -> Result<Option<RowGroupDeserializer>> {
         let result = self.row_groups.next().transpose()?;
 
-        self.remaining_rows = self.remaining_rows.saturating_sub(
-            result
-                .as_ref()
-                .map(|x| x.num_rows())
-                .unwrap_or(self.remaining_rows),
-        );
+        // If current_row_group is None, then there will be no elements to remove.
+        if self.current_row_group.is_some() {
+            self.remaining_rows = self.remaining_rows.saturating_sub(
+                result
+                    .as_ref()
+                    .map(|x| x.num_rows())
+                    .unwrap_or(self.remaining_rows),
+            );
+        }
         Ok(result)
     }
 }
