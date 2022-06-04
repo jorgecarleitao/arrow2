@@ -1,8 +1,4 @@
-use crate::{
-    array::Offset,
-    bitmap::utils::{zip_validity, ZipValidity},
-    trusted_len::TrustedLen,
-};
+use crate::{array::Offset, bitmap::utils::ZipValidity, trusted_len::TrustedLen};
 
 use super::BinaryArray;
 
@@ -47,21 +43,6 @@ impl<'a, O: Offset> IntoIterator for &'a BinaryArray<O> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
-    }
-}
-
-impl<'a, O: Offset> BinaryArray<O> {
-    /// Returns an iterator of `Option<&[u8]>`
-    pub fn iter(&'a self) -> ZipValidity<'a, &'a [u8], BinaryValueIter<'a, O>> {
-        zip_validity(
-            BinaryValueIter::new(self),
-            self.validity.as_ref().map(|x| x.iter()),
-        )
-    }
-
-    /// Returns an iterator of `&[u8]`
-    pub fn values_iter(&'a self) -> BinaryValueIter<'a, O> {
-        BinaryValueIter::new(self)
     }
 }
 
