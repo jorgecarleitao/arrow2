@@ -42,6 +42,13 @@ pub use mutable::*;
 /// assert_eq!(array.offsets(), &Buffer::from(vec![0, 2, 2, 2 + 5]));
 /// # }
 /// ```
+///
+/// # Generic parameter
+/// The generic parameter [`Offset`] can only be `i32` or `i64` and tradeoffs maximum array length with
+/// memory usage:
+/// * the sum of lengths of all elements cannot exceed `Offset::MAX`
+/// * the total size of the underlying data is `array.len() * size_of::<Offset>() + sum of lengths of all elements`
+///
 /// # Safety
 /// The following invariants hold:
 /// * Two consecutives `offsets` casted (`as`) to `usize` are valid slices of `values`.
@@ -57,7 +64,7 @@ pub struct Utf8Array<O: Offset> {
 
 // constructors
 impl<O: Offset> Utf8Array<O> {
-    /// Returns a [`Utf8Array`] from its internal representation.
+    /// Returns a [`Utf8Array`] created from its internal representation.
     ///
     /// # Errors
     /// This function returns an error iff:
@@ -115,10 +122,7 @@ impl<O: Offset> Utf8Array<O> {
 
     /// Returns an iterator of `Option<&str>`
     pub fn iter(&self) -> ZipValidity<&str, Utf8ValuesIter<O>> {
-        zip_validity(
-            Utf8ValuesIter::new(self),
-            self.validity.as_ref().map(|x| x.iter()),
-        )
+        zip_validity(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
     }
 
     /// Returns an iterator of `&str`

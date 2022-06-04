@@ -1,8 +1,12 @@
 use crate::{
-    bitmap::Bitmap,
+    bitmap::{
+        utils::{zip_validity, ZipValidity},
+        Bitmap,
+    },
     buffer::Buffer,
     datatypes::DataType,
-    error::{Error, Result},
+    error::Error,
+    trusted_len::TrustedLen,
 };
 
 use super::{
@@ -18,7 +22,32 @@ mod from;
 mod mutable;
 pub use mutable::*;
 
-/// A [`BinaryArray`] is a nullable array of bytes - the Arrow equivalent of `Vec<Option<Vec<u8>>>`.
+/// A [`BinaryArray`] is Arrow's semantically equivalent of an immutable `Vec<Option<Vec<u8>>>`.
+/// It implements [`Array`].
+///
+/// The size of this struct is `O(1)`, as all data is stored behind an [`std::sync::Arc`].
+/// # Example
+/// ```
+/// use arrow2::array::BinaryArray;
+/// use arrow2::bitmap::Bitmap;
+/// use arrow2::buffer::Buffer;
+///
+/// let array = BinaryArray::<i32>::from([Some([1, 2].as_ref()), None, Some([3].as_ref())]);
+/// assert_eq!(array.value(0), &[1, 2]);
+/// assert_eq!(array.iter().collect::<Vec<_>>(), vec![Some([1, 2].as_ref()), None, Some([3].as_ref())]);
+/// assert_eq!(array.values_iter().collect::<Vec<_>>(), vec![[1, 2].as_ref(), &[], &[3]]);
+/// // the underlying representation:
+/// assert_eq!(array.values(), &Buffer::from(vec![1, 2, 3]));
+/// assert_eq!(array.offsets(), &Buffer::from(vec![0, 2, 2, 3]));
+/// assert_eq!(array.validity(), Some(&Bitmap::from([true, false, true])));
+/// ```
+///
+/// # Generic parameter
+/// The generic parameter [`Offset`] can only be `i32` or `i64` and tradeoffs maximum array length with
+/// memory usage:
+/// * the sum of lengths of all elements cannot exceed `Offset::MAX`
+/// * the total size of the underlying data is `array.len() * size_of::<Offset>() + sum of lengths of all elements`
+///
 /// # Safety
 /// The following invariants hold:
 /// * Two consecutives `offsets` casted (`as`) to `usize` are valid slices of `values`.
@@ -31,9 +60,8 @@ pub struct BinaryArray<O: Offset> {
     validity: Option<Bitmap>,
 }
 
-// constructors
 impl<O: Offset> BinaryArray<O> {
-    /// Creates a new [`BinaryArray`].
+    /// Returns a [`BinaryArray`] created from its internal representation.
     ///
     /// # Errors
     /// This function returns an error iff:
@@ -48,7 +76,7 @@ impl<O: Offset> BinaryArray<O> {
         offsets: Buffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
-    ) -> Result<Self> {
+    ) -> Result<Self, Error> {
         try_check_offsets(&offsets, values.len())?;
 
         if validity
@@ -74,156 +102,79 @@ impl<O: Offset> BinaryArray<O> {
         })
     }
 
-    /// Creates a new [`BinaryArray`].
-    /// # Panics
-    /// * the offsets are not monotonically increasing
-    /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
-    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
-    /// # Implementation
-    /// This function is `O(N)` - checking monotinicity is `O(N)`
-    pub fn new(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::try_new(data_type, offsets, values, validity).unwrap()
+    /// Creates a new [`BinaryArray`] from slices of `&[u8]`.
+    pub fn from_slice<T: AsRef<[u8]>, P: AsRef<[T]>>(slice: P) -> Self {
+        Self::from_trusted_len_values_iter(slice.as_ref().iter())
     }
 
-    /// Alias for `new`
-    pub fn from_data(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new(data_type, offsets, values, validity)
+    /// Creates a new [`BinaryArray`] from a slice of optional `&[u8]`.
+    // Note: this can't be `impl From` because Rust does not allow double `AsRef` on it.
+    pub fn from<T: AsRef<[u8]>, P: AsRef<[Option<T>]>>(slice: P) -> Self {
+        Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
     }
 
-    /// Creates an empty [`BinaryArray`], i.e. whose `.len` is zero.
-    pub fn new_empty(data_type: DataType) -> Self {
-        Self::new(
-            data_type,
-            Buffer::from(vec![O::zero()]),
-            Buffer::new(),
-            None,
-        )
+    /// Returns an iterator of `Option<&[u8]>` over every element of this array.
+    pub fn iter(&self) -> ZipValidity<&[u8], BinaryValueIter<O>> {
+        zip_validity(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
     }
 
-    /// Creates an null [`BinaryArray`], i.e. whose `.null_count() == .len()`.
+    /// Returns an iterator of `&[u8]` over every element of this array, ignoring the validity
+    pub fn values_iter(&self) -> BinaryValueIter<O> {
+        BinaryValueIter::new(self)
+    }
+
+    /// Returns the length of this array
     #[inline]
-    pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::new(
-            data_type,
-            vec![O::default(); 1 + length].into(),
-            Buffer::new(),
-            Some(Bitmap::new_zeroed(length)),
-        )
+    pub fn len(&self) -> usize {
+        self.offsets.len() - 1
     }
 
-    /// Returns the default [`DataType`], `DataType::Binary` or `DataType::LargeBinary`
-    pub fn default_data_type() -> DataType {
-        if O::IS_LARGE {
-            DataType::LargeBinary
-        } else {
-            DataType::Binary
-        }
-    }
-
-    /// Boxes self into a [`Box<dyn Array>`].
-    pub fn boxed(self) -> Box<dyn Array> {
-        Box::new(self)
-    }
-
-    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
-    pub fn arced(self) -> std::sync::Arc<dyn Array> {
-        std::sync::Arc::new(self)
-    }
-}
-
-// unsafe constructors
-impl<O: Offset> BinaryArray<O> {
-    /// Creates a new [`BinaryArray`] without checking for offsets monotinicity.
-    ///
-    /// # Errors
-    /// This function returns an error iff:
-    /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
-    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
-    /// # Safety
-    /// This function is unsafe iff:
-    /// * the offsets are not monotonically increasing
-    /// # Implementation
-    /// This function is `O(1)`
-    pub unsafe fn try_new_unchecked(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Result<Self> {
-        try_check_offsets_bounds(&offsets, values.len())?;
-
-        if validity
-            .as_ref()
-            .map_or(false, |validity| validity.len() != offsets.len() - 1)
-        {
-            return Err(Error::oos(
-                "validity mask length must match the number of values",
-            ));
-        }
-
-        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            return Err(Error::oos(
-                "BinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary",
-            ));
-        }
-
-        Ok(Self {
-            data_type,
-            offsets,
-            values,
-            validity,
-        })
-    }
-
-    /// Creates a new [`BinaryArray`] without checking for offsets monotinicity.
-    ///
+    /// Returns the element at index `i`
     /// # Panics
-    /// This function returns an error iff:
-    /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
-    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
-    /// # Safety
-    /// This function is unsafe iff:
-    /// * the offsets are not monotonically increasing
-    /// # Implementation
-    /// This function is `O(1)`
-    pub unsafe fn new_unchecked(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::try_new_unchecked(data_type, offsets, values, validity).unwrap()
+    /// iff `i >= self.len()`
+    #[inline]
+    pub fn value(&self, i: usize) -> &[u8] {
+        assert!(i < self.len());
+        unsafe { self.value_unchecked(i) }
     }
 
-    /// Alias for [`Self::new_unchecked`]
+    /// Returns the element at index `i`
     /// # Safety
-    /// This function is unsafe iff:
-    /// * the offsets are not monotonically increasing
-    pub unsafe fn from_data_unchecked(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new_unchecked(data_type, offsets, values, validity)
-    }
-}
+    /// Assumes that the `i < self.len`.
+    #[inline]
+    pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
+        // soundness: the invariant of the function
+        let start = self.offsets.get_unchecked(i).to_usize();
+        let end = self.offsets.get_unchecked(i + 1).to_usize();
 
-// must use
-impl<O: Offset> BinaryArray<O> {
+        // soundness: the invariant of the struct
+        self.values.get_unchecked(start..end)
+    }
+
+    /// Returns the [`DataType`] of this array.
+    #[inline]
+    pub fn data_type(&self) -> &DataType {
+        &self.data_type
+    }
+
+    /// Returns the values of this [`Utf8Array`].
+    #[inline]
+    pub fn values(&self) -> &Buffer<u8> {
+        &self.values
+    }
+
+    /// Returns the offsets of this [`Utf8Array`].
+    #[inline]
+    pub fn offsets(&self) -> &Buffer<O> {
+        &self.offsets
+    }
+
+    /// The optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
+    }
+
     /// Creates a new [`BinaryArray`] by slicing this [`BinaryArray`].
     /// # Implementation
     /// This function is `O(1)`: all data will be shared between both arrays.
@@ -258,6 +209,16 @@ impl<O: Offset> BinaryArray<O> {
         }
     }
 
+    /// Boxes self into a [`Box<dyn Array>`].
+    pub fn boxed(self) -> Box<dyn Array> {
+        Box::new(self)
+    }
+
+    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
+    pub fn arced(self) -> std::sync::Arc<dyn Array> {
+        std::sync::Arc::new(self)
+    }
+
     /// Clones this [`BinaryArray`] with a different validity.
     /// # Panic
     /// Panics iff `validity.len() != self.len()`.
@@ -270,55 +231,189 @@ impl<O: Offset> BinaryArray<O> {
         arr.validity = validity;
         arr
     }
-}
 
-// accessors
-impl<O: Offset> BinaryArray<O> {
-    /// Returns the length of this array
+    /// Creates an empty [`BinaryArray`], i.e. whose `.len` is zero.
+    pub fn new_empty(data_type: DataType) -> Self {
+        Self::new(
+            data_type,
+            Buffer::from(vec![O::zero()]),
+            Buffer::new(),
+            None,
+        )
+    }
+
+    /// Creates an null [`BinaryArray`], i.e. whose `.null_count() == .len()`.
     #[inline]
-    pub fn len(&self) -> usize {
-        self.offsets.len() - 1
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        Self::new(
+            data_type,
+            vec![O::default(); 1 + length].into(),
+            Buffer::new(),
+            Some(Bitmap::new_zeroed(length)),
+        )
     }
 
-    /// Returns the element at index `i`
-    /// # Panics
-    /// iff `i >= self.len()`
-    pub fn value(&self, i: usize) -> &[u8] {
-        let start = self.offsets[i].to_usize();
-        let end = self.offsets[i + 1].to_usize();
-
-        // soundness: the invariant of the struct
-        unsafe { self.values.get_unchecked(start..end) }
+    /// Returns the default [`DataType`], `DataType::Binary` or `DataType::LargeBinary`
+    pub fn default_data_type() -> DataType {
+        if O::IS_LARGE {
+            DataType::LargeBinary
+        } else {
+            DataType::Binary
+        }
     }
 
-    /// Returns the element at index `i`
+    /// Creates a new [`BinaryArray`] without checking for offsets monotinicity.
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
     /// # Safety
-    /// Assumes that the `i < self.len`.
-    pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
-        // soundness: the invariant of the function
-        let start = self.offsets.get_unchecked(i).to_usize();
-        let end = self.offsets.get_unchecked(i + 1).to_usize();
+    /// This function is unsafe iff:
+    /// * the offsets are not monotonically increasing
+    /// # Implementation
+    /// This function is `O(1)`
+    pub unsafe fn try_new_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, Error> {
+        try_check_offsets_bounds(&offsets, values.len())?;
 
-        // soundness: the invariant of the struct
-        self.values.get_unchecked(start..end)
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+        {
+            return Err(Error::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            return Err(Error::oos(
+                "BinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        })
     }
 
-    /// The optional validity.
-    #[inline]
-    pub fn validity(&self) -> Option<&Bitmap> {
-        self.validity.as_ref()
+    /// Alias for unwrapping [`Self::try_new`]
+    pub fn new(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::try_new(data_type, offsets, values, validity).unwrap()
     }
 
-    /// Returns the offsets that slice `.values()` to return valid values.
-    #[inline]
-    pub fn offsets(&self) -> &Buffer<O> {
-        &self.offsets
+    /// Alias for unwrapping [`Self::try_new_unchecked`]
+    /// # Safety
+    /// This function is unsafe iff:
+    /// * the offsets are not monotonically increasing
+    pub unsafe fn new_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::try_new_unchecked(data_type, offsets, values, validity).unwrap()
     }
 
-    /// Returns all values in this array. Use `.offsets()` to slice them.
+    /// Returns a [`BinaryArray`] from an iterator of trusted length.
+    ///
+    /// The [`BinaryArray`] is guaranteed to not have a validity
     #[inline]
-    pub fn values(&self) -> &Buffer<u8> {
-        &self.values
+    pub fn from_trusted_len_values_iter<T: AsRef<[u8]>, I: TrustedLen<Item = T>>(
+        iterator: I,
+    ) -> Self {
+        MutableBinaryArray::<O>::from_trusted_len_values_iter(iterator).into()
+    }
+
+    /// Returns a new [`BinaryArray`] from a [`Iterator`] of `&[u8]`.
+    ///
+    /// The [`BinaryArray`] is guaranteed to not have a validity
+    pub fn from_iter_values<T: AsRef<[u8]>, I: Iterator<Item = T>>(iterator: I) -> Self {
+        MutableBinaryArray::<O>::from_iter_values(iterator).into()
+    }
+
+    /// Creates a [`BinaryArray`] from an iterator of trusted length.
+    /// # Safety
+    /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+    /// I.e. that `size_hint().1` correctly reports its length.
+    #[inline]
+    pub unsafe fn from_trusted_len_iter_unchecked<I, P>(iterator: I) -> Self
+    where
+        P: AsRef<[u8]>,
+        I: Iterator<Item = Option<P>>,
+    {
+        MutableBinaryArray::<O>::from_trusted_len_iter_unchecked(iterator).into()
+    }
+
+    /// Creates a [`BinaryArray`] from a [`TrustedLen`]
+    #[inline]
+    pub fn from_trusted_len_iter<I, P>(iterator: I) -> Self
+    where
+        P: AsRef<[u8]>,
+        I: TrustedLen<Item = Option<P>>,
+    {
+        // soundness: I is `TrustedLen`
+        unsafe { Self::from_trusted_len_iter_unchecked(iterator) }
+    }
+
+    /// Creates a [`BinaryArray`] from an falible iterator of trusted length.
+    /// # Safety
+    /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+    /// I.e. that `size_hint().1` correctly reports its length.
+    #[inline]
+    pub unsafe fn try_from_trusted_len_iter_unchecked<E, I, P>(iterator: I) -> Result<Self, E>
+    where
+        P: AsRef<[u8]>,
+        I: IntoIterator<Item = Result<Option<P>, E>>,
+    {
+        MutableBinaryArray::<O>::try_from_trusted_len_iter_unchecked(iterator).map(|x| x.into())
+    }
+
+    /// Creates a [`BinaryArray`] from an fallible iterator of trusted length.
+    #[inline]
+    pub fn try_from_trusted_len_iter<E, I, P>(iter: I) -> Result<Self, E>
+    where
+        P: AsRef<[u8]>,
+        I: TrustedLen<Item = Result<Option<P>, E>>,
+    {
+        // soundness: I: TrustedLen
+        unsafe { Self::try_from_trusted_len_iter_unchecked(iter) }
+    }
+
+    /// Alias for [`Self::new_unchecked`]
+    /// # Safety
+    /// This function is unsafe iff:
+    /// * the offsets are not monotonically increasing
+    pub unsafe fn from_data_unchecked(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::new_unchecked(data_type, offsets, values, validity)
+    }
+
+    /// Alias for `new`
+    pub fn from_data(
+        data_type: DataType,
+        offsets: Buffer<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self::new(data_type, offsets, values, validity)
     }
 }
 
