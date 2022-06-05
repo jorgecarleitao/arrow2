@@ -180,8 +180,8 @@ fn main() -&gt; Result&lt;()&gt; {
 <p>Note how deserialization can be performed on a separate thread pool to avoid
 blocking the runtime (see also <a href="https://ryhl.io/blog/async-what-is-blocking/">here</a>).</p>
 <p>This crate also supports reading JSON, at the expense of being unable to read the file in chunks.</p>
-<pre><pre class="playground"><code class="language-rust">use std::fs::File;
-use std::io::BufReader;
+<pre><pre class="playground"><code class="language-rust">/// Example of reading a JSON file.
+use std::fs;
 use std::sync::Arc;
 
 use arrow2::array::Array;
@@ -189,12 +189,16 @@ use arrow2::error::Result;
 use arrow2::io::json::read;
 
 fn read_path(path: &amp;str) -&gt; Result&lt;Arc&lt;dyn Array&gt;&gt; {
-    // Example of reading a JSON file.
-    let reader = BufReader::new(File::open(path)?);
-    let json = serde_json::from_reader(reader)?;
+    // read the file into memory (IO-bounded)
+    let data = fs::read(path)?;
 
+    // create a non-owning struct of the data (CPU-bounded)
+    let json = read::json_deserializer::parse(&amp;data)?;
+
+    // use it to infer an Arrow schema (CPU-bounded)
     let data_type = read::infer(&amp;json)?;
 
+    // and deserialize it (CPU-bounded)
     read::deserialize(&amp;json, data_type)
 }
 
