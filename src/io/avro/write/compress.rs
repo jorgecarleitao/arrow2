@@ -5,6 +5,7 @@ use crate::error::Result;
 use super::Compression;
 use super::{Block, CompressedBlock};
 
+#[cfg(feature = "io_avro_compression")]
 const CRC_TABLE: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
 
 /// Compresses a [`Block`] to a [`CompressedBlock`].

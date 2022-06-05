@@ -13,6 +13,8 @@ use crate::temporal_conversions::{
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
 
+use super::utf8;
+
 fn boolean_serializer<'a>(
     array: &'a BooleanArray,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
@@ -73,7 +75,7 @@ fn utf8_serializer<'a, O: Offset>(
         array.iter(),
         |x, buf| {
             if let Some(x) = x {
-                serde_json::to_writer(buf, x).unwrap();
+                utf8::write_str(buf, x).unwrap();
             } else {
                 buf.extend_from_slice(b"null")
             }
@@ -256,7 +258,7 @@ fn serialize_item(buffer: &mut Vec<u8>, record: &[(&str, &[u8])], is_first_row: 
             buffer.push(b',');
         }
         first_item = false;
-        serde_json::to_writer(&mut *buffer, key).unwrap();
+        utf8::write_str(buffer, key).unwrap();
         buffer.push(b':');
         buffer.extend(*value);
     }

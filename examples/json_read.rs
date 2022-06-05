@@ -1,5 +1,5 @@
-use std::fs::File;
-use std::io::BufReader;
+/// Example of reading a JSON file.
+use std::fs;
 use std::sync::Arc;
 
 use arrow2::array::Array;
@@ -7,12 +7,16 @@ use arrow2::error::Result;
 use arrow2::io::json::read;
 
 fn read_path(path: &str) -> Result<Arc<dyn Array>> {
-    // Example of reading a JSON file.
-    let reader = BufReader::new(File::open(path)?);
-    let json = serde_json::from_reader(reader)?;
+    // read the file into memory (IO-bounded)
+    let data = fs::read(path)?;
 
+    // create a non-owning struct of the data (CPU-bounded)
+    let json = read::json_deserializer::parse(&data)?;
+
+    // use it to infer an Arrow schema (CPU-bounded)
     let data_type = read::infer(&json)?;
 
+    // and deserialize it (CPU-bounded)
     read::deserialize(&json, data_type)
 }
 

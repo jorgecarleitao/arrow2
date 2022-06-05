@@ -5,6 +5,8 @@
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::error::Error;
+
 pub mod read;
 pub mod write;
 
@@ -116,4 +118,10 @@ pub struct ArrowJsonColumn {
     pub type_id: Option<Vec<Value>>,
     /// the children
     pub children: Option<Vec<ArrowJsonColumn>>,
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
+        Error::ExternalFormat(error.to_string())
+    }
 }

@@ -1,5 +1,6 @@
 //! APIs to write to JSON
 mod serialize;
+mod utf8;
 
 pub use fallible_streaming_iterator::*;
 pub(crate) use serialize::new_serializer;

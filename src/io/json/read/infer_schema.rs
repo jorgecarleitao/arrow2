@@ -1,8 +1,9 @@
 use std::borrow::Borrow;
+use std::collections::BTreeMap;
 
 use indexmap::map::IndexMap as HashMap;
 use indexmap::set::IndexSet as HashSet;
-use serde_json::Value;
+use json_deserializer::{Number, Value};
 
 use crate::datatypes::*;
 use crate::error::Result;
@@ -29,7 +30,7 @@ fn filter_map_nulls(dt: DataType) -> Option<DataType> {
     }
 }
 
-fn infer_object(inner: &serde_json::Map<String, Value>) -> Result<DataType> {
+fn infer_object(inner: &BTreeMap<String, Value>) -> Result<DataType> {
     let fields = inner
         .iter()
         .filter_map(|(key, value)| {
@@ -69,11 +70,10 @@ fn infer_array(values: &[Value]) -> Result<DataType> {
     })
 }
 
-fn infer_number(n: &serde_json::Number) -> DataType {
-    if n.is_f64() {
-        DataType::Float64
-    } else {
-        DataType::Int64
+fn infer_number(n: &Number) -> DataType {
+    match n {
+        Number::Float(..) => DataType::Float64,
+        Number::Integer(..) => DataType::Int64,
     }
 }
 

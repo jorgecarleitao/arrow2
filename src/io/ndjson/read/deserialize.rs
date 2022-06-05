@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use serde_json::Value;
+use json_deserializer::parse;
 
 use crate::array::Array;
 use crate::datatypes::DataType;
@@ -22,7 +22,7 @@ pub fn deserialize(rows: &[String], data_type: DataType) -> Result<Arc<dyn Array
         ));
     }
 
-    deserialize_iter(rows.iter(), data_type)
+    deserialize_iter(rows.iter().map(|x| x.as_ref()), data_type)
 }
 
 /// Deserializes an iterator of rows into an [`Array`] of [`DataType`].
@@ -31,14 +31,14 @@ pub fn deserialize(rows: &[String], data_type: DataType) -> Result<Arc<dyn Array
 /// This function is guaranteed to return an array of length equal to the leng
 /// # Errors
 /// This function errors iff any of the rows is not a valid JSON (i.e. the format is not valid NDJSON).
-pub fn deserialize_iter<A: AsRef<str>>(
-    rows: impl Iterator<Item = A>,
+pub fn deserialize_iter<'a>(
+    rows: impl Iterator<Item = &'a str>,
     data_type: DataType,
 ) -> Result<Arc<dyn Array>, Error> {
     // deserialize strings to `Value`s
     let rows = rows
-        .map(|row| serde_json::from_str(row.as_ref()).map_err(Error::from))
-        .collect::<Result<Vec<Value>, Error>>()?;
+        .map(|row| parse(row.as_bytes()).map_err(Error::from))
+        .collect::<Result<Vec<_>, Error>>()?;
 
     // deserialize &[Value] to Array
     Ok(_deserialize(&rows, data_type))
