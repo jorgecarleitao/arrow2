@@ -1,5 +1,71 @@
 # Changelog
 
+## [v0.12.0](https://github.com/jorgecarleitao/arrow2/tree/v0.12.0) (2022-06-05)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.11.2...v0.12.0)
+
+**Breaking changes:**
+
+- Require one encoding per parquet column on write [\#1012](https://github.com/jorgecarleitao/arrow2/issues/1012)
+- Bumped parquet2 [\#1035](https://github.com/jorgecarleitao/arrow2/pull/1035) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved performance of deserializing JSON \(2x\) [\#1024](https://github.com/jorgecarleitao/arrow2/pull/1024) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Remove `from_trusted_len_*` from `Buffer` [\#1020](https://github.com/jorgecarleitao/arrow2/pull/1020) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Bumped arrow-format [\#1011](https://github.com/jorgecarleitao/arrow2/pull/1011) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Replace `fn Offset::is_large()` as `const Offset::IS_LARGE` [\#1002](https://github.com/jorgecarleitao/arrow2/pull/1002) ([HaoYang670](https://github.com/HaoYang670))
+- Renamed `ArrowError` to `Error` [\#993](https://github.com/jorgecarleitao/arrow2/pull/993) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**New features:**
+
+- Added support to deserialize `MapArray` from parquet [\#1045](https://github.com/jorgecarleitao/arrow2/pull/1045) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for random access reads from IPC [\#1034](https://github.com/jorgecarleitao/arrow2/pull/1034) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for custom sort `build_compare_fn` [\#1016](https://github.com/jorgecarleitao/arrow2/pull/1016) ([b41sh](https://github.com/b41sh))
+- Added support to write nested parquet [\#1007](https://github.com/jorgecarleitao/arrow2/pull/1007) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for deserializing JSON from iterator [\#989](https://github.com/jorgecarleitao/arrow2/pull/989) ([cjermain](https://github.com/cjermain))
+
+**Fixed bugs:**
+
+- Writing of `ListArray` does not preserve all values [\#1008](https://github.com/jorgecarleitao/arrow2/issues/1008)
+- Write a two-dimensional list to parquet file failed [\#992](https://github.com/jorgecarleitao/arrow2/issues/992)
+- Writing to Parquet fails for extension types that contain lists [\#830](https://github.com/jorgecarleitao/arrow2/issues/830)
+- Fixed using lower limit than size of first parquet row group [\#1046](https://github.com/jorgecarleitao/arrow2/pull/1046) ([arxra](https://github.com/arxra))
+- Fixed error in consuming sliced `FixedSizedBinary` from c data interface \(FFI\) [\#1026](https://github.com/jorgecarleitao/arrow2/pull/1026) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed lexsort limit equal or greater than row\_count [\#1021](https://github.com/jorgecarleitao/arrow2/pull/1021) ([b41sh](https://github.com/b41sh))
+- Fixed error in reading nested parquet structs [\#1015](https://github.com/jorgecarleitao/arrow2/pull/1015) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed panic on debug print of invalid timezones [\#1013](https://github.com/jorgecarleitao/arrow2/pull/1013) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Treat empty timezone string as no-timezone [\#1009](https://github.com/jorgecarleitao/arrow2/pull/1009) ([dbr](https://github.com/dbr))
+- Fixed encoding of `NaN` to json [\#990](https://github.com/jorgecarleitao/arrow2/pull/990) ([SimonSchneider](https://github.com/SimonSchneider))
+- Fixed error in writing `ListArray` to parquet [\#984](https://github.com/jorgecarleitao/arrow2/pull/984) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed decoding Binary Plain pages with dictionary pages [\#982](https://github.com/jorgecarleitao/arrow2/pull/982) ([aptr322](https://github.com/aptr322))
+
+**Enhancements:**
+
+- Added `Debug` and `PartialEq` for `MapArray` [\#1043](https://github.com/jorgecarleitao/arrow2/pull/1043) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Exposed compression levels for parquet [\#1041](https://github.com/jorgecarleitao/arrow2/pull/1041) ([ritchie46](https://github.com/ritchie46))
+- Added `.arced`/`.boxed` to arrays [\#1040](https://github.com/jorgecarleitao/arrow2/pull/1040) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added utility to create encodings [\#1018](https://github.com/jorgecarleitao/arrow2/pull/1018) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Made `parquet_to_arrow_schema` public [\#1006](https://github.com/jorgecarleitao/arrow2/pull/1006) ([martingallagher](https://github.com/martingallagher))
+- Speeded up `min_max_boolean` for the case where all values are null [\#1005](https://github.com/jorgecarleitao/arrow2/pull/1005) ([HaoYang670](https://github.com/HaoYang670))
+- Simplified `min_max_string` and `min_max_binary` [\#1004](https://github.com/jorgecarleitao/arrow2/pull/1004) ([HaoYang670](https://github.com/HaoYang670))
+- Added support for Decimal in `build_compare` [\#998](https://github.com/jorgecarleitao/arrow2/pull/998) ([GPSnoopy](https://github.com/GPSnoopy))
+- remove accidental quadratic null\_count [\#991](https://github.com/jorgecarleitao/arrow2/pull/991) ([ritchie46](https://github.com/ritchie46))
+- Aligns MutableDictionaryArray's with MutablePrimitiveArrays with TryPush [\#981](https://github.com/jorgecarleitao/arrow2/pull/981) ([TurnOfACard](https://github.com/TurnOfACard))
+
+**Documentation updates:**
+
+- Cleaned docs for BinaryArray [\#1047](https://github.com/jorgecarleitao/arrow2/pull/1047) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved API docs for `MutableBitmap` [\#1025](https://github.com/jorgecarleitao/arrow2/pull/1025) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved docs for `bitmap` [\#1022](https://github.com/jorgecarleitao/arrow2/pull/1022) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved API docs for `PrimitiveArray` and `Utf8Array` [\#1017](https://github.com/jorgecarleitao/arrow2/pull/1017) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed dev guide [\#1003](https://github.com/jorgecarleitao/arrow2/pull/1003) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Testing updates:**
+
+- Added more tests [\#1029](https://github.com/jorgecarleitao/arrow2/pull/1029) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Moved coverage reporting to `cargo-llvm-cov` [\#1028](https://github.com/jorgecarleitao/arrow2/pull/1028) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added more tests \(increase coverage\) [\#1027](https://github.com/jorgecarleitao/arrow2/pull/1027) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Moved tests from lib to `tests` [\#1001](https://github.com/jorgecarleitao/arrow2/pull/1001) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Allowed feature-specific test runs [\#985](https://github.com/jorgecarleitao/arrow2/pull/985) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.11.2](https://github.com/jorgecarleitao/arrow2/tree/v0.11.2) (2022-05-05)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.11.1...v0.11.2)
