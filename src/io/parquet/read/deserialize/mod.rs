@@ -301,7 +301,6 @@ where
             Box::new(struct_::StructIterator::new(columns, fields.clone()))
         }
         Map(inner, _) => {
-            println!("{:?}", init);
             init.push(InitNested::List(field.is_nullable));
             let iter = columns_to_iter_recursive(
                 columns,
@@ -312,7 +311,6 @@ where
             )?;
             Box::new(iter.map(move |x| {
                 let (nested, inner) = x?;
-                println!("{:?}", inner);
                 let array = MapArray::new(
                     field.data_type().clone(),
                     vec![0, inner.len() as i32].into(),
