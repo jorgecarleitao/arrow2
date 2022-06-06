@@ -1,7 +1,7 @@
 //! Contains traits and implementations of multi-data used in SIMD.
 //! The actual representation is driven by the feature flag `"simd"`, which, if set,
 //! uses [`std::simd`].
-use super::{days_ms, months_days_ns};
+use super::{days_ms, f16, months_days_ns};
 use super::{BitChunk, BitChunkIter, NativeType};
 
 /// Describes the ability to convert itself from a [`BitChunk`].
@@ -129,6 +129,7 @@ pub(super) use native_simd;
 // Types do not have specific intrinsics and thus SIMD can't be specialized.
 // Therefore, we can declare their MD representation as `[$t; 8]` irrespectively
 // of how they are represented in the different channels.
+native_simd!(f16x32, f16, 32, u32);
 native_simd!(days_msx8, days_ms, 8, u8);
 native_simd!(months_days_nsx8, months_days_ns, 8, u8);
 native_simd!(i128x8, i128, 8, u8);
@@ -157,6 +158,7 @@ native!(i8, i8x64);
 native!(i16, i16x32);
 native!(i32, i32x16);
 native!(i64, i64x8);
+native!(f16, f16x32);
 native!(f32, f32x16);
 native!(f64, f64x8);
 native!(i128, i128x8);

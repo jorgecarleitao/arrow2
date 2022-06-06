@@ -18,7 +18,6 @@ documentation of each of its APIs.
 ## Features
 
 * Most feature-complete implementation of Apache Arrow after the reference implementation (C++)
-  * Float 16 unsupported (not a Rust native type)
   * Decimal 256 unsupported (not a Rust native type)
 * C data interface supported for all Arrow types (read and write)
 * C stream interface supported for all Arrow types (read and write)

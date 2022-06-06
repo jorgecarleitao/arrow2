@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use super::{set, Simd8, Simd8Lanes, Simd8PartialEq, Simd8PartialOrd};
-use crate::types::{days_ms, months_days_ns};
+use crate::types::{days_ms, f16, months_days_ns};
 
 simd8_native_all!(u8);
 simd8_native_all!(u16);
@@ -12,6 +12,8 @@ simd8_native_all!(i16);
 simd8_native_all!(i32);
 simd8_native_all!(i128);
 simd8_native_all!(i64);
+simd8_native!(f16);
+simd8_native_partial_eq!(f16);
 simd8_native_all!(f32);
 simd8_native_all!(f64);
 simd8_native!(days_ms);

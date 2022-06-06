@@ -203,7 +203,7 @@ macro_rules! with_match_primitive_type {(
 ) => ({
     macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
     use crate::datatypes::PrimitiveType::*;
-    use crate::types::{days_ms, months_days_ns};
+    use crate::types::{days_ms, months_days_ns, f16};
     match $key_type {
         Int8 => __with_ty__! { i8 },
         Int16 => __with_ty__! { i16 },
@@ -216,6 +216,7 @@ macro_rules! with_match_primitive_type {(
         UInt16 => __with_ty__! { u16 },
         UInt32 => __with_ty__! { u32 },
         UInt64 => __with_ty__! { u64 },
+        Float16 => __with_ty__! { f16 },
         Float32 => __with_ty__! { f32 },
         Float64 => __with_ty__! { f64 },
     }

@@ -4,7 +4,7 @@ use num_traits::{AsPrimitive, Float, ToPrimitive};
 
 use crate::datatypes::IntervalUnit;
 use crate::error::Result;
-use crate::types::{days_ms, months_days_ns};
+use crate::types::{days_ms, f16, months_days_ns};
 use crate::{
     array::*,
     bitmap::Bitmap,
@@ -580,4 +580,9 @@ pub fn months_to_months_days_ns(from: &PrimitiveArray<i32>) -> PrimitiveArray<mo
         months_to_months_days_ns_scalar,
         DataType::Interval(IntervalUnit::MonthDayNano),
     )
+}
+
+/// Casts f16 into f32
+pub fn f16_to_f32(from: &PrimitiveArray<f16>) -> PrimitiveArray<f32> {
+    unary(from, |x| x.as_f32(), DataType::Float32)
 }

@@ -55,6 +55,8 @@ pub enum PrimitiveType {
     UInt32,
     /// An unsigned 64-bit integer.
     UInt64,
+    /// A 16-bit floating point number.
+    Float16,
     /// A 32-bit floating point number.
     Float32,
     /// A 64-bit floating point number.
@@ -77,6 +79,7 @@ mod private {
     impl Sealed for i32 {}
     impl Sealed for i64 {}
     impl Sealed for i128 {}
+    impl Sealed for super::f16 {}
     impl Sealed for f32 {}
     impl Sealed for f64 {}
     impl Sealed for super::days_ms {}
