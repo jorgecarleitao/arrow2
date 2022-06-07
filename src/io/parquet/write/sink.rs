@@ -59,7 +59,7 @@ pub struct FileSink<'a, W: AsyncWrite + Send + Unpin> {
     writer: Option<FileStreamer<W>>,
     task: Option<BoxFuture<'a, Result<Option<FileStreamer<W>>, Error>>>,
     options: WriteOptions,
-    encoding: Vec<Vec<Encoding>>,
+    encodings: Vec<Vec<Encoding>>,
     schema: Schema,
     parquet_schema: SchemaDescriptor,
     /// Key-value metadata that will be written to the file on close.
@@ -73,13 +73,21 @@ where
     /// Create a new sink that writes arrays to the provided `writer`.
     ///
     /// # Error
-    /// If the Arrow schema can't be converted to a valid Parquet schema.
+    /// Iff
+    /// * the Arrow schema can't be converted to a valid Parquet schema.
+    /// * the length of the encodings is different from the number of fields in schema
     pub fn try_new(
         writer: W,
         schema: Schema,
-        encoding: Vec<Vec<Encoding>>,
+        encodings: Vec<Vec<Encoding>>,
         options: WriteOptions,
     ) -> Result<Self, Error> {
+        if encodings.len() != schema.fields.len() {
+            return Err(Error::InvalidArgumentError(
+                "The number of encodings must equal the number of fields".to_string(),
+            ));
+        }
+
         let parquet_schema = crate::io::parquet::write::to_parquet_schema(&schema)?;
         let created_by = Some("Arrow2 - Native Rust implementation of Arrow".to_string());
         let writer = FileStreamer::new(
@@ -96,7 +104,7 @@ where
             task: None,
             options,
             schema,
-            encoding,
+            encodings,
             parquet_schema,
             metadata: HashMap::default(),
         })
@@ -146,11 +154,17 @@ where
     type Error = Error;
 
     fn start_send(self: Pin<&mut Self>, item: Chunk<Arc<dyn Array>>) -> Result<(), Self::Error> {
+        if self.schema.fields.len() != item.arrays().len() {
+            return Err(Error::InvalidArgumentError(
+                "The number of arrays in the chunk must equal the number of fields in the schema"
+                    .to_string(),
+            ));
+        }
         let this = self.get_mut();
         if let Some(mut writer) = this.writer.take() {
             let rows = crate::io::parquet::write::row_group_iter(
                 item,
-                this.encoding.clone(),
+                this.encodings.clone(),
                 this.parquet_schema.fields().to_vec(),
                 this.options,
             );

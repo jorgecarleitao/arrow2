@@ -17,12 +17,18 @@ use super::{
 
 /// Maps a [`Chunk`] and parquet-specific options to an [`RowGroupIter`] used to
 /// write to parquet
+/// # Panics
+/// Iff
+/// * `encodings.len() != fields.len()` or
+/// * `encodings.len() != chunk.arrays().len()`
 pub fn row_group_iter<A: AsRef<dyn Array> + 'static + Send + Sync>(
     chunk: Chunk<A>,
     encodings: Vec<Vec<Encoding>>,
     fields: Vec<ParquetType>,
     options: WriteOptions,
 ) -> RowGroupIter<'static, Error> {
+    assert_eq!(encodings.len(), fields.len());
+    assert_eq!(encodings.len(), chunk.arrays().len());
     DynIter::new(
         chunk
             .into_arrays()
@@ -63,12 +69,22 @@ pub struct RowGroupIterator<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Re
 
 impl<A: AsRef<dyn Array> + 'static, I: Iterator<Item = Result<Chunk<A>>>> RowGroupIterator<A, I> {
     /// Creates a new [`RowGroupIterator`] from an iterator over [`Chunk`].
+    ///
+    /// # Errors
+    /// Iff
+    /// * the Arrow schema can't be converted to a valid Parquet schema.
+    /// * the length of the encodings is different from the number of fields in schema
     pub fn try_new(
         iter: I,
         schema: &Schema,
         options: WriteOptions,
         encodings: Vec<Vec<Encoding>>,
     ) -> Result<Self> {
+        if encodings.len() != schema.fields.len() {
+            return Err(Error::InvalidArgumentError(
+                "The number of encodings must equal the number of fields".to_string(),
+            ));
+        }
         let parquet_schema = to_parquet_schema(schema)?;
 
         Ok(Self {
@@ -95,6 +111,12 @@ impl<A: AsRef<dyn Array> + 'static + Send + Sync, I: Iterator<Item = Result<Chun
 
         self.iter.next().map(|maybe_chunk| {
             let chunk = maybe_chunk?;
+            if self.encodings.len() != chunk.arrays().len() {
+                return Err(Error::InvalidArgumentError(
+                    "The number of arrays in the chunk must equal the number of fields in the schema"
+                        .to_string(),
+                ));
+            };
             let encodings = self.encodings.clone();
             Ok(row_group_iter(
                 chunk,
