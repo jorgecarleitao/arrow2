@@ -991,7 +991,7 @@ fn main() -&gt; Result&lt;()&gt; {
 }
 </code></pre></pre>
 <h2 id="async"><a class="header" href="#async">Async</a></h2>
-<p>This crate also supports reading from a CSV asyncronously through the <code>csv-async</code> crate.
+<p>This crate also supports reading from a CSV asynchronously through the <code>csv-async</code> crate.
 The example below demonstrates this:</p>
 <pre><pre class="playground"><code class="language-rust">use tokio::fs::File;
 use tokio_util::compat::*;
@@ -1237,8 +1237,8 @@ This inference is based on Parquet's physical, logical and converted types.</p>
 <tr><td>ByteArray</td><td>Decimal</td><td>Decimal</td></tr>
 <tr><td>FixedLenByteArray</td><td>Decimal</td><td>Decimal</td></tr>
 </tbody></table>
-<p>When a a logical type is not defined but a converted type is defined, we use
-the equivalent convertion as above, mutatis mutandis.</p>
+<p>When a logical type is not defined but a converted type is defined, we use
+the equivalent conversion as above, mutatis mutandis.</p>
 <p>When neither is defined, we fall back to the physical representation:</p>
 <table><thead><tr><th><code>Parquet</code></th><th><code>DataType</code></th></tr></thead><tbody>
 <tr><td>Boolean</td><td>Boolean</td></tr>
