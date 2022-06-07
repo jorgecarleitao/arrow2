@@ -30,7 +30,7 @@ to only run both non-feature-specific tests and tests for json.
 
 ## Merging
 
-We currently do not have maintainance versions and thus only PR and merge to `main`.
+We currently do not have maintenance versions and thus only PR and merge to `main`.
 
 We use labels to build a changelog - it is very important to label issues and/or PRs
 accordingly. Because our changelog can contain both issues and PRs, when a PR closes
@@ -39,17 +39,17 @@ the author (credits).
 
 Summary:
 * pull requests with both backward-incompatible changes and new 
-  features/enchancements MUST close at least one issue (the one
+  features/enhancements MUST close at least one issue (the one
   documenting the backward-incompatible change)
 * Every other pull request MAY close one issue
 
 issues are only used to document situations whose a single PR adds two entries to
-the changelog (e.g. a backward incompatible change + an new enchancement).
+the changelog (e.g. a backward incompatible change + a new enhancement).
 
 Merging a PR to main has the following checklist:
 
 1. Does it close an issue? If yes, add the label `no-changelog` to the issue.
-2. Label the PR accordingly (`Testing`, `Documentation`, `Enchancement`, `Feature`, `Bug`)
+2. Label the PR accordingly (`Testing`, `Documentation`, `Enhancement`, `Feature`, `Bug`)
 3. If the PR is backward incompatible:
     1. create a new issue labeled `backward-incompatible` with what changed and how to migrate
        from the old API to the new API

@@ -32,7 +32,7 @@ thereby maximizing IO throughput. The example below shows how to do just that:
 
 ## Async
 
-This crate also supports reading from a CSV asyncronously through the `csv-async` crate.
+This crate also supports reading from a CSV asynchronously through the `csv-async` crate.
 The example below demonstrates this:
 
 ```rust

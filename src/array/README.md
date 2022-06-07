@@ -44,7 +44,7 @@ This document describes the overall design of this module.
 
 * An array MUST have a `offset: usize` measuring the number of slots that the array is currently offsetted by if the specification requires.
 
-* An array MUST implement `fn slice(&self, offset: usize, length: usize) -> Self` that returns an offseted and/or truncated clone of the array. This function MUST increase the array's offset if it exists.
+* An array MUST implement `fn slice(&self, offset: usize, length: usize) -> Self` that returns an offsetted and/or truncated clone of the array. This function MUST increase the array's offset if it exists.
 
 * Conversely, `offset` MUST only be changed by `slice`.
 
