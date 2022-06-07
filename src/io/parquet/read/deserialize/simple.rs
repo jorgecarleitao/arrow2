@@ -62,7 +62,7 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
     pages: I,
     type_: &PrimitiveType,
     data_type: DataType,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
 ) -> Result<ArrayIter<'a>> {
     use DataType::*;
 
@@ -232,7 +232,7 @@ fn timestamp<'a, I: 'a + DataPages>(
     physical_type: &PhysicalType,
     logical_type: &Option<PrimitiveLogicalType>,
     data_type: DataType,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
     time_unit: TimeUnit,
 ) -> Result<ArrayIter<'a>> {
     if physical_type == &PhysicalType::Int96 {
@@ -291,7 +291,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
     physical_type: &PhysicalType,
     logical_type: &Option<PrimitiveLogicalType>,
     data_type: DataType,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
     time_unit: TimeUnit,
 ) -> Result<ArrayIter<'a>> {
     if physical_type == &PhysicalType::Int96 {
@@ -426,7 +426,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
     physical_type: &PhysicalType,
     logical_type: &Option<PrimitiveLogicalType>,
     data_type: DataType,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
 ) -> Result<ArrayIter<'a>> {
     use DataType::*;
     let values_data_type = if let Dictionary(_, v, _) = &data_type {

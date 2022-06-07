@@ -16,7 +16,7 @@ pub fn iter_to_arrays_nested<'a, I, T, P, F>(
     iter: I,
     init: Vec<InitNested>,
     data_type: DataType,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
     op: F,
 ) -> NestedArrayIter<'a>
 where

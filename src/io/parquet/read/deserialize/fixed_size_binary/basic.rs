@@ -289,11 +289,11 @@ pub struct Iter<I: DataPages> {
     data_type: DataType,
     size: usize,
     items: VecDeque<(FixedSizeBinary, MutableBitmap)>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
 }
 
 impl<I: DataPages> Iter<I> {
-    pub fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
+    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>) -> Self {
         let size = FixedSizeBinaryArray::get_size(&data_type);
         Self {
             iter,

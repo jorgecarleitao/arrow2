@@ -24,7 +24,7 @@ where
     data_type: DataType,
     values: Dict,
     items: VecDeque<(Vec<K>, MutableBitmap)>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
 }
 
 impl<K, I> DictIter<K, I>
@@ -32,7 +32,7 @@ where
     K: DictionaryKey,
     I: DataPages,
 {
-    pub fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
+    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>) -> Self {
         let data_type = match data_type {
             DataType::Dictionary(_, values, _) => values.as_ref().clone(),
             _ => unreachable!(),

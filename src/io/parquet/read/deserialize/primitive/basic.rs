@@ -296,7 +296,7 @@ where
     iter: I,
     data_type: DataType,
     items: VecDeque<(Vec<T>, MutableBitmap)>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
     op: F,
     phantom: std::marker::PhantomData<P>,
 }
@@ -309,7 +309,7 @@ where
     P: ParquetNativeType,
     F: Copy + Fn(P) -> T,
 {
-    pub fn new(iter: I, data_type: DataType, chunk_size: usize, op: F) -> Self {
+    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>, op: F) -> Self {
         Self {
             iter,
             data_type,

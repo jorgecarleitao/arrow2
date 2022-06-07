@@ -179,7 +179,7 @@ where
     // invariant: items.len() == nested.len()
     items: VecDeque<(Vec<T>, MutableBitmap)>,
     nested: VecDeque<NestedState>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
     decoder: PrimitiveDecoder<T, P, F>,
 }
 
@@ -195,7 +195,7 @@ where
         iter: I,
         init: Vec<InitNested>,
         data_type: DataType,
-        chunk_size: usize,
+        chunk_size: Option<usize>,
         op: F,
     ) -> Self {
         Self {

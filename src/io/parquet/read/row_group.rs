@@ -196,7 +196,7 @@ pub fn to_deserializer<'a>(
         })
         .unzip();
 
-    column_iter_to_arrays(columns, types, field, chunk_size)
+    column_iter_to_arrays(columns, types, field, Some(chunk_size))
 }
 
 /// Returns a vector of iterators of [`Array`] ([`ArrayIter`]) corresponding to the top

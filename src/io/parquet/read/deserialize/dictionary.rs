@@ -216,7 +216,7 @@ pub(super) fn next_dict<
     iter: &'a mut I,
     items: &mut VecDeque<(Vec<K>, MutableBitmap)>,
     dict: &mut Dict,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
     read_dict: F,
 ) -> MaybeNext<Result<DictionaryArray<K>>> {
     if items.len() > 1 {
@@ -249,7 +249,7 @@ pub(super) fn next_dict<
 
             utils::extend_from_new_page(page, chunk_size, items, &PrimitiveDecoder::<K>::default());
 
-            if items.front().unwrap().len() < chunk_size {
+            if items.front().unwrap().len() < chunk_size.unwrap_or(usize::MAX) {
                 MaybeNext::More
             } else {
                 let (values, validity) = items.pop_front().unwrap();
@@ -262,7 +262,7 @@ pub(super) fn next_dict<
             if let Some((values, validity)) = items.pop_front() {
                 // we have a populated item and no more pages
                 // the only case where an item's length may be smaller than chunk_size
-                debug_assert!(values.len() <= chunk_size);
+                debug_assert!(values.len() <= chunk_size.unwrap_or(usize::MAX));
 
                 let keys = finish_key(values, validity);
 

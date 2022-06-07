@@ -374,10 +374,13 @@ pub(super) trait Decoder<'a> {
 
 pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
     mut page: T::State,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
     items: &mut VecDeque<T::DecodedState>,
     decoder: &T,
 ) {
+    let capacity = chunk_size.unwrap_or(0);
+    let chunk_size = chunk_size.unwrap_or(usize::MAX);
+
     let mut decoded = if let Some(decoded) = items.pop_back() {
         // there is a already a state => it must be incomplete...
         debug_assert!(
@@ -387,7 +390,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
         decoded
     } else {
         // there is no state => initialize it
-        decoder.with_capacity(chunk_size)
+        decoder.with_capacity(capacity)
     };
 
     let remaining = chunk_size - decoded.len();
@@ -398,7 +401,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
     items.push_back(decoded);
 
     while page.len() > 0 {
-        let mut decoded = decoder.with_capacity(chunk_size);
+        let mut decoded = decoder.with_capacity(capacity);
         decoder.extend_from_state(&mut page, &mut decoded, chunk_size);
         items.push_back(decoded)
     }
@@ -415,7 +418,7 @@ pub enum MaybeNext<P> {
 pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
     iter: &'a mut I,
     items: &mut VecDeque<D::DecodedState>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
     decoder: &D,
 ) -> MaybeNext<Result<D::DecodedState, Error>> {
     // front[a1, a2, a3, ...]back
@@ -435,7 +438,7 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
 
             extend_from_new_page(page, chunk_size, items, decoder);
 
-            if (items.len() == 1) && items.front().unwrap().len() < chunk_size {
+            if (items.len() == 1) && items.front().unwrap().len() < chunk_size.unwrap_or(0) {
                 MaybeNext::More
             } else {
                 let decoded = items.pop_front().unwrap();
@@ -446,7 +449,7 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
             if let Some(decoded) = items.pop_front() {
                 // we have a populated item and no more pages
                 // the only case where an item's length may be smaller than chunk_size
-                debug_assert!(decoded.len() <= chunk_size);
+                debug_assert!(decoded.len() <= chunk_size.unwrap_or(usize::MAX));
                 MaybeNext::Some(Ok(decoded))
             } else {
                 MaybeNext::None

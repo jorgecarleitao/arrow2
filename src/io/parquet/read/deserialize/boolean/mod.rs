@@ -13,7 +13,7 @@ pub use self::basic::Iter;
 pub fn iter_to_arrays_nested<'a, I: 'a>(
     iter: I,
     init: Vec<InitNested>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
 ) -> NestedArrayIter<'a>
 where
     I: DataPages,

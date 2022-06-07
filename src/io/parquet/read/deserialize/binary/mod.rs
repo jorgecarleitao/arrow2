@@ -25,7 +25,7 @@ pub fn iter_to_arrays_nested<'a, O, A, I>(
     iter: I,
     init: Vec<InitNested>,
     data_type: DataType,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
 ) -> NestedArrayIter<'a>
 where
     I: 'a + DataPages,

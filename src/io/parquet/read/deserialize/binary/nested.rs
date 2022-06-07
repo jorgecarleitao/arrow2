@@ -146,12 +146,17 @@ pub struct ArrayIterator<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
     init: Vec<InitNested>,
     items: VecDeque<(Binary<O>, MutableBitmap)>,
     nested: VecDeque<NestedState>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
     phantom_a: std::marker::PhantomData<A>,
 }
 
 impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> ArrayIterator<O, A, I> {
-    pub fn new(iter: I, init: Vec<InitNested>, data_type: DataType, chunk_size: usize) -> Self {
+    pub fn new(
+        iter: I,
+        init: Vec<InitNested>,
+        data_type: DataType,
+        chunk_size: Option<usize>,
+    ) -> Self {
         Self {
             iter,
             data_type,
