@@ -105,7 +105,7 @@ Design documents about each of the parts of this repo are available on their res
 
 ### Any plans to merge with the Apache Arrow project?
 
-Maybe. The primary reason to have this repo and crate is to be able to propotype
+Maybe. The primary reason to have this repo and crate is to be able to prototype
 and mature using a fundamentally different design based on a transmute-free
 implementation. This requires breaking backward compatibility and loss of
 features that is impossible to achieve on the Arrow repo.

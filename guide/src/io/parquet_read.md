@@ -77,8 +77,8 @@ When a logical type is defined, we use it as follows:
 | ByteArray         | Decimal           | Decimal       |
 | FixedLenByteArray | Decimal           | Decimal       |
 
-When a a logical type is not defined but a converted type is defined, we use
-the equivalent convertion as above, mutatis mutandis.
+When a logical type is not defined but a converted type is defined, we use
+the equivalent conversion as above, mutatis mutandis.
 
 When neither is defined, we fall back to the physical representation:
 
