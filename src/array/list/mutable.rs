@@ -50,12 +50,16 @@ impl<O: Offset, M: MutableArray + Default> Default for MutableListArray<O, M> {
 
 impl<O: Offset, M: MutableArray> From<MutableListArray<O, M>> for ListArray<O> {
     fn from(mut other: MutableListArray<O, M>) -> Self {
-        ListArray::new(
-            other.data_type,
-            other.offsets.into(),
-            other.values.as_arc(),
-            other.validity.map(|x| x.into()),
-        )
+        // Safety:
+        // MutableListArray has monotonically increasing offsets
+        unsafe {
+            ListArray::new_unchecked(
+                other.data_type,
+                other.offsets.into(),
+                other.values.as_arc(),
+                other.validity.map(|x| x.into()),
+            )
+        }
     }
 }
 
@@ -209,21 +213,29 @@ impl<O: Offset, M: MutableArray + Default + 'static> MutableArray for MutableLis
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(ListArray::new(
-            self.data_type.clone(),
-            std::mem::take(&mut self.offsets).into(),
-            self.values.as_arc(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        // Safety:
+        // MutableListArray has monotonically increasing offsets
+        unsafe {
+            Box::new(ListArray::new_unchecked(
+                self.data_type.clone(),
+                std::mem::take(&mut self.offsets).into(),
+                self.values.as_arc(),
+                std::mem::take(&mut self.validity).map(|x| x.into()),
+            ))
+        }
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(ListArray::new(
-            self.data_type.clone(),
-            std::mem::take(&mut self.offsets).into(),
-            self.values.as_arc(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        // Safety:
+        // MutableListArray has monotonically increasing offsets
+        unsafe {
+            Arc::new(ListArray::new_unchecked(
+                self.data_type.clone(),
+                std::mem::take(&mut self.offsets).into(),
+                self.values.as_arc(),
+                std::mem::take(&mut self.validity).map(|x| x.into()),
+            ))
+        }
     }
 
     fn data_type(&self) -> &DataType {
