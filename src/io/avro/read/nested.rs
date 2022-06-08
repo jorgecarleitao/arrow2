@@ -80,21 +80,29 @@ impl<O: Offset> MutableArray for DynMutableListArray<O> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(ListArray::new(
-            self.data_type.clone(),
-            std::mem::take(&mut self.offsets).into(),
-            self.values.as_arc(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        // Safety:
+        // MutableListArray has monotonically increasing offsets
+        unsafe {
+            Box::new(ListArray::new_unchecked(
+                self.data_type.clone(),
+                std::mem::take(&mut self.offsets).into(),
+                self.values.as_arc(),
+                std::mem::take(&mut self.validity).map(|x| x.into()),
+            ))
+        }
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(ListArray::new(
-            self.data_type.clone(),
-            std::mem::take(&mut self.offsets).into(),
-            self.values.as_arc(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        // Safety:
+        // MutableListArray has monotonically increasing offsets
+        unsafe {
+            Arc::new(ListArray::new_unchecked(
+                self.data_type.clone(),
+                std::mem::take(&mut self.offsets).into(),
+                self.values.as_arc(),
+                std::mem::take(&mut self.validity).map(|x| x.into()),
+            ))
+        }
     }
 
     fn data_type(&self) -> &DataType {
