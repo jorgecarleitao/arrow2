@@ -185,14 +185,7 @@ fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Arc<dy
         .iter()
         .flat_map(|value| value.as_str().unwrap().as_bytes().to_vec())
         .collect();
-    // Safety:
-    // - we just created monotonically increasing offsets
-    // - we converted valid `&str` to bytes, so not needed to check utf8 again
-    unsafe {
-        Arc::new(Utf8Array::new_unchecked(
-            data_type, offsets, values, validity,
-        ))
-    }
+    Arc::new(Utf8Array::new(data_type, offsets, values, validity))
 }
 
 fn to_list<O: Offset>(
