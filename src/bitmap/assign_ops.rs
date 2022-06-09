@@ -9,7 +9,7 @@ pub fn unary_assign<T: BitChunk, F: Fn(T) -> T>(bitmap: &mut MutableBitmap, op: 
     let mut chunks = bitmap.bitchunks_exact_mut::<T>();
 
     chunks.by_ref().for_each(|chunk| {
-        let new_chunk: T = match (&chunk[..] as &[u8]).try_into() {
+        let new_chunk: T = match (chunk as &[u8]).try_into() {
             Ok(a) => T::from_ne_bytes(a),
             Err(_) => unreachable!(),
         };
@@ -56,7 +56,7 @@ where
         .by_ref()
         .zip(rhs.by_ref())
         .for_each(|(lhs, rhs)| {
-            let new_chunk: T = match (&lhs[..] as &[u8]).try_into() {
+            let new_chunk: T = match (lhs as &[u8]).try_into() {
                 Ok(a) => T::from_ne_bytes(a),
                 Err(_) => unreachable!(),
             };
