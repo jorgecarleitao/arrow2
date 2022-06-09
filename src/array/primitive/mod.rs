@@ -1,7 +1,7 @@
 use crate::{
     bitmap::{
         utils::{zip_validity, ZipValidity},
-        Bitmap,
+        Bitmap, MutableBitmap,
     },
     buffer::Buffer,
     datatypes::*,
@@ -250,6 +250,39 @@ impl<T: NativeType> PrimitiveArray<T> {
         let mut arr = self.clone();
         arr.validity = validity;
         arr
+    }
+
+    /// Applies a function `f` to the values of this array, cloning the values
+    /// iff they are being shared with others
+    ///
+    /// This is an API to use clone-on-write
+    /// # Implementation
+    /// This function is `O(f)` if the data is not being shared, and `O(N) + O(f)`
+    /// if it is being shared (since it results in a `O(N)` memcopy).
+    pub fn apply_values<F: Fn(&mut [T])>(&mut self, f: F) {
+        let values = std::mem::take(&mut self.values);
+        let mut values = values.make_mut();
+        f(&mut values);
+        self.values = values.into();
+    }
+
+    /// Applies a function `f` to the validity of this array, cloning it
+    /// iff it is being shared.
+    ///
+    /// This is an API to leverage clone-on-write
+    /// # Implementation
+    /// This function is `O(f)` if the data is not being shared, and `O(N) + O(f)`
+    /// if it is being shared (since it results in a `O(N)` memcopy).
+    /// # Panics
+    /// This function panics if the function modifies the length of the [`MutableBitmap`].
+    pub fn apply_validity<F: Fn(&mut MutableBitmap)>(&mut self, f: F) {
+        if let Some(validity) = self.validity.as_mut() {
+            let values = std::mem::take(validity);
+            let mut bitmap = values.make_mut();
+            f(&mut bitmap);
+            assert_eq!(bitmap.len(), self.values.len());
+            *validity = bitmap.into();
+        }
     }
 
     /// Try to convert this [`PrimitiveArray`] to a [`MutablePrimitiveArray`] via copy-on-write semantics.

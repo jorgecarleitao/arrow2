@@ -124,3 +124,25 @@ fn into_mut_3() {
     let array = PrimitiveArray::new(DataType::Int32, values, validity);
     assert!(array.into_mut().is_right());
 }
+
+#[test]
+fn apply_values() {
+    let mut a = PrimitiveArray::from([Some(1), Some(2), None]);
+    a.apply_values(|x| {
+        x[0] = 10;
+    });
+    let expected = PrimitiveArray::from([Some(10), Some(2), None]);
+    assert_eq!(a, expected);
+}
+
+#[test]
+fn apply_validity() {
+    let mut a = PrimitiveArray::from([Some(1), Some(2), None]);
+    a.apply_validity(|x| {
+        let mut a = std::mem::take(x);
+        a = !a;
+        *x = a;
+    });
+    let expected = PrimitiveArray::from([None, None, Some(0)]);
+    assert_eq!(a, expected);
+}

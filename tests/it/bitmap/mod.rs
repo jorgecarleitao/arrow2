@@ -1,3 +1,4 @@
+mod assign_ops;
 mod bitmap_ops;
 mod immutable;
 mod mutable;

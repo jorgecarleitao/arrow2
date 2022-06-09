@@ -5,7 +5,9 @@ use crate::bitmap::utils::{merge_reversed, set_bit_unchecked};
 use crate::error::Error;
 use crate::trusted_len::TrustedLen;
 
-use super::utils::{count_zeros, fmt, get_bit, set, set_bit, BitmapIter};
+use super::utils::{
+    count_zeros, fmt, get_bit, set, set_bit, BitChunk, BitChunksExactMut, BitmapIter,
+};
 use super::Bitmap;
 
 /// A container of booleans. [`MutableBitmap`] is semantically equivalent
@@ -149,7 +151,7 @@ impl MutableBitmap {
         set_bit(self.buffer.as_mut_slice(), index, value)
     }
 
-    /// constructs a new iterator over the values of [`MutableBitmap`].
+    /// constructs a new iterator over the bits of [`MutableBitmap`].
     pub fn iter(&self) -> BitmapIter {
         BitmapIter::new(&self.buffer, 0, self.length)
     }
@@ -307,6 +309,11 @@ impl MutableBitmap {
     /// Shrinks the capacity of the [`MutableBitmap`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.buffer.shrink_to_fit();
+    }
+
+    /// Returns an iterator over mutable slices, [`BitChunksExactMut`]
+    pub(crate) fn bitchunks_exact_mut<T: BitChunk>(&mut self) -> BitChunksExactMut<T> {
+        BitChunksExactMut::new(&mut self.buffer, self.length)
     }
 }
 

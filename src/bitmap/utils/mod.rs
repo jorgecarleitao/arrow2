@@ -1,5 +1,6 @@
 //! General utilities for bitmaps representing items where LSB is the first item.
 mod chunk_iterator;
+mod chunks_exact_mut;
 mod fmt;
 mod iterator;
 mod slice_iterator;
@@ -9,6 +10,7 @@ use std::convert::TryInto;
 
 pub(crate) use chunk_iterator::merge_reversed;
 pub use chunk_iterator::{BitChunk, BitChunkIterExact, BitChunks, BitChunksExact};
+pub use chunks_exact_mut::BitChunksExactMut;
 pub use fmt::fmt;
 pub use iterator::BitmapIter;
 pub use slice_iterator::SlicesIterator;
