@@ -19,8 +19,19 @@ pub fn lexical_to_bytes_mut<N: lexical_core::ToLexical>(n: N, buf: &mut Vec<u8>)
         //      Length of buf is set as written length afterwards. lexical_core
         //      creates a valid string, so doesn't need to be checked.
         let slice = std::slice::from_raw_parts_mut(buf.as_mut_ptr(), buf.capacity());
-        let len = lexical_core::write(n, slice).len();
-        buf.set_len(len);
+
+        //  Safety:
+        //  Omits an unneeded bound check as we just ensured that we reserved `N::FORMATTED_SIZE_DECIMAL`
+        #[cfg(debug_assertions)]
+        {
+            let len = lexical_core::write(n, slice).len();
+            buf.set_len(len);
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            let len = lexical_core::write_unchecked(n, slice).len();
+            buf.set_len(len);
+        }
     }
 }
 
