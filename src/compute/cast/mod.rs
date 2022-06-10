@@ -79,16 +79,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
     }
 
     match (from_type, to_type) {
-        (
-            Null,
-            Boolean | Int8 | UInt8 | Int16 | UInt16 | Int32 | UInt32 | Float32 | Date32 | Time32(_)
-            | Int64 | UInt64 | Float64 | Date64 | List(_) | Dictionary(..),
-        )
-        | (
-            Boolean | Int8 | UInt8 | Int16 | UInt16 | Int32 | UInt32 | Float32 | Date32 | Time32(_)
-            | Int64 | UInt64 | Float64 | Date64 | List(_) | Dictionary(..),
-            Null,
-        ) => true,
+        (Null, _) | (_, Null) => true,
         (Struct(_), _) => false,
         (_, Struct(_)) => false,
         (List(list_from), List(list_to)) => {
@@ -379,16 +370,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
 
     let as_options = options.with_wrapped(true);
     match (from_type, to_type) {
-        (
-            Null,
-            Boolean | Int8 | UInt8 | Int16 | UInt16 | Int32 | UInt32 | Float32 | Date32 | Time32(_)
-            | Int64 | UInt64 | Float64 | Date64 | List(_) | Dictionary(..),
-        )
-        | (
-            Boolean | Int8 | UInt8 | Int16 | UInt16 | Int32 | UInt32 | Float32 | Date32 | Time32(_)
-            | Int64 | UInt64 | Float64 | Date64 | List(_) | Dictionary(..),
-            Null,
-        ) => Ok(new_null_array(to_type.clone(), array.len())),
+        (Null, _) | (_, Null) => Ok(new_null_array(to_type.clone(), array.len())),
         (Struct(_), _) => Err(Error::NotYetImplemented(
             "Cannot cast from struct to other types".to_string(),
         )),
