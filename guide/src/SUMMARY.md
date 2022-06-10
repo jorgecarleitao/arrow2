@@ -20,3 +20,4 @@
     - [Write Avro](./io/avro_write.md)
     - [Read JSON](./io/json_read.md)
     - [Write JSON](./io/json_write.md)
+    - [Read and Write ODBC](./io/odbc.md)
