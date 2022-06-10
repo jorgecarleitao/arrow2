@@ -12,6 +12,9 @@ where
     while let Ok(Some(x)) = iter.next() {
         len += x.num_values()
     }
+    if len == 0 {
+        return Box::new(std::iter::empty());
+    }
 
     let complete_chunks = chunk_size / len;
     let remainder = chunk_size % len;
