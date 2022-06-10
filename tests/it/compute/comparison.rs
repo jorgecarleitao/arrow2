@@ -1,7 +1,7 @@
 use arrow2::array::*;
-use arrow2::compute::comparison::{self, boolean::*};
-use arrow2::datatypes::{DataType::*, IntervalUnit};
-use arrow2::datatypes::{IntegerType, TimeUnit};
+use arrow2::bitmap::Bitmap;
+use arrow2::compute::comparison::{self, boolean::*, primitive};
+use arrow2::datatypes::{DataType::*, IntegerType, IntervalUnit, TimeUnit};
 use arrow2::scalar::new_scalar;
 
 #[test]
@@ -68,263 +68,315 @@ fn consistency() {
     });
 }
 
-// disable wrapping inside literal vectors used for test data and assertions
-#[rustfmt::skip::macros(vec)]
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use arrow2::bitmap::Bitmap;
+macro_rules! cmp_bool {
+    ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
+        let a = BooleanArray::from_slice($A_VEC);
+        let b = BooleanArray::from_slice($B_VEC);
+        let c = $KERNEL(&a, &b);
+        assert_eq!(BooleanArray::from_slice($EXPECTED), c);
+    };
+}
 
-    macro_rules! cmp_bool {
-        ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
-            let a = BooleanArray::from_slice($A_VEC);
-            let b = BooleanArray::from_slice($B_VEC);
-            let c = $KERNEL(&a, &b);
-            assert_eq!(BooleanArray::from_slice($EXPECTED), c);
-        };
-    }
+macro_rules! cmp_bool_options {
+    ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
+        let a = BooleanArray::from($A_VEC);
+        let b = BooleanArray::from($B_VEC);
+        let c = $KERNEL(&a, &b);
+        assert_eq!(BooleanArray::from($EXPECTED), c);
+    };
+}
 
-    macro_rules! cmp_bool_options {
-        ($KERNEL:ident, $A_VEC:expr, $B_VEC:expr, $EXPECTED:expr) => {
-            let a = BooleanArray::from($A_VEC);
-            let b = BooleanArray::from($B_VEC);
-            let c = $KERNEL(&a, &b);
-            assert_eq!(BooleanArray::from($EXPECTED), c);
-        };
-    }
+macro_rules! cmp_bool_scalar {
+    ($KERNEL:ident, $A_VEC:expr, $B:literal, $EXPECTED:expr) => {
+        let a = BooleanArray::from_slice($A_VEC);
+        let c = $KERNEL(&a, $B);
+        assert_eq!(BooleanArray::from_slice($EXPECTED), c);
+    };
+}
 
-    macro_rules! cmp_bool_scalar {
-        ($KERNEL:ident, $A_VEC:expr, $B:literal, $EXPECTED:expr) => {
-            let a = BooleanArray::from_slice($A_VEC);
-            let c = $KERNEL(&a, $B);
-            assert_eq!(BooleanArray::from_slice($EXPECTED), c);
-        };
-    }
+#[test]
+fn test_eq() {
+    cmp_bool!(
+        eq,
+        &[true, false, true, false],
+        &[true, true, false, false],
+        &[true, false, false, true]
+    );
+}
 
-    #[test]
-    fn test_eq() {
-        cmp_bool!(
-            eq,
-            &[true, false, true, false],
-            &[true, true, false, false],
-            &[true, false, false, true]
-        );
-    }
+#[test]
+fn test_eq_scalar() {
+    cmp_bool_scalar!(eq_scalar, &[false, true], true, &[false, true]);
+}
 
-    #[test]
-    fn test_eq_scalar() {
-        cmp_bool_scalar!(eq_scalar, &[false, true], true, &[false, true]);
-    }
+#[test]
+fn test_eq_with_slice() {
+    let a = BooleanArray::from_slice(&[true, true, false]);
+    let b = BooleanArray::from_slice(&[true, true, true, true, false]);
+    let c = b.slice(2, 3);
+    let d = eq(&c, &a);
+    assert_eq!(d, BooleanArray::from_slice(&[true, true, true]));
+}
 
-    #[test]
-    fn test_eq_with_slice() {
-        let a = BooleanArray::from_slice(&[true, true, false]);
-        let b = BooleanArray::from_slice(&[true, true, true, true, false]);
-        let c = b.slice(2, 3);
-        let d = eq(&c, &a);
-        assert_eq!(d, BooleanArray::from_slice(&[true, true, true]));
-    }
+#[test]
+fn test_neq() {
+    cmp_bool!(
+        neq,
+        &[true, false, true, false],
+        &[true, true, false, false],
+        &[false, true, true, false]
+    );
+}
 
-    #[test]
-    fn test_neq() {
-        cmp_bool!(
-            neq,
-            &[true, false, true, false],
-            &[true, true, false, false],
-            &[false, true, true, false]
-        );
-    }
+#[test]
+fn test_neq_scalar() {
+    cmp_bool_scalar!(neq_scalar, &[false, true], true, &[true, false]);
+}
 
-    #[test]
-    fn test_neq_scalar() {
-        cmp_bool_scalar!(neq_scalar, &[false, true], true, &[true, false]);
-    }
+#[test]
+fn test_lt() {
+    cmp_bool!(
+        lt,
+        &[true, false, true, false],
+        &[true, true, false, false],
+        &[false, true, false, false]
+    );
+}
 
-    #[test]
-    fn test_lt() {
-        cmp_bool!(
-            lt,
-            &[true, false, true, false],
-            &[true, true, false, false],
-            &[false, true, false, false]
-        );
-    }
+#[test]
+fn test_lt_scalar_true() {
+    cmp_bool_scalar!(lt_scalar, &[false, true], true, &[true, false]);
+}
 
-    #[test]
-    fn test_lt_scalar_true() {
-        cmp_bool_scalar!(lt_scalar, &[false, true], true, &[true, false]);
-    }
+#[test]
+fn test_lt_scalar_false() {
+    cmp_bool_scalar!(lt_scalar, &[false, true], false, &[false, false]);
+}
 
-    #[test]
-    fn test_lt_scalar_false() {
-        cmp_bool_scalar!(lt_scalar, &[false, true], false, &[false, false]);
-    }
+#[test]
+fn test_lt_eq_scalar_true() {
+    cmp_bool_scalar!(lt_eq_scalar, &[false, true], true, &[true, true]);
+}
 
-    #[test]
-    fn test_lt_eq_scalar_true() {
-        cmp_bool_scalar!(lt_eq_scalar, &[false, true], true, &[true, true]);
-    }
+#[test]
+fn test_lt_eq_scalar_false() {
+    cmp_bool_scalar!(lt_eq_scalar, &[false, true], false, &[true, false]);
+}
 
-    #[test]
-    fn test_lt_eq_scalar_false() {
-        cmp_bool_scalar!(lt_eq_scalar, &[false, true], false, &[true, false]);
-    }
+#[test]
+fn test_gt_scalar_true() {
+    cmp_bool_scalar!(gt_scalar, &[false, true], true, &[false, false]);
+}
 
-    #[test]
-    fn test_gt_scalar_true() {
-        cmp_bool_scalar!(gt_scalar, &[false, true], true, &[false, false]);
-    }
+#[test]
+fn test_gt_scalar_false() {
+    cmp_bool_scalar!(gt_scalar, &[false, true], false, &[false, true]);
+}
 
-    #[test]
-    fn test_gt_scalar_false() {
-        cmp_bool_scalar!(gt_scalar, &[false, true], false, &[false, true]);
-    }
+#[test]
+fn test_gt_eq_scalar_true() {
+    cmp_bool_scalar!(gt_eq_scalar, &[false, true], true, &[false, true]);
+}
 
-    #[test]
-    fn test_gt_eq_scalar_true() {
-        cmp_bool_scalar!(gt_eq_scalar, &[false, true], true, &[false, true]);
-    }
+#[test]
+fn test_gt_eq_scalar_false() {
+    cmp_bool_scalar!(gt_eq_scalar, &[false, true], false, &[true, true]);
+}
 
-    #[test]
-    fn test_gt_eq_scalar_false() {
-        cmp_bool_scalar!(gt_eq_scalar, &[false, true], false, &[true, true]);
-    }
+#[test]
+fn test_lt_eq_scalar_true_1() {
+    cmp_bool_scalar!(
+        lt_eq_scalar,
+        &[false, true, true, true, true, true, true, true, false],
+        true,
+        &[true, true, true, true, true, true, true, true, true]
+    );
+}
 
-    #[test]
-    fn test_lt_eq_scalar_true_1() {
-        cmp_bool_scalar!(
-            lt_eq_scalar,
-            &[false, true, true, true, true, true, true, true, false],
-            true,
-            &[true, true, true, true, true, true, true, true, true]
-        );
-    }
+#[test]
+fn eq_nulls() {
+    cmp_bool_options!(
+        eq,
+        &[
+            None,
+            None,
+            None,
+            Some(false),
+            Some(false),
+            Some(false),
+            Some(true),
+            Some(true),
+            Some(true)
+        ],
+        &[
+            None,
+            Some(false),
+            Some(true),
+            None,
+            Some(false),
+            Some(true),
+            None,
+            Some(false),
+            Some(true)
+        ],
+        &[
+            None,
+            None,
+            None,
+            None,
+            Some(true),
+            Some(false),
+            None,
+            Some(false),
+            Some(true)
+        ]
+    );
+}
 
-    #[test]
-    fn eq_nulls() {
-        cmp_bool_options!(
-            eq,
-            &[
-                None,
-                None,
-                None,
-                Some(false),
-                Some(false),
-                Some(false),
-                Some(true),
-                Some(true),
-                Some(true)
-            ],
-            &[
-                None,
-                Some(false),
-                Some(true),
-                None,
-                Some(false),
-                Some(true),
-                None,
-                Some(false),
-                Some(true)
-            ],
-            &[
-                None,
-                None,
-                None,
-                None,
-                Some(true),
-                Some(false),
-                None,
-                Some(false),
-                Some(true)
-            ]
-        );
-    }
+fn check_mask(mask: &BooleanArray, expected: &[bool]) {
+    assert!(mask.validity().is_none());
+    let mask = mask.values_iter().collect::<Vec<_>>();
+    assert_eq!(mask, expected);
+}
 
-    fn check_mask(mask: &BooleanArray, expected: &[bool]) {
-        assert!(mask.validity().is_none());
-        let mask = mask.values_iter().collect::<Vec<_>>();
-        assert_eq!(mask, expected);
-    }
+#[test]
+fn compare_no_propagating_nulls_eq() {
+    // single validity
+    let a = Utf8Array::<i32>::from_iter([Some("a"), None, Some("c")]);
+    let b = Utf8Array::<i32>::from_iter([Some("a"), Some("c"), Some("c")]);
 
-    #[test]
-    fn compare_no_propagating_nulls_eq() {
-        // single validity
-        let a = Utf8Array::<i32>::from_iter([Some("a"), None, Some("c")]);
-        let b = Utf8Array::<i32>::from_iter([Some("a"), Some("c"), Some("c")]);
+    let out = comparison::utf8::eq_and_validity(&a, &b);
+    check_mask(&out, &[true, false, true]);
+    let out = comparison::utf8::eq_and_validity(&b, &a);
+    check_mask(&out, &[true, false, true]);
 
-        let out = comparison::utf8::eq_and_validity(&a, &b);
-        check_mask(&out, &[true, false, true]);
-        let out = comparison::utf8::eq_and_validity(&b, &a);
-        check_mask(&out, &[true, false, true]);
+    // both have validities
+    let b = Utf8Array::<i32>::from_iter([Some("a"), None, None]);
+    let out = comparison::utf8::eq_and_validity(&a, &b);
+    check_mask(&out, &[true, true, false]);
 
-        // both have validities
-        let b = Utf8Array::<i32>::from_iter([Some("a"), None, None]);
-        let out = comparison::utf8::eq_and_validity(&a, &b);
-        check_mask(&out, &[true, true, false]);
+    // scalar
+    let out = comparison::utf8::eq_scalar_and_validity(&a, "a");
+    check_mask(&out, &[true, false, false]);
 
-        // scalar
-        let out = comparison::utf8::eq_scalar_and_validity(&a, "a");
-        check_mask(&out, &[true, false, false]);
+    // now we add a mask while we know that underlying values are equal
+    let a = Utf8Array::<i32>::from_iter([Some("a"), Some("b"), Some("c")]);
 
-        // now we add a mask while we know that underlying values are equal
-        let a = Utf8Array::<i32>::from_iter([Some("a"), Some("b"), Some("c")]);
+    // now mask with a null
+    let mask = Bitmap::from_iter([false, true, true]);
+    let a_masked = a.with_validity(Some(mask));
+    let out = comparison::utf8::eq_and_validity(&a, &a_masked);
+    check_mask(&out, &[false, true, true]);
 
-        // now mask with a null
-        let mask = Bitmap::from_iter([false, true, true]);
-        let a_masked = a.with_validity(Some(mask));
-        let out = comparison::utf8::eq_and_validity(&a, &a_masked);
-        check_mask(&out, &[false, true, true]);
+    // other types
+    let a = Int32Array::from_iter([Some(1), Some(2), Some(3)]);
+    let b = Int32Array::from_iter([Some(1), Some(2), None]);
+    let out = comparison::primitive::eq_and_validity(&a, &b);
+    check_mask(&out, &[true, true, false]);
 
-        // other types
-        let a = Int32Array::from_iter([Some(1), Some(2), Some(3)]);
-        let b = Int32Array::from_iter([Some(1), Some(2), None]);
-        let out = comparison::primitive::eq_and_validity(&a, &b);
-        check_mask(&out, &[true, true, false]);
+    let a = BooleanArray::from_iter([Some(true), Some(false), Some(false)]);
+    let b = BooleanArray::from_iter([Some(true), Some(true), None]);
+    let out = comparison::boolean::eq_and_validity(&a, &b);
+    check_mask(&out, &[true, false, false]);
+}
 
-        let a = BooleanArray::from_iter([Some(true), Some(false), Some(false)]);
-        let b = BooleanArray::from_iter([Some(true), Some(true), None]);
-        let out = comparison::boolean::eq_and_validity(&a, &b);
-        check_mask(&out, &[true, false, false]);
-    }
+#[test]
+fn compare_no_propagating_nulls_neq() {
+    // single validity
+    let a = Utf8Array::<i32>::from_iter([Some("a"), None, Some("c")]);
+    let b = Utf8Array::<i32>::from_iter([Some("foo"), Some("c"), Some("c")]);
 
-    #[test]
-    fn compare_no_propagating_nulls_neq() {
-        // single validity
-        let a = Utf8Array::<i32>::from_iter([Some("a"), None, Some("c")]);
-        let b = Utf8Array::<i32>::from_iter([Some("foo"), Some("c"), Some("c")]);
+    let out = comparison::utf8::neq_and_validity(&a, &b);
+    check_mask(&out, &[true, true, false]);
+    let out = comparison::utf8::neq_and_validity(&b, &a);
+    check_mask(&out, &[true, true, false]);
 
-        let out = comparison::utf8::neq_and_validity(&a, &b);
-        check_mask(&out, &[true, true, false]);
-        let out = comparison::utf8::neq_and_validity(&b, &a);
-        check_mask(&out, &[true, true, false]);
+    // both have validities
+    let b = Utf8Array::<i32>::from_iter([Some("a"), None, None]);
+    let out = comparison::utf8::neq_and_validity(&a, &b);
+    check_mask(&out, &[false, false, true]);
 
-        // both have validities
-        let b = Utf8Array::<i32>::from_iter([Some("a"), None, None]);
-        let out = comparison::utf8::neq_and_validity(&a, &b);
-        check_mask(&out, &[false, false, true]);
+    // scalar
+    let out = comparison::utf8::neq_scalar_and_validity(&a, "a");
+    check_mask(&out, &[false, true, true]);
 
-        // scalar
-        let out = comparison::utf8::neq_scalar_and_validity(&a, "a");
-        check_mask(&out, &[false, true, true]);
+    // now we add a mask while we know that underlying values are equal
+    let a = Utf8Array::<i32>::from_iter([Some("a"), Some("b"), Some("c")]);
 
-        // now we add a mask while we know that underlying values are equal
-        let a = Utf8Array::<i32>::from_iter([Some("a"), Some("b"), Some("c")]);
+    // now mask with a null
+    let mask = Bitmap::from_iter([false, true, true]);
+    let a_masked = a.with_validity(Some(mask));
+    let out = comparison::utf8::neq_and_validity(&a, &a_masked);
+    check_mask(&out, &[true, false, false]);
 
-        // now mask with a null
-        let mask = Bitmap::from_iter([false, true, true]);
-        let a_masked = a.with_validity(Some(mask));
-        let out = comparison::utf8::neq_and_validity(&a, &a_masked);
-        check_mask(&out, &[true, false, false]);
+    // other types
+    let a = Int32Array::from_iter([Some(1), Some(2), Some(3)]);
+    let b = Int32Array::from_iter([Some(1), Some(2), None]);
+    let out = comparison::primitive::neq_and_validity(&a, &b);
+    check_mask(&out, &[false, false, true]);
 
-        // other types
-        let a = Int32Array::from_iter([Some(1), Some(2), Some(3)]);
-        let b = Int32Array::from_iter([Some(1), Some(2), None]);
-        let out = comparison::primitive::neq_and_validity(&a, &b);
-        check_mask(&out, &[false, false, true]);
+    let a = BooleanArray::from_iter([Some(true), Some(false), Some(false)]);
+    let b = BooleanArray::from_iter([Some(true), Some(true), None]);
+    let out = comparison::boolean::neq_and_validity(&a, &b);
+    check_mask(&out, &[false, true, true]);
+}
 
-        let a = BooleanArray::from_iter([Some(true), Some(false), Some(false)]);
-        let b = BooleanArray::from_iter([Some(true), Some(true), None]);
-        let out = comparison::boolean::neq_and_validity(&a, &b);
-        check_mask(&out, &[false, true, true]);
-    }
+#[test]
+fn primitive_eq() {
+    let a = Int32Array::from([Some(0), Some(1), Some(3), Some(2), None]);
+    let b = Int32Array::from([Some(0), Some(3), Some(1), None, Some(3)]);
+
+    let a = primitive::eq(&a, &b);
+    assert_eq!(
+        a,
+        BooleanArray::from([Some(true), Some(false), Some(false), None, None])
+    )
+}
+
+#[test]
+fn primitive_lt() {
+    let a = Int32Array::from([Some(0), Some(1), Some(3), Some(2), None]);
+    let b = Int32Array::from([Some(0), Some(3), Some(1), None, Some(3)]);
+
+    let a = primitive::lt(&a, &b);
+    assert_eq!(
+        a,
+        BooleanArray::from([Some(false), Some(true), Some(false), None, None])
+    )
+}
+
+#[test]
+fn primitive_lt_eq() {
+    let a = Int32Array::from([Some(0), Some(1), Some(3), Some(2), None]);
+    let b = Int32Array::from([Some(0), Some(3), Some(1), None, Some(3)]);
+
+    let a = primitive::lt_eq(&a, &b);
+    assert_eq!(
+        a,
+        BooleanArray::from([Some(true), Some(true), Some(false), None, None])
+    )
+}
+
+#[test]
+fn primitive_gt() {
+    let a = Int32Array::from([Some(0), Some(1), Some(3), Some(2), None]);
+    let b = Int32Array::from([Some(0), Some(3), Some(1), None, Some(3)]);
+
+    let a = primitive::gt(&a, &b);
+    assert_eq!(
+        a,
+        BooleanArray::from([Some(false), Some(false), Some(true), None, None])
+    )
+}
+
+#[test]
+fn primitive_gt_eq() {
+    let a = Int32Array::from([Some(0), Some(1), Some(3), Some(2), None]);
+    let b = Int32Array::from([Some(0), Some(3), Some(1), None, Some(3)]);
+
+    let a = primitive::gt_eq(&a, &b);
+    assert_eq!(
+        a,
+        BooleanArray::from([Some(true), Some(false), Some(true), None, None])
+    )
 }
