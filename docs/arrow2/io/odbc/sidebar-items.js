@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["read","APIs to read from ODBC"],["write","APIs to write to ODBC"]]});
