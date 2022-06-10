@@ -8,7 +8,7 @@ use parquet2::write::WriteOptions as FileWriteOptions;
 use crate::datatypes::Schema;
 use crate::error::{Error, Result};
 
-use super::{schema::schema_to_metadata_key, to_parquet_schema, WriteOptions};
+use super::{schema::schema_to_metadata_key, to_parquet_schema, ThriftFileMetaData, WriteOptions};
 
 /// Attaches [`Schema`] to `key_value_metadata`
 pub fn add_arrow_schema(
@@ -86,5 +86,12 @@ impl<W: Write> FileWriter<W> {
     /// Consumes this writer and returns the inner writer
     pub fn into_inner(self) -> W {
         self.writer.into_inner()
+    }
+
+    /// Returns the underlying writer and [`ThriftFileMetaData`]
+    /// # Panics
+    /// This function panics if [`Self::end`] has not yet been called
+    pub fn into_inner_and_metadata(self) -> (W, ThriftFileMetaData) {
+        self.writer.into_inner_and_metadata()
     }
 }
