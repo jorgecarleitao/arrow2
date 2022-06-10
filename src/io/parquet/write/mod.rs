@@ -24,10 +24,13 @@ pub use parquet2::{
     compression::{BrotliLevel, CompressionLevel, CompressionOptions, GzipLevel, ZstdLevel},
     encoding::Encoding,
     fallible_streaming_iterator,
-    metadata::{Descriptor, KeyValue, SchemaDescriptor},
+    metadata::{Descriptor, FileMetaData, KeyValue, SchemaDescriptor, ThriftFileMetaData},
     page::{CompressedDataPage, CompressedPage, EncodedPage},
     schema::types::{FieldInfo, ParquetType, PhysicalType as ParquetPhysicalType},
-    write::{compress, Compressor, DynIter, DynStreamingIterator, RowGroupIter, Version},
+    write::{
+        compress, write_metadata_sidecar, Compressor, DynIter, DynStreamingIterator, RowGroupIter,
+        Version,
+    },
     FallibleStreamingIterator,
 };
 
