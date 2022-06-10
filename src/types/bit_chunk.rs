@@ -9,6 +9,8 @@ use super::NativeType;
 
 /// A chunk of bits. This is used to create masks of a given length
 /// whose width is `1` bit. In `portable_simd` notation, this corresponds to `m1xY`.
+///
+/// This (sealed) trait is implemented for [`u8`], [`u16`], [`u32`] and [`u64`].
 pub trait BitChunk:
     super::private::Sealed
     + PrimInt

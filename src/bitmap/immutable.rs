@@ -234,6 +234,17 @@ impl Bitmap {
         }
     }
 
+    /// Converts this [`Bitmap`] into a [`MutableBitmap`], cloning its internal
+    /// buffer if required (clone-on-write).
+    pub fn make_mut(self) -> MutableBitmap {
+        match self.into_mut() {
+            Either::Left(data) => {
+                MutableBitmap::from_vec(data.bytes.as_ref().to_vec(), data.length)
+            }
+            Either::Right(data) => data,
+        }
+    }
+
     /// Initializes an new [`Bitmap`] filled with unset values.
     #[inline]
     pub fn new_zeroed(length: usize) -> Self {

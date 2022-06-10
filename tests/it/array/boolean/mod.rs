@@ -131,3 +131,27 @@ fn from_iter() {
     let a: BooleanArray = iter.collect();
     assert_eq!(a.len(), 2);
 }
+
+#[test]
+fn apply_values() {
+    let mut a = BooleanArray::from([Some(true), Some(false), None]);
+    a.apply_values(|x| {
+        let mut a = std::mem::take(x);
+        a = !a;
+        *x = a;
+    });
+    let expected = BooleanArray::from([Some(false), Some(true), None]);
+    assert_eq!(a, expected);
+}
+
+#[test]
+fn apply_validity() {
+    let mut a = BooleanArray::from([Some(true), Some(false), None]);
+    a.apply_validity(|x| {
+        let mut a = std::mem::take(x);
+        a = !a;
+        *x = a;
+    });
+    let expected = BooleanArray::from([None, None, Some(false)]);
+    assert_eq!(a, expected);
+}

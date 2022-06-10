@@ -157,6 +157,17 @@ impl<T: NativeType> Buffer<T> {
             }
         }
     }
+
+    /// Converts this [`Buffer`] to a [`Vec`], cloning the data if needed, also
+    /// known as clone-on-write semantics.
+    ///
+    /// This function is O(1) under the same conditions that [`Self::into_mut`] returns `Vec`.
+    pub fn make_mut(self) -> Vec<T> {
+        match self.into_mut() {
+            Either::Left(data) => data.as_ref().to_vec(),
+            Either::Right(data) => data,
+        }
+    }
 }
 
 impl<T: NativeType> From<Vec<T>> for Buffer<T> {

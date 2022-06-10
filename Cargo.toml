@@ -321,3 +321,11 @@ harness = false
 [[bench]]
 name = "slices_iterator"
 harness = false
+
+[[bench]]
+name = "bitmap_assign_ops"
+harness = false
+
+[[bench]]
+name = "assign_ops"
+harness = false
