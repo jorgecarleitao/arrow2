@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
+use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
-use std::{collections::hash_map::DefaultHasher, sync::Arc};
 
 use hash_hasher::HashedMap;
 use indexmap::map::IndexMap as HashMap;
@@ -314,17 +314,17 @@ fn deserialize_dictionary<'a, K: DictionaryKey, A: Borrow<Value<'a>>>(
 pub(crate) fn _deserialize<'a, A: Borrow<Value<'a>>>(
     rows: &[A],
     data_type: DataType,
-) -> Arc<dyn Array> {
+) -> Box<dyn Array> {
     match &data_type {
-        DataType::Null => Arc::new(NullArray::new(data_type, rows.len())),
-        DataType::Boolean => Arc::new(deserialize_boolean(rows)),
-        DataType::Int8 => Arc::new(deserialize_int::<i8, _>(rows, data_type)),
-        DataType::Int16 => Arc::new(deserialize_int::<i16, _>(rows, data_type)),
+        DataType::Null => Box::new(NullArray::new(data_type, rows.len())),
+        DataType::Boolean => Box::new(deserialize_boolean(rows)),
+        DataType::Int8 => Box::new(deserialize_int::<i8, _>(rows, data_type)),
+        DataType::Int16 => Box::new(deserialize_int::<i16, _>(rows, data_type)),
         DataType::Int32
         | DataType::Date32
         | DataType::Time32(_)
         | DataType::Interval(IntervalUnit::YearMonth) => {
-            Arc::new(deserialize_int::<i32, _>(rows, data_type))
+            Box::new(deserialize_int::<i32, _>(rows, data_type))
         }
         DataType::Interval(IntervalUnit::DayTime) => {
             unimplemented!("There is no natural representation of DayTime in JSON.")
@@ -333,24 +333,24 @@ pub(crate) fn _deserialize<'a, A: Borrow<Value<'a>>>(
         | DataType::Date64
         | DataType::Time64(_)
         | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => Arc::new(deserialize_int::<i64, _>(rows, data_type)),
-        DataType::UInt8 => Arc::new(deserialize_int::<u8, _>(rows, data_type)),
-        DataType::UInt16 => Arc::new(deserialize_int::<u16, _>(rows, data_type)),
-        DataType::UInt32 => Arc::new(deserialize_int::<u32, _>(rows, data_type)),
-        DataType::UInt64 => Arc::new(deserialize_int::<u64, _>(rows, data_type)),
+        | DataType::Duration(_) => Box::new(deserialize_int::<i64, _>(rows, data_type)),
+        DataType::UInt8 => Box::new(deserialize_int::<u8, _>(rows, data_type)),
+        DataType::UInt16 => Box::new(deserialize_int::<u16, _>(rows, data_type)),
+        DataType::UInt32 => Box::new(deserialize_int::<u32, _>(rows, data_type)),
+        DataType::UInt64 => Box::new(deserialize_int::<u64, _>(rows, data_type)),
         DataType::Float16 => unreachable!(),
-        DataType::Float32 => Arc::new(deserialize_float::<f32, _>(rows, data_type)),
-        DataType::Float64 => Arc::new(deserialize_float::<f64, _>(rows, data_type)),
-        DataType::Utf8 => Arc::new(deserialize_utf8::<i32, _>(rows)),
-        DataType::LargeUtf8 => Arc::new(deserialize_utf8::<i64, _>(rows)),
-        DataType::List(_) => Arc::new(deserialize_list::<i32, _>(rows, data_type)),
-        DataType::LargeList(_) => Arc::new(deserialize_list::<i64, _>(rows, data_type)),
-        DataType::Binary => Arc::new(deserialize_binary::<i32, _>(rows)),
-        DataType::LargeBinary => Arc::new(deserialize_binary::<i64, _>(rows)),
-        DataType::Struct(_) => Arc::new(deserialize_struct(rows, data_type)),
+        DataType::Float32 => Box::new(deserialize_float::<f32, _>(rows, data_type)),
+        DataType::Float64 => Box::new(deserialize_float::<f64, _>(rows, data_type)),
+        DataType::Utf8 => Box::new(deserialize_utf8::<i32, _>(rows)),
+        DataType::LargeUtf8 => Box::new(deserialize_utf8::<i64, _>(rows)),
+        DataType::List(_) => Box::new(deserialize_list::<i32, _>(rows, data_type)),
+        DataType::LargeList(_) => Box::new(deserialize_list::<i64, _>(rows, data_type)),
+        DataType::Binary => Box::new(deserialize_binary::<i32, _>(rows)),
+        DataType::LargeBinary => Box::new(deserialize_binary::<i64, _>(rows)),
+        DataType::Struct(_) => Box::new(deserialize_struct(rows, data_type)),
         DataType::Dictionary(key_type, _, _) => {
             match_integer_type!(key_type, |$T| {
-                Arc::new(deserialize_dictionary::<$T, _>(rows, data_type))
+                Box::new(deserialize_dictionary::<$T, _>(rows, data_type))
             })
         }
         _ => todo!(),
@@ -368,7 +368,7 @@ pub(crate) fn _deserialize<'a, A: Borrow<Value<'a>>>(
 /// This function errors iff either:
 /// * `json` is not a [`Value::Array`]
 /// * `data_type` is neither [`DataType::List`] nor [`DataType::LargeList`]
-pub fn deserialize(json: &Value, data_type: DataType) -> Result<Arc<dyn Array>, Error> {
+pub fn deserialize(json: &Value, data_type: DataType) -> Result<Box<dyn Array>, Error> {
     match json {
         Value::Array(rows) => match data_type {
             DataType::List(inner) | DataType::LargeList(inner) => {

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::datatypes::DataType;
 
 use super::Scalar;
@@ -7,7 +5,7 @@ use super::Scalar;
 /// A single entry of a [`crate::array::UnionArray`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnionScalar {
-    value: Arc<dyn Scalar>,
+    value: Box<dyn Scalar>,
     type_: i8,
     data_type: DataType,
 }
@@ -15,7 +13,7 @@ pub struct UnionScalar {
 impl UnionScalar {
     /// Returns a new [`UnionScalar`]
     #[inline]
-    pub fn new(data_type: DataType, type_: i8, value: Arc<dyn Scalar>) -> Self {
+    pub fn new(data_type: DataType, type_: i8, value: Box<dyn Scalar>) -> Self {
         Self {
             value,
             type_,
@@ -25,7 +23,7 @@ impl UnionScalar {
 
     /// Returns the inner value
     #[inline]
-    pub fn value(&self) -> &Arc<dyn Scalar> {
+    pub fn value(&self) -> &Box<dyn Scalar> {
         &self.value
     }
 

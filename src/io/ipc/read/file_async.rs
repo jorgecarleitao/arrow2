@@ -1,7 +1,6 @@
 //! Async reader for Arrow IPC files
 use std::collections::HashMap;
 use std::io::SeekFrom;
-use std::sync::Arc;
 
 use arrow_format::ipc::{planus::ReadAsRoot, Block, MessageHeaderRef, MessageRef};
 use futures::{
@@ -21,7 +20,7 @@ use super::FileMetadata;
 
 /// Async reader for Arrow IPC files
 pub struct FileStream<'a> {
-    stream: BoxStream<'a, Result<Chunk<Arc<dyn Array>>>>,
+    stream: BoxStream<'a, Result<Chunk<Box<dyn Array>>>>,
     schema: Option<Schema>,
     metadata: FileMetadata,
 }
@@ -69,7 +68,7 @@ impl<'a> FileStream<'a> {
         mut dictionaries: Option<Dictionaries>,
         metadata: FileMetadata,
         projection: Option<(Vec<usize>, HashMap<usize, usize>)>,
-    ) -> BoxStream<'a, Result<Chunk<Arc<dyn Array>>>>
+    ) -> BoxStream<'a, Result<Chunk<Box<dyn Array>>>>
     where
         R: AsyncRead + AsyncSeek + Unpin + Send + 'a,
     {
@@ -105,7 +104,7 @@ impl<'a> FileStream<'a> {
 }
 
 impl<'a> Stream for FileStream<'a> {
-    type Item = Result<Chunk<Arc<dyn Array>>>;
+    type Item = Result<Chunk<Box<dyn Array>>>;
 
     fn poll_next(
         self: std::pin::Pin<&mut Self>,
@@ -156,7 +155,7 @@ async fn read_batch<R>(
     block: usize,
     meta_buffer: &mut Vec<u8>,
     block_buffer: &mut Vec<u8>,
-) -> Result<Chunk<Arc<dyn Array>>>
+) -> Result<Chunk<Box<dyn Array>>>
 where
     R: AsyncRead + AsyncSeek + Unpin,
 {

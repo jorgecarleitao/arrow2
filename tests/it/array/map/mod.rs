@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::{
     array::*,
     datatypes::{DataType, Field},
@@ -16,21 +14,21 @@ fn basics() {
     let field = StructArray::new(
         dt.clone(),
         vec![
-            Arc::new(Utf8Array::<i32>::from_slice(["a", "aa", "aaa"])) as _,
-            Arc::new(Utf8Array::<i32>::from_slice(["b", "bb", "bbb"])),
+            Box::new(Utf8Array::<i32>::from_slice(["a", "aa", "aaa"])) as _,
+            Box::new(Utf8Array::<i32>::from_slice(["b", "bb", "bbb"])),
         ],
         None,
     );
 
-    let array = MapArray::new(data_type, vec![0, 1, 2].into(), Arc::new(field), None);
+    let array = MapArray::new(data_type, vec![0, 1, 2].into(), Box::new(field), None);
 
     assert_eq!(
         array.value(0),
         Box::new(StructArray::new(
             dt.clone(),
             vec![
-                Arc::new(Utf8Array::<i32>::from_slice(["a"])) as _,
-                Arc::new(Utf8Array::<i32>::from_slice(["b"])),
+                Box::new(Utf8Array::<i32>::from_slice(["a"])) as _,
+                Box::new(Utf8Array::<i32>::from_slice(["b"])),
             ],
             None,
         )) as Box<dyn Array>
@@ -42,8 +40,8 @@ fn basics() {
         Box::new(StructArray::new(
             dt,
             vec![
-                Arc::new(Utf8Array::<i32>::from_slice(["aa"])) as _,
-                Arc::new(Utf8Array::<i32>::from_slice(["bb"])),
+                Box::new(Utf8Array::<i32>::from_slice(["aa"])) as _,
+                Box::new(Utf8Array::<i32>::from_slice(["bb"])),
             ],
             None,
         )) as Box<dyn Array>

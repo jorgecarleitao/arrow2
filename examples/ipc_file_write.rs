@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::sync::Arc;
 
 use arrow2::array::{Array, Int32Array, Utf8Array};
 use arrow2::chunk::Chunk;
@@ -7,7 +6,7 @@ use arrow2::datatypes::{DataType, Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::write;
 
-fn write_batches(path: &str, schema: Schema, columns: &[Chunk<Arc<dyn Array>>]) -> Result<()> {
+fn write_batches(path: &str, schema: Schema, columns: &[Chunk<Box<dyn Array>>]) -> Result<()> {
     let file = File::create(path)?;
 
     let options = write::WriteOptions { compression: None };
@@ -35,7 +34,7 @@ fn main() -> Result<()> {
     let a = Int32Array::from_slice(&[1, 2, 3, 4, 5]);
     let b = Utf8Array::<i32>::from_slice(&["a", "b", "c", "d", "e"]);
 
-    let batch = Chunk::try_new(vec![a.arced(), b.arced()])?;
+    let batch = Chunk::try_new(vec![a.boxed(), b.boxed()])?;
 
     // write it
     write_batches(file_path, schema, &[batch])?;

@@ -20,7 +20,6 @@ use crate::error::{Error, Result};
 /// # Examples
 ///
 /// ```
-/// use std::sync::Arc;
 /// use futures::SinkExt;
 /// use arrow2::array::{Array, Int32Array};
 /// use arrow2::datatypes::{DataType, Field, Schema};
@@ -41,7 +40,7 @@ use crate::error::{Error, Result};
 ///
 /// for i in 0..3 {
 ///     let values = Int32Array::from(&[Some(i), None]);
-///     let chunk = Chunk::new(vec![values.arced()]);
+///     let chunk = Chunk::new(vec![values.boxed()]);
 ///     sink.feed(chunk.into()).await?;
 /// }
 /// sink.close().await?;

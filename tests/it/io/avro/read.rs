@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::chunk::Chunk;
 use avro_rs::types::{Record, Value};
 use avro_rs::{Codec, Writer};
@@ -83,7 +81,7 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
 }
 
-pub(super) fn data() -> Chunk<Arc<dyn Array>> {
+pub(super) fn data() -> Chunk<Box<dyn Array>> {
     let data = vec![
         Some(vec![Some(1i32), None, Some(3)]),
         Some(vec![Some(1i32), None, Some(3)]),
@@ -93,28 +91,29 @@ pub(super) fn data() -> Chunk<Arc<dyn Array>> {
     array.try_extend(data).unwrap();
 
     let columns = vec![
-        Int64Array::from_slice([27, 47]).arced(),
-        Arc::new(Utf8Array::<i32>::from_slice(["foo", "bar"])),
-        Arc::new(Int32Array::from_slice([1, 1])),
-        Arc::new(Int32Array::from_slice([1, 2]).to(DataType::Date32)),
-        Arc::new(BinaryArray::<i32>::from_slice([b"foo", b"bar"])),
-        Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0])),
-        Arc::new(BooleanArray::from_slice([true, false])),
-        Arc::new(Utf8Array::<i32>::from([Some("foo"), None])),
-        array.into_arc(),
-        Arc::new(StructArray::from_data(
+        Int64Array::from_slice([27, 47]).boxed(),
+        Utf8Array::<i32>::from_slice(["foo", "bar"]).boxed(),
+        Int32Array::from_slice([1, 1]).boxed(),
+        Int32Array::from_slice([1, 2]).to(DataType::Date32).boxed(),
+        BinaryArray::<i32>::from_slice([b"foo", b"bar"]).boxed(),
+        PrimitiveArray::<f64>::from_slice([1.0, 2.0]).boxed(),
+        BooleanArray::from_slice([true, false]).boxed(),
+        Utf8Array::<i32>::from([Some("foo"), None]).boxed(),
+        array.into_box(),
+        StructArray::from_data(
             DataType::Struct(vec![Field::new("e", DataType::Float64, false)]),
-            vec![Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0]))],
+            vec![Box::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0]))],
             None,
-        )),
-        Arc::new(DictionaryArray::<i32>::from_data(
+        )
+        .boxed(),
+        DictionaryArray::<i32>::from_data(
             Int32Array::from_slice([1, 0]),
-            Arc::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
-        )),
-        Arc::new(
-            PrimitiveArray::<i128>::from_slice([12345678i128, -12345678i128])
-                .to(DataType::Decimal(18, 5)),
-        ),
+            Box::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
+        )
+        .boxed(),
+        PrimitiveArray::<i128>::from_slice([12345678i128, -12345678i128])
+            .to(DataType::Decimal(18, 5))
+            .boxed(),
     ];
 
     Chunk::try_new(columns).unwrap()
@@ -193,7 +192,7 @@ pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::
 pub(super) fn read_avro(
     mut avro: &[u8],
     projection: Option<Vec<bool>>,
-) -> Result<(Chunk<Arc<dyn Array>>, Schema)> {
+) -> Result<(Chunk<Box<dyn Array>>, Schema)> {
     let file = &mut avro;
 
     let (avro_schema, schema, codec, file_marker) = read::read_metadata(file)?;

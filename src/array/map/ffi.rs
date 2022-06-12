@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{array::FromFfi, bitmap::align, error::Result, ffi};
 
 use super::super::{ffi::ToFfi, Array};
@@ -13,7 +11,7 @@ unsafe impl ToFfi for MapArray {
         ]
     }
 
-    fn children(&self) -> Vec<Arc<dyn Array>> {
+    fn children(&self) -> Vec<Box<dyn Array>> {
         vec![self.field.clone()]
     }
 
@@ -56,7 +54,7 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for MapArray {
         let validity = unsafe { array.validity() }?;
         let offsets = unsafe { array.buffer::<i32>(1) }?;
         let child = array.child(0)?;
-        let values = ffi::try_from(child)?.into();
+        let values = ffi::try_from(child)?;
 
         Self::try_new(data_type, offsets, values, validity)
     }

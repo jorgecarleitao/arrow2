@@ -1,5 +1,4 @@
 use std::convert::TryInto;
-use std::sync::Arc;
 
 use avro_schema::Record;
 use avro_schema::{Enum, Schema as AvroSchema};
@@ -444,7 +443,7 @@ pub fn deserialize(
     fields: &[Field],
     avro_schemas: &[AvroSchema],
     projection: &[bool],
-) -> Result<Chunk<Arc<dyn Array>>> {
+) -> Result<Chunk<Box<dyn Array>>> {
     let rows = block.number_of_rows;
     let mut block = block.data.as_ref();
 
@@ -484,7 +483,7 @@ pub fn deserialize(
             .iter_mut()
             .zip(projection.iter())
             .filter_map(|x| if *x.1 { Some(x.0) } else { None })
-            .map(|array| array.as_arc())
+            .map(|array| array.as_box())
             .collect(),
     )
 }

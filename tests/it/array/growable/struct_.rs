@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::array::{
     growable::{Growable, GrowableStruct},
     Array, PrimitiveArray, StructArray, Utf8Array,
@@ -7,15 +5,15 @@ use arrow2::array::{
 use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::{DataType, Field};
 
-fn some_values() -> (DataType, Vec<Arc<dyn Array>>) {
-    let strings: Arc<dyn Array> = Arc::new(Utf8Array::<i32>::from(&[
+fn some_values() -> (DataType, Vec<Box<dyn Array>>) {
+    let strings: Box<dyn Array> = Box::new(Utf8Array::<i32>::from(&[
         Some("a"),
         Some("aa"),
         None,
         Some("mark"),
         Some("doe"),
     ]));
-    let ints: Arc<dyn Array> = Arc::new(PrimitiveArray::<i32>::from(&[
+    let ints: Box<dyn Array> = Box::new(PrimitiveArray::<i32>::from(&[
         Some(1),
         Some(2),
         Some(3),
@@ -42,7 +40,7 @@ fn basic() {
 
     let expected = StructArray::from_data(
         fields,
-        vec![values[0].slice(1, 2).into(), values[1].slice(1, 2).into()],
+        vec![values[0].slice(1, 2), values[1].slice(1, 2)],
         None,
     );
     assert_eq!(result, expected)
@@ -61,7 +59,7 @@ fn offset() {
 
     let expected = StructArray::from_data(
         fields,
-        vec![values[0].slice(2, 2).into(), values[1].slice(2, 2).into()],
+        vec![values[0].slice(2, 2), values[1].slice(2, 2)],
         None,
     );
 
@@ -85,7 +83,7 @@ fn nulls() {
 
     let expected = StructArray::from_data(
         fields,
-        vec![values[0].slice(1, 2).into(), values[1].slice(1, 2).into()],
+        vec![values[0].slice(1, 2), values[1].slice(1, 2)],
         Some(Bitmap::from_u8_slice(&[0b00000010], 5).slice(1, 2)),
     );
 
@@ -105,14 +103,14 @@ fn many() {
     mutable.extend_validity(1);
     let result = mutable.as_box();
 
-    let expected_string: Arc<dyn Array> = Arc::new(Utf8Array::<i32>::from(&[
+    let expected_string: Box<dyn Array> = Box::new(Utf8Array::<i32>::from(&[
         Some("aa"),
         None,
         Some("a"),
         Some("aa"),
         None,
     ]));
-    let expected_int: Arc<dyn Array> = Arc::new(PrimitiveArray::<i32>::from(vec![
+    let expected_int: Box<dyn Array> = Box::new(PrimitiveArray::<i32>::from(vec![
         Some(2),
         Some(3),
         Some(1),

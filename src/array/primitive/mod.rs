@@ -53,6 +53,28 @@ pub struct PrimitiveArray<T: NativeType> {
     validity: Option<Bitmap>,
 }
 
+fn check<T: NativeType>(
+    data_type: &DataType,
+    values: &[T],
+    validity: &Option<Bitmap>,
+) -> Result<(), Error> {
+    if validity
+        .as_ref()
+        .map_or(false, |validity| validity.len() != values.len())
+    {
+        return Err(Error::oos(
+            "validity mask length must match the number of values",
+        ));
+    }
+
+    if data_type.to_physical_type() != PhysicalType::Primitive(T::PRIMITIVE) {
+        return Err(Error::oos(
+            "BooleanArray can only be initialized with a DataType whose physical type is Primitive",
+        ));
+    }
+    Ok(())
+}
+
 impl<T: NativeType> PrimitiveArray<T> {
     /// The canonical method to create a [`PrimitiveArray`] out of its internal components.
     /// # Implementation
@@ -67,21 +89,7 @@ impl<T: NativeType> PrimitiveArray<T> {
         values: Buffer<T>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
-        if validity
-            .as_ref()
-            .map_or(false, |validity| validity.len() != values.len())
-        {
-            return Err(Error::oos(
-                "validity mask length must match the number of values",
-            ));
-        }
-
-        if data_type.to_physical_type() != PhysicalType::Primitive(T::PRIMITIVE) {
-            return Err(Error::oos(
-                "BooleanArray can only be initialized with a DataType whose physical type is Primitive",
-            ));
-        }
-
+        check(&data_type, &values, &validity)?;
         Ok(Self {
             data_type,
             values,
@@ -109,14 +117,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     #[inline]
     #[must_use]
     pub fn to(self, data_type: DataType) -> Self {
-        if !data_type.to_physical_type().eq_primitive(T::PRIMITIVE) {
-            Err(Error::InvalidArgumentError(format!(
-                "Type {} does not support logical type {:?}",
-                std::any::type_name::<T>(),
-                data_type
-            )))
-            .unwrap()
-        }
+        check(&data_type, &self.values, &self.validity).unwrap();
         Self {
             data_type,
             values: self.values,
@@ -417,6 +418,11 @@ impl<T: NativeType> PrimitiveArray<T> {
 impl<T: NativeType> Array for PrimitiveArray<T> {
     #[inline]
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 

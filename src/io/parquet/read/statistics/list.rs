@@ -36,7 +36,7 @@ impl MutableArray for DynMutableListArray {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        let inner = self.inner.as_arc();
+        let inner = self.inner.as_box();
 
         match self.data_type.to_logical_type() {
             DataType::List(_) => {

@@ -1,7 +1,4 @@
-use std::{
-    io::{Read, Seek},
-    sync::Arc,
-};
+use std::io::{Read, Seek};
 
 use futures::{
     future::{try_join_all, BoxFuture},
@@ -59,7 +56,7 @@ impl RowGroupDeserializer {
 }
 
 impl Iterator for RowGroupDeserializer {
-    type Item = Result<Chunk<Arc<dyn Array>>>;
+    type Item = Result<Chunk<Box<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining_rows == 0 {
@@ -71,7 +68,7 @@ impl Iterator for RowGroupDeserializer {
             .map(|iter| {
                 let array = iter.next().unwrap()?;
                 Ok(if array.len() > self.remaining_rows {
-                    array.slice(0, array.len() - self.remaining_rows).into()
+                    array.slice(0, array.len() - self.remaining_rows)
                 } else {
                     array
                 })
@@ -186,7 +183,7 @@ pub fn to_deserializer<'a>(
             let pages = PageReader::new(
                 std::io::Cursor::new(chunk),
                 column_meta,
-                Arc::new(|_, _| true),
+                std::sync::Arc::new(|_, _| true),
                 vec![],
             );
             (

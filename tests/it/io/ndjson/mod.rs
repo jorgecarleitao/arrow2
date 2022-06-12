@@ -1,7 +1,5 @@
 mod read;
 
-use std::sync::Arc;
-
 use arrow2::array::*;
 use arrow2::bitmap::Bitmap;
 use arrow2::buffer::Buffer;
@@ -42,7 +40,7 @@ fn round_trip_list() -> Result<()> {
     round_trip(data)
 }
 
-fn case_list() -> (String, Arc<dyn Array>) {
+fn case_list() -> (String, Box<dyn Array>) {
     let data = r#"{"a":1, "b":[2.0, 1.3, -6.1], "c":[false, true], "d":"4"}
             {"a":-10, "b":null, "c":[true, true]}
             {"a":null, "b":[2.1, null, -6.2], "c":[false, null], "d":"text"}
@@ -87,14 +85,14 @@ fn case_list() -> (String, Arc<dyn Array>) {
 
     let array = StructArray::from_data(
         data_type,
-        vec![a.arced(), b.arced(), c.arced(), d.arced()],
+        vec![a.boxed(), b.boxed(), c.boxed(), d.boxed()],
         None,
     );
 
-    (data, array.arced())
+    (data, array.boxed())
 }
 
-fn case_dict() -> (String, Arc<dyn Array>) {
+fn case_dict() -> (String, Box<dyn Array>) {
     let data = r#"{"machine": "a", "events": [null, "Elect Leader", "Do Ballot"]}
     {"machine": "b", "events": ["Do Ballot", null, "Send Data", "Elect Leader"]}
     {"machine": "c", "events": ["Send Data"]}
@@ -133,15 +131,15 @@ fn case_dict() -> (String, Arc<dyn Array>) {
 
     (
         data,
-        Arc::new(StructArray::from_data(
+        Box::new(StructArray::from_data(
             DataType::Struct(fields),
-            vec![array.arced()],
+            vec![array.boxed()],
             None,
         )),
     )
 }
 
-fn case_basics() -> (String, Arc<dyn Array>) {
+fn case_basics() -> (String, Box<dyn Array>) {
     let data = r#"{"a":1, "b":2.0, "c":false, "d":"4"}
     {"a":-10, "b":-3.5, "c":true, "d":null}
     {"a":100000000, "b":0.6, "d":"text"}"#
@@ -155,17 +153,17 @@ fn case_basics() -> (String, Arc<dyn Array>) {
     let array = StructArray::from_data(
         data_type,
         vec![
-            Int64Array::from_slice(&[1, -10, 100000000]).arced(),
-            Arc::new(Float64Array::from_slice(&[2.0, -3.5, 0.6])),
-            Arc::new(BooleanArray::from(&[Some(false), Some(true), None])),
-            Arc::new(Utf8Array::<i32>::from(&[Some("4"), None, Some("text")])),
+            Int64Array::from_slice(&[1, -10, 100000000]).boxed(),
+            Float64Array::from_slice(&[2.0, -3.5, 0.6]).boxed(),
+            BooleanArray::from(&[Some(false), Some(true), None]).boxed(),
+            Utf8Array::<i32>::from(&[Some("4"), None, Some("text")]).boxed(),
         ],
         None,
     );
-    (data, Arc::new(array))
+    (data, Box::new(array))
 }
 
-fn case_projection() -> (String, Arc<dyn Array>) {
+fn case_projection() -> (String, Box<dyn Array>) {
     let data = r#"{"a":1, "b":2.0, "c":false, "d":"4", "e":"4"}
     {"a":10, "b":-3.5, "c":true, "d":null, "e":"text"}
     {"a":100000000, "b":0.6, "d":"text"}"#
@@ -180,21 +178,17 @@ fn case_projection() -> (String, Arc<dyn Array>) {
     let array = StructArray::from_data(
         data_type,
         vec![
-            UInt32Array::from_slice(&[1, 10, 100000000]).arced(),
-            Arc::new(Float32Array::from_slice(&[2.0, -3.5, 0.6])),
-            Arc::new(BooleanArray::from(&[Some(false), Some(true), None])),
-            Arc::new(BinaryArray::<i32>::from(&[
-                Some(b"4".as_ref()),
-                Some(b"text".as_ref()),
-                None,
-            ])),
+            UInt32Array::from_slice(&[1, 10, 100000000]).boxed(),
+            Float32Array::from_slice(&[2.0, -3.5, 0.6]).boxed(),
+            BooleanArray::from(&[Some(false), Some(true), None]).boxed(),
+            BinaryArray::<i32>::from(&[Some(b"4".as_ref()), Some(b"text".as_ref()), None]).boxed(),
         ],
         None,
     );
-    (data, Arc::new(array))
+    (data, Box::new(array))
 }
 
-fn case_struct() -> (String, Arc<dyn Array>) {
+fn case_struct() -> (String, Box<dyn Array>) {
     let data = r#"{"a": {"b": true, "c": {"d": "text"}}}
     {"a": {"b": false, "c": null}}
     {"a": {"b": true, "c": {"d": "text"}}}
@@ -217,7 +211,7 @@ fn case_struct() -> (String, Arc<dyn Array>) {
     let d = Utf8Array::<i32>::from(&vec![Some("text"), None, Some("text"), None]);
     let c = StructArray::from_data(
         DataType::Struct(vec![d_field]),
-        vec![Arc::new(d)],
+        vec![Box::new(d)],
         Some(Bitmap::from_u8_slice([0b11111101], 4)),
     );
 
@@ -225,7 +219,7 @@ fn case_struct() -> (String, Arc<dyn Array>) {
     let inner = DataType::Struct(vec![Field::new("b", DataType::Boolean, true), c_field]);
     let expected = StructArray::from_data(
         inner,
-        vec![Arc::new(b), Arc::new(c)],
+        vec![Box::new(b), Box::new(c)],
         Some(Bitmap::from_u8_slice([0b11110111], 4)),
     );
 
@@ -233,15 +227,15 @@ fn case_struct() -> (String, Arc<dyn Array>) {
 
     (
         data,
-        Arc::new(StructArray::from_data(
+        Box::new(StructArray::from_data(
             data_type,
-            vec![expected.arced()],
+            vec![expected.boxed()],
             None,
         )),
     )
 }
 
-fn case_nested_list() -> (String, Arc<dyn Array>) {
+fn case_nested_list() -> (String, Box<dyn Array>) {
     let d_field = Field::new("d", DataType::Utf8, true);
     let c_field = Field::new("c", DataType::Struct(vec![d_field.clone()]), true);
     let b_field = Field::new("b", DataType::Boolean, true);
@@ -273,7 +267,7 @@ fn case_nested_list() -> (String, Arc<dyn Array>) {
 
     let c = StructArray::from_data(
         DataType::Struct(vec![d_field]),
-        vec![Arc::new(d)],
+        vec![d.boxed()],
         Some(Bitmap::from_u8_slice([0b11111011], 6)),
     );
 
@@ -287,26 +281,26 @@ fn case_nested_list() -> (String, Arc<dyn Array>) {
     ]);
     let a_struct = StructArray::from_data(
         DataType::Struct(vec![b_field, c_field]),
-        vec![b.arced(), c.arced()],
+        vec![b.boxed(), c.boxed()],
         None,
     );
     let expected = ListArray::from_data(
         a_list_data_type,
         Buffer::from(vec![0i32, 2, 3, 6, 6, 6]),
-        a_struct.arced(),
+        a_struct.boxed(),
         Some(Bitmap::from_u8_slice([0b00010111], 5)),
     );
 
-    let array = Arc::new(StructArray::from_data(
+    let array = Box::new(StructArray::from_data(
         DataType::Struct(vec![a_field]),
-        vec![Arc::new(expected)],
+        vec![Box::new(expected)],
         None,
     ));
 
     (data, array)
 }
 
-fn case(case: &str) -> (String, Arc<dyn Array>) {
+fn case(case: &str) -> (String, Box<dyn Array>) {
     match case {
         "basics" => case_basics(),
         "projection" => case_projection(),

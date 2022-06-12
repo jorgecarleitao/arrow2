@@ -62,7 +62,7 @@ pub async fn scenario_setup(port: u16) -> Result {
 struct IntegrationDataset {
     schema: Schema,
     ipc_schema: IpcSchema,
-    chunks: Vec<Chunk<Arc<dyn Array>>>,
+    chunks: Vec<Chunk<Box<dyn Array>>>,
 }
 
 #[derive(Clone, Default)]
@@ -282,7 +282,7 @@ async fn record_batch_from_message(
     fields: &[Field],
     ipc_schema: &IpcSchema,
     dictionaries: &mut Dictionaries,
-) -> Result<Chunk<Arc<dyn Array>>, Status> {
+) -> Result<Chunk<Box<dyn Array>>, Status> {
     let mut reader = std::io::Cursor::new(data_body);
 
     let arrow_batch_result = ipc::read::read_record_batch(

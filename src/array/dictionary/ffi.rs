@@ -33,7 +33,7 @@ impl<K: DictionaryKey, A: ffi::ArrowArrayRef> FromFfi<A> for DictionaryArray<K> 
         let data_type = K::PRIMITIVE.into();
         let keys = PrimitiveArray::<K>::try_new(data_type, values, validity)?;
         let values = array.dictionary()?.unwrap();
-        let values = ffi::try_from(values)?.into();
+        let values = ffi::try_from(values)?;
 
         Ok(DictionaryArray::<K>::from_data(keys, values))
     }

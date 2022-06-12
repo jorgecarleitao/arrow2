@@ -1,5 +1,4 @@
 //! Serialization and deserialization to Arrow's flight protocol
-use std::sync::Arc;
 
 use arrow_format::flight::data::{FlightData, SchemaResult};
 use arrow_format::ipc;
@@ -21,7 +20,7 @@ use super::ipc::{IpcField, IpcSchema};
 /// Serializes [`Chunk`] to a vector of [`FlightData`] representing the serialized dictionaries
 /// and a [`FlightData`] representing the batch.
 pub fn serialize_batch(
-    columns: &Chunk<Arc<dyn Array>>,
+    columns: &Chunk<Box<dyn Array>>,
     fields: &[IpcField],
     options: &WriteOptions,
 ) -> (Vec<FlightData>, FlightData) {
@@ -114,7 +113,7 @@ pub fn deserialize_batch(
     fields: &[Field],
     ipc_schema: &IpcSchema,
     dictionaries: &read::Dictionaries,
-) -> Result<Chunk<Arc<dyn Array>>> {
+) -> Result<Chunk<Box<dyn Array>>> {
     // check that the data_header is a record batch message
     let message = arrow_format::ipc::MessageRef::read_as_root(&data.data_header)
         .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;

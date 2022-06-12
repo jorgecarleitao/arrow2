@@ -1,5 +1,4 @@
 use std::ffi::{CStr, CString};
-use std::sync::Arc;
 
 use crate::{array::Array, datatypes::Field, error::Error};
 
@@ -125,7 +124,7 @@ impl ArrowArrayStreamReader {
 }
 
 struct PrivateData {
-    iter: Box<dyn Iterator<Item = Result<Arc<dyn Array>, Error>>>,
+    iter: Box<dyn Iterator<Item = Result<Box<dyn Array>, Error>>>,
     field: Field,
     error: Option<CString>,
 }
@@ -199,7 +198,7 @@ unsafe extern "C" fn release(iter: *mut ArrowArrayStream) {
 /// # Safety
 /// The pointer `consumer` must be allocated
 pub unsafe fn export_iterator(
-    iter: Box<dyn Iterator<Item = Result<Arc<dyn Array>, Error>>>,
+    iter: Box<dyn Iterator<Item = Result<Box<dyn Array>, Error>>>,
     field: Field,
     consumer: *mut ArrowArrayStream,
 ) {

@@ -3,9 +3,8 @@ use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::{DataType, Field, TimeUnit};
 use arrow2::{error::Result, ffi};
 use std::collections::BTreeMap;
-use std::sync::Arc;
 
-fn _test_round_trip(array: Arc<dyn Array>, expected: Box<dyn Array>) -> Result<()> {
+fn _test_round_trip(array: Box<dyn Array>, expected: Box<dyn Array>) -> Result<()> {
     let field = Field::new("a", array.data_type().clone(), true);
 
     let array_ptr = Box::new(ffi::ArrowArray::empty());
@@ -33,12 +32,12 @@ fn _test_round_trip(array: Arc<dyn Array>, expected: Box<dyn Array>) -> Result<(
 }
 
 fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
-    let array: Arc<dyn Array> = Arc::new(expected.clone());
+    let array: Box<dyn Array> = Box::new(expected.clone());
     let expected = Box::new(expected) as Box<dyn Array>;
     _test_round_trip(array.clone(), clone(expected.as_ref()))?;
 
     // sliced
-    _test_round_trip(array.slice(1, 2).into(), expected.slice(1, 2))
+    _test_round_trip(array.slice(1, 2), expected.slice(1, 2))
 }
 
 fn test_round_trip_schema(field: Field) -> Result<()> {
@@ -232,7 +231,7 @@ fn list_sliced() -> Result<()> {
     let array = ListArray::<i32>::try_new(
         DataType::List(Box::new(Field::new("a", DataType::Int32, true))),
         vec![0, 1, 1, 2].into(),
-        Arc::new(PrimitiveArray::<i32>::from_vec(vec![1, 2])),
+        Box::new(PrimitiveArray::<i32>::from_vec(vec![1, 2])),
         Some(bitmap),
     )?;
 
@@ -277,7 +276,7 @@ fn fixed_size_list_sliced() -> Result<()> {
 
     let array = FixedSizeListArray::try_new(
         DataType::FixedSizeList(Box::new(Field::new("a", DataType::Int32, true)), 2),
-        Arc::new(PrimitiveArray::<i32>::from_vec(vec![1, 2, 3, 4, 5, 6])),
+        Box::new(PrimitiveArray::<i32>::from_vec(vec![1, 2, 3, 4, 5, 6])),
         Some(bitmap),
     )?;
 
@@ -308,7 +307,7 @@ fn list_list() -> Result<()> {
 #[test]
 fn struct_() -> Result<()> {
     let data_type = DataType::Struct(vec![Field::new("a", DataType::Int32, true)]);
-    let values = vec![Int32Array::from([Some(1), None, Some(3)]).arced()];
+    let values = vec![Int32Array::from([Some(1), None, Some(3)]).boxed()];
     let validity = Bitmap::from([true, false, true]);
 
     let array = StructArray::from_data(data_type, values, validity.into());

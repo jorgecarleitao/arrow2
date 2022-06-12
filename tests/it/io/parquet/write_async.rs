@@ -20,7 +20,7 @@ async fn test_parquet_async_roundtrip() {
     for i in 0..5 {
         let a1 = Int32Array::from(&[Some(i), None, Some(i + 1)]);
         let a2 = Float32Array::from(&[None, Some(i as f32), None]);
-        let chunk = Chunk::new(vec![a1.arced(), a2.arced()]);
+        let chunk = Chunk::new(vec![a1.boxed(), a2.boxed()]);
         data.push(chunk);
     }
     let schema = Schema::from(vec![

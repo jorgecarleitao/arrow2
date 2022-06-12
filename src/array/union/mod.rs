@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use crate::{
     bitmap::Bitmap,
@@ -14,7 +14,7 @@ mod ffi;
 pub(super) mod fmt;
 mod iterator;
 
-type FieldEntry = (usize, Arc<dyn Array>);
+type FieldEntry = (usize, Box<dyn Array>);
 type UnionComponents<'a> = (&'a [Field], Option<&'a [i32]>, UnionMode);
 
 /// [`UnionArray`] represents an array whose each slot can contain different values.
@@ -32,7 +32,7 @@ pub struct UnionArray {
     types: Buffer<i8>,
     // None represents when there is no typeid
     fields_hash: Option<HashMap<i8, FieldEntry>>,
-    fields: Vec<Arc<dyn Array>>,
+    fields: Vec<Box<dyn Array>>,
     offsets: Option<Buffer<i32>>,
     data_type: DataType,
     offset: usize,
@@ -48,7 +48,7 @@ impl UnionArray {
     pub fn try_new(
         data_type: DataType,
         types: Buffer<i8>,
-        fields: Vec<Arc<dyn Array>>,
+        fields: Vec<Box<dyn Array>>,
         offsets: Option<Buffer<i32>>,
     ) -> Result<Self, Error> {
         let (f, ids, mode) = Self::try_get_all(&data_type)?;
@@ -111,7 +111,7 @@ impl UnionArray {
     pub fn new(
         data_type: DataType,
         types: Buffer<i8>,
-        fields: Vec<Arc<dyn Array>>,
+        fields: Vec<Box<dyn Array>>,
         offsets: Option<Buffer<i32>>,
     ) -> Self {
         Self::try_new(data_type, types, fields, offsets).unwrap()
@@ -121,7 +121,7 @@ impl UnionArray {
     pub fn from_data(
         data_type: DataType,
         types: Buffer<i8>,
-        fields: Vec<Arc<dyn Array>>,
+        fields: Vec<Box<dyn Array>>,
         offsets: Option<Buffer<i32>>,
     ) -> Self {
         Self::new(data_type, types, fields, offsets)
@@ -132,7 +132,7 @@ impl UnionArray {
         if let DataType::Union(f, _, mode) = &data_type {
             let fields = f
                 .iter()
-                .map(|x| new_null_array(x.data_type().clone(), length).into())
+                .map(|x| new_null_array(x.data_type().clone(), length))
                 .collect();
 
             let offsets = if mode.is_sparse() {
@@ -155,7 +155,7 @@ impl UnionArray {
         if let DataType::Union(f, _, mode) = &data_type {
             let fields = f
                 .iter()
-                .map(|x| new_empty_array(x.data_type().clone()).into())
+                .map(|x| new_empty_array(x.data_type().clone()))
                 .collect();
 
             let offsets = if mode.is_sparse() {
@@ -243,7 +243,7 @@ impl UnionArray {
     }
 
     /// The fields.
-    pub fn fields(&self) -> &Vec<Arc<dyn Array>> {
+    pub fn fields(&self) -> &Vec<Box<dyn Array>> {
         &self.fields
     }
 
@@ -253,11 +253,11 @@ impl UnionArray {
     }
 
     #[inline]
-    fn field(&self, type_: i8) -> &Arc<dyn Array> {
+    fn field(&self, type_: i8) -> &dyn Array {
         self.fields_hash
             .as_ref()
-            .map(|x| &x[&type_].1)
-            .unwrap_or_else(|| &self.fields[type_ as usize])
+            .map(|x| x[&type_].1.as_ref())
+            .unwrap_or_else(|| self.fields[type_ as usize].as_ref())
     }
 
     #[inline]
@@ -285,12 +285,17 @@ impl UnionArray {
         let type_ = self.types()[index];
         let field = self.field(type_);
         let index = self.field_slot(index);
-        new_scalar(field.as_ref(), index)
+        new_scalar(field, index)
     }
 }
 
 impl Array for UnionArray {
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 

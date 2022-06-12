@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::array::*;
 
 use super::test_equal;
@@ -8,7 +6,7 @@ fn create_dictionary_array(values: &[Option<&str>], keys: &[Option<i16>]) -> Dic
     let keys = Int16Array::from(keys);
     let values = Utf8Array::<i32>::from(values);
 
-    DictionaryArray::from_data(keys, Arc::new(values))
+    DictionaryArray::from_data(keys, Box::new(values))
 }
 
 #[test]

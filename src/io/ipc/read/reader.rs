@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::io::{Read, Seek, SeekFrom};
-use std::sync::Arc;
 
 use crate::array::Array;
 use crate::chunk::Chunk;
@@ -234,7 +233,7 @@ pub fn read_batch<R: Read + Seek>(
     projection: Option<&[usize]>,
     index: usize,
     stratch: &mut Vec<u8>,
-) -> Result<Chunk<Arc<dyn Array>>> {
+) -> Result<Chunk<Box<dyn Array>>> {
     let block = metadata.blocks[index];
 
     // read length
@@ -318,7 +317,7 @@ impl<R: Read + Seek> FileReader<R> {
 }
 
 impl<R: Read + Seek> Iterator for FileReader<R> {
-    type Item = Result<Chunk<Arc<dyn Array>>>;
+    type Item = Result<Chunk<Box<dyn Array>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // get current block

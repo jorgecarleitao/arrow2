@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, sync::Arc};
+use std::collections::VecDeque;
 
 use parquet2::page::{DictPage, FixedLenByteArrayPageDict};
 
@@ -47,14 +47,14 @@ where
     }
 }
 
-fn read_dict(data_type: DataType, dict: &dyn DictPage) -> Arc<dyn Array> {
+fn read_dict(data_type: DataType, dict: &dyn DictPage) -> Box<dyn Array> {
     let dict = dict
         .as_any()
         .downcast_ref::<FixedLenByteArrayPageDict>()
         .unwrap();
     let values = dict.values().to_vec();
 
-    Arc::new(FixedSizeBinaryArray::from_data(
+    Box::new(FixedSizeBinaryArray::from_data(
         data_type,
         values.into(),
         None,

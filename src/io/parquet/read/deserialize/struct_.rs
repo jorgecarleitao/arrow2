@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::array::{Array, StructArray};
 use crate::datatypes::{DataType, Field};
 use crate::error::Error;
@@ -19,7 +17,7 @@ impl<'a> StructIterator<'a> {
 }
 
 impl<'a> Iterator for StructIterator<'a> {
-    type Item = Result<(NestedState, Arc<dyn Array>), Error>;
+    type Item = Result<(NestedState, Box<dyn Array>), Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let values = self
@@ -49,7 +47,7 @@ impl<'a> Iterator for StructIterator<'a> {
 
         Some(Ok((
             nested,
-            Arc::new(StructArray::from_data(
+            Box::new(StructArray::from_data(
                 DataType::Struct(self.fields.clone()),
                 new_values,
                 validity.and_then(|x| x.into()),

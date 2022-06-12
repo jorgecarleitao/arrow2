@@ -1,12 +1,11 @@
 /// Example of reading a JSON file.
 use std::fs;
-use std::sync::Arc;
 
 use arrow2::array::Array;
 use arrow2::error::Result;
 use arrow2::io::json::read;
 
-fn read_path(path: &str) -> Result<Arc<dyn Array>> {
+fn read_path(path: &str) -> Result<Box<dyn Array>> {
     // read the file into memory (IO-bounded)
     let data = fs::read(path)?;
 

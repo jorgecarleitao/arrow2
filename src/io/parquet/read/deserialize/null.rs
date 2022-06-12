@@ -20,11 +20,11 @@ where
     let remainder = chunk_size % len;
     let i_data_type = data_type.clone();
     let complete = (0..complete_chunks)
-        .map(move |_| Ok(NullArray::new(i_data_type.clone(), chunk_size).arced()));
+        .map(move |_| Ok(NullArray::new(i_data_type.clone(), chunk_size).boxed()));
     if len % chunk_size == 0 {
         Box::new(complete)
     } else {
         let array = NullArray::new(data_type, remainder);
-        Box::new(complete.chain(std::iter::once(Ok(array.arced()))))
+        Box::new(complete.chain(std::iter::once(Ok(array.boxed()))))
     }
 }

@@ -17,6 +17,7 @@ bench = false
 [dependencies]
 either = "1.6"
 num-traits = "0.2"
+dyn-clone = "1"
 bytemuck = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", default_features = false, features = ["std"] }
 chrono-tz = { version = "0.6", optional = true }

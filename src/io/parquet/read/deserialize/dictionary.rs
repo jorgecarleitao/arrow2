@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, sync::Arc};
+use std::collections::VecDeque;
 
 use parquet2::{
     deserialize::SliceFilteredIter,
@@ -190,11 +190,11 @@ where
 #[derive(Debug)]
 pub enum Dict {
     Empty,
-    Complete(Arc<dyn Array>),
+    Complete(Box<dyn Array>),
 }
 
 impl Dict {
-    pub fn unwrap(&self) -> Arc<dyn Array> {
+    pub fn unwrap(&self) -> Box<dyn Array> {
         match self {
             Self::Empty => panic!(),
             Self::Complete(array) => array.clone(),
@@ -211,7 +211,7 @@ pub(super) fn next_dict<
     'a,
     K: DictionaryKey,
     I: DataPages,
-    F: Fn(&dyn DictPage) -> Arc<dyn Array>,
+    F: Fn(&dyn DictPage) -> Box<dyn Array>,
 >(
     iter: &'a mut I,
     items: &mut VecDeque<(Vec<K>, MutableBitmap)>,

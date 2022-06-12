@@ -1,5 +1,4 @@
 use std::borrow::{Borrow, Cow};
-use std::sync::Arc;
 
 use arrow_format::ipc::planus::Builder;
 
@@ -173,7 +172,7 @@ fn encode_dictionary(
 }
 
 pub fn encode_chunk(
-    columns: &Chunk<Arc<dyn Array>>,
+    columns: &Chunk<Box<dyn Array>>,
     fields: &[IpcField],
     dictionary_tracker: &mut DictionaryTracker,
     options: &WriteOptions,
@@ -214,7 +213,7 @@ fn serialize_compression(
 
 /// Write [`Chunk`] into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the batch's data
-fn columns_to_bytes(columns: &Chunk<Arc<dyn Array>>, options: &WriteOptions) -> EncodedData {
+fn columns_to_bytes(columns: &Chunk<Box<dyn Array>>, options: &WriteOptions) -> EncodedData {
     let mut nodes: Vec<arrow_format::ipc::FieldNode> = vec![];
     let mut buffers: Vec<arrow_format::ipc::Buffer> = vec![];
     let mut arrow_data: Vec<u8> = vec![];
@@ -378,7 +377,7 @@ pub(crate) fn pad_to_8(len: usize) -> usize {
 /// An array [`Chunk`] with optional accompanying IPC fields.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Record<'a> {
-    columns: Cow<'a, Chunk<Arc<dyn Array>>>,
+    columns: Cow<'a, Chunk<Box<dyn Array>>>,
     fields: Option<Cow<'a, [IpcField]>>,
 }
 
@@ -389,13 +388,13 @@ impl<'a> Record<'a> {
     }
 
     /// Get the Arrow columns in this record.
-    pub fn columns(&self) -> &Chunk<Arc<dyn Array>> {
+    pub fn columns(&self) -> &Chunk<Box<dyn Array>> {
         self.columns.borrow()
     }
 }
 
-impl From<Chunk<Arc<dyn Array>>> for Record<'static> {
-    fn from(columns: Chunk<Arc<dyn Array>>) -> Self {
+impl From<Chunk<Box<dyn Array>>> for Record<'static> {
+    fn from(columns: Chunk<Box<dyn Array>>) -> Self {
         Self {
             columns: Cow::Owned(columns),
             fields: None,
@@ -403,11 +402,11 @@ impl From<Chunk<Arc<dyn Array>>> for Record<'static> {
     }
 }
 
-impl<'a, F> From<(Chunk<Arc<dyn Array>>, Option<F>)> for Record<'a>
+impl<'a, F> From<(Chunk<Box<dyn Array>>, Option<F>)> for Record<'a>
 where
     F: Into<Cow<'a, [IpcField]>>,
 {
-    fn from((columns, fields): (Chunk<Arc<dyn Array>>, Option<F>)) -> Self {
+    fn from((columns, fields): (Chunk<Box<dyn Array>>, Option<F>)) -> Self {
         Self {
             columns: Cow::Owned(columns),
             fields: fields.map(|f| f.into()),
@@ -415,11 +414,11 @@ where
     }
 }
 
-impl<'a, F> From<(&'a Chunk<Arc<dyn Array>>, Option<F>)> for Record<'a>
+impl<'a, F> From<(&'a Chunk<Box<dyn Array>>, Option<F>)> for Record<'a>
 where
     F: Into<Cow<'a, [IpcField]>>,
 {
-    fn from((columns, fields): (&'a Chunk<Arc<dyn Array>>, Option<F>)) -> Self {
+    fn from((columns, fields): (&'a Chunk<Box<dyn Array>>, Option<F>)) -> Self {
         Self {
             columns: Cow::Borrowed(columns),
             fields: fields.map(|f| f.into()),

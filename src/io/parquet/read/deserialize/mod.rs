@@ -40,15 +40,15 @@ pub fn get_page_iterator<R: Read + Seek>(
 fn create_list(
     data_type: DataType,
     nested: &mut NestedState,
-    values: Arc<dyn Array>,
-) -> Arc<dyn Array> {
+    values: Box<dyn Array>,
+) -> Box<dyn Array> {
     let (mut offsets, validity) = nested.nested.pop().unwrap().inner();
     match data_type.to_logical_type() {
         DataType::List(_) => {
             offsets.push(values.len() as i64);
 
             let offsets = offsets.iter().map(|x| *x as i32).collect::<Vec<_>>();
-            Arc::new(ListArray::<i32>::new(
+            Box::new(ListArray::<i32>::new(
                 data_type,
                 offsets.into(),
                 values,
@@ -58,14 +58,14 @@ fn create_list(
         DataType::LargeList(_) => {
             offsets.push(values.len() as i64);
 
-            Arc::new(ListArray::<i64>::new(
+            Box::new(ListArray::<i64>::new(
                 data_type,
                 offsets.into(),
                 values,
                 validity.and_then(|x| x.into()),
             ))
         }
-        DataType::FixedSizeList(_, _) => Arc::new(FixedSizeListArray::new(
+        DataType::FixedSizeList(_, _) => Box::new(FixedSizeListArray::new(
             data_type,
             values,
             validity.and_then(|x| x.into()),
@@ -317,7 +317,7 @@ where
                     inner,
                     None,
                 );
-                Ok((nested, array.arced()))
+                Ok((nested, array.boxed()))
             }))
         }
         other => {

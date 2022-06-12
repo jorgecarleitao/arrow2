@@ -234,8 +234,8 @@ mod tests {
 
     #[test]
     fn test_struct() {
-        let boolean = BooleanArray::from_slice(&[false, false, true, true]).arced();
-        let int = Int32Array::from_slice(&[42, 28, 19, 31]).arced();
+        let boolean = BooleanArray::from_slice(&[false, false, true, true]).boxed();
+        let int = Int32Array::from_slice(&[42, 28, 19, 31]).boxed();
 
         let fields = vec![
             Field::new("b", DataType::Boolean, false),
@@ -298,9 +298,8 @@ mod tests {
 
     #[test]
     fn test_struct_struct() {
-        use std::sync::Arc;
-        let boolean = BooleanArray::from_slice(&[false, false, true, true]).arced();
-        let int = Int32Array::from_slice(&[42, 28, 19, 31]).arced();
+        let boolean = BooleanArray::from_slice(&[false, false, true, true]).boxed();
+        let int = Int32Array::from_slice(&[42, 28, 19, 31]).boxed();
 
         let fields = vec![
             Field::new("b", DataType::Boolean, false),
@@ -320,7 +319,7 @@ mod tests {
 
         let array = StructArray::from_data(
             DataType::Struct(fields),
-            vec![Arc::new(array.clone()), Arc::new(array)],
+            vec![Box::new(array.clone()), Box::new(array)],
             None,
         );
 
@@ -402,9 +401,8 @@ mod tests {
 
     #[test]
     fn test_list_struct() {
-        use std::sync::Arc;
-        let boolean = BooleanArray::from_slice(&[false, false, true, true]).arced();
-        let int = Int32Array::from_slice(&[42, 28, 19, 31]).arced();
+        let boolean = BooleanArray::from_slice(&[false, false, true, true]).boxed();
+        let int = Int32Array::from_slice(&[42, 28, 19, 31]).boxed();
 
         let fields = vec![
             Field::new("b", DataType::Boolean, false),
@@ -420,7 +418,7 @@ mod tests {
         let array = ListArray::new(
             DataType::List(Box::new(Field::new("l", array.data_type().clone(), true))),
             vec![0i32, 2, 4].into(),
-            Arc::new(array),
+            Box::new(array),
             None,
         );
 

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use json_deserializer::parse;
 
 use crate::array::Array;
@@ -14,7 +12,7 @@ use super::super::super::json::read::_deserialize;
 /// This function is guaranteed to return an array of length equal to `rows.len()`.
 /// # Errors
 /// This function errors iff any of the rows is not a valid JSON (i.e. the format is not valid NDJSON).
-pub fn deserialize(rows: &[String], data_type: DataType) -> Result<Arc<dyn Array>, Error> {
+pub fn deserialize(rows: &[String], data_type: DataType) -> Result<Box<dyn Array>, Error> {
     if rows.is_empty() {
         return Err(Error::ExternalFormat(
             "Cannot deserialize 0 NDJSON rows because empty string is not a valid JSON value"
@@ -34,7 +32,7 @@ pub fn deserialize(rows: &[String], data_type: DataType) -> Result<Arc<dyn Array
 pub fn deserialize_iter<'a>(
     rows: impl Iterator<Item = &'a str>,
     data_type: DataType,
-) -> Result<Arc<dyn Array>, Error> {
+) -> Result<Box<dyn Array>, Error> {
     // deserialize strings to `Value`s
     let rows = rows
         .map(|row| parse(row.as_bytes()).map_err(Error::from))

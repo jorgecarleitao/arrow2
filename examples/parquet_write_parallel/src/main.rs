@@ -1,6 +1,5 @@
 //! Example demonstrating how to write to parquet in parallel.
 use std::collections::VecDeque;
-use std::sync::Arc;
 
 use rayon::prelude::*;
 
@@ -12,7 +11,7 @@ use arrow2::{
     io::parquet::{read::ParquetError, write::*},
 };
 
-type Chunk = AChunk<Arc<dyn Array>>;
+type Chunk = AChunk<Box<dyn Array>>;
 
 struct Bla {
     columns: VecDeque<CompressedPage>,
@@ -134,7 +133,14 @@ fn create_batch(size: usize) -> Result<Chunk> {
         })
         .collect();
 
+<<<<<<< HEAD
     Chunk::try_new(vec![c1.arced(), c2.arced()])
+=======
+    Chunk::try_new(vec![
+        Box::new(c1) as Box<dyn Array>,
+        Box::new(c2) as Box<dyn Array>,
+    ])
+>>>>>>> 619252ff0 (Arc->Box)
 }
 
 fn main() -> Result<()> {

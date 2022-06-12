@@ -1,5 +1,4 @@
 use std::io::Read;
-use std::sync::Arc;
 
 use arrow_format;
 use arrow_format::ipc::planus::ReadAsRoot;
@@ -61,7 +60,7 @@ pub enum StreamState {
     /// A live stream without data
     Waiting,
     /// Next item in the stream
-    Some(Chunk<Arc<dyn Array>>),
+    Some(Chunk<Box<dyn Array>>),
 }
 
 impl StreamState {
@@ -70,7 +69,7 @@ impl StreamState {
     /// # Panics
     ///
     /// If the `StreamState` was `Waiting`.
-    pub fn unwrap(self) -> Chunk<Arc<dyn Array>> {
+    pub fn unwrap(self) -> Chunk<Box<dyn Array>> {
         if let StreamState::Some(batch) = self {
             batch
         } else {

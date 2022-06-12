@@ -40,7 +40,7 @@ fn test_make_growable() {
 
     let array = DictionaryArray::<i32>::from_data(
         Int32Array::from_slice([1, 2]),
-        std::sync::Arc::new(Int32Array::from_slice([1, 2])),
+        Box::new(Int32Array::from_slice([1, 2])),
     );
     make_growable(&[&array], false, 2);
 }

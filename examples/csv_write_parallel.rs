@@ -1,7 +1,6 @@
 use std::io::Write;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-use std::sync::Arc;
 use std::thread;
 
 use arrow2::{
@@ -11,7 +10,7 @@ use arrow2::{
     io::csv::write,
 };
 
-fn parallel_write(path: &str, batches: [Chunk<Arc<dyn Array>>; 2]) -> Result<()> {
+fn parallel_write(path: &str, batches: [Chunk<Box<dyn Array>>; 2]) -> Result<()> {
     let options = write::SerializeOptions::default();
 
     // write a header
@@ -59,7 +58,7 @@ fn main() -> Result<()> {
         Some(5),
         Some(6),
     ]);
-    let columns = Chunk::new(vec![array.arced()]);
+    let columns = Chunk::new(vec![array.boxed()]);
 
     parallel_write("example.csv", [columns.clone(), columns])
 }

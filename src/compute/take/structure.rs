@@ -15,8 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::sync::Arc;
-
 use crate::{
     array::{Array, PrimitiveArray, StructArray},
     bitmap::{Bitmap, MutableBitmap},
@@ -54,10 +52,10 @@ fn take_validity<I: Index>(
 }
 
 pub fn take<I: Index>(array: &StructArray, indices: &PrimitiveArray<I>) -> Result<StructArray> {
-    let values: Vec<Arc<dyn Array>> = array
+    let values: Vec<Box<dyn Array>> = array
         .values()
         .iter()
-        .map(|a| super::take(a.as_ref(), indices).map(|x| x.into()))
+        .map(|a| super::take(a.as_ref(), indices))
         .collect::<Result<_>>()?;
     let validity = take_validity(array.validity(), indices)?;
     Ok(StructArray::new(

@@ -1,5 +1,4 @@
 use std::io::{Cursor, Seek, Write};
-use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
@@ -40,7 +39,7 @@ fn write_ipc<W: Write + Seek>(writer: W, array: impl Array + 'static) -> Result<
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::new(writer, schema, None, options);
 
-    let batch = Chunk::try_new(vec![Arc::new(array) as Arc<dyn Array>])?;
+    let batch = Chunk::try_new(vec![Box::new(array) as Box<dyn Array>])?;
 
     writer.start()?;
     writer.write(&batch, None)?;
@@ -49,7 +48,7 @@ fn write_ipc<W: Write + Seek>(writer: W, array: impl Array + 'static) -> Result<
     Ok(writer.into_inner())
 }
 
-fn read_ipc(buf: &[u8]) -> Result<Chunk<Arc<dyn Array>>> {
+fn read_ipc(buf: &[u8]) -> Result<Chunk<Box<dyn Array>>> {
     let mut cursor = Cursor::new(buf);
     let metadata = read::read_file_metadata(&mut cursor)?;
     let mut reader = read::FileReader::new(cursor, metadata, None);

@@ -85,7 +85,7 @@ unsafe extern "C" fn c_release_array(array: *mut ArrowArray) {
 
 #[allow(dead_code)]
 struct PrivateData {
-    array: Arc<dyn Array>,
+    array: Box<dyn Array>,
     buffers_ptr: Box<[*const std::os::raw::c_void]>,
     children_ptr: Box<[*mut ArrowArray]>,
     dictionary_ptr: Option<*mut ArrowArray>,
@@ -96,7 +96,7 @@ impl ArrowArray {
     /// # Safety
     /// This method releases `buffers`. Consumers of this struct *must* call `release` before
     /// releasing this struct, or contents in `buffers` leak.
-    pub(crate) fn new(array: Arc<dyn Array>) -> Self {
+    pub(crate) fn new(array: Box<dyn Array>) -> Self {
         let (offset, buffers, children, dictionary) =
             offset_buffers_children_dictionary(array.as_ref());
 

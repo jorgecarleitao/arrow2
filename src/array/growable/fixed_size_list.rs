@@ -67,7 +67,7 @@ impl<'a> GrowableFixedSizeList<'a> {
 
     fn to(&mut self) -> FixedSizeListArray {
         let validity = std::mem::take(&mut self.validity);
-        let values = self.values.as_arc();
+        let values = self.values.as_box();
 
         FixedSizeListArray::new(self.arrays[0].data_type().clone(), values, validity.into())
     }
@@ -97,7 +97,7 @@ impl<'a> Growable<'a> for GrowableFixedSizeList<'a> {
 impl<'a> From<GrowableFixedSizeList<'a>> for FixedSizeListArray {
     fn from(val: GrowableFixedSizeList<'a>) -> Self {
         let mut values = val.values;
-        let values = values.as_arc();
+        let values = values.as_box();
 
         Self::new(
             val.arrays[0].data_type().clone(),

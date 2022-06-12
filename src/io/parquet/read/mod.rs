@@ -8,10 +8,7 @@ mod row_group;
 pub mod schema;
 pub mod statistics;
 
-use std::{
-    io::{Read, Seek},
-    sync::Arc,
-};
+use std::io::{Read, Seek};
 
 use futures::{AsyncRead, AsyncSeek};
 
@@ -56,7 +53,7 @@ impl<I: FallibleStreamingIterator<Item = DataPage, Error = ParquetError> + Send 
 }
 
 /// Type def for a sharable, boxed dyn [`Iterator`] of arrays
-pub type ArrayIter<'a> = Box<dyn Iterator<Item = Result<Arc<dyn Array>>> + Send + Sync + 'a>;
+pub type ArrayIter<'a> = Box<dyn Iterator<Item = Result<Box<dyn Array>>> + Send + Sync + 'a>;
 
 /// Reads parquets' metadata syncronously.
 pub fn read_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetaData> {

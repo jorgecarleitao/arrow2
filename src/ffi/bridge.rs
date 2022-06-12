@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::array::*;
 
 macro_rules! ffi_dyn {
@@ -8,12 +6,12 @@ macro_rules! ffi_dyn {
         if a.offset().is_some() {
             $array
         } else {
-            Arc::new(a.to_ffi_aligned())
+            Box::new(a.to_ffi_aligned())
         }
     }};
 }
 
-pub fn align_to_c_data_interface(array: Arc<dyn Array>) -> Arc<dyn Array> {
+pub fn align_to_c_data_interface(array: Box<dyn Array>) -> Box<dyn Array> {
     use crate::datatypes::PhysicalType::*;
     match array.data_type().to_physical_type() {
         Null => ffi_dyn!(array, NullArray),

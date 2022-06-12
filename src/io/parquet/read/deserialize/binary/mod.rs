@@ -3,8 +3,6 @@ mod dictionary;
 mod nested;
 mod utils;
 
-use std::sync::Arc;
-
 use crate::{
     array::{Array, Offset},
     datatypes::DataType,
@@ -36,7 +34,7 @@ where
         ArrayIterator::<O, A, I>::new(iter, init, data_type, chunk_size).map(|x| {
             x.map(|(mut nested, array)| {
                 let _ = nested.nested.pop().unwrap(); // the primitive
-                let values = Arc::new(array) as Arc<dyn Array>;
+                let values = Box::new(array) as Box<dyn Array>;
                 (nested, values)
             })
         }),

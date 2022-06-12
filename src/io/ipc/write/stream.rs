@@ -4,7 +4,6 @@
 //! however the `FileWriter` expects a reader that supports `Seek`ing
 
 use std::io::Write;
-use std::sync::Arc;
 
 use super::super::IpcField;
 use super::common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions};
@@ -70,7 +69,7 @@ impl<W: Write> StreamWriter<W> {
     /// Writes [`Chunk`] to the stream
     pub fn write(
         &mut self,
-        columns: &Chunk<Arc<dyn Array>>,
+        columns: &Chunk<Box<dyn Array>>,
         ipc_fields: Option<&[IpcField]>,
     ) -> Result<()> {
         if self.finished {

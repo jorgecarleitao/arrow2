@@ -10,7 +10,7 @@ fn equal() {
     let dt = DataType::FixedSizeList(Box::new(Field::new("a", DataType::Boolean, true)), 2);
     let a = FixedSizeListScalar::new(
         dt.clone(),
-        Some(BooleanArray::from_slice([true, false]).arced()),
+        Some(BooleanArray::from_slice([true, false]).boxed()),
     );
 
     let b = FixedSizeListScalar::new(dt.clone(), None);
@@ -19,7 +19,7 @@ fn equal() {
     assert_eq!(b, b);
     assert!(a != b);
 
-    let b = FixedSizeListScalar::new(dt, Some(BooleanArray::from_slice([true, true]).arced()));
+    let b = FixedSizeListScalar::new(dt, Some(BooleanArray::from_slice([true, true]).boxed()));
     assert!(a != b);
     assert_eq!(b, b);
 }
@@ -29,7 +29,7 @@ fn basics() {
     let dt = DataType::FixedSizeList(Box::new(Field::new("a", DataType::Boolean, true)), 2);
     let a = FixedSizeListScalar::new(
         dt.clone(),
-        Some(BooleanArray::from_slice([true, false]).arced()),
+        Some(BooleanArray::from_slice([true, false]).boxed()),
     );
 
     assert_eq!(

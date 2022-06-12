@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use arrow2::array::{clone, Array};
@@ -9,11 +7,11 @@ use arrow2::error::Result;
 use arrow2::io::parquet::write::*;
 use arrow2::util::bench_util::{create_boolean_array, create_primitive_array, create_string_array};
 
-type ChunkArc = Chunk<Arc<dyn Array>>;
+type ChunkBox = Chunk<Box<dyn Array>>;
 
 fn write(array: &dyn Array, encoding: Encoding) -> Result<()> {
     let schema = Schema::from(vec![Field::new("c1", array.data_type().clone(), true)]);
-    let columns: ChunkArc = Chunk::new(vec![clone(array).into()]);
+    let columns: ChunkBox = Chunk::new(vec![clone(array)]);
 
     let options = WriteOptions {
         write_statistics: false,

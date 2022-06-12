@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{Read, Seek};
-use std::sync::Arc;
 
 use arrow_format;
 
@@ -12,8 +11,6 @@ use crate::io::ipc::{IpcField, IpcSchema};
 
 use super::deserialize::{read, skip};
 use super::Dictionaries;
-
-type ArrayRef = Arc<dyn Array>;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 enum ProjectionResult<A> {
@@ -86,7 +83,7 @@ pub fn read_record_batch<R: Read + Seek>(
     version: arrow_format::ipc::MetadataVersion,
     reader: &mut R,
     block_offset: u64,
-) -> Result<Chunk<Arc<dyn Array>>> {
+) -> Result<Chunk<Box<dyn Array>>> {
     assert_eq!(fields.len(), ipc_schema.fields.len());
     let buffers = batch
         .buffers()?
@@ -221,7 +218,7 @@ pub fn read_dictionary<R: Read + Seek>(
     // As the dictionary batch does not contain the type of the
     // values array, we need to retrieve this from the schema.
     // Get an array representing this dictionary's values.
-    let dictionary_values: ArrayRef = match &first_field.data_type {
+    let dictionary_values: Box<dyn Array> = match &first_field.data_type {
         DataType::Dictionary(_, ref value_type, _) => {
             // Make a fake schema for the dictionary batch.
             let fields = vec![Field::new("", value_type.as_ref().clone(), false)];
@@ -301,10 +298,10 @@ pub fn prepare_projection(
 }
 
 pub fn apply_projection(
-    chunk: Chunk<Arc<dyn Array>>,
+    chunk: Chunk<Box<dyn Array>>,
     projection: &[usize],
     map: &HashMap<usize, usize>,
-) -> Chunk<Arc<dyn Array>> {
+) -> Chunk<Box<dyn Array>> {
     // re-order according to projection
     let arrays = chunk.into_arrays();
     let arrays = projection

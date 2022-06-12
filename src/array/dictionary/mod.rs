@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, IntegerType},
@@ -54,14 +52,14 @@ impl DictionaryKey for u64 {
 pub struct DictionaryArray<K: DictionaryKey> {
     data_type: DataType,
     keys: PrimitiveArray<K>,
-    values: Arc<dyn Array>,
+    values: Box<dyn Array>,
 }
 
 impl<K: DictionaryKey> DictionaryArray<K> {
     /// Returns a new empty [`DictionaryArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         let values = Self::get_child(&data_type);
-        let values = new_empty_array(values.clone()).into();
+        let values = new_empty_array(values.clone());
         let data_type = K::PRIMITIVE.into();
         Self::from_data(PrimitiveArray::<K>::new_empty(data_type), values)
     }
@@ -73,12 +71,12 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         let data_type = K::PRIMITIVE.into();
         Self::from_data(
             PrimitiveArray::<K>::new_null(data_type, length),
-            new_empty_array(values.clone()).into(),
+            new_empty_array(values.clone()),
         )
     }
 
     /// The canonical method to create a new [`DictionaryArray`].
-    pub fn from_data(keys: PrimitiveArray<K>, values: Arc<dyn Array>) -> Self {
+    pub fn from_data(keys: PrimitiveArray<K>, values: Box<dyn Array>) -> Self {
         let data_type =
             DataType::Dictionary(K::KEY_TYPE, Box::new(values.data_type().clone()), false);
 
@@ -119,7 +117,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
             panic!("validity should be as least as large as the array")
         }
         let mut arr = self.clone();
-        arr.values = Arc::from(arr.values.with_validity(validity));
+        arr.values = arr.values.with_validity(validity);
         arr
     }
 }
@@ -147,7 +145,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
 
     /// Returns the values of the [`DictionaryArray`].
     #[inline]
-    pub fn values(&self) -> &Arc<dyn Array> {
+    pub fn values(&self) -> &Box<dyn Array> {
         &self.values
     }
 
@@ -186,6 +184,11 @@ impl<K: DictionaryKey> DictionaryArray<K> {
 impl<K: DictionaryKey> Array for DictionaryArray<K> {
     #[inline]
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 

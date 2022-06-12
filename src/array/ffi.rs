@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::datatypes::PhysicalType;
 use crate::{array::*, ffi};
 
@@ -14,7 +12,7 @@ pub(crate) unsafe trait ToFfi {
     fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>>;
 
     /// The children
-    fn children(&self) -> Vec<Arc<dyn Array>> {
+    fn children(&self) -> Vec<Box<dyn Array>> {
         vec![]
     }
 
@@ -50,8 +48,8 @@ macro_rules! ffi_dyn {
 type BuffersChildren = (
     usize,
     Vec<Option<std::ptr::NonNull<u8>>>,
-    Vec<Arc<dyn Array>>,
-    Option<Arc<dyn Array>>,
+    Vec<Box<dyn Array>>,
+    Option<Box<dyn Array>>,
 );
 
 pub fn offset_buffers_children_dictionary(array: &dyn Array) -> BuffersChildren {

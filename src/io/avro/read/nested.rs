@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::array::*;
 use crate::bitmap::*;
 use crate::datatypes::*;
@@ -83,16 +81,16 @@ impl<O: Offset> MutableArray for DynMutableListArray<O> {
         Box::new(ListArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.offsets).into(),
-            self.values.as_arc(),
+            self.values.as_box(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
         ))
     }
 
-    fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(ListArray::new(
+    fn as_arc(&mut self) -> std::sync::Arc<dyn Array> {
+        std::sync::Arc::new(ListArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.offsets).into(),
-            self.values.as_arc(),
+            self.values.as_box(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
         ))
     }
@@ -161,14 +159,14 @@ impl MutableArray for FixedItemsUtf8Dictionary {
     fn as_box(&mut self) -> Box<dyn Array> {
         Box::new(DictionaryArray::from_data(
             std::mem::take(&mut self.keys).into(),
-            Arc::new(self.values.clone()),
+            Box::new(self.values.clone()),
         ))
     }
 
-    fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(DictionaryArray::from_data(
+    fn as_arc(&mut self) -> std::sync::Arc<dyn Array> {
+        std::sync::Arc::new(DictionaryArray::from_data(
             std::mem::take(&mut self.keys).into(),
-            Arc::new(self.values.clone()),
+            Box::new(self.values.clone()),
         ))
     }
 
@@ -245,7 +243,7 @@ impl MutableArray for DynMutableStructArray {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        let values = self.values.iter_mut().map(|x| x.as_arc()).collect();
+        let values = self.values.iter_mut().map(|x| x.as_box()).collect();
 
         Box::new(StructArray::new(
             self.data_type.clone(),
@@ -254,10 +252,10 @@ impl MutableArray for DynMutableStructArray {
         ))
     }
 
-    fn as_arc(&mut self) -> Arc<dyn Array> {
-        let values = self.values.iter_mut().map(|x| x.as_arc()).collect();
+    fn as_arc(&mut self) -> std::sync::Arc<dyn Array> {
+        let values = self.values.iter_mut().map(|x| x.as_box()).collect();
 
-        Arc::new(StructArray::new(
+        std::sync::Arc::new(StructArray::new(
             self.data_type.clone(),
             values,
             std::mem::take(&mut self.validity).map(|x| x.into()),

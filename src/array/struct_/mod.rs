@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
@@ -16,11 +14,10 @@ mod iterator;
 /// multiple [`Array`] with the same number of rows.
 /// # Example
 /// ```
-/// use std::sync::Arc;
 /// use arrow2::array::*;
 /// use arrow2::datatypes::*;
-/// let boolean = BooleanArray::from_slice(&[false, false, true, true]).arced();
-/// let int = Int32Array::from_slice(&[42, 28, 19, 31]).arced();
+/// let boolean = BooleanArray::from_slice(&[false, false, true, true]).boxed();
+/// let int = Int32Array::from_slice(&[42, 28, 19, 31]).boxed();
 ///
 /// let fields = vec![
 ///     Field::new("b", DataType::Boolean, false),
@@ -32,7 +29,7 @@ mod iterator;
 #[derive(Clone)]
 pub struct StructArray {
     data_type: DataType,
-    values: Vec<Arc<dyn Array>>,
+    values: Vec<Box<dyn Array>>,
     validity: Option<Bitmap>,
 }
 
@@ -48,7 +45,7 @@ impl StructArray {
     /// * the validity's length is not equal to the length of the first element
     pub fn try_new(
         data_type: DataType,
-        values: Vec<Arc<dyn Array>>,
+        values: Vec<Box<dyn Array>>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
         let fields = Self::try_get_fields(&data_type)?;
@@ -117,14 +114,14 @@ impl StructArray {
     /// * any of the values's data type is different from its corresponding children' data type
     /// * any element of values has a different length than the first element
     /// * the validity's length is not equal to the length of the first element
-    pub fn new(data_type: DataType, values: Vec<Arc<dyn Array>>, validity: Option<Bitmap>) -> Self {
+    pub fn new(data_type: DataType, values: Vec<Box<dyn Array>>, validity: Option<Bitmap>) -> Self {
         Self::try_new(data_type, values, validity).unwrap()
     }
 
     /// Alias for `new`
     pub fn from_data(
         data_type: DataType,
-        values: Vec<Arc<dyn Array>>,
+        values: Vec<Box<dyn Array>>,
         validity: Option<Bitmap>,
     ) -> Self {
         Self::new(data_type, values, validity)
@@ -135,7 +132,7 @@ impl StructArray {
         if let DataType::Struct(fields) = &data_type {
             let values = fields
                 .iter()
-                .map(|field| new_empty_array(field.data_type().clone()).into())
+                .map(|field| new_empty_array(field.data_type().clone()))
                 .collect();
             Self::new(data_type, values, None)
         } else {
@@ -148,7 +145,7 @@ impl StructArray {
         if let DataType::Struct(fields) = &data_type {
             let values = fields
                 .iter()
-                .map(|field| new_null_array(field.data_type().clone(), length).into())
+                .map(|field| new_null_array(field.data_type().clone(), length))
                 .collect();
             Self::new(data_type, values, Some(Bitmap::new_zeroed(length)))
         } else {
@@ -161,7 +158,7 @@ impl StructArray {
 impl StructArray {
     /// Deconstructs the [`StructArray`] into its individual components.
     #[must_use]
-    pub fn into_data(self) -> (Vec<Field>, Vec<Arc<dyn Array>>, Option<Bitmap>) {
+    pub fn into_data(self) -> (Vec<Field>, Vec<Box<dyn Array>>, Option<Bitmap>) {
         let Self {
             data_type,
             values,
@@ -205,7 +202,7 @@ impl StructArray {
             values: self
                 .values
                 .iter()
-                .map(|x| x.slice_unchecked(offset, length).into())
+                .map(|x| x.slice_unchecked(offset, length))
                 .collect(),
             validity,
         }
@@ -249,7 +246,7 @@ impl StructArray {
     }
 
     /// Returns the values of this [`StructArray`].
-    pub fn values(&self) -> &[Arc<dyn Array>] {
+    pub fn values(&self) -> &[Box<dyn Array>] {
         &self.values
     }
 
@@ -279,6 +276,11 @@ impl StructArray {
 impl Array for StructArray {
     #[inline]
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 

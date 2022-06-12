@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{array::FromFfi, error::Result, ffi};
 
 use super::super::{ffi::ToFfi, Array};
@@ -17,7 +15,7 @@ unsafe impl ToFfi for UnionArray {
         }
     }
 
-    fn children(&self) -> Vec<Arc<dyn Array>> {
+    fn children(&self) -> Vec<Box<dyn Array>> {
         self.fields.clone()
     }
 
@@ -47,9 +45,9 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for UnionArray {
         let fields = (0..fields.len())
             .map(|index| {
                 let child = array.child(index)?;
-                Ok(ffi::try_from(child)?.into())
+                ffi::try_from(child)
             })
-            .collect::<Result<Vec<Arc<dyn Array>>>>()?;
+            .collect::<Result<Vec<Box<dyn Array>>>>()?;
 
         if offset > 0 {
             types = types.slice(offset, length);

@@ -97,12 +97,12 @@ fn test_neg() {
 fn test_neg_dict() {
     let a = DictionaryArray::<u8>::from_data(
         UInt8Array::from_slice(&[0, 0, 1]),
-        std::sync::Arc::new(Int8Array::from_slice(&[1, 2])),
+        Box::new(Int8Array::from_slice(&[1, 2])),
     );
     let result = neg(&a);
     let expected = DictionaryArray::<u8>::from_data(
         UInt8Array::from_slice(&[0, 0, 1]),
-        std::sync::Arc::new(Int8Array::from_slice(&[-1, -2])),
+        Box::new(Int8Array::from_slice(&[-1, -2])),
     );
     assert_eq!(expected, result.as_ref());
 }

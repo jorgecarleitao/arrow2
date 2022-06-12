@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, sync::Arc};
+use std::collections::VecDeque;
 
 use parquet2::page::{BinaryPageDict, DictPage};
 
@@ -51,7 +51,7 @@ where
     }
 }
 
-fn read_dict<O: Offset>(data_type: DataType, dict: &dyn DictPage) -> Arc<dyn Array> {
+fn read_dict<O: Offset>(data_type: DataType, dict: &dyn DictPage) -> Box<dyn Array> {
     let dict = dict.as_any().downcast_ref::<BinaryPageDict>().unwrap();
     let offsets = dict
         .offsets()
@@ -61,13 +61,13 @@ fn read_dict<O: Offset>(data_type: DataType, dict: &dyn DictPage) -> Arc<dyn Arr
     let values = dict.values().to_vec();
 
     match data_type.to_physical_type() {
-        PhysicalType::Utf8 | PhysicalType::LargeUtf8 => Arc::new(Utf8Array::<O>::from_data(
+        PhysicalType::Utf8 | PhysicalType::LargeUtf8 => Box::new(Utf8Array::<O>::from_data(
             data_type,
             offsets.into(),
             values.into(),
             None,
         )) as _,
-        PhysicalType::Binary | PhysicalType::LargeBinary => Arc::new(BinaryArray::<O>::from_data(
+        PhysicalType::Binary | PhysicalType::LargeBinary => Box::new(BinaryArray::<O>::from_data(
             data_type,
             offsets.into(),
             values.into(),

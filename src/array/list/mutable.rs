@@ -56,7 +56,7 @@ impl<O: Offset, M: MutableArray> From<MutableListArray<O, M>> for ListArray<O> {
             ListArray::new_unchecked(
                 other.data_type,
                 other.offsets.into(),
-                other.values.as_arc(),
+                other.values.as_box(),
                 other.validity.map(|x| x.into()),
             )
         }
@@ -215,27 +215,27 @@ impl<O: Offset, M: MutableArray + Default + 'static> MutableArray for MutableLis
     fn as_box(&mut self) -> Box<dyn Array> {
         // Safety:
         // MutableListArray has monotonically increasing offsets
-        unsafe {
-            Box::new(ListArray::new_unchecked(
+        Box::new(unsafe {
+            ListArray::new_unchecked(
                 self.data_type.clone(),
                 std::mem::take(&mut self.offsets).into(),
-                self.values.as_arc(),
+                self.values.as_box(),
                 std::mem::take(&mut self.validity).map(|x| x.into()),
-            ))
-        }
+            )
+        })
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
         // Safety:
         // MutableListArray has monotonically increasing offsets
-        unsafe {
-            Arc::new(ListArray::new_unchecked(
+        Arc::new(unsafe {
+            ListArray::new_unchecked(
                 self.data_type.clone(),
                 std::mem::take(&mut self.offsets).into(),
-                self.values.as_arc(),
+                self.values.as_box(),
                 std::mem::take(&mut self.validity).map(|x| x.into()),
-            ))
-        }
+            )
+        })
     }
 
     fn data_type(&self) -> &DataType {

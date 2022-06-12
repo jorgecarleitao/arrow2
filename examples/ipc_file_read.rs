@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::sync::Arc;
 
 use arrow2::array::Array;
 use arrow2::chunk::Chunk;
@@ -9,7 +8,7 @@ use arrow2::io::ipc::read;
 use arrow2::io::print;
 
 /// Simplest way: read all record batches from the file. This can be used e.g. for random access.
-fn read_batches(path: &str) -> Result<(Schema, Vec<Chunk<Arc<dyn Array>>>)> {
+fn read_batches(path: &str) -> Result<(Schema, Vec<Chunk<Box<dyn Array>>>)> {
     let mut file = File::open(path)?;
 
     // read the files' metadata. At this point, we can distribute the read whatever we like.
@@ -25,7 +24,7 @@ fn read_batches(path: &str) -> Result<(Schema, Vec<Chunk<Arc<dyn Array>>>)> {
 }
 
 /// Random access way: read a single record batch from the file. This can be used e.g. for random access.
-fn read_batch(path: &str) -> Result<(Schema, Chunk<Arc<dyn Array>>)> {
+fn read_batch(path: &str) -> Result<(Schema, Chunk<Box<dyn Array>>)> {
     let mut file = File::open(path)?;
 
     // read the files' metadata. At this point, we can distribute the read whatever we like.

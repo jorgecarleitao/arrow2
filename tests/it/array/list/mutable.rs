@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use arrow2::{array::*, bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
 
 #[test]
@@ -24,7 +22,7 @@ fn basics() {
     let expected = ListArray::<i32>::from_data(
         data_type,
         Buffer::from(vec![0, 3, 3, 6]),
-        Arc::new(values),
+        Box::new(values),
         Some(Bitmap::from([true, false, true])),
     );
     assert_eq!(expected, array);
