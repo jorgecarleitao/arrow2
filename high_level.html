@@ -370,6 +370,14 @@ is more expensive than operating over all values. If the operation is expensive,
 then using <code>PrimitiveArray::&lt;O&gt;::from_trusted_len_iter</code> is likely faster.</p>
 </li>
 </ol>
+<h2 id="clone-on-write-semantics"><a class="header" href="#clone-on-write-semantics">Clone on write semantics</a></h2>
+<p>We support the mutation of arrays in-place via clone-on-write semantics.
+Essentially, all data is under an <code>Arc</code>, but it can be taken via <code>Arc::get_mut</code>
+and operated in place.</p>
+<p>Below is a complete example of how to operate on a <code>Box&lt;dyn Array&gt;</code> without 
+extra allocations.</p>
+<pre><code class="language-rust ignore">{{#include ../examples/cow.rs}}
+</code></pre>
 
                     </main>
 

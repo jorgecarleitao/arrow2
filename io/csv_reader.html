@@ -146,14 +146,12 @@ This crate makes minimal assumptions on how you want to read a CSV, and offers a
 <p>Parsing bytes into values is more expensive than interpreting lines. As such, it is generally advantageous to have multiple readers of a single file that scan different parts of the file (within IO constraints).</p>
 <p>This crate relies on <a href="https://crates.io/crates/csv">the crate <code>csv</code></a> to scan and seek CSV files, and your code also needs such a dependency. With that said, <code>arrow2</code> makes no assumptions as to how to efficiently read the CSV: as a single reader per file or multiple readers.</p>
 <p>As an example, the following infers the schema and reads a CSV by re-using the same reader:</p>
-<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
-
-use arrow2::array::Array;
+<pre><pre class="playground"><code class="language-rust">use arrow2::array::Array;
 use arrow2::chunk::Chunk;
 use arrow2::error::Result;
 use arrow2::io::csv::read;
 
-fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
+fn read_path(path: &amp;str, projection: Option&lt;&amp;[usize]&gt;) -&gt; Result&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt; {
     // Create a CSV reader. This is typically created on the thread that reads the file and
     // thus owns the read head.
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
@@ -195,7 +193,6 @@ which implies that it is possible to run <code>parse</code> on a separate thread
 thereby maximizing IO throughput. The example below shows how to do just that:</p>
 <pre><pre class="playground"><code class="language-rust">use crossbeam_channel::unbounded;
 
-use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 
@@ -203,7 +200,7 @@ use arrow2::array::Array;
 use arrow2::chunk::Chunk;
 use arrow2::{error::Result, io::csv::read};
 
-fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt;&gt; {
+fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt;&gt; {
     let batch_size = 100;
     let has_header = true;
     let projection = None;
@@ -214,7 +211,7 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Arc&lt;dyn Arra
     let mut reader = read::ReaderBuilder::new().from_path(path)?;
     let (fields, _) =
         read::infer_schema(&amp;mut reader, Some(batch_size * 10), has_header, &amp;read::infer)?;
-    let fields = Arc::new(fields);
+    let fields = Box::new(fields);
 
     let start = SystemTime::now();
     // spawn a thread to produce `Vec&lt;ByteRecords&gt;` (IO bounded)

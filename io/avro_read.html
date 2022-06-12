@@ -137,9 +137,7 @@
                         <h1 id="avro-read"><a class="header" href="#avro-read">Avro read</a></h1>
 <p>When compiled with feature <code>io_avro_async</code>, you can use this crate to read Avro files
 asynchronously.</p>
-<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
-
-use futures::pin_mut;
+<pre><pre class="playground"><code class="language-rust">use futures::pin_mut;
 use futures::StreamExt;
 use tokio::fs::File;
 use tokio_util::compat::*;
@@ -158,8 +156,8 @@ async fn main() -&gt; Result&lt;()&gt; {
     let mut reader = File::open(file_path).await?.compat();
 
     let (avro_schemas, schema, compression, marker) = read_metadata(&amp;mut reader).await?;
-    let avro_schemas = Arc::new(avro_schemas);
-    let projection = Arc::new(schema.fields.iter().map(|_| true).collect::&lt;Vec&lt;_&gt;&gt;());
+    let avro_schemas = Box::new(avro_schemas);
+    let projection = Box::new(schema.fields.iter().map(|_| true).collect::&lt;Vec&lt;_&gt;&gt;());
 
     let blocks = block_stream(&amp;mut reader, marker).await;
 

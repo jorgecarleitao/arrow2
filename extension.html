@@ -141,7 +141,6 @@ In particular, its physical representation is equal to its inner <code>DataType<
 that all functionality in this crate works as if it was the inner <code>DataType</code>.</p>
 <p>The following example shows how to declare one:</p>
 <pre><pre class="playground"><code class="language-rust">use std::io::{Cursor, Seek, Write};
-use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
@@ -182,7 +181,7 @@ fn write_ipc&lt;W: Write + Seek&gt;(writer: W, array: impl Array + 'static) -&gt
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::new(writer, schema, None, options);
 
-    let batch = Chunk::try_new(vec![Arc::new(array) as Arc&lt;dyn Array&gt;])?;
+    let batch = Chunk::try_new(vec![Box::new(array) as Box&lt;dyn Array&gt;])?;
 
     writer.start()?;
     writer.write(&amp;batch, None)?;
@@ -191,7 +190,7 @@ fn write_ipc&lt;W: Write + Seek&gt;(writer: W, array: impl Array + 'static) -&gt
     Ok(writer.into_inner())
 }
 
-fn read_ipc(buf: &amp;[u8]) -&gt; Result&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
+fn read_ipc(buf: &amp;[u8]) -&gt; Result&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt; {
     let mut cursor = Cursor::new(buf);
     let metadata = read::read_file_metadata(&amp;mut cursor)?;
     let mut reader = read::FileReader::new(cursor, metadata, None);

@@ -148,7 +148,6 @@ as an higher-level API to abstract away some of this work into an easy to use AP
 <h2 id="single-threaded"><a class="header" href="#single-threaded">Single threaded</a></h2>
 <p>Here is an example of how to write a single chunk:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
-use std::sync::Arc;
 
 use arrow2::{
     array::{Array, Int32Array},
@@ -161,7 +160,7 @@ use arrow2::{
     },
 };
 
-fn write_batch(path: &amp;str, schema: Schema, columns: Chunk&lt;Arc&lt;dyn Array&gt;&gt;) -&gt; Result&lt;()&gt; {
+fn write_batch(path: &amp;str, schema: Schema, columns: Chunk&lt;Box&lt;dyn Array&gt;&gt;) -&gt; Result&lt;()&gt; {
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
@@ -202,7 +201,7 @@ fn main() -&gt; Result&lt;()&gt; {
     ]);
     let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
     let schema = Schema::from(vec![field]);
-    let columns = Chunk::new(vec![array.arced()]);
+    let columns = Chunk::new(vec![array.boxed()]);
 
     write_batch(&quot;test.parquet&quot;, schema, columns)
 }
@@ -217,7 +216,6 @@ and results in a speed up equal to minimum between the number of cores
 and number of columns in the record.</p>
 <pre><pre class="playground"><code class="language-rust">//! Example demonstrating how to write to parquet in parallel.
 use std::collections::VecDeque;
-use std::sync::Arc;
 
 use rayon::prelude::*;
 
@@ -229,7 +227,7 @@ use arrow2::{
     io::parquet::{read::ParquetError, write::*},
 };
 
-type Chunk = AChunk&lt;Arc&lt;dyn Array&gt;&gt;;
+type Chunk = AChunk&lt;Box&lt;dyn Array&gt;&gt;;
 
 struct Bla {
     columns: VecDeque&lt;CompressedPage&gt;,
@@ -351,7 +349,14 @@ fn create_batch(size: usize) -&gt; Result&lt;Chunk&gt; {
         })
         .collect();
 
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
     Chunk::try_new(vec![c1.arced(), c2.arced()])
+=======
+    Chunk::try_new(vec![
+        Box::new(c1) as Box&lt;dyn Array&gt;,
+        Box::new(c2) as Box&lt;dyn Array&gt;,
+    ])
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; 619252ff0 (Arc-&gt;Box)
 }
 
 fn main() -&gt; Result&lt;()&gt; {

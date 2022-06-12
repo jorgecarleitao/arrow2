@@ -144,7 +144,6 @@ Reading it generally consists of:</p>
 </ol>
 <p>The example below shows how to read them into <code>Chunk</code>es:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
-use std::sync::Arc;
 
 use arrow2::array::Array;
 use arrow2::chunk::Chunk;
@@ -154,7 +153,7 @@ use arrow2::io::ipc::read;
 use arrow2::io::print;
 
 /// Simplest way: read all record batches from the file. This can be used e.g. for random access.
-fn read_batches(path: &amp;str) -&gt; Result&lt;(Schema, Vec&lt;Chunk&lt;Arc&lt;dyn Array&gt;&gt;&gt;)&gt; {
+fn read_batches(path: &amp;str) -&gt; Result&lt;(Schema, Vec&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt;)&gt; {
     let mut file = File::open(path)?;
 
     // read the files' metadata. At this point, we can distribute the read whatever we like.
@@ -170,7 +169,7 @@ fn read_batches(path: &amp;str) -&gt; Result&lt;(Schema, Vec&lt;Chunk&lt;Arc&lt;
 }
 
 /// Random access way: read a single record batch from the file. This can be used e.g. for random access.
-fn read_batch(path: &amp;str) -&gt; Result&lt;(Schema, Chunk&lt;Arc&lt;dyn Array&gt;&gt;)&gt; {
+fn read_batch(path: &amp;str) -&gt; Result&lt;(Schema, Chunk&lt;Box&lt;dyn Array&gt;&gt;)&gt; {
     let mut file = File::open(path)?;
 
     // read the files' metadata. At this point, we can distribute the read whatever we like.

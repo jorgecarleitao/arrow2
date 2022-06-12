@@ -138,14 +138,13 @@
 <p>When compiled with feature <code>io_json</code>, you can use this crate to read NDJSON files:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::io::{BufReader, Seek};
-use std::sync::Arc;
 
 use arrow2::array::Array;
 use arrow2::error::Result;
 use arrow2::io::ndjson::read;
 use arrow2::io::ndjson::read::FallibleStreamingIterator;
 
-fn read_path(path: &amp;str) -&gt; Result&lt;Vec&lt;Arc&lt;dyn Array&gt;&gt;&gt; {
+fn read_path(path: &amp;str) -&gt; Result&lt;Vec&lt;Box&lt;dyn Array&gt;&gt;&gt; {
     let batch_size = 1024; // number of rows per array
     let mut reader = BufReader::new(File::open(path)?);
 
@@ -182,13 +181,12 @@ blocking the runtime (see also <a href="https://ryhl.io/blog/async-what-is-block
 <p>This crate also supports reading JSON, at the expense of being unable to read the file in chunks.</p>
 <pre><pre class="playground"><code class="language-rust">/// Example of reading a JSON file.
 use std::fs;
-use std::sync::Arc;
 
 use arrow2::array::Array;
 use arrow2::error::Result;
 use arrow2::io::json::read;
 
-fn read_path(path: &amp;str) -&gt; Result&lt;Arc&lt;dyn Array&gt;&gt; {
+fn read_path(path: &amp;str) -&gt; Result&lt;Box&lt;dyn Array&gt;&gt; {
     // read the file into memory (IO-bounded)
     let data = fs::read(path)?;
 

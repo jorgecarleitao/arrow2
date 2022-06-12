@@ -179,7 +179,6 @@ However, these typically deal with different bounds: serialization is often CPU 
 <pre><pre class="playground"><code class="language-rust">use std::io::Write;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-use std::sync::Arc;
 use std::thread;
 
 use arrow2::{
@@ -189,7 +188,7 @@ use arrow2::{
     io::csv::write,
 };
 
-fn parallel_write(path: &amp;str, batches: [Chunk&lt;Arc&lt;dyn Array&gt;&gt;; 2]) -&gt; Result&lt;()&gt; {
+fn parallel_write(path: &amp;str, batches: [Chunk&lt;Box&lt;dyn Array&gt;&gt;; 2]) -&gt; Result&lt;()&gt; {
     let options = write::SerializeOptions::default();
 
     // write a header
@@ -237,7 +236,7 @@ fn main() -&gt; Result&lt;()&gt; {
         Some(5),
         Some(6),
     ]);
-    let columns = Chunk::new(vec![array.arced()]);
+    let columns = Chunk::new(vec![array.boxed()]);
 
     parallel_write(&quot;example.csv&quot;, [columns.clone(), columns])
 }
