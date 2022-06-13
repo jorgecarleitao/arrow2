@@ -118,11 +118,11 @@ pub struct ArrayIterator<I: DataPages> {
     // invariant: items.len() == nested.len()
     items: VecDeque<(MutableBitmap, MutableBitmap)>,
     nested: VecDeque<NestedState>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
 }
 
 impl<I: DataPages> ArrayIterator<I> {
-    pub fn new(iter: I, init: Vec<InitNested>, chunk_size: usize) -> Self {
+    pub fn new(iter: I, init: Vec<InitNested>, chunk_size: Option<usize>) -> Self {
         Self {
             iter,
             init,

@@ -363,8 +363,11 @@ pub fn extend_offsets1<'a>(
     page: &mut NestedPage<'a>,
     init: &[InitNested],
     items: &mut VecDeque<NestedState>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
 ) {
+    let capacity = chunk_size.unwrap_or(0);
+    let chunk_size = chunk_size.unwrap_or(usize::MAX);
+
     let mut nested = if let Some(nested) = items.pop_back() {
         // there is a already a state => it must be incomplete...
         debug_assert!(
@@ -374,7 +377,7 @@ pub fn extend_offsets1<'a>(
         nested
     } else {
         // there is no state => initialize it
-        init_nested(init, chunk_size)
+        init_nested(init, capacity)
     };
 
     let remaining = chunk_size - nested.len();
@@ -384,7 +387,7 @@ pub fn extend_offsets1<'a>(
     items.push_back(nested);
 
     while page.len() > 0 {
-        let mut nested = init_nested(init, chunk_size);
+        let mut nested = init_nested(init, capacity);
         extend_offsets2(page, &mut nested, chunk_size);
         items.push_back(nested);
     }
@@ -425,7 +428,7 @@ fn extend_offsets2<'a>(page: &mut NestedPage<'a>, nested: &mut NestedState, addi
 
         let next_rep = page.iter.peek().map(|x| x.0).unwrap_or(0);
 
-        if next_rep == 0 && rows == additional + 1 {
+        if next_rep == 0 && rows == additional.saturating_add(1) {
             break;
         }
     }
@@ -478,7 +481,7 @@ pub(super) fn next<'a, I, D>(
     items: &mut VecDeque<D::DecodedState>,
     nested_items: &mut VecDeque<NestedState>,
     init: &[InitNested],
-    chunk_size: usize,
+    chunk_size: Option<usize>,
     decoder: &D,
 ) -> MaybeNext<Result<(NestedState, D::DecodedState)>>
 where
@@ -517,7 +520,7 @@ where
 
             extend_from_new_page(page, items, nested_items, decoder);
 
-            if nested_items.front().unwrap().len() < chunk_size {
+            if nested_items.front().unwrap().len() < chunk_size.unwrap_or(0) {
                 MaybeNext::More
             } else {
                 let nested = nested_items.pop_front().unwrap();

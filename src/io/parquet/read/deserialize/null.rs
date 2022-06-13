@@ -3,7 +3,11 @@ use crate::{array::NullArray, datatypes::DataType};
 use super::super::{ArrayIter, DataPages};
 
 /// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
-pub fn iter_to_arrays<'a, I>(mut iter: I, data_type: DataType, chunk_size: usize) -> ArrayIter<'a>
+pub fn iter_to_arrays<'a, I>(
+    mut iter: I,
+    data_type: DataType,
+    chunk_size: Option<usize>,
+) -> ArrayIter<'a>
 where
     I: 'a + DataPages,
 {
@@ -15,6 +19,8 @@ where
     if len == 0 {
         return Box::new(std::iter::empty());
     }
+
+    let chunk_size = chunk_size.unwrap_or(len);
 
     let complete_chunks = chunk_size / len;
     let remainder = chunk_size % len;

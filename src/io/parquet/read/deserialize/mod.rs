@@ -10,6 +10,9 @@ mod simple;
 mod struct_;
 mod utils;
 
+use parquet2::read::get_page_iterator as _get_page_iterator;
+use parquet2::schema::types::PrimitiveType;
+
 use crate::{
     array::{Array, BinaryArray, FixedSizeListArray, ListArray, MapArray, Utf8Array},
     datatypes::{DataType, Field},
@@ -17,7 +20,6 @@ use crate::{
 };
 
 use self::nested_utils::{InitNested, NestedArrayIter, NestedState};
-use parquet2::schema::types::PrimitiveType;
 use simple::page_iter_to_arrays;
 
 use super::*;
@@ -94,7 +96,7 @@ fn columns_to_iter_recursive<'a, I: 'a>(
     mut types: Vec<&PrimitiveType>,
     field: Field,
     mut init: Vec<InitNested>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
 ) -> Result<NestedArrayIter<'a>>
 where
     I: DataPages,
@@ -359,12 +361,15 @@ fn n_columns(data_type: &DataType) -> usize {
 
 /// An iterator adapter that maps multiple iterators of [`DataPages`] into an iterator of [`Array`]s.
 ///
+/// For a non-nested datatypes such as [`DataType::Int32`], this function requires a single element in `columns` and `types`.
+/// For nested types, `columns` must be composed by all parquet columns with associated types `types`.
+///
 /// The arrays are guaranteed to be at most of size `chunk_size` and data type `field.data_type`.
 pub fn column_iter_to_arrays<'a, I: 'a>(
     columns: Vec<I>,
     types: Vec<&PrimitiveType>,
     field: Field,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
 ) -> Result<ArrayIter<'a>>
 where
     I: DataPages,

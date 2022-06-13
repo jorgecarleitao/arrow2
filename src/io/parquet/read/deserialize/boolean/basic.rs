@@ -188,11 +188,11 @@ pub struct Iter<I: DataPages> {
     iter: I,
     data_type: DataType,
     items: VecDeque<(MutableBitmap, MutableBitmap)>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
 }
 
 impl<I: DataPages> Iter<I> {
-    pub fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
+    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>) -> Self {
         Self {
             iter,
             data_type,

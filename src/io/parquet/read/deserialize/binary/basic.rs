@@ -423,12 +423,12 @@ pub struct Iter<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
     iter: I,
     data_type: DataType,
     items: VecDeque<(Binary<O>, MutableBitmap)>,
-    chunk_size: usize,
+    chunk_size: Option<usize>,
     phantom_a: std::marker::PhantomData<A>,
 }
 
 impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iter<O, A, I> {
-    pub fn new(iter: I, data_type: DataType, chunk_size: usize) -> Self {
+    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>) -> Self {
         Self {
             iter,
             data_type,

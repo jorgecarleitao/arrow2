@@ -19,11 +19,11 @@ pub use parquet2::{
     metadata::{ColumnChunkMetaData, ColumnDescriptor, RowGroupMetaData},
     page::{CompressedDataPage, DataPage, DataPageHeader},
     read::{
-        decompress, get_column_iterator, get_page_iterator as _get_page_iterator,
-        get_page_stream as _get_page_stream, read_columns_indexes as _read_columns_indexes,
-        read_metadata as _read_metadata, read_metadata_async as _read_metadata_async,
-        read_pages_locations, BasicDecompressor, ColumnChunkIter, Decompressor,
-        MutStreamingIterator, PageFilter, PageReader, ReadColumnIterator, State,
+        decompress, get_column_iterator, get_page_stream,
+        read_columns_indexes as _read_columns_indexes, read_metadata as _read_metadata,
+        read_metadata_async as _read_metadata_async, read_pages_locations, BasicDecompressor,
+        ColumnChunkIter, Decompressor, MutStreamingIterator, PageFilter, PageReader,
+        ReadColumnIterator, State,
     },
     schema::types::{
         GroupLogicalType, ParquetType, PhysicalType, PrimitiveConvertedType, PrimitiveLogicalType,
