@@ -7,7 +7,7 @@ use crate::{
     datatypes::*,
     error::Error,
     trusted_len::TrustedLen,
-    types::{days_ms, months_days_ns, NativeType},
+    types::{days_ms, f16, months_days_ns, NativeType},
 };
 
 use super::Array;
@@ -468,6 +468,8 @@ pub type Int128Array = PrimitiveArray<i128>;
 pub type DaysMsArray = PrimitiveArray<days_ms>;
 /// A type definition [`PrimitiveArray`] for [`months_days_ns`]
 pub type MonthsDaysNsArray = PrimitiveArray<months_days_ns>;
+/// A type definition [`PrimitiveArray`] for `f16`
+pub type Float16Array = PrimitiveArray<f16>;
 /// A type definition [`PrimitiveArray`] for `f32`
 pub type Float32Array = PrimitiveArray<f32>;
 /// A type definition [`PrimitiveArray`] for `f64`
@@ -495,6 +497,8 @@ pub type Int128Vec = MutablePrimitiveArray<i128>;
 pub type DaysMsVec = MutablePrimitiveArray<days_ms>;
 /// A type definition [`MutablePrimitiveArray`] for [`months_days_ns`]
 pub type MonthsDaysNsVec = MutablePrimitiveArray<months_days_ns>;
+/// A type definition [`MutablePrimitiveArray`] for `f16`
+pub type Float16Vec = MutablePrimitiveArray<f16>;
 /// A type definition [`MutablePrimitiveArray`] for `f32`
 pub type Float32Vec = MutablePrimitiveArray<f32>;
 /// A type definition [`MutablePrimitiveArray`] for `f64`

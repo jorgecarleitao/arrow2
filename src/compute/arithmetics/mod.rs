@@ -414,7 +414,7 @@ macro_rules! with_match_negatable {(
         Int128 => __with_ty__! { i128 },
         DaysMs => __with_ty__! { days_ms },
         MonthDayNano => __with_ty__! { months_days_ns },
-        UInt8 | UInt16 | UInt32 | UInt64=> todo!(),
+        UInt8 | UInt16 | UInt32 | UInt64 | Float16 => todo!(),
         Float32 => __with_ty__! { f32 },
         Float64 => __with_ty__! { f64 },
     }

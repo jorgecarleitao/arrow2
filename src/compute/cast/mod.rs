@@ -215,6 +215,8 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Int64, Float64) => true,
         (Int64, Decimal(_, _)) => true,
 
+        (Float16, Float32) => true,
+
         (Float32, UInt8) => true,
         (Float32, UInt16) => true,
         (Float32, UInt32) => true,
@@ -735,6 +737,11 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (Int64, Float32) => primitive_to_primitive_dyn::<i64, f32>(array, to_type, options),
         (Int64, Float64) => primitive_to_primitive_dyn::<i64, f64>(array, to_type, as_options),
         (Int64, Decimal(p, s)) => integer_to_decimal_dyn::<i64>(array, *p, *s),
+
+        (Float16, Float32) => {
+            let from = array.as_any().downcast_ref().unwrap();
+            Ok(f16_to_f32(from).boxed())
+        }
 
         (Float32, UInt8) => primitive_to_primitive_dyn::<f32, u8>(array, to_type, options),
         (Float32, UInt16) => primitive_to_primitive_dyn::<f32, u16>(array, to_type, options),

@@ -446,6 +446,7 @@ fn consistency() {
         Int16,
         Int32,
         Int64,
+        Float16,
         Float32,
         Float64,
         Timestamp(TimeUnit::Second, None),
@@ -778,6 +779,7 @@ fn null_array_from_and_to_others() {
     typed_test!(UInt32Array, UInt32);
     typed_test!(UInt64Array, UInt64);
 
+    typed_test!(Float16Array, Float16);
     typed_test!(Float32Array, Float32);
     typed_test!(Float64Array, Float64);
 }

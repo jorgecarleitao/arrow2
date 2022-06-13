@@ -289,6 +289,7 @@ pub fn to_array(
         Primitive(PrimitiveType::UInt16) => Ok(Box::new(to_primitive::<u16>(json_col, data_type))),
         Primitive(PrimitiveType::UInt32) => Ok(Box::new(to_primitive::<u32>(json_col, data_type))),
         Primitive(PrimitiveType::UInt64) => Ok(Box::new(to_primitive::<u64>(json_col, data_type))),
+        Primitive(PrimitiveType::Float16) => todo!(),
         Primitive(PrimitiveType::Float32) => Ok(Box::new(to_primitive::<f32>(json_col, data_type))),
         Primitive(PrimitiveType::Float64) => Ok(Box::new(to_primitive::<f64>(json_col, data_type))),
         Binary => Ok(to_binary::<i32>(json_col, data_type)),

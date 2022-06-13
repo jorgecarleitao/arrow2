@@ -325,3 +325,113 @@ impl Neg for months_days_ns {
         Self::new(-self.months(), -self.days(), -self.ns())
     }
 }
+
+/// Type representation of the Float16 physical type
+#[derive(Copy, Clone, Default, Zeroable, Pod)]
+#[allow(non_camel_case_types)]
+#[repr(C)]
+pub struct f16(pub u16);
+
+impl PartialEq for f16 {
+    #[inline]
+    fn eq(&self, other: &f16) -> bool {
+        if self.is_nan() || other.is_nan() {
+            false
+        } else {
+            (self.0 == other.0) || ((self.0 | other.0) & 0x7FFFu16 == 0)
+        }
+    }
+}
+
+// see https://github.com/starkat99/half-rs/blob/main/src/binary16.rs
+impl f16 {
+    #[inline]
+    #[must_use]
+    pub(crate) const fn is_nan(self) -> bool {
+        self.0 & 0x7FFFu16 > 0x7C00u16
+    }
+
+    /// Casts this `f16` to `f32`
+    #[inline]
+    pub fn as_f32(self) -> f32 {
+        let i = self.0;
+        // Check for signed zero
+        if i & 0x7FFFu16 == 0 {
+            return f32::from_bits((i as u32) << 16);
+        }
+
+        let half_sign = (i & 0x8000u16) as u32;
+        let half_exp = (i & 0x7C00u16) as u32;
+        let half_man = (i & 0x03FFu16) as u32;
+
+        // Check for an infinity or NaN when all exponent bits set
+        if half_exp == 0x7C00u32 {
+            // Check for signed infinity if mantissa is zero
+            if half_man == 0 {
+                let number = (half_sign << 16) | 0x7F80_0000u32;
+                return f32::from_bits(number);
+            } else {
+                // NaN, keep current mantissa but also set most significiant mantissa bit
+                let number = (half_sign << 16) | 0x7FC0_0000u32 | (half_man << 13);
+                return f32::from_bits(number);
+            }
+        }
+
+        // Calculate single-precision components with adjusted exponent
+        let sign = half_sign << 16;
+        // Unbias exponent
+        let unbiased_exp = ((half_exp as i32) >> 10) - 15;
+
+        // Check for subnormals, which will be normalized by adjusting exponent
+        if half_exp == 0 {
+            // Calculate how much to adjust the exponent by
+            let e = (half_man as u16).leading_zeros() - 6;
+
+            // Rebias and adjust exponent
+            let exp = (127 - 15 - e) << 23;
+            let man = (half_man << (14 + e)) & 0x7F_FF_FFu32;
+            return f32::from_bits(sign | exp | man);
+        }
+
+        // Rebias exponent for a normalized normal
+        let exp = ((unbiased_exp + 127) as u32) << 23;
+        let man = (half_man & 0x03FFu32) << 13;
+        f32::from_bits(sign | exp | man)
+    }
+}
+
+impl std::fmt::Debug for f16 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.as_f32())
+    }
+}
+
+impl std::fmt::Display for f16 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_f32())
+    }
+}
+
+impl NativeType for f16 {
+    const PRIMITIVE: PrimitiveType = PrimitiveType::Float16;
+    type Bytes = [u8; 2];
+    #[inline]
+    fn to_le_bytes(&self) -> Self::Bytes {
+        self.0.to_le_bytes()
+    }
+
+    #[inline]
+    fn to_ne_bytes(&self) -> Self::Bytes {
+        self.0.to_ne_bytes()
+    }
+
+    #[inline]
+    fn to_be_bytes(&self) -> Self::Bytes {
+        self.0.to_be_bytes()
+    }
+
+    #[inline]
+    fn from_be_bytes(bytes: Self::Bytes) -> Self {
+        Self(u16::from_be_bytes(bytes))
+    }
+}
