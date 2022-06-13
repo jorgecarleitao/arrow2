@@ -101,6 +101,8 @@ tokio-util = { version = "0.6", features = ["compat"] }
 # used to run formal property testing
 proptest = { version = "1", default_features = false, features = ["std"] }
 avro-rs = { version = "0.13", features = ["snappy"] }
+# use for flaky testing
+rand = "0.8"
 
 [package.metadata.docs.rs]
 features = ["full"]

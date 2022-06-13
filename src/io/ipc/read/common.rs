@@ -83,12 +83,21 @@ pub fn read_record_batch<R: Read + Seek>(
     version: arrow_format::ipc::MetadataVersion,
     reader: &mut R,
     block_offset: u64,
+    file_size: u64,
 ) -> Result<Chunk<Box<dyn Array>>> {
     assert_eq!(fields.len(), ipc_schema.fields.len());
     let buffers = batch
         .buffers()?
         .ok_or_else(|| Error::oos("IPC RecordBatch must contain buffers"))?;
     let mut buffers: VecDeque<arrow_format::ipc::BufferRef> = buffers.iter().collect();
+
+    for buffer in buffers.iter() {
+        if buffer.length() as u64 > file_size {
+            return Err(Error::oos(
+                "Any buffer's length must be smaller than the size of the file",
+            ));
+        }
+    }
 
     let field_nodes = batch
         .nodes()?
@@ -205,6 +214,7 @@ pub fn read_dictionary<R: Read + Seek>(
     dictionaries: &mut Dictionaries,
     reader: &mut R,
     block_offset: u64,
+    file_size: u64,
 ) -> Result<()> {
     if batch.is_delta()? {
         return Err(Error::NotYetImplemented(
@@ -220,6 +230,10 @@ pub fn read_dictionary<R: Read + Seek>(
     // Get an array representing this dictionary's values.
     let dictionary_values: Box<dyn Array> = match &first_field.data_type {
         DataType::Dictionary(_, ref value_type, _) => {
+            let batch = batch
+                .data()?
+                .ok_or_else(|| Error::oos("The dictionary batch must have data."))?;
+
             // Make a fake schema for the dictionary batch.
             let fields = vec![Field::new("", value_type.as_ref().clone(), false)];
             let ipc_schema = IpcSchema {
@@ -227,9 +241,7 @@ pub fn read_dictionary<R: Read + Seek>(
                 is_little_endian: ipc_schema.is_little_endian,
             };
             let columns = read_record_batch(
-                batch
-                    .data()?
-                    .ok_or_else(|| Error::oos("The dictionary batch must have data."))?,
+                batch,
                 &fields,
                 &ipc_schema,
                 None,
@@ -237,6 +249,7 @@ pub fn read_dictionary<R: Read + Seek>(
                 arrow_format::ipc::MetadataVersion::V5,
                 reader,
                 block_offset,
+                file_size,
             )?;
             let mut arrays = columns.into_arrays();
             Some(arrays.pop().unwrap())

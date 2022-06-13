@@ -132,9 +132,15 @@ fn read_next<R: Read>(
         arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(Error::oos("A stream ")),
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
             // read the block that makes up the record batch into a buffer
+            let length: usize = message
+                .body_length()?
+                .try_into()
+                .map_err(|_| Error::oos("The body length of a header must be larger than zero"))?;
             data_buffer.clear();
-            data_buffer.resize(message.body_length()? as usize, 0);
+            data_buffer.resize(length, 0);
             reader.read_exact(data_buffer)?;
+
+            let file_size = data_buffer.len() as u64;
 
             let mut reader = std::io::Cursor::new(data_buffer);
 
@@ -147,15 +153,20 @@ fn read_next<R: Read>(
                 metadata.version,
                 &mut reader,
                 0,
+                file_size,
             )
             .map(|x| Some(StreamState::Some(x)))
         }
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
             // read the block that makes up the dictionary batch into a buffer
-            let mut buf = vec![0; message.body_length()? as usize];
+            let length: usize = message
+                .body_length()?
+                .try_into()
+                .map_err(|_| Error::oos("The body length of a header must be larger than zero"))?;
+            let mut buf = vec![0; length];
             reader.read_exact(&mut buf)?;
 
-            let mut dict_reader = std::io::Cursor::new(buf);
+            let mut dict_reader = std::io::Cursor::new(&buf);
 
             read_dictionary(
                 batch,
@@ -164,6 +175,7 @@ fn read_next<R: Read>(
                 dictionaries,
                 &mut dict_reader,
                 0,
+                buf.len() as u64,
             )?;
 
             // read the next message until we encounter a RecordBatch message

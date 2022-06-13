@@ -104,11 +104,17 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
     })?;
 
     match header {
-        arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(Error::oos("A stream ")),
+        arrow_format::ipc::MessageHeaderRef::Schema(_) => {
+            Err(Error::oos("A stream cannot contain a schema message"))
+        }
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
             // read the block that makes up the record batch into a buffer
+            let length: usize = message
+                .body_length()?
+                .try_into()
+                .map_err(|_| Error::oos("The body length of a header must be larger than zero"))?;
             state.data_buffer.clear();
-            state.data_buffer.resize(message.body_length()? as usize, 0);
+            state.data_buffer.resize(length, 0);
             state.reader.read_exact(&mut state.data_buffer).await?;
 
             read_record_batch(
@@ -120,15 +126,22 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
                 state.metadata.version,
                 &mut std::io::Cursor::new(&state.data_buffer),
                 0,
+                state.data_buffer.len() as u64,
             )
             .map(|chunk| Some(StreamState::Some((state, chunk))))
         }
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
             // read the block that makes up the dictionary batch into a buffer
-            let mut buf = vec![0; message.body_length()? as usize];
-            state.reader.read_exact(&mut buf).await?;
+            let length: usize = message
+                .body_length()?
+                .try_into()
+                .map_err(|_| Error::oos("The body length of a header must be larger than zero"))?;
+            let mut body = vec![0; length];
+            state.reader.read_exact(&mut body).await?;
 
-            let mut dict_reader = std::io::Cursor::new(buf);
+            let file_size = body.len() as u64;
+
+            let mut dict_reader = std::io::Cursor::new(body);
 
             read_dictionary(
                 batch,
@@ -137,6 +150,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
                 &mut state.dictionaries,
                 &mut dict_reader,
                 0,
+                file_size,
             )?;
 
             // read the next message until we encounter a Chunk<Box<dyn Array>> message

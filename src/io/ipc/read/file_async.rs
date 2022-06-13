@@ -144,7 +144,7 @@ where
     reader.seek(SeekFrom::End(-10 - footer_size as i64)).await?;
     reader.read_exact(&mut footer).await?;
 
-    deserialize_footer(&footer)
+    deserialize_footer(&footer, u64::MAX)
 }
 
 async fn read_batch<R>(
@@ -188,6 +188,7 @@ where
         message.version()?,
         &mut cursor,
         0,
+        metadata.size,
     )
 }
 
@@ -220,7 +221,15 @@ where
                 buffer.resize(length, 0);
                 reader.read_exact(&mut buffer).await?;
                 let mut cursor = std::io::Cursor::new(&mut buffer);
-                read_dictionary(batch, fields, ipc_schema, &mut dictionaries, &mut cursor, 0)?;
+                read_dictionary(
+                    batch,
+                    fields,
+                    ipc_schema,
+                    &mut dictionaries,
+                    &mut cursor,
+                    0,
+                    u64::MAX,
+                )?;
             }
             other => {
                 return Err(Error::OutOfSpec(format!(

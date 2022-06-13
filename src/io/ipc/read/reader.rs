@@ -30,6 +30,9 @@ pub struct FileMetadata {
 
     /// Dictionaries associated to each dict_id
     pub(crate) dictionaries: Option<Vec<arrow_format::ipc::Block>>,
+
+    /// The total size of the file in bytes
+    pub(crate) size: u64,
 }
 
 /// Arrow File reader
@@ -92,6 +95,7 @@ fn read_dictionary_block<R: Read + Seek>(
                 dictionaries,
                 reader,
                 block_offset,
+                metadata.size,
             )?;
         }
         t => {
@@ -126,9 +130,10 @@ pub fn read_file_dictionaries<R: Read + Seek>(
 }
 
 /// Reads the footer's length and magic number in footer
-fn read_footer_len<R: Read + Seek>(reader: &mut R) -> Result<usize> {
+fn read_footer_len<R: Read + Seek>(reader: &mut R) -> Result<(u64, usize)> {
     // read footer length and magic number in footer
-    reader.seek(SeekFrom::End(-10))?;
+    let end = reader.seek(SeekFrom::End(-10))? + 10;
+
     let mut footer: [u8; 10] = [0; 10];
 
     reader.read_exact(&mut footer)?;
@@ -139,12 +144,14 @@ fn read_footer_len<R: Read + Seek>(reader: &mut R) -> Result<usize> {
             "Arrow file does not contain correct footer".to_string(),
         ));
     }
-    footer_len
+    let footer_len = footer_len
         .try_into()
-        .map_err(|_| Error::oos("The footer's lenght must be a positive number"))
+        .map_err(|_| Error::oos("The footer's lenght must be a positive number"))?;
+
+    Ok((end, footer_len))
 }
 
-pub(super) fn deserialize_footer(footer_data: &[u8]) -> Result<FileMetadata> {
+pub(super) fn deserialize_footer(footer_data: &[u8], size: u64) -> Result<FileMetadata> {
     let footer = arrow_format::ipc::FooterRef::read_as_root(footer_data)
         .map_err(|err| Error::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
 
@@ -177,6 +184,7 @@ pub(super) fn deserialize_footer(footer_data: &[u8]) -> Result<FileMetadata> {
         ipc_schema,
         blocks,
         dictionaries,
+        size,
     })
 }
 
@@ -184,6 +192,7 @@ pub(super) fn deserialize_footer(footer_data: &[u8]) -> Result<FileMetadata> {
 pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata> {
     // check if header contain the correct magic bytes
     let mut magic_buffer: [u8; 6] = [0; 6];
+    let start = reader.seek(SeekFrom::Current(0))?;
     reader.read_exact(&mut magic_buffer)?;
     if magic_buffer != ARROW_MAGIC {
         return Err(Error::OutOfSpec(
@@ -191,14 +200,14 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
         ));
     }
 
-    let footer_len = read_footer_len(reader)?;
+    let (end, footer_len) = read_footer_len(reader)?;
 
     // read footer
-    let mut footer_data = vec![0; footer_len as usize];
+    let mut footer_data = vec![0; footer_len];
     reader.seek(SeekFrom::End(-10 - footer_len as i64))?;
     reader.read_exact(&mut footer_data)?;
 
-    deserialize_footer(&footer_data)
+    deserialize_footer(&footer_data, end - start)
 }
 
 pub(super) fn get_serialized_batch<'a>(
@@ -264,6 +273,7 @@ pub fn read_batch<R: Read + Seek>(
         message.version()?,
         reader,
         block.offset as u64 + block.meta_data_length as u64,
+        metadata.size,
     )
 }
 
