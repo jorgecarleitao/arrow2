@@ -133,14 +133,7 @@ fn create_batch(size: usize) -> Result<Chunk> {
         })
         .collect();
 
-<<<<<<< HEAD
-    Chunk::try_new(vec![c1.arced(), c2.arced()])
-=======
-    Chunk::try_new(vec![
-        Box::new(c1) as Box<dyn Array>,
-        Box::new(c2) as Box<dyn Array>,
-    ])
->>>>>>> 619252ff0 (Arc->Box)
+    Chunk::try_new(vec![c1.boxed(), c2.boxed()])
 }
 
 fn main() -> Result<()> {
