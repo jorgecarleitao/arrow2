@@ -18,6 +18,7 @@ pub mod aggregate;
 #[cfg_attr(docsrs, doc(cfg(feature = "compute_arithmetics")))]
 pub mod arithmetics;
 pub mod arity;
+pub mod arity_assign;
 #[cfg(feature = "compute_bitwise")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compute_bitwise")))]
 pub mod bitwise;
