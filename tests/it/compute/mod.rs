@@ -46,3 +46,5 @@ mod temporal;
 mod utf8;
 #[cfg(feature = "compute_window")]
 mod window;
+
+mod arity_assign;
