@@ -168,6 +168,16 @@ impl<T: NativeType> Buffer<T> {
             Either::Right(data) => data,
         }
     }
+
+    /// Get the strong count of underlying `Arc` data buffer.
+    pub fn shared_count_strong(&self) -> usize {
+        Arc::strong_count(&self.data)
+    }
+
+    /// Get the weak count of underlying `Arc` data buffer.
+    pub fn shared_count_weak(&self) -> usize {
+        Arc::weak_count(&self.data)
+    }
 }
 
 impl<T: NativeType> From<Vec<T>> for Buffer<T> {
