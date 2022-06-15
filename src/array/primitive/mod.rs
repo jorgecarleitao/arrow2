@@ -273,7 +273,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// Update the values buffer of this [`PrimitiveArray`].
     /// # Panics
     /// This function panics iff `values.len() != self.len()`.
-    pub fn set_values(&mut self, values: Vec<T>) {
+    pub fn set_values(&mut self, values: Buffer<T>) {
         assert_eq!(
             values.len(),
             self.len(),
