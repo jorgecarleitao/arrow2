@@ -245,12 +245,41 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// This function panics iff `validity.len() != self.len()`.
     #[must_use]
     pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        let mut out = self.clone();
+        out.set_validity(validity);
+        out
+    }
+
+    /// Update the validity buffer of this [`PrimitiveArray`].
+    /// # Panics
+    /// This function panics iff `values.len() != self.len()`.
+    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
             panic!("validity should be as least as large as the array")
         }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        arr
+        self.validity = validity;
+    }
+
+    /// Returns a clone of this [`PrimitiveArray`] with a new values.
+    /// # Panics
+    /// This function panics iff `values.len() != self.len()`.
+    #[must_use]
+    pub fn with_values(&self, values: Vec<T>) -> Self {
+        let mut out = self.clone();
+        out.set_values(values);
+        out
+    }
+
+    /// Update the values buffer of this [`PrimitiveArray`].
+    /// # Panics
+    /// This function panics iff `values.len() != self.len()`.
+    pub fn set_values(&mut self, values: Vec<T>) {
+        assert_eq!(
+            values.len(),
+            self.len(),
+            "values length should be equal to this arrays length"
+        );
+        self.values = values.into();
     }
 
     /// Applies a function `f` to the values of this array, cloning the values

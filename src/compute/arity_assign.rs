@@ -2,6 +2,7 @@
 
 use super::utils::check_same_len;
 use crate::{array::PrimitiveArray, types::NativeType};
+use either::Either;
 
 /// Applies an unary function to a [`PrimitiveArray`] in-place via cow semantics.
 ///
@@ -48,10 +49,28 @@ where
             }
         }
     }
+    // we need to take ownership for the `into_mut` call, but leave the `&mut` lhs intact
+    // so that we can later assign the result to out `&mut lhs`
+    let owned_lhs = std::mem::take(lhs);
 
-    lhs.apply_values(|x| {
-        x.iter_mut()
-            .zip(rhs.values().iter())
-            .for_each(|(l, r)| *l = op(*l, *r))
-    });
+    match owned_lhs.into_mut() {
+        Either::Left(mut immutable) => {
+            let values = immutable
+                .values()
+                .iter()
+                .zip(rhs.values().iter())
+                .map(|(l, r)| op(*l, *r))
+                .collect::<Vec<_>>();
+            immutable.set_values(values);
+            *lhs = immutable;
+        }
+        Either::Right(mut mutable) => {
+            mutable.apply_values(|x| {
+                x.iter_mut()
+                    .zip(rhs.values().iter())
+                    .for_each(|(l, r)| *l = op(*l, *r))
+            });
+            *lhs = mutable.into()
+        }
+    }
 }

@@ -81,6 +81,32 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     pub fn into_data(self) -> (DataType, Vec<T>, Option<MutableBitmap>) {
         (self.data_type, self.values, self.validity)
     }
+
+    /// Applies a function `f` to the values of this array, cloning the values
+    /// iff they are being shared with others
+    ///
+    /// This is an API to use clone-on-write
+    /// # Implementation
+    /// This function is `O(f)` if the data is not being shared, and `O(N) + O(f)`
+    /// if it is being shared (since it results in a `O(N)` memcopy).
+    pub fn apply_values<F: Fn(&mut [T])>(&mut self, f: F) {
+        f(&mut self.values);
+    }
+
+    /// Applies a function `f` to the validity of this array, cloning it
+    /// iff it is being shared.
+    ///
+    /// This is an API to leverage clone-on-write
+    /// # Implementation
+    /// This function is `O(f)` if the data is not being shared, and `O(N) + O(f)`
+    /// if it is being shared (since it results in a `O(N)` memcopy).
+    /// # Panics
+    /// This function panics if the function modifies the length of the [`MutableBitmap`].
+    pub fn apply_validity<F: Fn(&mut MutableBitmap)>(&mut self, f: F) {
+        if let Some(validity) = &mut self.validity {
+            f(validity);
+        }
+    }
 }
 
 impl<T: NativeType> Default for MutablePrimitiveArray<T> {
