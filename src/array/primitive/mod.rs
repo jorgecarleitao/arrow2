@@ -279,7 +279,7 @@ impl<T: NativeType> PrimitiveArray<T> {
             self.len(),
             "values length should be equal to this arrays length"
         );
-        self.values = values.into();
+        self.values = values;
     }
 
     /// Applies a function `f` to the values of this array, cloning the values
