@@ -514,6 +514,6 @@ pub type UInt64Vec = MutablePrimitiveArray<u64>;
 
 impl<T: NativeType> Default for PrimitiveArray<T> {
     fn default() -> Self {
-        PrimitiveArray::new(DataType::Null, vec![].into(), None)
+        PrimitiveArray::new(T::PRIMITIVE.into(), Default::default(), None)
     }
 }
