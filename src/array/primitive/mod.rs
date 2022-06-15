@@ -511,3 +511,9 @@ pub type UInt16Vec = MutablePrimitiveArray<u16>;
 pub type UInt32Vec = MutablePrimitiveArray<u32>;
 /// A type definition [`MutablePrimitiveArray`] for `u64`
 pub type UInt64Vec = MutablePrimitiveArray<u64>;
+
+impl<T: NativeType> Default for PrimitiveArray<T> {
+    fn default() -> Self {
+        PrimitiveArray::new(DataType::Null, vec![].into(), None)
+    }
+}
