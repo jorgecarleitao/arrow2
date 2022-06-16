@@ -13,7 +13,7 @@ fn main() {
         .unwrap();
 
     // 2. call `apply_values` with the function to apply over the values
-    array.apply_values(|x| x.iter_mut().for_each(|x| *x *= 10));
+    array.apply_values_mut(|x| x.iter_mut().for_each(|x| *x *= 10));
 
     // confirm that it gives the right result :)
     assert_eq!(array, &PrimitiveArray::from_vec(vec![10i32, 20]));
