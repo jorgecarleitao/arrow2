@@ -19,6 +19,24 @@ fn basics() {
 }
 
 #[test]
+fn binary_assign_oob() {
+    // this check we don't have an oob access if the bitmaps are size T + 1
+    // and we do some slicing.
+    let mut a = MutableBitmap::from_iter(std::iter::repeat(true).take(65));
+    let mut b = MutableBitmap::from_iter(std::iter::repeat(true).take(65));
+
+    let a: Bitmap = a.into();
+    let a = a.slice(10, 20);
+
+    let b: Bitmap = b.into();
+    let b = b.slice(10, 20);
+
+    let mut a = a.make_mut();
+
+    binary_assign(&mut a, &b, |x: u64, y| x & y);
+}
+
+#[test]
 fn fast_paths() {
     let b = MutableBitmap::from([true, false]);
     let c = Bitmap::from_iter([true, true]);

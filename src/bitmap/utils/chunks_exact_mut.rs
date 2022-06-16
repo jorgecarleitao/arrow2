@@ -16,12 +16,13 @@ pub struct BitChunksExactMut<'a, T: BitChunk> {
 impl<'a, T: BitChunk> BitChunksExactMut<'a, T> {
     /// Returns a new [`BitChunksExactMut`]
     #[inline]
-    pub fn new(bitmap: &'a mut [u8], length: usize) -> Self {
+    pub fn new(bitmap: &'a mut [u8]) -> Self {
         let size_of = std::mem::size_of::<T>();
 
-        let split = (length / 8 / size_of) * size_of;
+        let length = bitmap.len();
+        let split = (length / size_of) * size_of;
         let (chunks, remainder) = bitmap.split_at_mut(split);
-        let remainder_len = length - chunks.len() * 8;
+        let remainder_len = (length - chunks.len()) * 8;
 
         let chunks = chunks.chunks_exact_mut(size_of);
         Self {

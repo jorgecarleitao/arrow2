@@ -313,7 +313,7 @@ impl MutableBitmap {
 
     /// Returns an iterator over mutable slices, [`BitChunksExactMut`]
     pub(crate) fn bitchunks_exact_mut<T: BitChunk>(&mut self) -> BitChunksExactMut<T> {
-        BitChunksExactMut::new(&mut self.buffer, self.length)
+        BitChunksExactMut::new(&mut self.buffer)
     }
 }
 
