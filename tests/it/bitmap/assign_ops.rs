@@ -22,8 +22,8 @@ fn basics() {
 fn binary_assign_oob() {
     // this check we don't have an oob access if the bitmaps are size T + 1
     // and we do some slicing.
-    let mut a = MutableBitmap::from_iter(std::iter::repeat(true).take(65));
-    let mut b = MutableBitmap::from_iter(std::iter::repeat(true).take(65));
+    let a = MutableBitmap::from_iter(std::iter::repeat(true).take(65));
+    let b = MutableBitmap::from_iter(std::iter::repeat(true).take(65));
 
     let a: Bitmap = a.into();
     let a = a.slice(10, 20);
