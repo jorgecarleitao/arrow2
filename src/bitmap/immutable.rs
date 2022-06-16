@@ -239,7 +239,12 @@ impl Bitmap {
     pub fn make_mut(self) -> MutableBitmap {
         match self.into_mut() {
             Either::Left(data) => {
-                MutableBitmap::from_vec(data.bytes.as_ref().to_vec(), data.length)
+                if data.offset > 0 {
+                    // we have to recreate the bytes because a MutableBitmap does not have an `offset`.
+                    data.iter().collect()
+                } else {
+                    MutableBitmap::from_vec(data.bytes.as_ref().to_vec(), data.length)
+                }
             }
             Either::Right(data) => data,
         }
