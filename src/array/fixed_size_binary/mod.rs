@@ -228,7 +228,12 @@ impl FixedSizeBinaryArray {
 impl FixedSizeBinaryArray {
     pub(crate) fn maybe_get_size(data_type: &DataType) -> Result<usize, Error> {
         match data_type.to_logical_type() {
-            DataType::FixedSizeBinary(size) => Ok(*size),
+            DataType::FixedSizeBinary(size) => {
+                if *size == 0 {
+                    return Err(Error::oos("FixedSizeBinaryArray expects a positive size"));
+                }
+                Ok(*size)
+            }
             _ => Err(Error::oos(
                 "FixedSizeBinaryArray expects DataType::FixedSizeBinary",
             )),

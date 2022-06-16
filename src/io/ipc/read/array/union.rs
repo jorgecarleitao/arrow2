@@ -10,7 +10,7 @@ use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
 use super::super::read_basic::*;
 use super::super::Dictionaries;
-use super::super::{Compression, IpcBuffer, Node, Version};
+use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind, Version};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_union<R: Read + Seek>(
@@ -38,9 +38,14 @@ pub fn read_union<R: Read + Seek>(
             .ok_or_else(|| Error::oos("IPC: missing validity buffer."))?;
     };
 
+    let length: usize = field_node
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
     let types = read_buffer(
         buffers,
-        field_node.length() as usize,
+        length,
         reader,
         block_offset,
         is_little_endian,
@@ -51,7 +56,7 @@ pub fn read_union<R: Read + Seek>(
         if !mode.is_sparse() {
             Some(read_buffer(
                 buffers,
-                field_node.length() as usize,
+                length,
                 reader,
                 block_offset,
                 is_little_endian,

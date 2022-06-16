@@ -13,6 +13,7 @@ use super::super::CONTINUATION_MARKER;
 use super::common::*;
 use super::schema::deserialize_stream_metadata;
 use super::Dictionaries;
+use super::OutOfSpecKind;
 
 /// Metadata of an Arrow IPC stream, written at the start of the stream
 #[derive(Debug, Clone)]
@@ -32,7 +33,7 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
     // determine metadata length
     let mut meta_size: [u8; 4] = [0; 4];
     reader.read_exact(&mut meta_size)?;
-    let meta_len = {
+    let meta_length = {
         // If a continuation marker is encountered, skip over it and read
         // the size from the next four bytes.
         if meta_size == CONTINUATION_MARKER {
@@ -41,7 +42,11 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
         i32::from_le_bytes(meta_size)
     };
 
-    let mut meta_buffer = vec![0; meta_len as usize];
+    let meta_length: usize = meta_length
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    let mut meta_buffer = vec![0; meta_length];
     reader.read_exact(&mut meta_buffer)?;
 
     deserialize_stream_metadata(&meta_buffer)
@@ -110,8 +115,12 @@ fn read_next<R: Read>(
         if meta_length == CONTINUATION_MARKER {
             reader.read_exact(&mut meta_length)?;
         }
-        i32::from_le_bytes(meta_length) as usize
+        i32::from_le_bytes(meta_length)
     };
+
+    let meta_length: usize = meta_length
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
     if meta_length == 0 {
         // the stream has ended, mark the reader as finished
@@ -123,21 +132,23 @@ fn read_next<R: Read>(
     reader.read_exact(message_buffer)?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(message_buffer)
-        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
-    let header = message.header()?.ok_or_else(|| {
-        Error::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
-    })?;
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
+
+    let header = message
+        .header()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferHeader(err)))?
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageHeader))?;
+
+    let block_length: usize = message
+        .body_length()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferBodyLength(err)))?
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
     match header {
-        arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(Error::oos("A stream ")),
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
-            // read the block that makes up the record batch into a buffer
-            let length: usize = message
-                .body_length()?
-                .try_into()
-                .map_err(|_| Error::oos("The body length of a header must be larger than zero"))?;
             data_buffer.clear();
-            data_buffer.resize(length, 0);
+            data_buffer.resize(block_length, 0);
             reader.read_exact(data_buffer)?;
 
             let file_size = data_buffer.len() as u64;
@@ -158,12 +169,7 @@ fn read_next<R: Read>(
             .map(|x| Some(StreamState::Some(x)))
         }
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
-            // read the block that makes up the dictionary batch into a buffer
-            let length: usize = message
-                .body_length()?
-                .try_into()
-                .map_err(|_| Error::oos("The body length of a header must be larger than zero"))?;
-            let mut buf = vec![0; length];
+            let mut buf = vec![0; block_length];
             reader.read_exact(&mut buf)?;
 
             let mut dict_reader = std::io::Cursor::new(&buf);
@@ -181,10 +187,7 @@ fn read_next<R: Read>(
             // read the next message until we encounter a RecordBatch message
             read_next(reader, metadata, dictionaries, message_buffer, data_buffer)
         }
-        t => Err(Error::OutOfSpec(format!(
-            "Reading types other than record batches not yet supported, unable to read {:?} ",
-            t
-        ))),
+        _ => Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
     }
 }
 

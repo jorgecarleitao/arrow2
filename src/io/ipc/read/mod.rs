@@ -11,10 +11,14 @@ use crate::array::Array;
 mod array;
 mod common;
 mod deserialize;
+mod error;
 mod read_basic;
 pub(crate) mod reader;
 mod schema;
 mod stream;
+
+pub use error::OutOfSpecKind;
+
 #[cfg(feature = "io_ipc_read_async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_ipc_read_async")))]
 pub mod stream_async;

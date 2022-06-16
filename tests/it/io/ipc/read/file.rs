@@ -219,13 +219,11 @@ fn test_does_not_panic() {
     );
     let original = std::fs::read(path).unwrap();
 
-    for errors in 0..1000 {
+    for _ in 0..1000 {
         let mut data = original.clone();
-        for _ in 0..errors {
-            let position: usize = rand::thread_rng().gen_range(0..data.len());
-            let new_byte: u8 = rand::thread_rng().gen_range(0..u8::MAX);
-            data[position] = new_byte
-        }
+        let position: usize = rand::thread_rng().gen_range(0..data.len());
+        let new_byte: u8 = rand::thread_rng().gen_range(0..u8::MAX);
+        data[position] = new_byte;
         let _ = read_corrupted_ipc(data);
     }
 }

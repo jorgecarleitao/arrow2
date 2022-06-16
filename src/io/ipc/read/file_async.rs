@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 use std::io::SeekFrom;
 
-use arrow_format::ipc::{planus::ReadAsRoot, Block, MessageHeaderRef, MessageRef};
+use arrow_format::ipc::{planus::ReadAsRoot, Block, MessageHeaderRef};
 use futures::{
     stream::BoxStream, AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt, Stream, StreamExt,
 };
@@ -17,6 +17,7 @@ use super::common::{apply_projection, prepare_projection, read_dictionary, read_
 use super::reader::{deserialize_footer, get_serialized_batch};
 use super::Dictionaries;
 use super::FileMetadata;
+use super::OutOfSpecKind;
 
 /// Async reader for Arrow IPC files
 pub struct FileStream<'a> {
@@ -124,13 +125,11 @@ async fn read_footer_len<R: AsyncRead + AsyncSeek + Unpin>(reader: &mut R) -> Re
     let footer_len = i32::from_le_bytes(footer[..4].try_into().unwrap());
 
     if footer[4..] != ARROW_MAGIC {
-        return Err(Error::OutOfSpec(
-            "Arrow file does not contain correct footer".to_string(),
-        ));
+        return Err(Error::from(OutOfSpecKind::InvalidFooter));
     }
     footer_len
         .try_into()
-        .map_err(|_| Error::oos("The footer's lenght must be a positive number"))
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))
 }
 
 /// Read the metadata from an IPC file.
@@ -140,7 +139,7 @@ where
 {
     let footer_size = read_footer_len(reader).await?;
     // Read footer
-    let mut footer = vec![0; footer_size as usize];
+    let mut footer = vec![0; footer_size];
     reader.seek(SeekFrom::End(-10 - footer_size as i64)).await?;
     reader.read_exact(&mut footer).await?;
 
@@ -160,22 +159,40 @@ where
     R: AsyncRead + AsyncSeek + Unpin,
 {
     let block = metadata.blocks[block];
-    reader.seek(SeekFrom::Start(block.offset as u64)).await?;
+
+    let offset: u64 = block
+        .offset
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    reader.seek(SeekFrom::Start(offset)).await?;
     let mut meta_buf = [0; 4];
     reader.read_exact(&mut meta_buf).await?;
     if meta_buf == CONTINUATION_MARKER {
         reader.read_exact(&mut meta_buf).await?;
     }
-    let meta_len = i32::from_le_bytes(meta_buf) as usize;
+
+    let meta_len = i32::from_le_bytes(meta_buf)
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
+
     meta_buffer.clear();
     meta_buffer.resize(meta_len, 0);
     reader.read_exact(meta_buffer).await?;
 
-    let message = MessageRef::read_as_root(&meta_buffer[..])
-        .map_err(|err| Error::oos(format!("unable to parse message: {:?}", err)))?;
+    let message = arrow_format::ipc::MessageRef::read_as_root(meta_buffer)
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
+
     let batch = get_serialized_batch(&message)?;
+
+    let block_length: usize = message
+        .body_length()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferBodyLength(err)))?
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
+
     block_buffer.clear();
-    block_buffer.resize(message.body_length()? as usize, 0);
+    block_buffer.resize(block_length, 0);
     reader.read_exact(block_buffer).await?;
     let mut cursor = std::io::Cursor::new(block_buffer);
 
@@ -185,7 +202,9 @@ where
         &metadata.ipc_schema,
         projection,
         dictionaries,
-        message.version()?,
+        message
+            .version()
+            .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferVersion(err)))?,
         &mut cursor,
         0,
         metadata.size,
@@ -206,15 +225,26 @@ where
     let mut buffer = vec![];
 
     for block in blocks {
-        let offset = block.offset as u64;
-        let length = block.body_length as usize;
+        let offset: u64 = block
+            .offset
+            .try_into()
+            .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+        let length: usize = block
+            .body_length
+            .try_into()
+            .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
         read_dictionary_message(&mut reader, offset, &mut data).await?;
 
-        let message = MessageRef::read_as_root(&data)
-            .map_err(|err| Error::OutOfSpec(format!("unable to get root as message: {:?}", err)))?;
+        let message = arrow_format::ipc::MessageRef::read_as_root(&data)
+            .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
+
         let header = message
-            .header()?
-            .ok_or_else(|| Error::oos("message must have a header"))?;
+            .header()
+            .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferHeader(err)))?
+            .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageHeader))?;
+
         match header {
             MessageHeaderRef::DictionaryBatch(batch) => {
                 buffer.clear();
@@ -231,12 +261,7 @@ where
                     u64::MAX,
                 )?;
             }
-            other => {
-                return Err(Error::OutOfSpec(format!(
-                    "expected DictionaryBatch in dictionary blocks, found {:?}",
-                    other,
-                )))
-            }
+            _ => return Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
         }
     }
     Ok(dictionaries)
@@ -253,8 +278,13 @@ where
         reader.read_exact(&mut message_size).await?;
     }
     let footer_size = i32::from_le_bytes(message_size);
+
+    let footer_size: usize = footer_size
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
     data.clear();
-    data.resize(footer_size as usize, 0);
+    data.resize(footer_size, 0);
     reader.read_exact(data).await?;
 
     Ok(())

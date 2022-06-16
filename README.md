@@ -73,8 +73,6 @@ Reading from untrusted data currently _may_ `panic!` on the following formats:
 
 * parquet
 * avro
-* Arrow IPC streams
-* compressed Arrow IPC files and streams
 
 We are actively addressing this.
 

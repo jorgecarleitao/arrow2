@@ -213,7 +213,12 @@ impl FixedSizeListArray {
 impl FixedSizeListArray {
     pub(crate) fn try_child_and_size(data_type: &DataType) -> Result<(&Field, usize), Error> {
         match data_type.to_logical_type() {
-            DataType::FixedSizeList(child, size) => Ok((child.as_ref(), *size as usize)),
+            DataType::FixedSizeList(child, size) => {
+                if *size == 0 {
+                    return Err(Error::oos("FixedSizeBinaryArray expects a positive size"));
+                }
+                Ok((child.as_ref(), *size as usize))
+            }
             _ => Err(Error::oos(
                 "FixedSizeListArray expects DataType::FixedSizeList",
             )),

@@ -7,7 +7,7 @@ use crate::datatypes::DataType;
 use crate::error::{Error, Result};
 
 use super::super::read_basic::*;
-use super::super::{Compression, IpcBuffer, Node};
+use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
 
 pub fn read_binary<O: Offset, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
@@ -34,9 +34,14 @@ pub fn read_binary<O: Offset, R: Read + Seek>(
         compression,
     )?;
 
+    let length: usize = field_node
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
     let offsets: Buffer<O> = read_buffer(
         buffers,
-        1 + field_node.length() as usize,
+        1 + length,
         reader,
         block_offset,
         is_little_endian,

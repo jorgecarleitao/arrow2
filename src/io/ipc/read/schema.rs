@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     super::{IpcField, IpcSchema},
-    StreamMetadata,
+    OutOfSpecKind, StreamMetadata,
 };
 
 fn try_unzip_vec<A, B, I: Iterator<Item = Result<(A, B)>>>(iter: I) -> Result<(Vec<A>, Vec<B>)> {
@@ -131,7 +131,12 @@ fn get_data_type(
         Utf8(_) => (DataType::Utf8, IpcField::default()),
         LargeUtf8(_) => (DataType::LargeUtf8, IpcField::default()),
         FixedSizeBinary(fixed) => (
-            DataType::FixedSizeBinary(fixed.byte_width()? as usize),
+            DataType::FixedSizeBinary(
+                fixed
+                    .byte_width()?
+                    .try_into()
+                    .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?,
+            ),
             IpcField::default(),
         ),
         FloatingPoint(float) => {
@@ -193,8 +198,16 @@ fn get_data_type(
             (DataType::Duration(time_unit), IpcField::default())
         }
         Decimal(decimal) => {
-            let data_type =
-                DataType::Decimal(decimal.precision()? as usize, decimal.scale()? as usize);
+            let data_type = DataType::Decimal(
+                decimal
+                    .precision()?
+                    .try_into()
+                    .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?,
+                decimal
+                    .scale()?
+                    .try_into()
+                    .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?,
+            );
             (data_type, IpcField::default())
         }
         List(_) => {
@@ -240,7 +253,10 @@ fn get_data_type(
                 .ok_or_else(|| Error::oos("IPC: FixedSizeList must contain one child"))??;
             let (field, ipc_field) = deserialize_field(inner)?;
 
-            let size = list.list_size()? as usize;
+            let size = list
+                .list_size()?
+                .try_into()
+                .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
             (
                 DataType::FixedSizeList(Box::new(field), size),
@@ -332,7 +348,7 @@ pub fn deserialize_schema(bytes: &[u8]) -> Result<(Schema, IpcSchema)> {
 pub(super) fn fb_to_schema(schema: arrow_format::ipc::SchemaRef) -> Result<(Schema, IpcSchema)> {
     let fields = schema
         .fields()?
-        .ok_or_else(|| Error::oos("IPC: Schema must contain fields"))?;
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingFields))?;
     let (fields, ipc_fields) = try_unzip_vec(fields.iter().map(|field| {
         let (field, fields) = deserialize_field(field?)?;
         Ok((field, fields))

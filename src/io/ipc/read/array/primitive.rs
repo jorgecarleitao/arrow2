@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 use crate::{array::PrimitiveArray, types::NativeType};
 
 use super::super::read_basic::*;
-use super::super::{Compression, IpcBuffer, Node};
+use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
 
 pub fn read_primitive<T: NativeType, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
@@ -36,9 +36,14 @@ where
         compression,
     )?;
 
+    let length: usize = field_node
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
     let values = read_buffer(
         buffers,
-        field_node.length() as usize,
+        length,
         reader,
         block_offset,
         is_little_endian,

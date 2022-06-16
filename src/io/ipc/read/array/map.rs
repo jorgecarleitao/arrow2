@@ -10,7 +10,7 @@ use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
 use super::super::read_basic::*;
 use super::super::Dictionaries;
-use super::super::{Compression, IpcBuffer, Node, Version};
+use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind, Version};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_map<R: Read + Seek>(
@@ -41,9 +41,14 @@ pub fn read_map<R: Read + Seek>(
         compression,
     )?;
 
+    let length: usize = field_node
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
     let offsets = read_buffer::<i32, _>(
         buffers,
-        1 + field_node.length() as usize,
+        1 + length,
         reader,
         block_offset,
         is_little_endian,
