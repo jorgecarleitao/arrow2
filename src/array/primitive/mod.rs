@@ -264,7 +264,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// # Panics
     /// This function panics iff `values.len() != self.len()`.
     #[must_use]
-    pub fn with_values(&self, values: Vec<T>) -> Self {
+    pub fn with_values(&self, values: Buffer<T>) -> Self {
         let mut out = self.clone();
         out.set_values(values);
         out
@@ -289,10 +289,14 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// # Implementation
     /// This function is `O(f)` if the data is not being shared, and `O(N) + O(f)`
     /// if it is being shared (since it results in a `O(N)` memcopy).
+    /// # Panics
+    /// This function panics, if `f` modifies the length of `&mut [T]`
     pub fn apply_values<F: Fn(&mut [T])>(&mut self, f: F) {
         let values = std::mem::take(&mut self.values);
         let mut values = values.make_mut();
+        let len = values.len();
         f(&mut values);
+        assert_eq!(values.len(), len, "values length must remain the same");
         self.values = values.into();
     }
 

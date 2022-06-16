@@ -61,7 +61,7 @@ where
                 .zip(rhs.values().iter())
                 .map(|(l, r)| op(*l, *r))
                 .collect::<Vec<_>>();
-            immutable.set_values(values);
+            immutable.set_values(values.into());
             *lhs = immutable;
         }
         Either::Right(mut mutable) => {
