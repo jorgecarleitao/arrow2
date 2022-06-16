@@ -128,7 +128,7 @@ fn into_mut_3() {
 #[test]
 fn apply_values() {
     let mut a = PrimitiveArray::from([Some(1), Some(2), None]);
-    a.apply_values(|x| {
+    a.apply_values_mut(|x| {
         x[0] = 10;
     });
     let expected = PrimitiveArray::from([Some(10), Some(2), None]);
@@ -138,7 +138,7 @@ fn apply_values() {
 #[test]
 fn apply_validity() {
     let mut a = PrimitiveArray::from([Some(1), Some(2), None]);
-    a.apply_validity(|x| {
+    a.apply_validity_mut(|x| {
         let mut a = std::mem::take(x);
         a = !a;
         *x = a;

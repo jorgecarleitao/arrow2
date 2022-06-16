@@ -291,7 +291,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// if it is being shared (since it results in a `O(N)` memcopy).
     /// # Panics
     /// This function panics, if `f` modifies the length of `&mut [T]`
-    pub fn apply_values<F: Fn(&mut [T])>(&mut self, f: F) {
+    pub fn apply_values_mut<F: Fn(&mut [T])>(&mut self, f: F) {
         let values = std::mem::take(&mut self.values);
         let mut values = values.make_mut();
         let len = values.len();
@@ -309,13 +309,29 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// if it is being shared (since it results in a `O(N)` memcopy).
     /// # Panics
     /// This function panics if the function modifies the length of the [`MutableBitmap`].
-    pub fn apply_validity<F: Fn(&mut MutableBitmap)>(&mut self, f: F) {
+    pub fn apply_validity_mut<F: Fn(&mut MutableBitmap)>(&mut self, f: F) {
         if let Some(validity) = self.validity.as_mut() {
-            let values = std::mem::take(validity);
-            let mut bitmap = values.make_mut();
-            f(&mut bitmap);
-            assert_eq!(bitmap.len(), self.values.len());
-            *validity = bitmap.into();
+            let owned_validity = std::mem::take(validity);
+            let mut mut_bitmap = owned_validity.make_mut();
+            f(&mut mut_bitmap);
+            assert_eq!(mut_bitmap.len(), self.values.len());
+            *validity = mut_bitmap.into();
+        }
+    }
+
+    /// Applies a function `f` to the validity of this array, the caller can decide to make
+    /// it mutable or not.
+    ///
+    /// This is an API to leverage clone-on-write
+    /// # Implementation
+    /// This function is `O(f)` if the data is not being shared, and `O(N) + O(f)`
+    /// if it is being shared (since it results in a `O(N)` memcopy).
+    /// # Panics
+    /// This function panics if the function modifies the length of the [`MutableBitmap`].
+    pub fn apply_validity<F: Fn(&mut Bitmap)>(&mut self, f: F) {
+        if let Some(validity) = self.validity.as_mut() {
+            f(validity);
+            assert_eq!(validity.len(), self.values.len());
         }
     }
 
