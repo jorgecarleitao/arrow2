@@ -135,7 +135,7 @@ fn from_iter() {
 #[test]
 fn apply_values() {
     let mut a = BooleanArray::from([Some(true), Some(false), None]);
-    a.apply_values(|x| {
+    a.apply_values_mut(|x| {
         let mut a = std::mem::take(x);
         a = !a;
         *x = a;
@@ -147,7 +147,7 @@ fn apply_values() {
 #[test]
 fn apply_validity() {
     let mut a = BooleanArray::from([Some(true), Some(false), None]);
-    a.apply_validity(|x| {
+    a.apply_validity_mut(|x| {
         let mut a = std::mem::take(x);
         a = !a;
         *x = a;

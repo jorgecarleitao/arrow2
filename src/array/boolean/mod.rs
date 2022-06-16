@@ -102,7 +102,7 @@ impl BooleanArray {
     /// if it is being shared (since it results in a `O(N)` memcopy).
     /// # Panics
     /// This function panics if the function modifies the length of the [`MutableBitmap`].
-    pub fn apply_values<F: Fn(&mut MutableBitmap)>(&mut self, f: F) {
+    pub fn apply_values_mut<F: Fn(&mut MutableBitmap)>(&mut self, f: F) {
         let values = std::mem::take(&mut self.values);
         let mut values = values.make_mut();
         f(&mut values);
@@ -121,7 +121,7 @@ impl BooleanArray {
     /// if it is being shared (since it results in a `O(N)` memcopy).
     /// # Panics
     /// This function panics if the function modifies the length of the [`MutableBitmap`].
-    pub fn apply_validity<F: Fn(&mut MutableBitmap)>(&mut self, f: F) {
+    pub fn apply_validity_mut<F: Fn(&mut MutableBitmap)>(&mut self, f: F) {
         if let Some(validity) = self.validity.as_mut() {
             let values = std::mem::take(validity);
             let mut bitmap = values.make_mut();
