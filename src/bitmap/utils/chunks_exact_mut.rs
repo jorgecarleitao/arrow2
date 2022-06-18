@@ -17,7 +17,10 @@ impl<'a, T: BitChunk> BitChunksExactMut<'a, T> {
     /// Returns a new [`BitChunksExactMut`]
     #[inline]
     pub fn new(bitmap: &'a mut [u8], length: usize) -> Self {
+        assert!(length <= bitmap.len() * 8);
         let size_of = std::mem::size_of::<T>();
+
+        let bitmap = &mut bitmap[..length.saturating_add(7) / 8];
 
         let split = (length / 8 / size_of) * size_of;
         let (chunks, remainder) = bitmap.split_at_mut(split);

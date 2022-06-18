@@ -16,14 +16,15 @@ pub struct BitChunksExact<'a, T: BitChunk> {
 impl<'a, T: BitChunk> BitChunksExact<'a, T> {
     /// Creates a new [`BitChunksExact`].
     #[inline]
-    pub fn new(slice: &'a [u8], len: usize) -> Self {
-        assert!(len <= slice.len() * 8);
+    pub fn new(bitmap: &'a [u8], length: usize) -> Self {
+        assert!(length <= bitmap.len() * 8);
         let size_of = std::mem::size_of::<T>();
 
-        let split = (len / 8 / size_of) * size_of;
-        let chunks = &slice[..split];
-        let remainder = &slice[split..];
-        let remainder_len = len - chunks.len() * 8;
+        let bitmap = &bitmap[..length.saturating_add(7) / 8];
+
+        let split = (length / 8 / size_of) * size_of;
+        let (chunks, remainder) = bitmap.split_at(split);
+        let remainder_len = length - chunks.len() * 8;
         let iter = chunks.chunks_exact(size_of);
 
         Self {

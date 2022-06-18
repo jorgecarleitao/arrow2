@@ -46,42 +46,37 @@ where
     // new buffer, that is benchmarked to be ~2x faster than first memcpy and assign in place
     // for the validity bits it can be much faster as we might need to iterate all bits if the
     // bitmap has an offset.
-    match rhs.validity() {
-        None => {}
-        Some(rhs) => {
-            if lhs.validity().is_none() {
-                *lhs = lhs.with_validity(Some(rhs.clone()))
-            } else {
-                lhs.apply_validity(|bitmap| {
-                    // we need to take ownership for the `into_mut` call, but leave the `&mut` lhs intact
-                    // so that we can later assign the result to out `&mut bitmap`
-                    let owned_lhs = std::mem::take(bitmap);
+    if let Some(rhs) = rhs.validity() {
+        if lhs.validity().is_none() {
+            *lhs = lhs.with_validity(Some(rhs.clone()))
+        } else {
+            lhs.apply_validity(|bitmap| {
+                // we need to take ownership for the `into_mut` call, but leave the `&mut` lhs intact
+                // so that we can later assign the result to out `&mut bitmap`
+                let owned_lhs = std::mem::take(bitmap);
 
-                    match owned_lhs.into_mut() {
-                        // we take alloc and write to new buffer
-                        Either::Left(immutable) => {
-                            // we allocate a new bitmap because that is a lot faster
-                            // than doing the memcpy or the potential iteration of bits if
-                            // we are dealing with an offset
-                            let new = &immutable & rhs;
-                            *bitmap = new;
-                        }
-                        // we can mutate in place, happy days.
-                        Either::Right(mut mutable) => {
-                            let mut mutable_ref = &mut mutable;
-                            mutable_ref &= rhs;
-                            *bitmap = mutable.into()
-                        }
+                *bitmap = match owned_lhs.into_mut() {
+                    // we take alloc and write to new buffer
+                    Either::Left(immutable) => {
+                        // we allocate a new bitmap
+                        &immutable & rhs
                     }
-                });
-            }
+                    // we can mutate in place, happy days.
+                    Either::Right(mut mutable) => {
+                        let mut mutable_ref = &mut mutable;
+                        mutable_ref &= rhs;
+                        mutable.into()
+                    }
+                }
+            });
         }
     }
+
     // we need to take ownership for the `into_mut` call, but leave the `&mut` lhs intact
     // so that we can later assign the result to out `&mut lhs`
     let owned_lhs = std::mem::take(lhs);
 
-    match owned_lhs.into_mut() {
+    *lhs = match owned_lhs.into_mut() {
         // we take alloc and write to new buffer
         Either::Left(mut immutable) => {
             let values = immutable
@@ -91,7 +86,7 @@ where
                 .map(|(l, r)| op(*l, *r))
                 .collect::<Vec<_>>();
             immutable.set_values(values.into());
-            *lhs = immutable;
+            immutable
         }
         // we can mutate in place
         Either::Right(mut mutable) => {
@@ -100,7 +95,7 @@ where
                     .zip(rhs.values().iter())
                     .for_each(|(l, r)| *l = op(*l, *r))
             });
-            *lhs = mutable.into()
+            mutable.into()
         }
     }
 }
