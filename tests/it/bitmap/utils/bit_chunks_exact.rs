@@ -29,5 +29,5 @@ fn remainder_u16() {
     );
     assert_eq!(iter.next(), Some(511));
     assert_eq!(iter.next(), None);
-    assert_eq!(iter.remainder(), 0b1101_1011_0000_0001u16);
+    assert_eq!(iter.remainder(), 1u16);
 }

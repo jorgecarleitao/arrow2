@@ -1,4 +1,8 @@
+use proptest::prelude::*;
+
 use arrow2::bitmap::{binary_assign, unary_assign, Bitmap, MutableBitmap};
+
+use crate::bitmap::bitmap_strategy;
 
 #[test]
 fn basics() {
@@ -57,4 +61,19 @@ fn fast_paths() {
     let c = Bitmap::from_iter([false, false]);
     let b = b | &c;
     assert_eq!(b, MutableBitmap::from_iter([true, false]));
+}
+
+proptest! {
+    /// Asserts that !bitmap equals all bits flipped
+    #[test]
+    #[cfg_attr(miri, ignore)] // miri and proptest do not work well :(
+    fn not(b in bitmap_strategy()) {
+        let not_b: MutableBitmap = b.iter().map(|x| !x).collect();
+
+        let mut b = b.make_mut();
+
+        unary_assign(&mut b, |x: u8| !x);
+
+        assert_eq!(b, not_b);
+    }
 }
