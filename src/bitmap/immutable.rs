@@ -5,6 +5,7 @@ use std::sync::Arc;
 use crate::{buffer::bytes::Bytes, error::Error, trusted_len::TrustedLen};
 
 use super::{
+    chunk_iter_to_vec,
     utils::{count_zeros, fmt, get_bit, get_bit_unchecked, BitChunk, BitChunks, BitmapIter},
     MutableBitmap,
 };
@@ -240,8 +241,11 @@ impl Bitmap {
         match self.into_mut() {
             Either::Left(data) => {
                 if data.offset > 0 {
-                    // we have to recreate the bytes because a MutableBitmap does not have an `offset`.
-                    data.iter().collect()
+                    // re-align the bits (remove the offset)
+                    let chunks = data.chunks::<u64>();
+                    let remainder = chunks.remainder();
+                    let vec = chunk_iter_to_vec(chunks.chain(std::iter::once(remainder)));
+                    MutableBitmap::from_vec(vec, data.length)
                 } else {
                     MutableBitmap::from_vec(data.bytes.as_ref().to_vec(), data.length)
                 }
