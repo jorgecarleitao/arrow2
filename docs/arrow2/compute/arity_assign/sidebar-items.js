@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["binary","Applies a binary operations to two [`PrimitiveArray`], applying the operation in-place to the `lhs` via cow semantics."],["unary","Applies an unary function to a [`PrimitiveArray`] in-place via cow semantics."]]});
