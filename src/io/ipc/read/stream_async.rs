@@ -4,6 +4,7 @@ use arrow_format::ipc::planus::ReadAsRoot;
 use futures::future::BoxFuture;
 use futures::AsyncRead;
 use futures::AsyncReadExt;
+use futures::FutureExt;
 use futures::Stream;
 
 use crate::array::*;
@@ -14,6 +15,7 @@ use super::super::CONTINUATION_MARKER;
 use super::common::{read_dictionary, read_record_batch};
 use super::schema::deserialize_stream_metadata;
 use super::Dictionaries;
+use super::OutOfSpecKind;
 use super::StreamMetadata;
 
 /// A (private) state of stream messages
@@ -51,7 +53,11 @@ pub async fn read_stream_metadata_async<R: AsyncRead + Unpin + Send>(
         i32::from_le_bytes(meta_size)
     };
 
-    let mut meta_buffer = vec![0; meta_len as usize];
+    let meta_len: usize = meta_len
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    let mut meta_buffer = vec![0; meta_len];
     reader.read_exact(&mut meta_buffer).await?;
 
     deserialize_stream_metadata(&meta_buffer)
@@ -85,8 +91,12 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
         if meta_length == CONTINUATION_MARKER {
             state.reader.read_exact(&mut meta_length).await?;
         }
-        i32::from_le_bytes(meta_length) as usize
+        i32::from_le_bytes(meta_length)
     };
+
+    let meta_length: usize = meta_length
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
     if meta_length == 0 {
         // the stream has ended, mark the reader as finished
@@ -98,17 +108,23 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
     state.reader.read_exact(&mut state.message_buffer).await?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(&state.message_buffer)
-        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
-    let header = message.header()?.ok_or_else(|| {
-        Error::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
-    })?;
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
+
+    let header = message
+        .header()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferHeader(err)))?
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageHeader))?;
+
+    let block_length: usize = message
+        .body_length()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferBodyLength(err)))?
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
     match header {
-        arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(Error::oos("A stream ")),
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
-            // read the block that makes up the record batch into a buffer
             state.data_buffer.clear();
-            state.data_buffer.resize(message.body_length()? as usize, 0);
+            state.data_buffer.resize(block_length, 0);
             state.reader.read_exact(&mut state.data_buffer).await?;
 
             read_record_batch(
@@ -120,15 +136,17 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
                 state.metadata.version,
                 &mut std::io::Cursor::new(&state.data_buffer),
                 0,
+                state.data_buffer.len() as u64,
             )
             .map(|chunk| Some(StreamState::Some((state, chunk))))
         }
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
-            // read the block that makes up the dictionary batch into a buffer
-            let mut buf = vec![0; message.body_length()? as usize];
-            state.reader.read_exact(&mut buf).await?;
+            let mut body = vec![0; block_length];
+            state.reader.read_exact(&mut body).await?;
 
-            let mut dict_reader = std::io::Cursor::new(buf);
+            let file_size = body.len() as u64;
+
+            let mut dict_reader = std::io::Cursor::new(body);
 
             read_dictionary(
                 batch,
@@ -137,15 +155,13 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
                 &mut state.dictionaries,
                 &mut dict_reader,
                 0,
+                file_size,
             )?;
 
             // read the next message until we encounter a Chunk<Box<dyn Array>> message
             Ok(Some(StreamState::Waiting(state)))
         }
-        t => Err(Error::OutOfSpec(format!(
-            "Reading types other than record batches not yet supported, unable to read {:?} ",
-            t
-        ))),
+        _ => Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
     }
 }
 
@@ -165,7 +181,7 @@ impl<'a, R: AsyncRead + Unpin + Send + 'a> AsyncStreamReader<'a, R> {
             data_buffer: Default::default(),
             message_buffer: Default::default(),
         };
-        let future = Some(Box::pin(maybe_next(state)) as _);
+        let future = Some(maybe_next(state).boxed());
         Self { metadata, future }
     }
 

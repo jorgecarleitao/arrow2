@@ -73,8 +73,6 @@
 //! [2](https://github.com/jorgecarleitao/arrow2/blob/main/examples/ipc_file_write.rs),
 //! [3](https://github.com/jorgecarleitao/arrow2/tree/main/examples/ipc_pyarrow)).
 
-use crate::error::Error;
-
 mod compression;
 mod endianess;
 
@@ -102,10 +100,4 @@ pub struct IpcSchema {
     pub fields: Vec<IpcField>,
     /// Endianness of the file
     pub is_little_endian: bool,
-}
-
-impl From<arrow_format::ipc::planus::Error> for Error {
-    fn from(error: arrow_format::ipc::planus::Error) -> Self {
-        Error::OutOfSpec(error.to_string())
-    }
 }

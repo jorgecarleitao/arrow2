@@ -118,6 +118,7 @@ pub fn deserialize_batch(
     let message = arrow_format::ipc::MessageRef::read_as_root(&data.data_header)
         .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
 
+    let length = data.data_body.len();
     let mut reader = std::io::Cursor::new(&data.data_body);
 
     match message.header()?.ok_or_else(|| {
@@ -132,6 +133,7 @@ pub fn deserialize_batch(
             message.version()?,
             &mut reader,
             0,
+            length as u64,
         ),
         _ => Err(Error::nyi(
             "flight currently only supports reading RecordBatch messages",

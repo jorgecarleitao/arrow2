@@ -6,7 +6,7 @@ use crate::datatypes::DataType;
 use crate::error::{Error, Result};
 
 use super::super::read_basic::*;
-use super::super::{Compression, IpcBuffer, Node};
+use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
 
 pub fn read_fixed_size_binary<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
@@ -33,7 +33,12 @@ pub fn read_fixed_size_binary<R: Read + Seek>(
         compression,
     )?;
 
-    let length = field_node.length() as usize * FixedSizeBinaryArray::get_size(&data_type);
+    let length: usize = field_node
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    let length = length.saturating_mul(FixedSizeBinaryArray::get_size(&data_type));
     let values = read_buffer(
         buffers,
         length,

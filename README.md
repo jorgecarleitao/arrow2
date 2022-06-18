@@ -69,8 +69,12 @@ Most uses of `unsafe` fall into 3 categories:
 We actively monitor for vulnerabilities in Rust's advisory and either patch or mitigate
 them (see e.g. `.cargo/audit.yaml` and `.github/workflows/security.yaml`).
 
-Reading parquet and IPC currently `panic!` when they receive invalid. We are 
-actively addressing this.
+Reading from untrusted data currently _may_ `panic!` on the following formats:
+
+* parquet
+* avro
+
+We are actively addressing this.
 
 ## Integration tests
 

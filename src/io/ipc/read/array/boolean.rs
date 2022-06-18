@@ -6,7 +6,7 @@ use crate::datatypes::DataType;
 use crate::error::{Error, Result};
 
 use super::super::read_basic::*;
-use super::super::{Compression, IpcBuffer, Node};
+use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
 
 pub fn read_boolean<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
@@ -24,7 +24,11 @@ pub fn read_boolean<R: Read + Seek>(
         ))
     })?;
 
-    let length = field_node.length() as usize;
+    let length: usize = field_node
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
     let validity = read_validity(
         buffers,
         field_node,

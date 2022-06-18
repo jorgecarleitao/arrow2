@@ -7,7 +7,7 @@ use crate::{bitmap::Bitmap, types::NativeType};
 
 use super::super::compression;
 use super::super::endianess::is_native_little_endian;
-use super::{Compression, IpcBuffer, Node};
+use super::{Compression, IpcBuffer, Node, OutOfSpecKind};
 
 fn read_swapped<T: NativeType, R: Read + Seek>(
     reader: &mut R,
@@ -49,8 +49,16 @@ fn read_uncompressed_buffer<T: NativeType, R: Read + Seek>(
     length: usize,
     is_little_endian: bool,
 ) -> Result<Vec<T>> {
-    let bytes = length * std::mem::size_of::<T>();
-    if bytes > buffer_length {
+    let required_number_of_bytes = length.saturating_mul(std::mem::size_of::<T>());
+    if required_number_of_bytes > buffer_length {
+        return Err(Error::from(OutOfSpecKind::InvalidBuffer {
+            length,
+            type_name: std::any::type_name::<T>(),
+            required_number_of_bytes,
+            buffer_length,
+        }));
+        // todo: move this to the error's Display
+        /*
         return Err(Error::OutOfSpec(
             format!("The slots of the array times the physical size must \
             be smaller or equal to the length of the IPC buffer. \
@@ -62,6 +70,7 @@ fn read_uncompressed_buffer<T: NativeType, R: Read + Seek>(
                 buffer_length,
             ),
         ));
+         */
     }
 
     // it is undefined behavior to call read_exact on un-initialized, https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read
@@ -69,7 +78,7 @@ fn read_uncompressed_buffer<T: NativeType, R: Read + Seek>(
     let mut buffer = vec![T::default(); length];
 
     if is_native_little_endian() == is_little_endian {
-        // fast case where we can just copy the contents as is
+        // fast case where we can just copy the contents
         let slice = bytemuck::cast_slice_mut(&mut buffer);
         reader.read_exact(slice)?;
     } else {
@@ -102,16 +111,19 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
 
     let out_slice = bytemuck::cast_slice_mut(&mut buffer);
 
-    match compression.codec()? {
+    let compression = compression
+        .codec()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferCompression(err)))?;
+
+    match compression {
         arrow_format::ipc::CompressionType::Lz4Frame => {
             compression::decompress_lz4(&slice[8..], out_slice)?;
-            Ok(buffer)
         }
         arrow_format::ipc::CompressionType::Zstd => {
             compression::decompress_zstd(&slice[8..], out_slice)?;
-            Ok(buffer)
         }
     }
+    Ok(buffer)
 }
 
 pub fn read_buffer<T: NativeType, R: Read + Seek>(
@@ -124,11 +136,19 @@ pub fn read_buffer<T: NativeType, R: Read + Seek>(
 ) -> Result<Buffer<T>> {
     let buf = buf
         .pop_front()
-        .ok_or_else(|| Error::oos("IPC: unable to fetch a buffer. The file is corrupted."))?;
+        .ok_or_else(|| Error::from(OutOfSpecKind::ExpectedBuffer))?;
 
-    reader.seek(SeekFrom::Start(block_offset + buf.offset() as u64))?;
+    let offset: u64 = buf
+        .offset()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let buffer_length = buf.length() as usize;
+    let buffer_length: usize = buf
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    reader.seek(SeekFrom::Start(block_offset + offset))?;
 
     if let Some(compression) = compression {
         Ok(
@@ -146,13 +166,10 @@ fn read_uncompressed_bitmap<R: Read + Seek>(
     reader: &mut R,
 ) -> Result<Vec<u8>> {
     if length > bytes * 8 {
-        return Err(Error::OutOfSpec(format!(
-            "An array requires a bitmap with at least the same number of bits as slots. \
-            However, this array reports {} slots but the the bitmap in IPC only contains \
-            {} bits",
+        return Err(Error::from(OutOfSpecKind::InvalidBitmap {
             length,
-            bytes * 8,
-        )));
+            number_of_bits: bytes * 8,
+        }));
     }
     // it is undefined behavior to call read_exact on un-initialized, https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read
     // see also https://github.com/MaikKlein/ash/issues/354#issue-781730580
@@ -175,16 +192,19 @@ fn read_compressed_bitmap<R: Read + Seek>(
     let mut slice = vec![0u8; bytes];
     reader.read_exact(&mut slice)?;
 
-    match compression.codec()? {
+    let compression = compression
+        .codec()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferCompression(err)))?;
+
+    match compression {
         arrow_format::ipc::CompressionType::Lz4Frame => {
             compression::decompress_lz4(&slice[8..], &mut buffer)?;
-            Ok(buffer)
         }
         arrow_format::ipc::CompressionType::Zstd => {
             compression::decompress_zstd(&slice[8..], &mut buffer)?;
-            Ok(buffer)
         }
     }
+    Ok(buffer)
 }
 
 pub fn read_bitmap<R: Read + Seek>(
@@ -197,11 +217,19 @@ pub fn read_bitmap<R: Read + Seek>(
 ) -> Result<Bitmap> {
     let buf = buf
         .pop_front()
-        .ok_or_else(|| Error::oos("IPC: unable to fetch a buffer. The file is corrupted."))?;
+        .ok_or_else(|| Error::from(OutOfSpecKind::ExpectedBuffer))?;
 
-    reader.seek(SeekFrom::Start(block_offset + buf.offset() as u64))?;
+    let offset: u64 = buf
+        .offset()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let bytes = buf.length() as usize;
+    let bytes: usize = buf
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    reader.seek(SeekFrom::Start(block_offset + offset))?;
 
     let buffer = if let Some(compression) = compression {
         read_compressed_bitmap(length, bytes, compression, reader)
@@ -220,10 +248,15 @@ pub fn read_validity<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<Compression>,
 ) -> Result<Option<Bitmap>> {
+    let length: usize = field_node
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
     Ok(if field_node.null_count() > 0 {
         Some(read_bitmap(
             buffers,
-            field_node.length() as usize,
+            length,
             reader,
             block_offset,
             is_little_endian,
@@ -232,7 +265,7 @@ pub fn read_validity<R: Read + Seek>(
     } else {
         let _ = buffers
             .pop_front()
-            .ok_or_else(|| Error::oos("IPC: unable to fetch a buffer. The file is corrupted."))?;
+            .ok_or_else(|| Error::from(OutOfSpecKind::ExpectedBuffer))?;
         None
     })
 }

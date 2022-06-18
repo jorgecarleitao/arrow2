@@ -12,6 +12,7 @@ use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
 use super::common::*;
 use super::schema::fb_to_schema;
 use super::Dictionaries;
+use super::OutOfSpecKind;
 use arrow_format::ipc::planus::ReadAsRoot;
 
 /// Metadata of an Arrow IPC file, written in the footer of the file.
@@ -30,6 +31,9 @@ pub struct FileMetadata {
 
     /// Dictionaries associated to each dict_id
     pub(crate) dictionaries: Option<Vec<arrow_format::ipc::Block>>,
+
+    /// The total size of the file in bytes
+    pub(crate) size: u64,
 }
 
 /// Arrow File reader
@@ -56,9 +60,13 @@ fn read_dictionary_message<R: Read + Seek>(
     };
     let message_length = i32::from_le_bytes(message_size);
 
+    let message_length: usize = message_length
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
     // prepare `data` to read the message
     data.clear();
-    data.resize(message_length as usize, 0);
+    data.resize(message_length, 0);
 
     reader.read_exact(data)?;
     Ok(())
@@ -71,16 +79,23 @@ fn read_dictionary_block<R: Read + Seek>(
     dictionaries: &mut Dictionaries,
     scratch: &mut Vec<u8>,
 ) -> Result<()> {
-    let offset = block.offset as u64;
-    let length = block.meta_data_length as u64;
+    let offset: u64 = block
+        .offset
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
+    let length: u64 = block
+        .meta_data_length
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
     read_dictionary_message(reader, offset, scratch)?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(scratch)
-        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let header = message
-        .header()?
-        .ok_or_else(|| Error::oos("Message must have an header"))?;
+        .header()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferHeader(err)))?
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageHeader))?;
 
     match header {
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
@@ -92,16 +107,11 @@ fn read_dictionary_block<R: Read + Seek>(
                 dictionaries,
                 reader,
                 block_offset,
-            )?;
+                metadata.size,
+            )
         }
-        t => {
-            return Err(Error::OutOfSpec(format!(
-                "Expecting DictionaryBatch in dictionary blocks, found {:?}.",
-                t
-            )));
-        }
-    };
-    Ok(())
+        _ => Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
+    }
 }
 
 /// Reads all file's dictionaries, if any
@@ -126,48 +136,60 @@ pub fn read_file_dictionaries<R: Read + Seek>(
 }
 
 /// Reads the footer's length and magic number in footer
-fn read_footer_len<R: Read + Seek>(reader: &mut R) -> Result<usize> {
+fn read_footer_len<R: Read + Seek>(reader: &mut R) -> Result<(u64, usize)> {
     // read footer length and magic number in footer
-    reader.seek(SeekFrom::End(-10))?;
+    let end = reader.seek(SeekFrom::End(-10))? + 10;
+
     let mut footer: [u8; 10] = [0; 10];
 
     reader.read_exact(&mut footer)?;
     let footer_len = i32::from_le_bytes(footer[..4].try_into().unwrap());
 
     if footer[4..] != ARROW_MAGIC {
-        return Err(Error::OutOfSpec(
-            "Arrow file does not contain correct footer".to_string(),
-        ));
+        return Err(Error::from(OutOfSpecKind::InvalidFooter));
     }
-    footer_len
+    let footer_len = footer_len
         .try_into()
-        .map_err(|_| Error::oos("The footer's lenght must be a positive number"))
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    Ok((end, footer_len))
 }
 
-pub(super) fn deserialize_footer(footer_data: &[u8]) -> Result<FileMetadata> {
+pub(super) fn deserialize_footer(footer_data: &[u8], size: u64) -> Result<FileMetadata> {
     let footer = arrow_format::ipc::FooterRef::read_as_root(footer_data)
-        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as footer: {:?}", err)))?;
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferFooter(err)))?;
 
     let blocks = footer
-        .record_batches()?
-        .ok_or_else(|| Error::OutOfSpec("Unable to get record batches from footer".to_string()))?;
+        .record_batches()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferRecordBatches(err)))?
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingRecordBatches))?;
 
     let blocks = blocks
         .iter()
-        .map(|block| Ok(block.try_into()?))
+        .map(|block| {
+            block
+                .try_into()
+                .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferRecordBatches(err)))
+        })
         .collect::<Result<Vec<_>>>()?;
 
     let ipc_schema = footer
-        .schema()?
-        .ok_or_else(|| Error::OutOfSpec("Unable to get the schema from footer".to_string()))?;
+        .schema()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferSchema(err)))?
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingSchema))?;
     let (schema, ipc_schema) = fb_to_schema(ipc_schema)?;
 
     let dictionaries = footer
-        .dictionaries()?
+        .dictionaries()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferDictionaries(err)))?
         .map(|dictionaries| {
             dictionaries
                 .into_iter()
-                .map(|x| Ok(x.try_into()?))
+                .map(|block| {
+                    block.try_into().map_err(|err| {
+                        Error::from(OutOfSpecKind::InvalidFlatbufferRecordBatches(err))
+                    })
+                })
                 .collect::<Result<Vec<_>>>()
         })
         .transpose()?;
@@ -177,45 +199,40 @@ pub(super) fn deserialize_footer(footer_data: &[u8]) -> Result<FileMetadata> {
         ipc_schema,
         blocks,
         dictionaries,
+        size,
     })
 }
 
-/// Read the IPC file's metadata
+/// Read the Arrow IPC file's metadata
 pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata> {
     // check if header contain the correct magic bytes
     let mut magic_buffer: [u8; 6] = [0; 6];
+    let start = reader.seek(SeekFrom::Current(0))?;
     reader.read_exact(&mut magic_buffer)?;
     if magic_buffer != ARROW_MAGIC {
-        return Err(Error::OutOfSpec(
-            "Arrow file does not contain correct header".to_string(),
-        ));
+        return Err(Error::from(OutOfSpecKind::InvalidHeader));
     }
 
-    let footer_len = read_footer_len(reader)?;
+    let (end, footer_len) = read_footer_len(reader)?;
 
     // read footer
-    let mut footer_data = vec![0; footer_len as usize];
+    let mut serialized_footer = vec![0; footer_len];
     reader.seek(SeekFrom::End(-10 - footer_len as i64))?;
-    reader.read_exact(&mut footer_data)?;
+    reader.read_exact(&mut serialized_footer)?;
 
-    deserialize_footer(&footer_data)
+    deserialize_footer(&serialized_footer, end - start)
 }
 
 pub(super) fn get_serialized_batch<'a>(
     message: &'a arrow_format::ipc::MessageRef,
 ) -> Result<arrow_format::ipc::RecordBatchRef<'a>> {
-    let header = message.header()?.ok_or_else(|| {
-        Error::oos("IPC: unable to fetch the message header. The file or stream is corrupted.")
-    })?;
+    let header = message
+        .header()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferHeader(err)))?
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageHeader))?;
     match header {
-        arrow_format::ipc::MessageHeaderRef::Schema(_) => Err(Error::OutOfSpec(
-            "Not expecting a schema when messages are read".to_string(),
-        )),
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => Ok(batch),
-        t => Err(Error::OutOfSpec(format!(
-            "Reading types other than record batches not yet supported, unable to read {:?}",
-            t
-        ))),
+        _ => Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
     }
 }
 
@@ -236,24 +253,41 @@ pub fn read_batch<R: Read + Seek>(
 ) -> Result<Chunk<Box<dyn Array>>> {
     let block = metadata.blocks[index];
 
+    let offset: u64 = block
+        .offset
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
     // read length
-    reader.seek(SeekFrom::Start(block.offset as u64))?;
+    reader.seek(SeekFrom::Start(offset))?;
     let mut meta_buf = [0; 4];
     reader.read_exact(&mut meta_buf)?;
     if meta_buf == CONTINUATION_MARKER {
         // continuation marker encountered, read message next
         reader.read_exact(&mut meta_buf)?;
     }
-    let meta_len = i32::from_le_bytes(meta_buf) as usize;
+    let meta_len = i32::from_le_bytes(meta_buf)
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
     stratch.clear();
     stratch.resize(meta_len, 0);
     reader.read_exact(stratch)?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(stratch)
-        .map_err(|err| Error::oos(format!("Unable parse message: {:?}", err)))?;
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let batch = get_serialized_batch(&message)?;
+
+    let offset: u64 = block
+        .offset
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    let length: u64 = block
+        .meta_data_length
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
     read_record_batch(
         batch,
@@ -261,9 +295,12 @@ pub fn read_batch<R: Read + Seek>(
         &metadata.ipc_schema,
         projection,
         dictionaries,
-        message.version()?,
+        message
+            .version()
+            .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferVersion(err)))?,
         reader,
-        block.offset as u64 + block.meta_data_length as u64,
+        offset + length,
+        metadata.size,
     )
 }
 

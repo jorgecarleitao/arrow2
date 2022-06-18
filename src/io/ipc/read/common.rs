@@ -7,6 +7,7 @@ use crate::array::*;
 use crate::chunk::Chunk;
 use crate::datatypes::{DataType, Field};
 use crate::error::{Error, Result};
+use crate::io::ipc::read::OutOfSpecKind;
 use crate::io::ipc::{IpcField, IpcSchema};
 
 use super::deserialize::{read, skip};
@@ -83,16 +84,37 @@ pub fn read_record_batch<R: Read + Seek>(
     version: arrow_format::ipc::MetadataVersion,
     reader: &mut R,
     block_offset: u64,
+    file_size: u64,
 ) -> Result<Chunk<Box<dyn Array>>> {
     assert_eq!(fields.len(), ipc_schema.fields.len());
     let buffers = batch
-        .buffers()?
-        .ok_or_else(|| Error::oos("IPC RecordBatch must contain buffers"))?;
+        .buffers()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferBuffers(err)))?
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageBuffers))?;
     let mut buffers: VecDeque<arrow_format::ipc::BufferRef> = buffers.iter().collect();
 
+    // check that the sum of the sizes of all buffers is <= than the size of the file
+    let buffers_size = buffers
+        .iter()
+        .map(|buffer| {
+            let buffer_size: u64 = buffer
+                .length()
+                .try_into()
+                .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+            Ok(buffer_size)
+        })
+        .sum::<Result<u64>>()?;
+    if buffers_size > file_size {
+        return Err(Error::from(OutOfSpecKind::InvalidBuffersLength {
+            buffers_size,
+            file_size,
+        }));
+    }
+
     let field_nodes = batch
-        .nodes()?
-        .ok_or_else(|| Error::oos("IPC RecordBatch must contain field nodes"))?;
+        .nodes()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferNodes(err)))?
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageNodes))?;
     let mut field_nodes = field_nodes.iter().collect::<VecDeque<_>>();
 
     let columns = if let Some(projection) = projection {
@@ -110,7 +132,9 @@ pub fn read_record_batch<R: Read + Seek>(
                     dictionaries,
                     block_offset,
                     ipc_schema.is_little_endian,
-                    batch.compression()?,
+                    batch.compression().map_err(|err| {
+                        Error::from(OutOfSpecKind::InvalidFlatbufferCompression(err))
+                    })?,
                     version,
                 )?)),
                 ProjectionResult::NotSelected((field, _)) => {
@@ -134,7 +158,9 @@ pub fn read_record_batch<R: Read + Seek>(
                     dictionaries,
                     block_offset,
                     ipc_schema.is_little_endian,
-                    batch.compression()?,
+                    batch.compression().map_err(|err| {
+                        Error::from(OutOfSpecKind::InvalidFlatbufferCompression(err))
+                    })?,
                     version,
                 )
             })
@@ -190,10 +216,7 @@ fn first_dict_field<'a>(
             return Ok(field);
         }
     }
-    Err(Error::OutOfSpec(format!(
-        "dictionary id {} not found in schema",
-        id
-    )))
+    Err(Error::from(OutOfSpecKind::InvalidId { requested_id: id }))
 }
 
 /// Read the dictionary from the buffer and provided metadata,
@@ -205,21 +228,32 @@ pub fn read_dictionary<R: Read + Seek>(
     dictionaries: &mut Dictionaries,
     reader: &mut R,
     block_offset: u64,
+    file_size: u64,
 ) -> Result<()> {
-    if batch.is_delta()? {
+    if batch
+        .is_delta()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferIsDelta(err)))?
+    {
         return Err(Error::NotYetImplemented(
             "delta dictionary batches not supported".to_string(),
         ));
     }
 
-    let id = batch.id()?;
+    let id = batch
+        .id()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferId(err)))?;
     let (first_field, first_ipc_field) = first_dict_field(id, fields, &ipc_schema.fields)?;
 
     // As the dictionary batch does not contain the type of the
     // values array, we need to retrieve this from the schema.
     // Get an array representing this dictionary's values.
-    let dictionary_values: Box<dyn Array> = match &first_field.data_type {
+    let dictionary_values: Box<dyn Array> = match first_field.data_type.to_logical_type() {
         DataType::Dictionary(_, ref value_type, _) => {
+            let batch = batch
+                .data()
+                .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferData(err)))?
+                .ok_or_else(|| Error::from(OutOfSpecKind::MissingData))?;
+
             // Make a fake schema for the dictionary batch.
             let fields = vec![Field::new("", value_type.as_ref().clone(), false)];
             let ipc_schema = IpcSchema {
@@ -227,9 +261,7 @@ pub fn read_dictionary<R: Read + Seek>(
                 is_little_endian: ipc_schema.is_little_endian,
             };
             let columns = read_record_batch(
-                batch
-                    .data()?
-                    .ok_or_else(|| Error::oos("The dictionary batch must have data."))?,
+                batch,
                 &fields,
                 &ipc_schema,
                 None,
@@ -237,13 +269,17 @@ pub fn read_dictionary<R: Read + Seek>(
                 arrow_format::ipc::MetadataVersion::V5,
                 reader,
                 block_offset,
+                file_size,
             )?;
             let mut arrays = columns.into_arrays();
-            Some(arrays.pop().unwrap())
+            arrays.pop().unwrap()
         }
-        _ => None,
-    }
-    .ok_or_else(|| Error::InvalidArgumentError("dictionary id not found in schema".to_string()))?;
+        _ => {
+            return Err(Error::from(OutOfSpecKind::InvalidIdDataType {
+                requested_id: id,
+            }))
+        }
+    };
 
     dictionaries.insert(id, dictionary_values);
 

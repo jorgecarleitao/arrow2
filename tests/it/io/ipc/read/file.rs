@@ -191,3 +191,39 @@ fn read_projected() -> Result<()> {
 
     test_projection("1.0.0-littleendian", "generated_primitive", vec![2, 1])
 }
+
+fn read_corrupted_ipc(data: Vec<u8>) -> Result<()> {
+    let mut file = std::io::Cursor::new(data);
+
+    let metadata = read_file_metadata(&mut file)?;
+    let mut reader = FileReader::new(file, metadata, None);
+
+    reader.try_for_each(|rhs| {
+        rhs?;
+        Result::Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn test_does_not_panic() {
+    use rand::Rng; // 0.8.0
+
+    let version = "1.0.0-littleendian";
+    let file_name = "generated_primitive";
+    let testdata = crate::test_util::arrow_test_data();
+    let path = format!(
+        "{}/arrow-ipc-stream/integration/{}/{}.arrow_file",
+        testdata, version, file_name
+    );
+    let original = std::fs::read(path).unwrap();
+
+    for _ in 0..1000 {
+        let mut data = original.clone();
+        let position: usize = rand::thread_rng().gen_range(0..data.len());
+        let new_byte: u8 = rand::thread_rng().gen_range(0..u8::MAX);
+        data[position] = new_byte;
+        let _ = read_corrupted_ipc(data);
+    }
+}
