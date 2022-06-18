@@ -1,7 +1,11 @@
 use crate::{
-    bitmap::{Bitmap, MutableBitmap},
+    bitmap::{
+        utils::{zip_validity, BitmapIter, ZipValidity},
+        Bitmap, MutableBitmap,
+    },
     datatypes::{DataType, PhysicalType},
     error::Error,
+    trusted_len::TrustedLen,
 };
 use either::Either;
 
@@ -16,8 +20,31 @@ mod mutable;
 pub use iterator::*;
 pub use mutable::*;
 
-/// The Arrow's equivalent to an immutable `Vec<Option<bool>>`, but with `1/16` of its size.
-/// Cloning and slicing this struct is `O(1)`.
+/// A [`BooleanArray`] is Arrow's semantically equivalent of an immutable `Vec<Option<bool>>`.
+/// It implements [`Array`].
+///
+/// One way to think about a [`BooleanArray`] is `(DataType, Arc<Vec<u8>>, Option<Arc<Vec<u8>>>)`
+/// where:
+/// * the first item is the array's logical type
+/// * the second is the immutable values
+/// * the third is the immutable validity (whether a value is null or not as a bitmap).
+///
+/// The size of this struct is `O(1)`, as all data is stored behind an [`std::sync::Arc`].
+/// # Example
+/// ```
+/// use arrow2::array::BooleanArray;
+/// use arrow2::bitmap::Bitmap;
+/// use arrow2::buffer::Buffer;
+///
+/// let array = BooleanArray::from([Some(true), None, Some(false)]);
+/// assert_eq!(array.value(0), true);
+/// assert_eq!(array.iter().collect::<Vec<_>>(), vec![Some(true), None, Some(false)]);
+/// assert_eq!(array.values_iter().collect::<Vec<_>>(), vec![true, false, false]);
+/// // the underlying representation
+/// assert_eq!(array.values(), &Bitmap::from([true, false, false]));
+/// assert_eq!(array.validity(), Some(&Bitmap::from([true, false, true])));
+///
+/// ```
 #[derive(Clone)]
 pub struct BooleanArray {
     data_type: DataType,
@@ -58,39 +85,136 @@ impl BooleanArray {
         })
     }
 
-    /// The canonical method to create a [`BooleanArray`]
+    /// Returns an iterator over the optional values of this [`BooleanArray`].
+    #[inline]
+    pub fn iter(&self) -> ZipValidity<bool, BitmapIter> {
+        zip_validity(
+            self.values().iter(),
+            self.validity.as_ref().map(|x| x.iter()),
+        )
+    }
+
+    /// Returns an iterator over the values of this [`BooleanArray`].
+    #[inline]
+    pub fn values_iter(&self) -> BitmapIter {
+        self.values().iter()
+    }
+
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+
+    /// The values [`Bitmap`].
+    /// Values on null slots are undetermined (they can be anything).
+    #[inline]
+    pub fn values(&self) -> &Bitmap {
+        &self.values
+    }
+
+    /// Returns the optional validity.
+    #[inline]
+    pub fn validity(&self) -> Option<&Bitmap> {
+        self.validity.as_ref()
+    }
+
+    /// Returns the arrays' [`DataType`].
+    #[inline]
+    pub fn data_type(&self) -> &DataType {
+        &self.data_type
+    }
+
+    /// Returns the value at index `i`
+    /// # Panic
+    /// This function panics iff `i >= self.len()`.
+    #[inline]
+    pub fn value(&self, i: usize) -> bool {
+        self.values.get_bit(i)
+    }
+
+    /// Returns the element at index `i` as bool
+    /// # Safety
+    /// Caller must be sure that `i < self.len()`
+    #[inline]
+    pub unsafe fn value_unchecked(&self, i: usize) -> bool {
+        self.values.get_bit_unchecked(i)
+    }
+
+    /// Returns a slice of this [`BooleanArray`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to increase up to two ref counts.
+    /// # Panic
+    /// This function panics iff `offset + length > self.len()`.
+    #[inline]
+    #[must_use]
+    pub fn slice(&self, offset: usize, length: usize) -> Self {
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Returns a slice of this [`BooleanArray`].
+    /// # Implementation
+    /// This operation is `O(1)` as it amounts to increase two ref counts.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`.
+    #[inline]
+    #[must_use]
+    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        let validity = self
+            .validity
+            .clone()
+            .map(|x| x.slice_unchecked(offset, length));
+        Self {
+            data_type: self.data_type.clone(),
+            values: self.values.clone().slice_unchecked(offset, length),
+            validity,
+        }
+    }
+
+    /// Clones this [`BooleanArray`], returning one with the provided validity.
+    /// # Panic
+    /// This function panics iff `validity.len() != self.len()`.
+    #[must_use]
+    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+        let mut array = self.clone();
+        array.set_validity(validity);
+        array
+    }
+
+    /// Sets the validity of this [`BooleanArray`].
     /// # Panics
-    /// This function errors iff:
-    /// * The validity is not `None` and its length is different from `values`'s length
-    /// * The `data_type`'s [`PhysicalType`] is not equal to [`PhysicalType::Boolean`].
-    pub fn new(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
-        Self::try_new(data_type, values, validity).unwrap()
+    /// This function panics iff `values.len() != self.len()`.
+    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity must be equal to the array's length")
+        }
+        self.validity = validity;
     }
 
-    /// Alias for `new`
-    pub fn from_data(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
-        Self::new(data_type, values, validity)
+    /// Returns a clone of this [`BooleanArray`] with new values.
+    /// # Panics
+    /// This function panics iff `values.len() != self.len()`.
+    #[must_use]
+    pub fn with_values(&self, values: Bitmap) -> Self {
+        let mut out = self.clone();
+        out.set_values(values);
+        out
     }
 
-    /// Returns a new empty [`BooleanArray`].
-    pub fn new_empty(data_type: DataType) -> Self {
-        Self::new(data_type, Bitmap::new(), None)
-    }
-
-    /// Returns a new [`BooleanArray`] whose all slots are null / `None`.
-    pub fn new_null(data_type: DataType, length: usize) -> Self {
-        let bitmap = Bitmap::new_zeroed(length);
-        Self::new(data_type, bitmap.clone(), Some(bitmap))
-    }
-
-    /// Boxes self into a [`Box<dyn Array>`].
-    pub fn boxed(self) -> Box<dyn Array> {
-        Box::new(self)
-    }
-
-    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
-    pub fn arced(self) -> std::sync::Arc<dyn Array> {
-        std::sync::Arc::new(self)
+    /// Sets the values of this [`BooleanArray`].
+    /// # Panics
+    /// This function panics iff `values.len() != self.len()`.
+    pub fn set_values(&mut self, values: Bitmap) {
+        assert_eq!(
+            values.len(),
+            self.len(),
+            "values length must be equal to this arrays length"
+        );
+        self.values = values;
     }
 
     /// Applies a function `f` to the values of this array, cloning the values
@@ -123,62 +247,12 @@ impl BooleanArray {
     /// This function panics if the function modifies the length of the [`MutableBitmap`].
     pub fn apply_validity_mut<F: Fn(&mut MutableBitmap)>(&mut self, f: F) {
         if let Some(validity) = self.validity.as_mut() {
-            let values = std::mem::take(validity);
-            let mut bitmap = values.make_mut();
-            f(&mut bitmap);
-            assert_eq!(bitmap.len(), self.values.len());
-            *validity = bitmap.into();
+            let owned_validity = std::mem::take(validity);
+            let mut mut_bitmap = owned_validity.make_mut();
+            f(&mut mut_bitmap);
+            assert_eq!(mut_bitmap.len(), self.values.len());
+            *validity = mut_bitmap.into();
         }
-    }
-}
-
-// must use
-impl BooleanArray {
-    /// Returns a slice of this [`BooleanArray`].
-    /// # Implementation
-    /// This operation is `O(1)` as it amounts to increase two ref counts.
-    /// # Panic
-    /// This function panics iff `offset + length >= self.len()`.
-    #[inline]
-    #[must_use]
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
-        assert!(
-            offset + length <= self.len(),
-            "the offset of the new Buffer cannot exceed the existing length"
-        );
-        unsafe { self.slice_unchecked(offset, length) }
-    }
-
-    /// Returns a slice of this [`BooleanArray`].
-    /// # Implementation
-    /// This operation is `O(1)` as it amounts to increase two ref counts.
-    /// # Safety
-    /// The caller must ensure that `offset + length <= self.len()`.
-    #[inline]
-    #[must_use]
-    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
-        let validity = self
-            .validity
-            .clone()
-            .map(|x| x.slice_unchecked(offset, length));
-        Self {
-            data_type: self.data_type.clone(),
-            values: self.values.clone().slice_unchecked(offset, length),
-            validity,
-        }
-    }
-
-    /// Sets the validity bitmap on this [`BooleanArray`].
-    /// # Panic
-    /// This function panics iff `validity.len() != self.len()`.
-    #[must_use]
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
-        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity should be as least as large as the array")
-        }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        arr
     }
 
     /// Try to convert this [`BooleanArray`] to a [`MutableBooleanArray`]
@@ -212,42 +286,113 @@ impl BooleanArray {
             }
         }
     }
-}
 
-// accessors
-impl BooleanArray {
-    /// Returns the length of this array
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.values.len()
+    /// Returns a new empty [`BooleanArray`].
+    pub fn new_empty(data_type: DataType) -> Self {
+        Self::new(data_type, Bitmap::new(), None)
     }
 
-    /// Returns the value at index `i`
-    /// # Panic
-    /// This function panics iff `i >= self.len()`.
-    #[inline]
-    pub fn value(&self, i: usize) -> bool {
-        self.values.get_bit(i)
+    /// Returns a new [`BooleanArray`] whose all slots are null / `None`.
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
+        let bitmap = Bitmap::new_zeroed(length);
+        Self::new(data_type, bitmap.clone(), Some(bitmap))
     }
 
-    /// Returns the element at index `i` as bool
+    /// Creates a new [`BooleanArray`] from an [`TrustedLen`] of `bool`.
+    #[inline]
+    pub fn from_trusted_len_values_iter<I: TrustedLen<Item = bool>>(iterator: I) -> Self {
+        MutableBooleanArray::from_trusted_len_values_iter(iterator).into()
+    }
+
+    /// Creates a new [`BooleanArray`] from an [`TrustedLen`] of `bool`.
+    /// Use this over [`BooleanArray::from_trusted_len_iter`] when the iterator is trusted len
+    /// but this crate does not mark it as such.
     /// # Safety
-    /// Caller must be sure that `i < self.len()`
+    /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+    /// I.e. that `size_hint().1` correctly reports its length.
     #[inline]
-    pub unsafe fn value_unchecked(&self, i: usize) -> bool {
-        self.values.get_bit_unchecked(i)
+    pub unsafe fn from_trusted_len_values_iter_unchecked<I: Iterator<Item = bool>>(
+        iterator: I,
+    ) -> Self {
+        MutableBooleanArray::from_trusted_len_values_iter_unchecked(iterator).into()
     }
 
-    /// The optional validity.
+    /// Creates a new [`BooleanArray`] from a slice of `bool`.
     #[inline]
-    pub fn validity(&self) -> Option<&Bitmap> {
-        self.validity.as_ref()
+    pub fn from_slice<P: AsRef<[bool]>>(slice: P) -> Self {
+        MutableBooleanArray::from_slice(slice).into()
     }
 
-    /// Returns the values of this [`BooleanArray`].
+    /// Creates a [`BooleanArray`] from an iterator of trusted length.
+    /// Use this over [`BooleanArray::from_trusted_len_iter`] when the iterator is trusted len
+    /// but this crate does not mark it as such.
+    /// # Safety
+    /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+    /// I.e. that `size_hint().1` correctly reports its length.
     #[inline]
-    pub fn values(&self) -> &Bitmap {
-        &self.values
+    pub unsafe fn from_trusted_len_iter_unchecked<I, P>(iterator: I) -> Self
+    where
+        P: std::borrow::Borrow<bool>,
+        I: Iterator<Item = Option<P>>,
+    {
+        MutableBooleanArray::from_trusted_len_iter_unchecked(iterator).into()
+    }
+
+    /// Creates a [`BooleanArray`] from a [`TrustedLen`].
+    #[inline]
+    pub fn from_trusted_len_iter<I, P>(iterator: I) -> Self
+    where
+        P: std::borrow::Borrow<bool>,
+        I: TrustedLen<Item = Option<P>>,
+    {
+        MutableBooleanArray::from_trusted_len_iter(iterator).into()
+    }
+
+    /// Creates a [`BooleanArray`] from an falible iterator of trusted length.
+    /// # Safety
+    /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
+    /// I.e. that `size_hint().1` correctly reports its length.
+    #[inline]
+    pub unsafe fn try_from_trusted_len_iter_unchecked<E, I, P>(iterator: I) -> Result<Self, E>
+    where
+        P: std::borrow::Borrow<bool>,
+        I: Iterator<Item = Result<Option<P>, E>>,
+    {
+        Ok(MutableBooleanArray::try_from_trusted_len_iter_unchecked(iterator)?.into())
+    }
+
+    /// Creates a [`BooleanArray`] from a [`TrustedLen`].
+    #[inline]
+    pub fn try_from_trusted_len_iter<E, I, P>(iterator: I) -> Result<Self, E>
+    where
+        P: std::borrow::Borrow<bool>,
+        I: TrustedLen<Item = Result<Option<P>, E>>,
+    {
+        Ok(MutableBooleanArray::try_from_trusted_len_iter(iterator)?.into())
+    }
+
+    /// Boxes self into a [`Box<dyn Array>`].
+    pub fn boxed(self) -> Box<dyn Array> {
+        Box::new(self)
+    }
+
+    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
+    pub fn arced(self) -> std::sync::Arc<dyn Array> {
+        std::sync::Arc::new(self)
+    }
+
+    /// The canonical method to create a [`BooleanArray`]
+    /// # Panics
+    /// This function errors iff:
+    /// * The validity is not `None` and its length is different from `values`'s length
+    /// * The `data_type`'s [`PhysicalType`] is not equal to [`PhysicalType::Boolean`].
+    pub fn new(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
+        Self::try_new(data_type, values, validity).unwrap()
+    }
+
+    /// Alias for `new`
+    pub fn from_data(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
+        Self::new(data_type, values, validity)
     }
 }
 

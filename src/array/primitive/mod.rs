@@ -126,6 +126,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     }
 
     /// Creates a (non-null) [`PrimitiveArray`] from a vector of values.
+    /// This function is `O(1)`.
     /// # Examples
     /// ```
     /// use arrow2::array::PrimitiveArray;
@@ -260,7 +261,7 @@ impl<T: NativeType> PrimitiveArray<T> {
         self.validity = validity;
     }
 
-    /// Returns a clone of this [`PrimitiveArray`] with a new values.
+    /// Returns a clone of this [`PrimitiveArray`] with new values.
     /// # Panics
     /// This function panics iff `values.len() != self.len()`.
     #[must_use]
