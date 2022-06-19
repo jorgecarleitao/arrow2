@@ -1,5 +1,6 @@
 use std::fs::File;
 
+use arrow2::chunk::Chunk;
 use arrow2::error::Result;
 use arrow2::io::ipc::read::*;
 
@@ -166,18 +167,29 @@ fn test_projection(version: &str, file_name: &str, columns: Vec<usize>) -> Resul
 
     let metadata = read_file_metadata(&mut file)?;
 
-    let expected = columns
+    let (_, _, chunks) = read_gzip_json(version, file_name)?;
+
+    let expected_fields = columns
         .iter()
         .copied()
         .map(|x| metadata.schema.fields[x].clone())
         .collect::<Vec<_>>();
 
-    let mut reader = FileReader::new(&mut file, metadata, Some(columns));
+    let expected_chunks = chunks.into_iter().map(|chunk| {
+        let columns = columns
+            .iter()
+            .copied()
+            .map(|x| chunk.arrays()[x].clone())
+            .collect::<Vec<_>>();
+        Chunk::new(columns)
+    });
 
-    assert_eq!(reader.schema().fields, expected);
+    let reader = FileReader::new(&mut file, metadata, Some(columns.clone()));
 
-    reader.try_for_each(|rhs| {
-        assert_eq!(rhs?.arrays().len(), expected.len());
+    assert_eq!(reader.schema().fields, expected_fields);
+
+    reader.zip(expected_chunks).try_for_each(|(lhs, rhs)| {
+        assert_eq!(&lhs?.arrays()[0], &rhs.arrays()[0]);
         Result::Ok(())
     })?;
     Ok(())
@@ -189,7 +201,9 @@ fn read_projected() -> Result<()> {
     test_projection("1.0.0-littleendian", "generated_dictionary", vec![2])?;
     test_projection("1.0.0-littleendian", "generated_nested", vec![0])?;
 
-    test_projection("1.0.0-littleendian", "generated_primitive", vec![2, 1])
+    test_projection("1.0.0-littleendian", "generated_primitive", vec![2, 1])?;
+
+    test_projection("1.0.0-littleendian", "generated_primitive", vec![0, 2, 1])
 }
 
 fn read_corrupted_ipc(data: Vec<u8>) -> Result<()> {

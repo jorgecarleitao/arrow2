@@ -90,9 +90,9 @@ impl<'a> FileStream<'a> {
                     &mut block_buffer,
                 ).await?;
 
-                let chunk = if let Some((projection, map)) = &projection {
+                let chunk = if let Some((_, map)) = &projection {
                     // re-order according to projection
-                    apply_projection(chunk, projection, map)
+                    apply_projection(chunk, map)
                 } else {
                     chunk
                 };

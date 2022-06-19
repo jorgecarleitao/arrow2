@@ -379,9 +379,9 @@ impl<R: Read + Seek> Iterator for FileReader<R> {
             &mut self.buffer,
         );
 
-        let chunk = if let Some((projection, map, _)) = &self.projection {
+        let chunk = if let Some((_, map, _)) = &self.projection {
             // re-order according to projection
-            chunk.map(|chunk| apply_projection(chunk, projection, map))
+            chunk.map(|chunk| apply_projection(chunk, map))
         } else {
             chunk
         };

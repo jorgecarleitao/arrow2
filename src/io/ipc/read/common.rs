@@ -321,31 +321,31 @@ pub fn prepare_projection(
 
     let fields = projection.iter().map(|x| fields[*x].clone()).collect();
 
-    // selected index; index in
-    let sorted_projection = projection
-        .iter()
-        .copied()
-        .enumerate()
-        .map(|x| (x.1, x.0))
-        .collect::<HashMap<_, _>>(); // e.g. [2, 1] -> {2: 0, 1: 1}
-    projection.sort_unstable(); // e.g. [2, 1] -> [1, 2]
+    // todo: find way to do this more efficiently
+    let mut indices = (0..projection.len()).collect::<Vec<_>>();
+    indices.sort_unstable_by_key(|&i| &projection[i]);
+    let map = indices.iter().copied().enumerate().fold(
+        HashMap::default(),
+        |mut acc, (index, new_index)| {
+            if !acc.contains_key(&new_index) {
+                acc.insert(index, new_index);
+            };
+            acc
+        },
+    );
+    projection.sort_unstable();
 
-    (projection, sorted_projection, fields)
+    (projection, map, fields)
 }
 
 pub fn apply_projection(
     chunk: Chunk<Box<dyn Array>>,
-    projection: &[usize],
     map: &HashMap<usize, usize>,
 ) -> Chunk<Box<dyn Array>> {
     // re-order according to projection
-    let arrays = chunk.into_arrays();
-    let arrays = projection
-        .iter()
-        .map(|x| {
-            let index = map.get(x).unwrap();
-            arrays[*index].clone()
-        })
-        .collect();
+    let mut arrays = chunk.into_arrays();
+    map.iter().for_each(|(old, new)| {
+        arrays.swap(*old, *new);
+    });
     Chunk::new(arrays)
 }
