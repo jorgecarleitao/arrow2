@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::compute::arity_assign::binary;
+use arrow2::compute::arity_assign::{binary, unary};
 use arrow2::{
     compute::arithmetics::basic::{mul, mul_scalar},
     util::bench_util::*,
@@ -13,8 +13,7 @@ fn add_benchmark(c: &mut Criterion) {
         let mut arr_a = create_primitive_array::<f32>(size, 0.2);
         c.bench_function(&format!("apply_mul 2^{}", log2_size), |b| {
             b.iter(|| {
-                criterion::black_box(&mut arr_a)
-                    .apply_values_mut(|x| x.iter_mut().for_each(|x| *x *= 1.01));
+                unary(criterion::black_box(&mut arr_a), |x| x * 1.01);
                 assert!(!arr_a.value(10).is_nan());
             })
         });
@@ -30,7 +29,7 @@ fn add_benchmark(c: &mut Criterion) {
         let mut arr_a = create_primitive_array::<f32>(size, 0.2);
         let mut arr_b = create_primitive_array_with_seed::<f32>(size, 0.2, 10);
         // convert to be close to 1.01
-        arr_b.apply_values_mut(|x| x.iter_mut().for_each(|x| *x = 1.01 + *x / 20.0));
+        unary(&mut arr_b, |x| 1.01 + x / 20.0);
 
         c.bench_function(&format!("apply_mul null 2^{}", log2_size), |b| {
             b.iter(|| {

@@ -90,27 +90,9 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     /// This function is `O(f)` if the data is not being shared, and `O(N) + O(f)`
     /// if it is being shared (since it results in a `O(N)` memcopy).
     /// # Panics
-    /// This function panics, if `f` modifies the length of `&mut [T]`
+    /// This function panics iff `f` panics
     pub fn apply_values<F: Fn(&mut [T])>(&mut self, f: F) {
-        let len = self.values.len();
         f(&mut self.values);
-        assert_eq!(len, self.values.len(), "values length must remain the same")
-    }
-
-    /// Applies a function `f` to the validity of this array, cloning it
-    /// iff it is being shared.
-    ///
-    /// This is an API to leverage clone-on-write
-    /// # Implementation
-    /// This function is `O(f)` if the data is not being shared, and `O(N) + O(f)`
-    /// if it is being shared (since it results in a `O(N)` memcopy).
-    /// # Panics
-    /// This function panics if the function modifies the length of the [`MutableBitmap`].
-    pub fn apply_validity<F: Fn(&mut MutableBitmap)>(&mut self, f: F) {
-        if let Some(validity) = &mut self.validity {
-            f(validity);
-            assert_eq!(validity.len(), self.values.len());
-        }
     }
 }
 

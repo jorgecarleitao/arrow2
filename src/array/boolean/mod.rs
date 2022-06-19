@@ -236,25 +236,6 @@ impl BooleanArray {
         self.values = values.into();
     }
 
-    /// Applies a function `f` to the validity of this array, cloning it
-    /// iff it is being shared.
-    ///
-    /// This is an API to leverage clone-on-write
-    /// # Implementation
-    /// This function is `O(f)` if the data is not being shared, and `O(N) + O(f)`
-    /// if it is being shared (since it results in a `O(N)` memcopy).
-    /// # Panics
-    /// This function panics if the function modifies the length of the [`MutableBitmap`].
-    pub fn apply_validity_mut<F: Fn(&mut MutableBitmap)>(&mut self, f: F) {
-        if let Some(validity) = self.validity.as_mut() {
-            let owned_validity = std::mem::take(validity);
-            let mut mut_bitmap = owned_validity.make_mut();
-            f(&mut mut_bitmap);
-            assert_eq!(mut_bitmap.len(), self.values.len());
-            *validity = mut_bitmap.into();
-        }
-    }
-
     /// Try to convert this [`BooleanArray`] to a [`MutableBooleanArray`]
     pub fn into_mut(self) -> Either<Self, MutableBooleanArray> {
         use Either::*;
