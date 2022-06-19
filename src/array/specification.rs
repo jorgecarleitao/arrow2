@@ -34,14 +34,6 @@ pub fn check_offsets_minimal<O: Offset>(offsets: &[O], values_len: usize) -> usi
 /// * the `offsets` is not monotonically increasing, or
 /// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
 /// * any offset is larger or equal to `values_len`.
-pub fn check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) {
-    try_check_offsets_and_utf8(offsets, values).unwrap()
-}
-
-/// # Panics iff:
-/// * the `offsets` is not monotonically increasing, or
-/// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
-/// * any offset is larger or equal to `values_len`.
 pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Result<()> {
     if values.is_ascii() {
         try_check_offsets(offsets, values.len())

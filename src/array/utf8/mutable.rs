@@ -2,7 +2,7 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
     array::{
-        specification::{check_offsets_and_utf8, check_offsets_minimal},
+        specification::{check_offsets_minimal, try_check_offsets_and_utf8},
         Array, MutableArray, Offset, TryExtend, TryPush,
     },
     bitmap::MutableBitmap,
@@ -75,6 +75,47 @@ impl<O: Offset> MutableUtf8Array<O> {
         }
     }
 
+    /// Returns a [`MutableUtf8Array`] created from its internal representation.
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
+    /// * The `values` between two consecutive `offsets` are not valid utf8
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity and utf8 is `O(N)`
+    pub fn try_new(
+        data_type: DataType,
+        offsets: Vec<O>,
+        values: Vec<u8>,
+        validity: Option<MutableBitmap>,
+    ) -> Result<Self> {
+        try_check_offsets_and_utf8(&offsets, &values)?;
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+        {
+            return Err(Error::oos(
+                "validity's length must be equal to the number of values",
+            ));
+        }
+
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            return Err(Error::oos(
+                "MutableUtf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        })
+    }
+
     /// The canonical method to create a [`MutableUtf8Array`] out of low-end APIs.
     /// # Panics
     /// This function panics iff:
@@ -87,19 +128,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
-        check_offsets_and_utf8(&offsets, &values);
-        if let Some(ref validity) = validity {
-            assert_eq!(offsets.len() - 1, validity.len());
-        }
-        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("MutableUtf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
-        }
-        Self {
-            data_type,
-            offsets,
-            values,
-            validity,
-        }
+        Self::try_new(data_type, offsets, values, validity).unwrap()
     }
 
     /// Create a [`MutableUtf8Array`] out of low-end APIs.
