@@ -4,10 +4,12 @@ use super::utils::check_same_len;
 use crate::{array::PrimitiveArray, types::NativeType};
 use either::Either;
 
-/// Applies an unary function to a [`PrimitiveArray`] in-place via cow semantics.
+/// Applies an unary function to a [`PrimitiveArray`], optionally in-place.
 ///
 /// # Implementation
-/// This is the fastest method to apply a binary operation and it is often vectorized (SIMD).
+/// This function tries to apply the function directly to the values of the array.
+/// If that region is shared, this function creates a new region and writes to it.
+///
 /// # Panics
 /// This function panics iff
 /// * the arrays have a different length.
@@ -18,14 +20,22 @@ where
     I: NativeType,
     F: Fn(I) -> I,
 {
-    array.apply_values_mut(|values| values.iter_mut().for_each(|v| *v = op(*v)));
+    if let Some(values) = array.get_mut_values() {
+        // mutate in place
+        values.iter_mut().for_each(|l| *l = op(*l));
+    } else {
+        // alloc and write to new region
+        let values = array.values().iter().map(|l| op(*l)).collect::<Vec<_>>();
+        array.set_values(values.into());
+    }
 }
 
-/// Applies a binary operations to two [`PrimitiveArray`], applying the operation
-/// in-place to the `lhs` via cow semantics.
+/// Applies a binary function to two [`PrimitiveArray`]s, optionally in-place, returning
+/// a new [`PrimitiveArray`].
 ///
 /// # Implementation
-/// This is the fastest way to perform a binary operation and it is often vectorized (SIMD).
+/// This function tries to apply the function directly to the values of the array.
+/// If that region is shared, this function creates a new region and writes to it.
 /// # Panics
 /// This function panics iff
 /// * the arrays have a different length.
@@ -48,21 +58,16 @@ where
     // bitmap has an offset.
     if let Some(rhs) = rhs.validity() {
         if lhs.validity().is_none() {
-            *lhs = lhs.with_validity(Some(rhs.clone()))
+            lhs.set_validity(Some(rhs.clone()));
         } else {
             lhs.apply_validity(|bitmap| {
-                // we need to take ownership for the `into_mut` call, but leave the `&mut` lhs intact
-                // so that we can later assign the result to out `&mut bitmap`
-                let owned_lhs = std::mem::take(bitmap);
-
-                *bitmap = match owned_lhs.into_mut() {
-                    // we take alloc and write to new buffer
+                match bitmap.into_mut() {
                     Either::Left(immutable) => {
-                        // we allocate a new bitmap
+                        // alloc new region
                         &immutable & rhs
                     }
-                    // we can mutate in place, happy days.
                     Either::Right(mut mutable) => {
+                        // mutate in place
                         let mut mutable_ref = &mut mutable;
                         mutable_ref &= rhs;
                         mutable.into()
@@ -70,32 +75,22 @@ where
                 }
             });
         }
-    }
+    };
 
-    // we need to take ownership for the `into_mut` call, but leave the `&mut` lhs intact
-    // so that we can later assign the result to out `&mut lhs`
-    let owned_lhs = std::mem::take(lhs);
-
-    *lhs = match owned_lhs.into_mut() {
-        // we take alloc and write to new buffer
-        Either::Left(mut immutable) => {
-            let values = immutable
-                .values()
-                .iter()
-                .zip(rhs.values().iter())
-                .map(|(l, r)| op(*l, *r))
-                .collect::<Vec<_>>();
-            immutable.set_values(values.into());
-            immutable
-        }
-        // we can mutate in place
-        Either::Right(mut mutable) => {
-            mutable.apply_values(|x| {
-                x.iter_mut()
-                    .zip(rhs.values().iter())
-                    .for_each(|(l, r)| *l = op(*l, *r))
-            });
-            mutable.into()
-        }
+    if let Some(values) = lhs.get_mut_values() {
+        // mutate values in place
+        values
+            .iter_mut()
+            .zip(rhs.values().iter())
+            .for_each(|(l, r)| *l = op(*l, *r));
+    } else {
+        // alloc new region
+        let values = lhs
+            .values()
+            .iter()
+            .zip(rhs.values().iter())
+            .map(|(l, r)| op(*l, *r))
+            .collect::<Vec<_>>();
+        lhs.set_values(values.into());
     }
 }

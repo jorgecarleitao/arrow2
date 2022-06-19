@@ -137,6 +137,20 @@ impl<T: NativeType> Buffer<T> {
         self.offset
     }
 
+    /// Gets a mutable reference to its underlying [`Vec`], if it not being shared.
+    ///
+    /// This operation returns a [`Vec`] iff this [`Buffer`]:
+    /// * is not an offsetted slice of another [`Buffer`]
+    /// * has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
+    /// * has not been imported from the c data interface (FFI)
+    pub fn get_mut(&mut self) -> Option<&mut Vec<T>> {
+        if self.offset != 0 {
+            None
+        } else {
+            Arc::get_mut(&mut self.data).and_then(|b| b.get_vec())
+        }
+    }
+
     /// Converts this [`Buffer`] to either a [`Buffer`] or a [`Vec`], returning itself if the conversion
     /// is not possible
     ///
@@ -145,16 +159,10 @@ impl<T: NativeType> Buffer<T> {
     /// * has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
     /// * has not been imported from the c data interface (FFI)
     pub fn into_mut(mut self) -> Either<Self, Vec<T>> {
-        if self.offset != 0 {
-            Either::Left(self)
+        if let Some(vec) = self.get_mut() {
+            Either::Right(std::mem::take(vec))
         } else {
-            match Arc::get_mut(&mut self.data).and_then(|b| b.get_vec()) {
-                Some(v) => {
-                    let data = std::mem::take(v);
-                    Either::Right(data)
-                }
-                None => Either::Left(self),
-            }
+            Either::Left(self)
         }
     }
 
