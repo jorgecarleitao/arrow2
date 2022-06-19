@@ -38,7 +38,7 @@ pub fn read_fixed_size_binary<R: Read + Seek>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let length = length.saturating_mul(FixedSizeBinaryArray::get_size(&data_type));
+    let length = length.saturating_mul(FixedSizeBinaryArray::maybe_get_size(&data_type)?);
     let values = read_buffer(
         buffers,
         length,
