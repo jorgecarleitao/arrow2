@@ -63,7 +63,7 @@ pub trait Array: Send + Sync + dyn_clone::DynClone + 'static {
         };
         self.validity()
             .as_ref()
-            .map(|x| x.null_count())
+            .map(|x| x.unset_bits())
             .unwrap_or(0)
     }
 

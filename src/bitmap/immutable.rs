@@ -48,7 +48,7 @@ pub struct Bitmap {
     offset: usize,
     length: usize,
     // this is a cache: it is computed on initialization
-    null_count: usize,
+    unset_bits: usize,
 }
 
 impl std::fmt::Debug for Bitmap {
@@ -83,12 +83,12 @@ impl Bitmap {
                 bytes.len().saturating_mul(8)
             )));
         }
-        let null_count = count_zeros(&bytes, 0, length);
+        let unset_bits = count_zeros(&bytes, 0, length);
         Ok(Self {
             length,
             offset: 0,
             bytes: Arc::new(bytes.into()),
-            null_count,
+            unset_bits,
         })
     }
 
@@ -122,12 +122,12 @@ impl Bitmap {
     #[inline]
     pub(crate) fn from_bytes(bytes: Bytes<u8>, length: usize) -> Self {
         assert!(length <= bytes.len() * 8);
-        let null_count = count_zeros(&bytes, 0, length);
+        let unset_bits = count_zeros(&bytes, 0, length);
         Self {
             length,
             offset: 0,
             bytes: Arc::new(bytes),
-            null_count,
+            unset_bits,
         }
     }
 
@@ -150,9 +150,20 @@ impl Bitmap {
     }
 
     /// Returns the number of unset bits on this [`Bitmap`].
+    ///
+    /// Guaranted to be `<= self.len()`.
+    /// # Implementation
+    /// This function is `O(1)` - the number of unset bits is computed when the bitmap is
+    /// created
+    pub const fn unset_bits(&self) -> usize {
+        self.unset_bits
+    }
+
+    /// Returns the number of unset bits on this [`Bitmap`].
     #[inline]
+    #[deprecated(since = "0.13.0", note = "use `unset_bits` instead")]
     pub fn null_count(&self) -> usize {
-        self.null_count
+        self.unset_bits
     }
 
     /// Slices `self`, offsetting by `offset` and truncating up to `length` bits.
@@ -174,13 +185,13 @@ impl Bitmap {
         // count the smallest chunk
         if length < self.length / 2 {
             // count the null values in the slice
-            self.null_count = count_zeros(&self.bytes, self.offset + offset, length);
+            self.unset_bits = count_zeros(&self.bytes, self.offset + offset, length);
         } else {
             // subtract the null count of the chunks we slice off
             let start_end = self.offset + offset + length;
             let head_count = count_zeros(&self.bytes, self.offset, offset);
             let tail_count = count_zeros(&self.bytes, start_end, self.length - length - offset);
-            self.null_count -= head_count + tail_count;
+            self.unset_bits -= head_count + tail_count;
         }
         self.offset += offset;
         self.length = length;

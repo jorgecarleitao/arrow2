@@ -4,7 +4,7 @@ use arrow2::bitmap::Bitmap;
 
 fn bench_arrow2(lhs: &Bitmap, rhs: &Bitmap) {
     let r = lhs | rhs;
-    assert!(r.null_count() > 0);
+    assert!(r.unset_bits() > 0);
 }
 
 fn add_benchmark(c: &mut Criterion) {
@@ -15,7 +15,7 @@ fn add_benchmark(c: &mut Criterion) {
         c.bench_function(&format!("bitmap aligned not 2^{}", log2_size), |b| {
             b.iter(|| {
                 let r = !&bitmap;
-                assert!(r.null_count() > 0);
+                assert!(r.unset_bits() > 0);
             })
         });
 
@@ -27,7 +27,7 @@ fn add_benchmark(c: &mut Criterion) {
             |b| {
                 b.iter(|| {
                     let r = bitmap.clone().slice(offset, len);
-                    assert!(r.null_count() > 0);
+                    assert!(r.unset_bits() > 0);
                 })
             },
         );
@@ -40,7 +40,7 @@ fn add_benchmark(c: &mut Criterion) {
             |b| {
                 b.iter(|| {
                     let r = bitmap.clone().slice(offset, len);
-                    assert!(r.null_count() > 0);
+                    assert!(r.unset_bits() > 0);
                 })
             },
         );
@@ -49,7 +49,7 @@ fn add_benchmark(c: &mut Criterion) {
         c.bench_function(&format!("bitmap not 2^{}", log2_size), |b| {
             b.iter(|| {
                 let r = !&bitmap1;
-                assert!(r.null_count() > 0);
+                assert!(r.unset_bits() > 0);
             })
         });
 

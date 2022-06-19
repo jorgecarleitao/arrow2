@@ -39,7 +39,7 @@ impl<'a> SlicesIterator<'a> {
 
         Self {
             state,
-            count: values.len() - values.null_count(),
+            count: values.len() - values.unset_bits(),
             max_len: values.len(),
             values: iter,
             mask: 1u8.rotate_left(offset as u32),

@@ -194,7 +194,7 @@ pub fn any(array: &BooleanArray) -> bool {
         array.into_iter().any(|v| v == Some(true))
     } else {
         let vals = array.values();
-        vals.null_count() != vals.len()
+        vals.unset_bits() != vals.len()
     }
 }
 
@@ -204,6 +204,6 @@ pub fn all(array: &BooleanArray) -> bool {
         false
     } else {
         let vals = array.values();
-        vals.null_count() == 0
+        vals.unset_bits() == 0
     }
 }

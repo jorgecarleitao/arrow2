@@ -70,14 +70,14 @@ where
     F: FnMut(&T, &T) -> std::cmp::Ordering,
 {
     assert!(limit <= values.len());
-    if options.nulls_first && limit < validity.null_count() {
+    if options.nulls_first && limit < validity.unset_bits() {
         let buffer = vec![T::default(); limit];
         let bitmap = MutableBitmap::from_trusted_len_iter(std::iter::repeat(false).take(limit));
         return (buffer.into(), bitmap.into());
     }
 
-    let nulls = std::iter::repeat(false).take(validity.null_count());
-    let valids = std::iter::repeat(true).take(values.len() - validity.null_count());
+    let nulls = std::iter::repeat(false).take(validity.unset_bits());
+    let valids = std::iter::repeat(true).take(values.len() - validity.unset_bits());
 
     let mut buffer = Vec::<T>::with_capacity(values.len());
     let mut new_validity = MutableBitmap::with_capacity(values.len());
@@ -88,17 +88,17 @@ where
         new_validity.extend_from_trusted_len_iter(nulls.chain(valids).take(limit));
 
         // extend buffer with constants followed by non-null values
-        buffer.resize(validity.null_count(), T::default());
+        buffer.resize(validity.unset_bits(), T::default());
         for (start, len) in slices {
             buffer.extend_from_slice(&values[start..start + len])
         }
 
         // sort values
         sort_values(
-            &mut buffer.as_mut_slice()[validity.null_count()..],
+            &mut buffer.as_mut_slice()[validity.unset_bits()..],
             cmp,
             options.descending,
-            limit - validity.null_count(),
+            limit - validity.unset_bits(),
         );
     } else {
         // validity is [1,1,1,...,0,0,0,0]
@@ -114,12 +114,12 @@ where
             buffer.as_mut_slice(),
             cmp,
             options.descending,
-            limit - validity.null_count(),
+            limit - validity.unset_bits(),
         );
 
-        if limit > values.len() - validity.null_count() {
+        if limit > values.len() - validity.unset_bits() {
             // extend remaining with nulls
-            buffer.resize(buffer.len() + validity.null_count(), T::default());
+            buffer.resize(buffer.len() + validity.unset_bits(), T::default());
         }
     };
     // values are sorted, we can now truncate the remaining.

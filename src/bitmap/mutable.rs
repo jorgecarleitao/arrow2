@@ -224,9 +224,18 @@ impl MutableBitmap {
     }
 
     /// Returns the number of unset bits on this [`MutableBitmap`].
-    #[inline]
-    pub fn null_count(&self) -> usize {
+    ///
+    /// Guaranted to be `<= self.len()`.
+    /// # Implementation
+    /// This function is `O(N)`
+    pub fn unset_bits(&self) -> usize {
         count_zeros(&self.buffer, 0, self.length)
+    }
+
+    /// Returns the number of unset bits on this [`MutableBitmap`].
+    #[deprecated(since = "0.13.0", note = "use `unset_bits` instead")]
+    pub fn null_count(&self) -> usize {
+        self.unset_bits()
     }
 
     /// Returns the length of the [`MutableBitmap`].
@@ -327,7 +336,7 @@ impl From<MutableBitmap> for Bitmap {
 impl From<MutableBitmap> for Option<Bitmap> {
     #[inline]
     fn from(buffer: MutableBitmap) -> Self {
-        if buffer.null_count() > 0 {
+        if buffer.unset_bits() > 0 {
             Some(Bitmap::try_new(buffer.buffer, buffer.length).unwrap())
         } else {
             None

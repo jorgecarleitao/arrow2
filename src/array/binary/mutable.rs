@@ -306,7 +306,7 @@ impl<O: Offset> MutableBinaryArray<O> {
         // soundness: assumed trusted len
         let (mut validity, offsets, values) = try_trusted_len_unzip(iterator)?;
 
-        if validity.as_mut().unwrap().null_count() == 0 {
+        if validity.as_mut().unwrap().unset_bits() == 0 {
             validity = None;
         }
 
@@ -395,7 +395,7 @@ impl<O: Offset> MutableBinaryArray<O> {
             iterator,
         );
 
-        if self.validity.as_mut().unwrap().null_count() == 0 {
+        if self.validity.as_mut().unwrap().unset_bits() == 0 {
             self.validity = None;
         }
     }
