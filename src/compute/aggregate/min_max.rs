@@ -263,7 +263,7 @@ pub fn min_boolean(array: &BooleanArray) -> Option<bool> {
     if null_count == array.len() {
         None
     } else if null_count == 0 {
-        Some(array.values().null_count() == 0)
+        Some(array.values().unset_bits() == 0)
     } else {
         // Note the min bool is false (0), so short circuit as soon as we see it
         array
@@ -291,7 +291,7 @@ pub fn max_boolean(array: &BooleanArray) -> Option<bool> {
     if null_count == array.len() {
         None
     } else if null_count == 0 {
-        Some(array.values().null_count() < array.len())
+        Some(array.values().unset_bits() < array.len())
     } else {
         // Note the max bool is true (1), so short circuit as soon as we see it
         array

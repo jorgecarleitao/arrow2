@@ -28,7 +28,7 @@ pub(super) fn encode_plain(
             array
                 .validity()
                 .as_ref()
-                .map(|x| x.len() - x.null_count())
+                .map(|x| x.len() - x.unset_bits())
                 .unwrap_or_else(|| array.len()),
         );
         encode(iter, buffer)

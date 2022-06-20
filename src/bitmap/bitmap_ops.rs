@@ -166,7 +166,7 @@ pub(crate) fn align(bitmap: &Bitmap, new_offset: usize) -> Bitmap {
 #[inline]
 /// Compute bitwise AND operation
 pub fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
-    if lhs.null_count() == lhs.len() || rhs.null_count() == rhs.len() {
+    if lhs.unset_bits() == lhs.len() || rhs.unset_bits() == rhs.len() {
         assert_eq!(lhs.len(), rhs.len());
         Bitmap::new_zeroed(lhs.len())
     } else {
@@ -177,7 +177,7 @@ pub fn and(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
 #[inline]
 /// Compute bitwise OR operation
 pub fn or(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
-    if lhs.null_count() == 0 || rhs.null_count() == 0 {
+    if lhs.unset_bits() == 0 || rhs.unset_bits() == 0 {
         assert_eq!(lhs.len(), rhs.len());
         let mut mutable = MutableBitmap::with_capacity(lhs.len());
         mutable.extend_constant(lhs.len(), true);
@@ -190,8 +190,8 @@ pub fn or(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
 #[inline]
 /// Compute bitwise XOR operation
 pub fn xor(lhs: &Bitmap, rhs: &Bitmap) -> Bitmap {
-    let lhs_nulls = lhs.null_count();
-    let rhs_nulls = rhs.null_count();
+    let lhs_nulls = lhs.unset_bits();
+    let rhs_nulls = rhs.unset_bits();
 
     // all false or all true
     if lhs_nulls == rhs_nulls && rhs_nulls == rhs.len() || lhs_nulls == 0 && rhs_nulls == 0 {

@@ -136,7 +136,7 @@ fn null_filter_simd<T: NativeType + Simd>(
     mask: &Bitmap,
 ) -> (Vec<T>, MutableBitmap) {
     assert_eq!(values.len(), mask.len());
-    let filter_count = mask.len() - mask.null_count();
+    let filter_count = mask.len() - mask.unset_bits();
 
     let (slice, offset, length) = mask.as_slice();
     if offset == 0 {
@@ -150,7 +150,7 @@ fn null_filter_simd<T: NativeType + Simd>(
 
 fn nonnull_filter_simd<T: NativeType + Simd>(values: &[T], mask: &Bitmap) -> Vec<T> {
     assert_eq!(values.len(), mask.len());
-    let filter_count = mask.len() - mask.null_count();
+    let filter_count = mask.len() - mask.unset_bits();
 
     let (slice, offset, length) = mask.as_slice();
     if offset == 0 {
@@ -264,7 +264,7 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
         return crate::compute::filter::filter(array, &filter);
     }
 
-    let false_count = filter.values().null_count();
+    let false_count = filter.values().unset_bits();
     if false_count == filter.len() {
         assert_eq!(array.len(), filter.len());
         return Ok(array.slice(0, 0));

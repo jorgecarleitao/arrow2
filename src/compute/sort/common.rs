@@ -105,7 +105,7 @@ where
                 .zip(I::range(0, length).unwrap())
                 .for_each(|(is_valid, index)| {
                     if is_valid {
-                        indices[validity.null_count() + valids] = index;
+                        indices[validity.unset_bits() + valids] = index;
                         valids += 1;
                     } else {
                         indices[nulls] = index;
@@ -113,18 +113,18 @@ where
                     }
                 });
 
-            if limit > validity.null_count() {
+            if limit > validity.unset_bits() {
                 // when limit is larger, we must sort values:
 
                 // Soundness:
                 // all indices in `indices` are by construction `< array.len() == values.len()`
                 // limit is by construction < indices.len()
-                let limit = limit.saturating_sub(validity.null_count());
-                let indices = &mut indices.as_mut_slice()[validity.null_count()..];
+                let limit = limit.saturating_sub(validity.unset_bits());
+                let indices = &mut indices.as_mut_slice()[validity.unset_bits()..];
                 sort_unstable_by(indices, get, cmp, options.descending, limit)
             }
         } else {
-            let last_valid_index = length.saturating_sub(validity.null_count());
+            let last_valid_index = length.saturating_sub(validity.unset_bits());
             let mut nulls = 0;
             let mut valids = 0;
             validity

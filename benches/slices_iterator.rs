@@ -3,7 +3,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use arrow2::bitmap::{utils::SlicesIterator, Bitmap};
 
 fn bench_slices(lhs: &Bitmap) {
-    let set_count = lhs.len() - lhs.null_count();
+    let set_count = lhs.len() - lhs.unset_bits();
     let slices = SlicesIterator::new(lhs);
 
     let count = slices.fold(0usize, |acc, v| acc + v.1);

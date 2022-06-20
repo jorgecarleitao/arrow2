@@ -133,7 +133,7 @@ pub(crate) fn encode_delta<O: Offset>(
                 .map(|w| (w[1] - w[0]).to_usize() as i64)
                 .zip(validity.iter())
                 .flat_map(|(x, is_valid)| if is_valid { Some(x) } else { None });
-            let length = offsets.len() - 1 - validity.null_count();
+            let length = offsets.len() - 1 - validity.unset_bits();
             let lengths = utils::ExactSizedIter::new(lengths, length);
 
             delta_bitpacked::encode(lengths, buffer);

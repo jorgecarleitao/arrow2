@@ -173,7 +173,7 @@ impl MutableBooleanArray {
 
             extend_trusted_len_unzip(iterator, &mut validity, &mut self.values);
 
-            if validity.null_count() > 0 {
+            if validity.unset_bits() > 0 {
                 self.validity = Some(validity);
             }
         }
@@ -299,7 +299,7 @@ impl MutableBooleanArray {
     {
         let (validity, values) = try_trusted_len_unzip(iterator)?;
 
-        let validity = if validity.null_count() > 0 {
+        let validity = if validity.unset_bits() > 0 {
             Some(validity)
         } else {
             None
@@ -344,7 +344,7 @@ where
 
     extend_trusted_len_unzip(iterator, &mut validity, &mut values);
 
-    let validity = if validity.null_count() > 0 {
+    let validity = if validity.unset_bits() > 0 {
         Some(validity)
     } else {
         None

@@ -42,7 +42,7 @@ fn encode_keys<K: DictionaryKey>(
         });
         let projected_val = Bitmap::from_trusted_len_iter(projected_validity);
 
-        let null_count = projected_val.null_count();
+        let null_count = projected_val.unset_bits();
 
         utils::write_def_levels(
             &mut buffer,

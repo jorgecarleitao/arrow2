@@ -72,7 +72,7 @@ where
 
     extend_from_trusted_len_iter(&mut offsets, &mut values, &mut validity, iterator);
 
-    let validity = if validity.null_count() > 0 {
+    let validity = if validity.unset_bits() > 0 {
         Some(validity)
     } else {
         None

@@ -39,7 +39,7 @@ impl<O: Offset> From<MutableUtf8Array<O>> for Utf8Array<O> {
         // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
         let validity = other.validity.and_then(|x| {
             let bitmap: Bitmap = x.into();
-            if bitmap.null_count() == 0 {
+            if bitmap.unset_bits() == 0 {
                 None
             } else {
                 Some(bitmap)
