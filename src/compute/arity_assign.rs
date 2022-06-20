@@ -66,11 +66,9 @@ where
                         // alloc new region
                         &immutable & rhs
                     }
-                    Either::Right(mut mutable) => {
+                    Either::Right(mutable) => {
                         // mutate in place
-                        let mut mutable_ref = &mut mutable;
-                        mutable_ref &= rhs;
-                        mutable.into()
+                        (mutable & rhs).into()
                     }
                 }
             });
