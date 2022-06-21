@@ -122,7 +122,7 @@ impl FlightService for FlightServiceImpl {
             .enumerate()
             .flat_map(|(counter, batch)| {
                 let (dictionary_flight_data, mut batch_flight_data) =
-                    serialize_batch(batch, &flight.ipc_schema.fields, &options);
+                    serialize_batch(batch, &flight.ipc_schema.fields, &options).unwrap();
 
                 // Only the record batch's FlightData gets app_metadata
                 let metadata = counter.to_string().into_bytes();
