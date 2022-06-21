@@ -188,14 +188,29 @@ where
         }
         UInt32 => {
             init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive::iter_to_arrays_nested(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                chunk_size,
-                |x: i32| x as u32,
-            )
+            let type_ = types.pop().unwrap();
+            match type_.physical_type {
+                PhysicalType::Int32 => primitive::iter_to_arrays_nested(
+                    columns.pop().unwrap(),
+                    init,
+                    field.data_type().clone(),
+                    chunk_size,
+                    |x: i32| x as u32,
+                ),
+                // some implementations of parquet write arrow's u32 into i64.
+                PhysicalType::Int64 => primitive::iter_to_arrays_nested(
+                    columns.pop().unwrap(),
+                    init,
+                    field.data_type().clone(),
+                    chunk_size,
+                    |x: i64| x as u32,
+                ),
+                other => {
+                    return Err(Error::nyi(format!(
+                        "Deserializing UInt32 from {other:?}'s parquet"
+                    )))
+                }
+            }
         }
         UInt64 => {
             init.push(InitNested::Primitive(field.is_nullable));
