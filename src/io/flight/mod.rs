@@ -11,11 +11,13 @@ use crate::{
     error::{Error, Result},
     io::ipc::read,
     io::ipc::write,
-    io::ipc::write::common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions},
+    io::ipc::write::common::{encode_chunk, DictionaryTracker, EncodedData},
 };
 
-pub use super::ipc::write::default_ipc_fields;
 use super::ipc::{IpcField, IpcSchema};
+
+pub use super::ipc::write::default_ipc_fields;
+pub use crate::io::ipc::write::common::WriteOptions;
 
 /// Serializes [`Chunk`] to a vector of [`FlightData`] representing the serialized dictionaries
 /// and a [`FlightData`] representing the batch.
