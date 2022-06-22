@@ -1121,12 +1121,14 @@ fn integration_write(schema: &Schema, chunks: &[Chunk<Box<dyn Array>>]) -> Resul
     let encodings = schema
         .fields
         .iter()
-        .map(|x| {
-            vec![if let DataType::Dictionary(..) = x.data_type() {
-                Encoding::RleDictionary
-            } else {
-                Encoding::Plain
-            }]
+        .map(|f| {
+            transverse(&f.data_type, |x| {
+                if let DataType::Dictionary(..) = x {
+                    Encoding::RleDictionary
+                } else {
+                    Encoding::Plain
+                }
+            })
         })
         .collect();
 
@@ -1428,4 +1430,34 @@ fn list_int_nullable() -> Result<()> {
     );
     array.try_extend(data).unwrap();
     list_array_generic(true, array.into())
+}
+
+/// Tests that when arrow-specific types (Duration and LargeUtf8) are written to parquet, we can rountrip its
+/// logical types.
+#[test]
+fn nested_dict() -> Result<()> {
+    let indices = PrimitiveArray::from_values((0..3u64).map(|x| x % 2));
+    let values = PrimitiveArray::from_slice([1.0f32, 3.0]);
+    let floats = DictionaryArray::from_data(indices, values.boxed());
+    let floats = ListArray::try_new(
+        DataType::List(Box::new(Field::new(
+            "item",
+            floats.data_type().clone(),
+            true,
+        ))),
+        vec![0i32, 0, 2, 3, 3].into(),
+        floats.boxed(),
+        Some([true, false, true, true].into()),
+    )?;
+
+    let schema = Schema::from(vec![Field::new("floats", floats.data_type().clone(), true)]);
+    let batch = Chunk::try_new(vec![floats.boxed()])?;
+
+    let r = integration_write(&schema, &[batch.clone()])?;
+
+    let (new_schema, new_batches) = integration_read(&r)?;
+
+    assert_eq!(new_schema, schema);
+    assert_eq!(new_batches, vec![batch]);
+    Ok(())
 }
