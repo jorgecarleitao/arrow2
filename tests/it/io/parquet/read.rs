@@ -130,9 +130,13 @@ fn v1_timestamp_ms_nullable() -> Result<()> {
 }
 
 #[test]
-#[ignore] // pyarrow issue; see https://issues.apache.org/jira/browse/ARROW-12201
 fn v1_u32_nullable() -> Result<()> {
     test_pyarrow_integration("uint32", 1, "basic", false, false, None)
+}
+
+#[test]
+fn v2_u32_nullable() -> Result<()> {
+    test_pyarrow_integration("uint32", 2, "basic", false, false, None)
 }
 
 #[test]

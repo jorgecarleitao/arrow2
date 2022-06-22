@@ -82,12 +82,27 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
             chunk_size,
             |x: i32| x as u16,
         ))),
-        UInt32 => dyn_iter(iden(primitive::Iter::new(
-            pages,
-            data_type,
-            chunk_size,
-            |x: i32| x as u32,
-        ))),
+        UInt32 => match physical_type {
+            PhysicalType::Int32 => dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i32| x as u32,
+            ))),
+            // some implementations of parquet write arrow's u32 into i64.
+            PhysicalType::Int64 => dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                chunk_size,
+                |x: i64| x as u32,
+            ))),
+            other => {
+                return Err(Error::NotYetImplemented(format!(
+                    "Reading uin32 from {:?}-encoded parquet still not implemented",
+                    other
+                )))
+            }
+        },
         Int8 => dyn_iter(iden(primitive::Iter::new(
             pages,
             data_type,

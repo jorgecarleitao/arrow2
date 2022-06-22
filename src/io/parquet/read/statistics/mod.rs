@@ -410,7 +410,17 @@ fn push(
         }
         UInt8 => primitive::push(from, min, max, |x: i32| Ok(x as u8)),
         UInt16 => primitive::push(from, min, max, |x: i32| Ok(x as u16)),
-        UInt32 => primitive::push(from, min, max, |x: i32| Ok(x as u32)),
+        UInt32 => match physical_type {
+            // some implementations of parquet write arrow's u32 into i64.
+            ParquetPhysicalType::Int64 => primitive::push(from, min, max, |x: i64| Ok(x as u32)),
+            ParquetPhysicalType::Int32 => primitive::push(from, min, max, |x: i32| Ok(x as u32)),
+            other => {
+                return Err(Error::NotYetImplemented(format!(
+                    "Can't decode UInt32 type from parquet type {:?}",
+                    other
+                )))
+            }
+        },
         Int32 => primitive::push(from, min, max, |x: i32| Ok(x as i32)),
         Int64 | Date64 | Time64(_) | Duration(_) => {
             primitive::push(from, min, max, |x: i64| Ok(x as i64))
