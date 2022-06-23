@@ -14,16 +14,22 @@ use crate::{
     io::ipc::write::common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions},
 };
 
-use super::ipc::write::default_ipc_fields;
+pub use super::ipc::write::default_ipc_fields;
 use super::ipc::{IpcField, IpcSchema};
 
 /// Serializes [`Chunk`] to a vector of [`FlightData`] representing the serialized dictionaries
 /// and a [`FlightData`] representing the batch.
+/// # Errors
+/// This function errors iff `fields` is not consistent with `columns`
 pub fn serialize_batch(
     columns: &Chunk<Box<dyn Array>>,
     fields: &[IpcField],
     options: &WriteOptions,
-) -> (Vec<FlightData>, FlightData) {
+) -> Result<(Vec<FlightData>, FlightData)> {
+    if fields.len() != columns.arrays().len() {
+        return Err(Error::InvalidArgumentError("The argument `fields` must be consistent with the columns' schema. Use e.g. &arrow2::io::flight::default_ipc_fields(&schema.fields)".to_string()));
+    }
+
     let mut dictionary_tracker = DictionaryTracker {
         dictionaries: Default::default(),
         cannot_replace: false,
@@ -36,7 +42,7 @@ pub fn serialize_batch(
     let flight_dictionaries = encoded_dictionaries.into_iter().map(Into::into).collect();
     let flight_batch = encoded_batch.into();
 
-    (flight_dictionaries, flight_batch)
+    Ok((flight_dictionaries, flight_batch))
 }
 
 impl From<EncodedData> for FlightData {

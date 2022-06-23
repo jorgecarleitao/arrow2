@@ -147,7 +147,7 @@ async fn send_batch(
     fields: &[IpcField],
     options: &write::WriteOptions,
 ) -> Result {
-    let (dictionary_flight_data, mut batch_flight_data) = serialize_batch(batch, fields, options);
+    let (dictionary_flight_data, mut batch_flight_data) = serialize_batch(batch, fields, options)?;
 
     upload_tx
         .send_all(&mut stream::iter(dictionary_flight_data).map(Ok))
