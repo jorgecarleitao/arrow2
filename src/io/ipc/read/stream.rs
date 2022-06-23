@@ -169,7 +169,7 @@ fn read_next<R: Read>(
                 file_size,
             );
 
-            if let Some((_, map, _)) = projection.clone() {
+            if let Some((_, map, _)) = projection {
                 // re-order according to projection
                 chunk
                     .map(|chunk| apply_projection(chunk, &map))
