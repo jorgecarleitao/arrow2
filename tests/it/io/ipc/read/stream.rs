@@ -1,3 +1,4 @@
+use arrow2::chunk::Chunk;
 use std::fs::File;
 
 use arrow2::error::Result;
@@ -13,7 +14,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     ))?;
 
     let metadata = read_stream_metadata(&mut file)?;
-    let reader = StreamReader::new(file, metadata);
+    let reader = StreamReader::new(file, metadata, None);
 
     // read expected JSON output
     let (schema, ipc_fields, batches) = read_gzip_json(version, file_name)?;
@@ -99,4 +100,55 @@ fn read_generated_200_compression_lz4() -> Result<()> {
 #[test]
 fn read_generated_200_compression_zstd() -> Result<()> {
     test_file("2.0.0-compression", "generated_zstd")
+}
+
+fn test_projection(version: &str, file_name: &str, columns: Vec<usize>) -> Result<()> {
+    let testdata = crate::test_util::arrow_test_data();
+    let mut file = File::open(format!(
+        "{}/arrow-ipc-stream/integration/{}/{}.stream",
+        testdata, version, file_name
+    ))?;
+
+    let metadata = read_stream_metadata(&mut file)?;
+
+    let (_, _, chunks) = read_gzip_json(version, file_name)?;
+
+    let expected_fields = columns
+        .iter()
+        .copied()
+        .map(|x| metadata.schema.fields[x].clone())
+        .collect::<Vec<_>>();
+
+    let expected_chunks = chunks
+        .into_iter()
+        .map(|chunk| {
+            let columns = columns
+                .iter()
+                .copied()
+                .map(|x| chunk.arrays()[x].clone())
+                .collect::<Vec<_>>();
+            Chunk::new(columns)
+        })
+        .collect::<Vec<_>>();
+
+    let reader = StreamReader::new(&mut file, metadata, Some(columns.clone()));
+
+    assert_eq!(reader.schema().fields, expected_fields);
+
+    expected_chunks
+        .iter()
+        .zip(reader.map(|x| x.unwrap().unwrap()))
+        .for_each(|(lhs, rhs)| {
+            assert_eq!(lhs, &rhs);
+        });
+    Ok(())
+}
+
+#[test]
+fn read_projected() -> Result<()> {
+    test_projection("1.0.0-littleendian", "generated_primitive", vec![1])?;
+    test_projection("1.0.0-littleendian", "generated_dictionary", vec![2])?;
+    test_projection("1.0.0-littleendian", "generated_nested", vec![0])?;
+    test_projection("1.0.0-littleendian", "generated_primitive", vec![2, 1])?;
+    test_projection("1.0.0-littleendian", "generated_primitive", vec![0, 2, 1])
 }

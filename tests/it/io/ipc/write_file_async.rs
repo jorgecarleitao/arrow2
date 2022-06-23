@@ -32,7 +32,7 @@ async fn write_(
 }
 
 async fn test_file(version: &str, file_name: &str) -> Result<()> {
-    let (schema, ipc_fields, batches) = read_arrow_stream(version, file_name);
+    let (schema, ipc_fields, batches) = read_arrow_stream(version, file_name, None);
 
     let result = write_(&schema, &ipc_fields, &batches).await?;
 

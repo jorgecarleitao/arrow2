@@ -30,13 +30,13 @@ fn write_(
 }
 
 fn test_file(version: &str, file_name: &str) {
-    let (schema, ipc_fields, batches) = read_arrow_stream(version, file_name);
+    let (schema, ipc_fields, batches) = read_arrow_stream(version, file_name, None);
 
     let result = write_(&schema, Some(ipc_fields), &batches);
 
     let mut reader = Cursor::new(result);
     let metadata = read_stream_metadata(&mut reader).unwrap();
-    let reader = StreamReader::new(reader, metadata);
+    let reader = StreamReader::new(reader, metadata, None);
 
     let schema = reader.metadata().schema.clone();
     let ipc_fields = reader.metadata().ipc_schema.fields.clone();

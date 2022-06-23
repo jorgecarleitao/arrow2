@@ -46,7 +46,11 @@ pub fn read_gzip_json(version: &str, file_name: &str) -> Result<IpcRead> {
     Ok((schema, ipc_fields, batches))
 }
 
-pub fn read_arrow_stream(version: &str, file_name: &str) -> IpcRead {
+pub fn read_arrow_stream(
+    version: &str,
+    file_name: &str,
+    projection: Option<Vec<usize>>,
+) -> IpcRead {
     let testdata = crate::test_util::arrow_test_data();
     let mut file = File::open(format!(
         "{}/arrow-ipc-stream/integration/{}/{}.stream",
@@ -55,7 +59,7 @@ pub fn read_arrow_stream(version: &str, file_name: &str) -> IpcRead {
     .unwrap();
 
     let metadata = read_stream_metadata(&mut file).unwrap();
-    let reader = StreamReader::new(file, metadata);
+    let reader = StreamReader::new(file, metadata, projection);
 
     let schema = reader.metadata().schema.clone();
     let ipc_fields = reader.metadata().ipc_schema.fields.clone();
