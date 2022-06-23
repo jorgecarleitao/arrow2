@@ -243,7 +243,7 @@ impl<O: Offset> Utf8Array<O> {
     }
 
     /// Try to convert this `Utf8Array` to a `MutableUtf8Array`
-    pub fn into_mut(self) -> Either<Self, MutableUtf8Array<O>> {
+    pub fn into_mut(mut self) -> Either<Self, MutableUtf8Array<O>> {
         use Either::*;
         if let Some(bitmap) = self.validity {
             match bitmap.into_mut() {
@@ -256,84 +256,70 @@ impl<O: Offset> Utf8Array<O> {
                         Some(bitmap),
                     )
                 }),
-                Right(mutable_bitmap) => match (self.values.into_mut(), self.offsets.into_mut()) {
-                    (Left(immutable_values), Left(immutable_offsets)) => {
+                Right(mutable_bitmap) => match (
+                    self.values.get_mut().map(std::mem::take),
+                    self.offsets.get_mut().map(std::mem::take),
+                ) {
+                    (None, None) => {
                         // Safety: invariants are preserved
                         Left(unsafe {
                             Utf8Array::new_unchecked(
                                 self.data_type,
-                                immutable_offsets,
-                                immutable_values,
+                                self.offsets,
+                                self.values,
                                 Some(mutable_bitmap.into()),
                             )
                         })
                     }
-                    (Left(immutable_values), Right(mutable_offsets)) => {
+                    (None, Some(offsets)) => {
                         // Safety: invariants are preserved
                         Left(unsafe {
                             Utf8Array::new_unchecked(
                                 self.data_type,
-                                mutable_offsets.into(),
-                                immutable_values,
+                                offsets.into(),
+                                self.values,
                                 Some(mutable_bitmap.into()),
                             )
                         })
                     }
-                    (Right(mutable_values), Left(immutable_offsets)) => {
+                    (Some(mutable_values), None) => {
                         // Safety: invariants are preserved
                         Left(unsafe {
                             Utf8Array::new_unchecked(
                                 self.data_type,
-                                immutable_offsets,
+                                self.offsets,
                                 mutable_values.into(),
                                 Some(mutable_bitmap.into()),
                             )
                         })
                     }
-                    (Right(mutable_values), Right(mutable_offsets)) => {
-                        Right(MutableUtf8Array::from_data(
+                    (Some(values), Some(offsets)) => Right(unsafe {
+                        MutableUtf8Array::from_data_unchecked(
                             self.data_type,
-                            mutable_offsets,
-                            mutable_values,
+                            offsets,
+                            values,
                             Some(mutable_bitmap),
-                        ))
-                    }
+                        )
+                    }),
                 },
             }
         } else {
-            match (self.values.into_mut(), self.offsets.into_mut()) {
-                (Left(immutable_values), Left(immutable_offsets)) => Left(unsafe {
-                    Utf8Array::new_unchecked(
-                        self.data_type,
-                        immutable_offsets,
-                        immutable_values,
-                        None,
-                    )
+            match (
+                self.values.get_mut().map(std::mem::take),
+                self.offsets.get_mut().map(std::mem::take),
+            ) {
+                (None, None) => Left(unsafe {
+                    Utf8Array::new_unchecked(self.data_type, self.offsets, self.values, None)
                 }),
-                (Left(immutable_values), Right(mutable_offsets)) => Left(unsafe {
-                    Utf8Array::new_unchecked(
-                        self.data_type,
-                        mutable_offsets.into(),
-                        immutable_values,
-                        None,
-                    )
+                (None, Some(offsets)) => Left(unsafe {
+                    Utf8Array::new_unchecked(self.data_type, offsets.into(), self.values, None)
                 }),
-                (Right(mutable_values), Left(immutable_offsets)) => Left(unsafe {
-                    Utf8Array::from_data(
-                        self.data_type,
-                        immutable_offsets,
-                        mutable_values.into(),
-                        None,
-                    )
+                (Some(values), None) => Left(unsafe {
+                    Utf8Array::new_unchecked(self.data_type, self.offsets, values.into(), None)
                 }),
-                (Right(mutable_values), Right(mutable_offsets)) => {
-                    Right(MutableUtf8Array::from_data(
-                        self.data_type,
-                        mutable_offsets,
-                        mutable_values,
-                        None,
-                    ))
-                }
+                (Some(values), Some(offsets)) => Right(unsafe {
+                    MutableUtf8Array::from_data_unchecked(self.data_type, offsets, values, None)
+                }),
             }
         }
     }

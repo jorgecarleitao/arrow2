@@ -309,7 +309,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     ///
     /// This function is primarily used to re-use memory regions.
     #[must_use]
-    pub fn into_mut(self) -> Either<Self, MutablePrimitiveArray<T>> {
+    pub fn into_mut(mut self) -> Either<Self, MutablePrimitiveArray<T>> {
         use Either::*;
 
         if let Some(bitmap) = self.validity {
@@ -319,27 +319,27 @@ impl<T: NativeType> PrimitiveArray<T> {
                     self.values,
                     Some(bitmap),
                 )),
-                Right(mutable_bitmap) => match self.values.into_mut() {
-                    Left(buffer) => Left(PrimitiveArray::new(
-                        self.data_type,
-                        buffer,
-                        Some(mutable_bitmap.into()),
-                    )),
-                    Right(values) => Right(MutablePrimitiveArray::from_data(
+                Right(mutable_bitmap) => match self.values.get_mut().map(std::mem::take) {
+                    Some(values) => Right(MutablePrimitiveArray::from_data(
                         self.data_type,
                         values,
                         Some(mutable_bitmap),
                     )),
+                    None => Left(PrimitiveArray::new(
+                        self.data_type,
+                        self.values,
+                        Some(mutable_bitmap.into()),
+                    )),
                 },
             }
         } else {
-            match self.values.into_mut() {
-                Left(values) => Left(PrimitiveArray::new(self.data_type, values, None)),
-                Right(values) => Right(MutablePrimitiveArray::from_data(
+            match self.values.get_mut().map(std::mem::take) {
+                Some(values) => Right(MutablePrimitiveArray::from_data(
                     self.data_type,
                     values,
                     None,
                 )),
+                None => Left(PrimitiveArray::new(self.data_type, self.values, None)),
             }
         }
     }
