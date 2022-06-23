@@ -18,6 +18,32 @@ This runs the tests of the crate without features. To run all features, use
 cargo test --features full
 ```
 
+If you get warnings about parquet files not existing, you can generate the test files by using Python:
+
+```bash
+# Ubuntu: sudo apt install python3-pip python3-venv
+# Mac: brew install python3
+# Archlinux: sudo pacman -Syu python
+
+# Create a virtual environment for python, to keep dependencies contained
+python3 -m venv venv
+
+# Activate the virtual environment
+source venv/bin/activate
+
+# Make sure pip is up to date
+pip install pip --upgrade
+
+# Install pyarrow, version 6
+pip install pyarrow==6
+
+# Generate the parquet files (this might take some time, depending on your computer setup)
+python parquet_integration/write_parquet.py
+
+# Get out of venv, back to normal terminal
+deactivate
+```
+
 during development of particular parts of the crate, it is usually faster
 to reduce the feature set - the tests are gated to only the relevant tests
 of that feature set. For example, if improving JSON, you can use
