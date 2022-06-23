@@ -22,3 +22,6 @@ mod avro;
     feature = "io_csv_read_async"
 ))]
 mod csv;
+
+#[cfg(feature = "io_flight")]
+mod flight;
