@@ -52,7 +52,7 @@ deactivate
 ```
 
 If you receive warnings about other files not found (IPC), ensure you have all submodules:
-```
+```bash
 # If you didn't clone with `git clone --recurse-submodules https://github.com/jorgecarleitao/arrow2`
 git submodule update --init --recursive
 
