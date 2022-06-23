@@ -4,6 +4,13 @@ This crate follows the standard for developing a Rust library via `cargo`.
 The CI is our "ground truth" over the state of the library. Check out the different parts of
 the CI to understand how to test the different parts of this library locally.
 
+## Git clone with submodules
+The crate comes with additional submodules to aid with testing, to ensure you have them if you plan on testing, using `--recurse-submodules` will clone the submodules alongside the repository.
+
+```bash
+git clone --recurse-submodules https://github.com/jorgecarleitao/arrow2
+```
+
 ## Testing
 
 The simplest way to test the crate is to run 
@@ -42,6 +49,15 @@ python parquet_integration/write_parquet.py
 
 # Get out of venv, back to normal terminal
 deactivate
+```
+
+If you receive warnings about other files not found (IPC), ensure you have all submodules:
+```
+# If you didn't clone with `git clone --recurse-submodules https://github.com/jorgecarleitao/arrow2`
+git submodule update --init --recursive
+
+# Update to the latest submodules
+git submodule update --recursive --remote
 ```
 
 during development of particular parts of the crate, it is usually faster
