@@ -4,10 +4,7 @@ use std::{ptr::NonNull, sync::Arc};
 use crate::{
     array::*,
     bitmap::{utils::bytes_for, Bitmap},
-    buffer::{
-        bytes::{Bytes, Deallocation},
-        Buffer,
-    },
+    buffer::{bytes::Bytes, Buffer},
     datatypes::{DataType, PhysicalType},
     error::{Error, Result},
     ffi::schema::get_child,
@@ -181,7 +178,7 @@ impl ArrowArray {
 unsafe fn create_buffer<T: NativeType>(
     array: &ArrowArray,
     data_type: &DataType,
-    deallocation: Deallocation,
+    owner: Arc<InternalArrowArray>,
     index: usize,
 ) -> Result<Buffer<T>> {
     if array.buffers.is_null() {
@@ -197,7 +194,7 @@ unsafe fn create_buffer<T: NativeType>(
     let len = buffer_len(array, data_type, index)?;
     let offset = buffer_offset(array, data_type, index);
     let bytes = ptr
-        .map(|ptr| Bytes::from_ffi(ptr, len, deallocation))
+        .map(|ptr| Bytes::from_owned(ptr, len, owner))
         .ok_or_else(|| Error::OutOfSpec(format!("The buffer at position {} is null", index)))?;
 
     Ok(Buffer::from_bytes(bytes).slice(offset, len - offset))
@@ -212,7 +209,7 @@ unsafe fn create_buffer<T: NativeType>(
 /// This function assumes that `ceil(self.length * bits, 8)` is the size of the buffer
 unsafe fn create_bitmap(
     array: &ArrowArray,
-    deallocation: Deallocation,
+    owner: Arc<InternalArrowArray>,
     index: usize,
 ) -> Result<Bitmap> {
     if array.buffers.is_null() {
@@ -228,7 +225,7 @@ unsafe fn create_bitmap(
     let bytes_len = bytes_for(offset + len);
     let ptr = NonNull::new(ptr as *mut u8);
     let bytes = ptr
-        .map(|ptr| Bytes::from_ffi(ptr, bytes_len, deallocation))
+        .map(|ptr| Bytes::from_owned(ptr, bytes_len, owner))
         .ok_or_else(|| {
             Error::OutOfSpec(format!(
                 "The buffer {} is a null pointer and cannot be interpreted as a bitmap",
@@ -344,8 +341,8 @@ fn create_dictionary(
 }
 
 pub trait ArrowArrayRef: std::fmt::Debug {
-    fn deallocation(&self) -> Deallocation {
-        Deallocation::Foreign(self.parent().clone())
+    fn owner(&self) -> Arc<InternalArrowArray> {
+        self.parent().clone()
     }
 
     /// returns the null bit buffer.
@@ -358,7 +355,7 @@ pub trait ArrowArrayRef: std::fmt::Debug {
         if self.array().null_count() == 0 {
             Ok(None)
         } else {
-            create_bitmap(self.array(), self.deallocation(), 0).map(Some)
+            create_bitmap(self.array(), self.owner(), 0).map(Some)
         }
     }
 
@@ -366,15 +363,14 @@ pub trait ArrowArrayRef: std::fmt::Debug {
     /// The caller must guarantee that the buffer `index` corresponds to a bitmap.
     /// This function assumes that the bitmap created from FFI is valid; this is impossible to prove.
     unsafe fn buffer<T: NativeType>(&self, index: usize) -> Result<Buffer<T>> {
-        create_buffer::<T>(self.array(), self.data_type(), self.deallocation(), index)
+        create_buffer::<T>(self.array(), self.data_type(), self.owner(), index)
     }
 
     /// # Safety
     /// The caller must guarantee that the buffer `index` corresponds to a bitmap.
     /// This function assumes that the bitmap created from FFI is valid; this is impossible to prove.
     unsafe fn bitmap(&self, index: usize) -> Result<Bitmap> {
-        // +1 to ignore null bitmap
-        create_bitmap(self.array(), self.deallocation(), index)
+        create_bitmap(self.array(), self.owner(), index)
     }
 
     /// # Safety

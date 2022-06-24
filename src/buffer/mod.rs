@@ -3,6 +3,5 @@
 mod immutable;
 
 pub(crate) mod bytes;
-mod foreign;
 
 pub use immutable::Buffer;
