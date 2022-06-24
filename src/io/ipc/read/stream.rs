@@ -172,7 +172,7 @@ fn read_next<R: Read>(
             if let Some((_, map, _)) = projection {
                 // re-order according to projection
                 chunk
-                    .map(|chunk| apply_projection(chunk, &map))
+                    .map(|chunk| apply_projection(chunk, map))
                     .map(|x| Some(StreamState::Some(x)))
             } else {
                 chunk.map(|x| Some(StreamState::Some(x)))
