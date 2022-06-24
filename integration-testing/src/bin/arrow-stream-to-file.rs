@@ -24,7 +24,7 @@ use arrow2::io::ipc::write;
 fn main() -> Result<()> {
     let mut reader = io::stdin();
     let metadata = read::read_stream_metadata(&mut reader)?;
-    let mut arrow_stream_reader = read::StreamReader::new(reader, metadata.clone());
+    let mut arrow_stream_reader = read::StreamReader::new(reader, metadata.clone(), None);
 
     let writer = io::stdout();
 
