@@ -31,10 +31,8 @@ impl Debug for Deallocation {
 
 /// A continuous, fixed-size, immutable memory region that knows how to de-allocate itself.
 ///
-/// In the most common case, this buffer is allocated using [`allocate_aligned`](alloc::allocate_aligned)
-/// and deallocated accordingly [`free_aligned`](alloc::free_aligned).
-/// When the region is allocated by a foreign allocator, [Deallocation::Foreign], this calls the
-/// foreign deallocator to deallocate the region when it is no longer needed.
+/// In the most common case, this buffer is allocated using Rust's native allocator.
+/// However, it may also be allocated by a foreign allocator, [Deallocation::Foreign].
 pub struct Bytes<T: NativeType> {
     /// inner data
     data: MaybeForeign<T>,

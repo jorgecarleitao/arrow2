@@ -1,37 +1,37 @@
-use either::Either;
 use std::{iter::FromIterator, sync::Arc, usize};
 
 use crate::types::NativeType;
 
 use super::bytes::Bytes;
 
-/// [`Buffer`] is a contiguous memory region that can be shared across thread boundaries.
+/// [`Buffer`] is a contiguous memory region of plain old data types
+/// that can be shared across thread boundaries.
 ///
-/// The easiest way to think about `Buffer<T>` is being equivalent to
+/// The easiest way to think about [`Buffer<T>`] is being equivalent to
 /// a `Arc<Vec<T>>`, with the following differences:
 /// * `T` must be [`NativeType`]
-/// * slicing the buffer is `O(1)`
+/// * slicing and cloning is `O(1)`.
 /// * it supports external allocated memory (via FFI)
 ///
-/// The easiest way to create one is to use its implementation of `From` a `Vec`.
+/// The easiest way to create one is to use its implementation of `From<Vec<T>>`.
 ///
 /// # Examples
 /// ```
 /// use arrow2::buffer::Buffer;
 ///
-/// let buffer: Buffer<u32> = vec![1, 2, 3].into();
+/// let mut buffer: Buffer<u32> = vec![1, 2, 3].into();
 /// assert_eq!(buffer.as_ref(), [1, 2, 3].as_ref());
 ///
 /// // it supports copy-on-write semantics (i.e. back to a `Vec`)
-/// let vec: Vec<u32> = buffer.into_mut().right().unwrap();
-/// assert_eq!(vec, vec![1, 2, 3]);
+/// let vec: &mut [u32] = buffer.get_mut().unwrap();
+/// assert_eq!(vec, &mut [1, 2, 3]);
 ///
 /// // cloning and slicing is `O(1)` (data is shared)
-/// let buffer: Buffer<u32> = vec![1, 2, 3].into();
+/// let mut buffer: Buffer<u32> = vec![1, 2, 3].into();
 /// let slice = buffer.clone().slice(1, 1);
 /// assert_eq!(slice.as_ref(), [2].as_ref());
-/// // no longer possible to get a vec since `slice` and `buffer` share data
-/// let same: Buffer<u32> = buffer.into_mut().left().unwrap();
+/// // but cloning forbids getting mut since `slice` and `buffer` now share data
+/// assert_eq!(buffer.get_mut(), None);
 /// ```
 #[derive(Clone, PartialEq)]
 pub struct Buffer<T: NativeType> {
@@ -100,7 +100,7 @@ impl<T: NativeType> Buffer<T> {
         }
     }
 
-    /// Returns a new [Buffer] that is a slice of this buffer starting at `offset`.
+    /// Returns a new [`Buffer`] that is a slice of this buffer starting at `offset`.
     /// Doing so allows the same memory region to be shared between buffers.
     /// # Panics
     /// Panics iff `offset` is larger than `len`.
@@ -114,7 +114,7 @@ impl<T: NativeType> Buffer<T> {
         unsafe { self.slice_unchecked(offset, length) }
     }
 
-    /// Returns a new [Buffer] that is a slice of this buffer starting at `offset`.
+    /// Returns a new [`Buffer`] that is a slice of this buffer starting at `offset`.
     /// Doing so allows the same memory region to be shared between buffers.
     /// # Safety
     /// The caller must ensure `offset + length <= self.len()`
@@ -137,10 +137,10 @@ impl<T: NativeType> Buffer<T> {
         self.offset
     }
 
-    /// Gets a mutable reference to its underlying [`Vec`], if it not being shared.
+    /// Returns a mutable reference to its underlying [`Vec`], if possible.
     ///
-    /// This operation returns a [`Vec`] iff this [`Buffer`]:
-    /// * is not an offsetted slice of another [`Buffer`]
+    /// This operation returns [`Some`] iff this [`Buffer`]:
+    /// * has not been sliced with an offset
     /// * has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
     /// * has not been imported from the c data interface (FFI)
     pub fn get_mut(&mut self) -> Option<&mut Vec<T>> {
@@ -148,32 +148,6 @@ impl<T: NativeType> Buffer<T> {
             None
         } else {
             Arc::get_mut(&mut self.data).and_then(|b| b.get_vec())
-        }
-    }
-
-    /// Converts this [`Buffer`] to either a [`Buffer`] or a [`Vec`], returning itself if the conversion
-    /// is not possible
-    ///
-    /// This operation returns a [`Vec`] iff this [`Buffer`]:
-    /// * is not an offsetted slice of another [`Buffer`]
-    /// * has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
-    /// * has not been imported from the c data interface (FFI)
-    pub fn into_mut(mut self) -> Either<Self, Vec<T>> {
-        if let Some(vec) = self.get_mut() {
-            Either::Right(std::mem::take(vec))
-        } else {
-            Either::Left(self)
-        }
-    }
-
-    /// Converts this [`Buffer`] to a [`Vec`], cloning the data if needed, also
-    /// known as clone-on-write semantics.
-    ///
-    /// This function is O(1) under the same conditions that [`Self::into_mut`] returns `Vec`.
-    pub fn make_mut(self) -> Vec<T> {
-        match self.into_mut() {
-            Either::Left(data) => data.as_ref().to_vec(),
-            Either::Right(data) => data,
         }
     }
 

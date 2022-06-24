@@ -66,10 +66,9 @@ impl<O: Offset> Default for MutableUtf8Array<O> {
 impl<O: Offset> MutableUtf8Array<O> {
     /// Initializes a new empty [`MutableUtf8Array`].
     pub fn new() -> Self {
-        let offsets = vec![O::default()];
         Self {
             data_type: Self::default_data_type(),
-            offsets,
+            offsets: vec![O::default()],
             values: Vec::<u8>::new(),
             validity: None,
         }
