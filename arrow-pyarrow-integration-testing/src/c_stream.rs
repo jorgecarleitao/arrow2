@@ -23,7 +23,7 @@ pub fn to_rust_iterator(ob: PyObject, py: Python) -> PyResult<Vec<PyObject>> {
 
     let mut arrays = vec![];
     while let Some(array) = unsafe { iter.next() } {
-        let py_array = to_py_array(array.unwrap().into(), py)?;
+        let py_array = to_py_array(array.map_err(PyO3Error::from)?, py)?;
         arrays.push(py_array)
     }
     Ok(arrays)
@@ -38,16 +38,16 @@ pub fn from_rust_iterator(py: Python) -> PyResult<PyObject> {
         None,
     )
     .boxed();
+
     // and a field with its datatype
     let field = Field::new("a", array.data_type().clone(), true);
 
     // create an iterator of arrays
     let arrays = vec![array.clone(), array.clone(), array];
-    let iter = Box::new(arrays.clone().into_iter().map(Ok)) as _;
+    let iter = Box::new(arrays.into_iter().map(Ok)) as _;
 
     // create an [`ArrowArrayStream`] based on this iterator and field
-    let mut stream = Box::new(ffi::ArrowArrayStream::empty());
-    unsafe { ffi::export_iterator(iter, field, &mut *stream) };
+    let stream = Box::new(ffi::export_iterator(iter, field));
 
     // call pyarrow's interface to read this stream
     let pa = py.import("pyarrow.ipc")?;
@@ -55,7 +55,6 @@ pub fn from_rust_iterator(py: Python) -> PyResult<PyObject> {
         "_import_from_c",
         ((&*stream as *const ffi::ArrowArrayStream) as Py_uintptr_t,),
     )?;
-    Box::leak(stream); // this is not ideal => the struct should be allocated by pyarrow
 
     Ok(py_stream.to_object(py))
 }

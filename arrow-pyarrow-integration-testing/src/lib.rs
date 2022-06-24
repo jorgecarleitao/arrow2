@@ -67,22 +67,21 @@ fn to_rust_array(ob: PyObject, py: Python) -> PyResult<Box<dyn Array>> {
 
     let field = unsafe { ffi::import_field_from_c(schema.as_ref()).map_err(PyO3Error::from)? };
     let array =
-        unsafe { ffi::import_array_from_c(array, field.data_type).map_err(PyO3Error::from)? };
+        unsafe { ffi::import_array_from_c(*array, field.data_type).map_err(PyO3Error::from)? };
 
-    Ok(array.into())
+    Ok(array)
 }
 
 fn to_py_array(array: Box<dyn Array>, py: Python) -> PyResult<PyObject> {
-    let array_ptr = Box::new(ffi::ArrowArray::empty());
-    let schema_ptr = Box::new(ffi::ArrowSchema::empty());
+    let schema = Box::new(ffi::export_field_to_c(&Field::new(
+        "",
+        array.data_type().clone(),
+        true,
+    )));
+    let array = Box::new(ffi::export_array_to_c(array));
 
-    let array_ptr = Box::into_raw(array_ptr);
-    let schema_ptr = Box::into_raw(schema_ptr);
-
-    unsafe {
-        ffi::export_field_to_c(&Field::new("", array.data_type().clone(), true), schema_ptr);
-        ffi::export_array_to_c(array, array_ptr);
-    };
+    let schema_ptr: *const arrow2::ffi::ArrowSchema = &*schema;
+    let array_ptr: *const arrow2::ffi::ArrowArray = &*array;
 
     let pa = py.import("pyarrow")?;
 
@@ -90,11 +89,6 @@ fn to_py_array(array: Box<dyn Array>, py: Python) -> PyResult<PyObject> {
         "_import_from_c",
         (array_ptr as Py_uintptr_t, schema_ptr as Py_uintptr_t),
     )?;
-
-    unsafe {
-        Box::from_raw(array_ptr);
-        Box::from_raw(schema_ptr);
-    };
 
     Ok(array.to_object(py))
 }
@@ -115,20 +109,14 @@ fn to_rust_field(ob: PyObject, py: Python) -> PyResult<Field> {
 }
 
 fn to_py_field(field: &Field, py: Python) -> PyResult<PyObject> {
-    let schema_ptr = Box::new(ffi::ArrowSchema::empty());
-    let schema_ptr = Box::into_raw(schema_ptr);
-
-    unsafe {
-        ffi::export_field_to_c(field, schema_ptr);
-    };
+    let schema = Box::new(ffi::export_field_to_c(field));
+    let schema_ptr: *const arrow2::ffi::ArrowSchema = &*schema;
 
     let pa = py.import("pyarrow")?;
 
     let array = pa
         .getattr("Field")?
         .call_method1("_import_from_c", (schema_ptr as Py_uintptr_t,))?;
-
-    unsafe { Box::from_raw(schema_ptr) };
 
     Ok(array.to_object(py))
 }

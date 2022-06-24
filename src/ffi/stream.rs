@@ -61,8 +61,6 @@ impl ArrowArrayStreamReader {
     /// * The `ArrowArrayStream` fulfills the invariants of the C stream interface
     /// * The schema `get_schema` produces fulfills the C data interface
     pub unsafe fn try_new(mut iter: Box<ArrowArrayStream>) -> Result<Self, Error> {
-        let mut field = Box::new(ArrowSchema::empty());
-
         if iter.get_next.is_none() {
             return Err(Error::OutOfSpec(
                 "The C stream MUST contain a non-null get_next".to_string(),
@@ -75,8 +73,9 @@ impl ArrowArrayStreamReader {
             ));
         };
 
+        let mut field = ArrowSchema::empty();
         let status = if let Some(f) = iter.get_schema {
-            unsafe { (f)(&mut *iter, &mut *field) }
+            unsafe { (f)(&mut *iter, &mut field) }
         } else {
             return Err(Error::OutOfSpec(
                 "The C stream MUST contain a non-null get_schema".to_string(),
@@ -106,8 +105,8 @@ impl ArrowArrayStreamReader {
     /// Calling this iterator's `next` assumes that the [`ArrowArrayStream`] produces arrow arrays
     /// that fulfill the C data interface
     pub unsafe fn next(&mut self) -> Option<Result<Box<dyn Array>, Error>> {
-        let mut array = Box::new(ArrowArray::empty());
-        let status = unsafe { (self.iter.get_next.unwrap())(&mut *self.iter, &mut *array) };
+        let mut array = ArrowArray::empty();
+        let status = unsafe { (self.iter.get_next.unwrap())(&mut *self.iter, &mut array) };
 
         if status != 0 {
             return Some(Err(unsafe { handle_error(&mut self.iter) }));
@@ -145,7 +144,8 @@ unsafe extern "C" fn get_next(iter: *mut ArrowArrayStream, array: *mut ArrowArra
                 return 2001; // custom application specific error (since this is never a result of this interface)
             }
 
-            export_array_to_c(item, array);
+            std::ptr::write(array, export_array_to_c(item));
+
             private.error = None;
             0
         }
@@ -168,7 +168,7 @@ unsafe extern "C" fn get_schema(iter: *mut ArrowArrayStream, schema: *mut ArrowS
     }
     let private = &mut *((*iter).private_data as *mut PrivateData);
 
-    export_field_to_c(&private.field, schema);
+    std::ptr::write(schema, export_field_to_c(&private.field));
     0
 }
 
@@ -195,20 +195,17 @@ unsafe extern "C" fn release(iter: *mut ArrowArrayStream) {
 }
 
 /// Exports an iterator to the [C stream interface](https://arrow.apache.org/docs/format/CStreamInterface.html)
-/// # Safety
-/// The pointer `consumer` must be allocated
-pub unsafe fn export_iterator(
+pub fn export_iterator(
     iter: Box<dyn Iterator<Item = Result<Box<dyn Array>, Error>>>,
     field: Field,
-    consumer: *mut ArrowArrayStream,
-) {
+) -> ArrowArrayStream {
     let private_data = Box::new(PrivateData {
         iter,
         field,
         error: None,
     });
 
-    *consumer = ArrowArrayStream {
+    ArrowArrayStream {
         get_schema: Some(get_schema),
         get_next: Some(get_next),
         get_last_error: Some(get_last_error),
