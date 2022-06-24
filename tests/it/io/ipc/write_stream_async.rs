@@ -32,13 +32,13 @@ async fn write_(
 }
 
 async fn test_file(version: &str, file_name: &str) -> Result<()> {
-    let (schema, ipc_fields, batches) = read_arrow_stream(version, file_name);
+    let (schema, ipc_fields, batches) = read_arrow_stream(version, file_name, None);
 
     let result = write_(&schema, &ipc_fields, &batches).await?;
 
     let mut reader = Cursor::new(result);
     let metadata = read::read_stream_metadata(&mut reader)?;
-    let reader = read::StreamReader::new(reader, metadata);
+    let reader = read::StreamReader::new(reader, metadata, None);
 
     let schema = &reader.metadata().schema;
     let ipc_fields = reader.metadata().ipc_schema.fields.clone();

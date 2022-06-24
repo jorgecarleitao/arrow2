@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Read;
 
 use arrow_format;
@@ -91,6 +92,7 @@ fn read_next<R: Read>(
     dictionaries: &mut Dictionaries,
     message_buffer: &mut Vec<u8>,
     data_buffer: &mut Vec<u8>,
+    projection: &Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
 ) -> Result<Option<StreamState>> {
     // determine metadata length
     let mut meta_length: [u8; 4] = [0; 4];
@@ -155,18 +157,26 @@ fn read_next<R: Read>(
 
             let mut reader = std::io::Cursor::new(data_buffer);
 
-            read_record_batch(
+            let chunk = read_record_batch(
                 batch,
                 &metadata.schema.fields,
                 &metadata.ipc_schema,
-                None,
+                projection.as_ref().map(|x| x.0.as_ref()),
                 dictionaries,
                 metadata.version,
                 &mut reader,
                 0,
                 file_size,
-            )
-            .map(|x| Some(StreamState::Some(x)))
+            );
+
+            if let Some((_, map, _)) = projection {
+                // re-order according to projection
+                chunk
+                    .map(|chunk| apply_projection(chunk, map))
+                    .map(|x| Some(StreamState::Some(x)))
+            } else {
+                chunk.map(|x| Some(StreamState::Some(x)))
+            }
         }
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
             let mut buf = vec![0; block_length];
@@ -185,7 +195,14 @@ fn read_next<R: Read>(
             )?;
 
             // read the next message until we encounter a RecordBatch message
-            read_next(reader, metadata, dictionaries, message_buffer, data_buffer)
+            read_next(
+                reader,
+                metadata,
+                dictionaries,
+                message_buffer,
+                data_buffer,
+                projection,
+            )
         }
         _ => Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
     }
@@ -204,6 +221,7 @@ pub struct StreamReader<R: Read> {
     finished: bool,
     data_buffer: Vec<u8>,
     message_buffer: Vec<u8>,
+    projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
 }
 
 impl<R: Read> StreamReader<R> {
@@ -212,7 +230,16 @@ impl<R: Read> StreamReader<R> {
     /// The first message in the stream is the schema, the reader will fail if it does not
     /// encounter a schema.
     /// To check if the reader is done, use `is_finished(self)`
-    pub fn new(reader: R, metadata: StreamMetadata) -> Self {
+    pub fn new(reader: R, metadata: StreamMetadata, projection: Option<Vec<usize>>) -> Self {
+        let projection = projection.map(|projection| {
+            let (p, h, fields) = prepare_projection(&metadata.schema.fields, projection);
+            let schema = Schema {
+                fields,
+                metadata: metadata.schema.metadata.clone(),
+            };
+            (p, h, schema)
+        });
+
         Self {
             reader,
             metadata,
@@ -220,12 +247,21 @@ impl<R: Read> StreamReader<R> {
             finished: false,
             data_buffer: vec![],
             message_buffer: vec![],
+            projection,
         }
     }
 
     /// Return the schema of the stream
     pub fn metadata(&self) -> &StreamMetadata {
         &self.metadata
+    }
+
+    /// Return the schema of the file
+    pub fn schema(&self) -> &Schema {
+        self.projection
+            .as_ref()
+            .map(|x| &x.2)
+            .unwrap_or(&self.metadata.schema)
     }
 
     /// Check if the stream is finished
@@ -243,6 +279,7 @@ impl<R: Read> StreamReader<R> {
             &mut self.dictionaries,
             &mut self.message_buffer,
             &mut self.data_buffer,
+            &self.projection,
         )?;
         if batch.is_none() {
             self.finished = true;
