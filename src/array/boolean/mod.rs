@@ -175,14 +175,13 @@ impl BooleanArray {
         }
     }
 
-    /// Clones this [`BooleanArray`], returning one with the provided validity.
+    /// Returns this [`BooleanArray`] with a new validity.
     /// # Panic
     /// This function panics iff `validity.len() != self.len()`.
     #[must_use]
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
-        let mut array = self.clone();
-        array.set_validity(validity);
-        array
+    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
+        self.set_validity(validity);
+        self
     }
 
     /// Sets the validity of this [`BooleanArray`].
@@ -412,7 +411,7 @@ impl Array for BooleanArray {
         Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
-        Box::new(self.with_validity(validity))
+        Box::new(self.clone().with_validity(validity))
     }
     fn to_boxed(&self) -> Box<dyn Array> {
         Box::new(self.clone())

@@ -219,17 +219,23 @@ impl<O: Offset> BinaryArray<O> {
         std::sync::Arc::new(self)
     }
 
-    /// Clones this [`BinaryArray`] with a different validity.
+    /// Returns this [`BinaryArray`] with a new validity.
     /// # Panic
     /// Panics iff `validity.len() != self.len()`.
     #[must_use]
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
+        self.set_validity(validity);
+        self
+    }
+
+    /// Sets the validity of this [`BinaryArray`].
+    /// # Panics
+    /// This function panics iff `values.len() != self.len()`.
+    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity's length must be equal to the array's length")
+            panic!("validity must be equal to the array's length")
         }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        arr
+        self.validity = validity;
     }
 
     /// Creates an empty [`BinaryArray`], i.e. whose `.len` is zero.
@@ -449,7 +455,7 @@ impl<O: Offset> Array for BinaryArray<O> {
         Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
-        Box::new(self.with_validity(validity))
+        Box::new(self.clone().with_validity(validity))
     }
     fn to_boxed(&self) -> Box<dyn Array> {
         Box::new(self.clone())

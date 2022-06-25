@@ -231,16 +231,23 @@ impl<O: Offset> ListArray<O> {
         }
     }
 
-    /// Sets the validity bitmap on this [`ListArray`].
+    /// Returns this [`ListArray`] with a new validity.
     /// # Panic
     /// This function panics iff `validity.len() != self.len()`.
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+    #[must_use]
+    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
+        self.set_validity(validity);
+        self
+    }
+
+    /// Sets the validity of this [`ListArray`].
+    /// # Panics
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity should be as least as large as the array")
+            panic!("validity must be equal to the array's length")
         }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        arr
+        self.validity = validity;
     }
 }
 
@@ -368,12 +375,15 @@ impl<O: Offset> Array for ListArray<O> {
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
     }
+
     unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice_unchecked(offset, length))
     }
+
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
-        Box::new(self.with_validity(validity))
+        Box::new(self.clone().with_validity(validity))
     }
+
     fn to_boxed(&self) -> Box<dyn Array> {
         Box::new(self.clone())
     }

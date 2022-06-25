@@ -108,8 +108,8 @@ where
 {
     let validity_lhs = lhs.validity().cloned();
     let validity_rhs = rhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
-    let rhs = rhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
+    let rhs = rhs.clone().with_validity(None);
     let out = compare_op(&lhs, &rhs, |a, b| a.eq(b));
 
     finish_eq_validities(out, validity_lhs, validity_rhs)
@@ -131,7 +131,7 @@ where
     T::Simd: Simd8PartialEq,
 {
     let validity = lhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
     let out = compare_op_scalar(&lhs, rhs, |a, b| a.eq(b));
 
     finish_eq_validities(out, validity, None)
@@ -154,8 +154,8 @@ where
 {
     let validity_lhs = lhs.validity().cloned();
     let validity_rhs = rhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
-    let rhs = rhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
+    let rhs = rhs.clone().with_validity(None);
     let out = compare_op(&lhs, &rhs, |a, b| a.neq(b));
 
     finish_neq_validities(out, validity_lhs, validity_rhs)
@@ -177,7 +177,7 @@ where
     T::Simd: Simd8PartialEq,
 {
     let validity = lhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
     let out = compare_op_scalar(&lhs, rhs, |a, b| a.neq(b));
 
     finish_neq_validities(out, validity, None)

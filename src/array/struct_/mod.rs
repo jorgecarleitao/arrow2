@@ -208,17 +208,23 @@ impl StructArray {
         }
     }
 
-    /// Sets the validity bitmap on this [`StructArray`].
-    /// # Panic
+    /// Returns this [`StructArray`] with a new validity.
+    /// # Panics
     /// This function panics iff `validity.len() != self.len()`.
     #[must_use]
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
+        self.set_validity(validity);
+        self
+    }
+
+    /// Sets the validity of this [`StructArray`].
+    /// # Panics
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity should be as least as large as the array")
+            panic!("validity's length must be equal to the array's length")
         }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        arr
+        self.validity = validity;
     }
 
     /// Boxes self into a [`Box<dyn Array>`].
@@ -302,12 +308,15 @@ impl Array for StructArray {
     fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice(offset, length))
     }
+
     unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
         Box::new(self.slice_unchecked(offset, length))
     }
+
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
-        Box::new(self.with_validity(validity))
+        Box::new(self.clone().with_validity(validity))
     }
+
     fn to_boxed(&self) -> Box<dyn Array> {
         Box::new(self.clone())
     }

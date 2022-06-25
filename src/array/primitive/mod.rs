@@ -241,58 +241,54 @@ impl<T: NativeType> PrimitiveArray<T> {
         }
     }
 
-    /// Returns a clone of this [`PrimitiveArray`] with a new validity.
+    /// Returns this [`PrimitiveArray`] with a new validity.
     /// # Panics
     /// This function panics iff `validity.len() != self.len()`.
     #[must_use]
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
-        let mut out = self.clone();
-        out.set_validity(validity);
-        out
+    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
+        self.set_validity(validity);
+        self
     }
 
-    /// Update the validity buffer of this [`PrimitiveArray`].
+    /// Sets the validity of this [`PrimitiveArray`].
     /// # Panics
-    /// This function panics iff `values.len() != self.len()`.
+    /// This function panics iff `validity.len() != self.len()`.
     pub fn set_validity(&mut self, validity: Option<Bitmap>) {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity should be as least as large as the array")
+            panic!("validity's length must be equal to the array's length")
         }
         self.validity = validity;
     }
 
-    /// Returns a clone of this [`PrimitiveArray`] with new values.
+    /// Returns this [`PrimitiveArray`] with new values.
     /// # Panics
     /// This function panics iff `values.len() != self.len()`.
     #[must_use]
-    pub fn with_values(&self, values: Buffer<T>) -> Self {
-        let mut out = self.clone();
-        out.set_values(values);
-        out
+    pub fn with_values(mut self, values: Buffer<T>) -> Self {
+        self.set_values(values);
+        self
     }
 
-    /// Update the values buffer of this [`PrimitiveArray`].
+    /// Update the values of this [`PrimitiveArray`].
     /// # Panics
     /// This function panics iff `values.len() != self.len()`.
     pub fn set_values(&mut self, values: Buffer<T>) {
         assert_eq!(
             values.len(),
             self.len(),
-            "values length should be equal to this arrays length"
+            "values' length must be equal to this arrays' length"
         );
         self.values = values;
     }
 
-    /// Applies a function `f` to the validity of this array, the caller can decide to make
-    /// it mutable or not.
+    /// Applies a function `f` to the validity of this array.
     ///
     /// This is an API to leverage clone-on-write
     /// # Panics
     /// This function panics if the function `f` modifies the length of the [`Bitmap`].
     pub fn apply_validity<F: Fn(Bitmap) -> Bitmap>(&mut self, f: F) {
         if let Some(validity) = std::mem::take(&mut self.validity) {
-            assert_eq!(validity.len(), self.values.len());
-            self.validity = Some(f(validity))
+            self.set_validity(Some(f(validity)))
         }
     }
 
@@ -462,7 +458,7 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
         Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
-        Box::new(self.with_validity(validity))
+        Box::new(self.clone().with_validity(validity))
     }
     fn to_boxed(&self) -> Box<dyn Array> {
         Box::new(self.clone())

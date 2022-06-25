@@ -114,6 +114,7 @@ impl Array for NullArray {
     fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {
         panic!("cannot set validity of a null array")
     }
+
     fn to_boxed(&self) -> Box<dyn Array> {
         Box::new(self.clone())
     }

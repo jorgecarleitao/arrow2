@@ -117,6 +117,25 @@ impl MapArray {
         Self::new(data_type, Buffer::from(vec![0i32]), field, None)
     }
 
+    /// Returns this [`MapArray`] with a new validity.
+    /// # Panics
+    /// This function panics iff `validity.len() != self.len()`.
+    #[must_use]
+    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
+        self.set_validity(validity);
+        self
+    }
+
+    /// Sets the validity of this [`MapArray`].
+    /// # Panics
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
+        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+            panic!("validity's length must be equal to the array's length")
+        }
+        self.validity = validity;
+    }
+
     /// Boxes self into a [`Box<dyn Array>`].
     pub fn boxed(self) -> Box<dyn Array> {
         Box::new(self)
@@ -252,9 +271,10 @@ impl Array for MapArray {
         Box::new(self.slice_unchecked(offset, length))
     }
 
-    fn with_validity(&self, _validity: Option<Bitmap>) -> Box<dyn Array> {
-        self.to_boxed()
+    fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
+        Box::new(self.clone().with_validity(validity))
     }
+
     fn to_boxed(&self) -> Box<dyn Array> {
         Box::new(self.clone())
     }

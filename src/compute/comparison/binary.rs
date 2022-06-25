@@ -56,8 +56,8 @@ pub fn eq<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) -> BooleanArray
 pub fn eq_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) -> BooleanArray {
     let validity_lhs = lhs.validity().cloned();
     let validity_rhs = rhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
-    let rhs = rhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
+    let rhs = rhs.clone().with_validity(None);
     let out = compare_op(&lhs, &rhs, |a, b| a == b);
 
     finish_eq_validities(out, validity_lhs, validity_rhs)
@@ -71,7 +71,7 @@ pub fn eq_scalar<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> BooleanArray {
 /// Perform `lhs == rhs` operation on [`BinaryArray`] and a scalar and include validities in comparison.
 pub fn eq_scalar_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> BooleanArray {
     let validity = lhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
     let out = compare_op_scalar(&lhs, rhs, |a, b| a == b);
 
     finish_eq_validities(out, validity, None)
@@ -90,8 +90,8 @@ pub fn neq<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) -> BooleanArra
 pub fn neq_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &BinaryArray<O>) -> BooleanArray {
     let validity_lhs = lhs.validity().cloned();
     let validity_rhs = rhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
-    let rhs = rhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
+    let rhs = rhs.clone().with_validity(None);
 
     let out = compare_op(&lhs, &rhs, |a, b| a != b);
     finish_neq_validities(out, validity_lhs, validity_rhs)
@@ -105,7 +105,7 @@ pub fn neq_scalar<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> BooleanArray {
 /// Perform `lhs != rhs` operation on [`BinaryArray`] and a scalar and include validities in comparison.
 pub fn neq_scalar_and_validity<O: Offset>(lhs: &BinaryArray<O>, rhs: &[u8]) -> BooleanArray {
     let validity = lhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
     let out = compare_op_scalar(&lhs, rhs, |a, b| a != b);
 
     finish_neq_validities(out, validity, None)
