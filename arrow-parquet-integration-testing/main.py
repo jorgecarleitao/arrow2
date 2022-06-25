@@ -49,11 +49,8 @@ non_native_types = [
     pyarrow.date64(),
     pyarrow.time32("s"),
     pyarrow.timestamp("s"),
+    # the issue here is the second, not the tz
     pyarrow.timestamp("s", tz="UTC"),
-    pyarrow.duration("s"),
-    pyarrow.duration("ms"),
-    pyarrow.duration("us"),
-    pyarrow.duration("ns"),
 ]
 
 

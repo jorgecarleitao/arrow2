@@ -46,7 +46,7 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
-          pip install pyarrow==6 pyspark==3
+          pip install pyarrow==8 pyspark==3
           python main.py
           # test against spark
           python main_spark.py

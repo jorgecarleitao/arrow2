@@ -11,8 +11,8 @@ use arrow2::{
         json_integration::read,
         json_integration::ArrowJson,
         parquet::write::{
-            CompressionOptions as ParquetCompression, Encoding, FileWriter, RowGroupIterator,
-            Version as ParquetVersion, WriteOptions,
+            transverse, CompressionOptions as ParquetCompression, Encoding, FileWriter,
+            RowGroupIterator, Version as ParquetVersion, WriteOptions,
         },
     },
 };
@@ -174,16 +174,18 @@ fn main() -> Result<()> {
     let encodings = schema
         .fields
         .iter()
-        .map(|x| match x.data_type() {
-            DataType::Dictionary(..) => vec![Encoding::RleDictionary],
-            DataType::Utf8 | DataType::LargeUtf8 => {
-                vec![if args.encoding_utf8 == EncodingScheme::Delta {
-                    Encoding::DeltaLengthByteArray
-                } else {
-                    Encoding::Plain
-                }]
-            }
-            _ => vec![Encoding::Plain],
+        .map(|f| {
+            transverse(&f.data_type, |dt| match dt {
+                DataType::Dictionary(..) => Encoding::RleDictionary,
+                DataType::Utf8 | DataType::LargeUtf8 => {
+                    if args.encoding_utf8 == EncodingScheme::Delta {
+                        Encoding::DeltaLengthByteArray
+                    } else {
+                        Encoding::Plain
+                    }
+                }
+                _ => Encoding::Plain,
+            })
         })
         .collect();
 

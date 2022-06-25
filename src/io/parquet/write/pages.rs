@@ -172,7 +172,7 @@ fn to_leafs_recursive<'a>(array: &'a dyn Array, leafs: &mut Vec<&'a dyn Array>) 
         }
         Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
         | LargeUtf8 | Dictionary(_) => leafs.push(array),
-        _ => todo!(),
+        other => todo!("Writing {:?} to parquet not yet implemented", other),
     }
 }
 
