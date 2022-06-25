@@ -1,6 +1,10 @@
 use std::collections::VecDeque;
 
-use parquet2::{encoding::Encoding, page::DataPage, schema::Repetition};
+use parquet2::{
+    encoding::Encoding,
+    page::{split_buffer, DataPage},
+    schema::Repetition,
+};
 
 use crate::{
     array::Offset, bitmap::MutableBitmap, datatypes::DataType, error::Result,
@@ -58,23 +62,25 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
         ) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
-                Ok(State::RequiredDictionary(ValuesDictionary::new(page, dict)))
+                Ok(State::RequiredDictionary(ValuesDictionary::try_new(
+                    page, dict,
+                )?))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
                 Ok(State::OptionalDictionary(
-                    Optional::new(page),
-                    ValuesDictionary::new(page, dict),
+                    Optional::try_new(page)?,
+                    ValuesDictionary::try_new(page, dict)?,
                 ))
             }
             (Encoding::Plain, _, true, false) => {
-                let (_, _, values) = utils::split_buffer(page);
+                let (_, _, values) = split_buffer(page)?;
 
                 let values = BinaryIter::new(values);
 
-                Ok(State::Optional(Optional::new(page), values))
+                Ok(State::Optional(Optional::try_new(page)?, values))
             }
-            (Encoding::Plain, _, false, false) => Ok(State::Required(Required::new(page))),
+            (Encoding::Plain, _, false, false) => Ok(State::Required(Required::try_new(page)?)),
             _ => Err(utils::not_implemented(page)),
         }
     }

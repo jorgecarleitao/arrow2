@@ -36,9 +36,9 @@ pub struct Required<'a> {
 }
 
 impl<'a> Required<'a> {
-    fn new(page: &'a DataPage) -> Self {
-        let values = dict_indices_decoder(page);
-        Self { values }
+    fn try_new(page: &'a DataPage) -> Result<Self> {
+        let values = dict_indices_decoder(page)?;
+        Ok(Self { values })
     }
 }
 
@@ -48,13 +48,13 @@ pub struct FilteredRequired<'a> {
 }
 
 impl<'a> FilteredRequired<'a> {
-    fn new(page: &'a DataPage) -> Self {
-        let values = dict_indices_decoder(page);
+    fn try_new(page: &'a DataPage) -> Result<Self> {
+        let values = dict_indices_decoder(page)?;
 
         let rows = get_selected_rows(page);
         let values = SliceFilteredIter::new(values, rows);
 
-        Self { values }
+        Ok(Self { values })
     }
 }
 
@@ -65,13 +65,13 @@ pub struct Optional<'a> {
 }
 
 impl<'a> Optional<'a> {
-    fn new(page: &'a DataPage) -> Self {
-        let values = dict_indices_decoder(page);
+    fn try_new(page: &'a DataPage) -> Result<Self> {
+        let values = dict_indices_decoder(page)?;
 
-        Self {
+        Ok(Self {
             values,
-            validity: OptionalPageValidity::new(page),
-        }
+            validity: OptionalPageValidity::try_new(page)?,
+        })
     }
 }
 
@@ -120,18 +120,18 @@ where
 
         match (page.encoding(), is_optional, is_filtered) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, false, false) => {
-                Ok(State::Required(Required::new(page)))
+                Required::try_new(page).map(State::Required)
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, true, false) => {
-                Ok(State::Optional(Optional::new(page)))
+                Optional::try_new(page).map(State::Optional)
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, false, true) => {
-                Ok(State::FilteredRequired(FilteredRequired::new(page)))
+                FilteredRequired::try_new(page).map(State::FilteredRequired)
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, true, true) => {
                 Ok(State::FilteredOptional(
-                    FilteredOptionalPageValidity::new(page),
-                    dict_indices_decoder(page),
+                    FilteredOptionalPageValidity::try_new(page)?,
+                    dict_indices_decoder(page)?,
                 ))
             }
             _ => Err(utils::not_implemented(page)),

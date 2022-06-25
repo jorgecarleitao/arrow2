@@ -1,6 +1,10 @@
 use std::collections::VecDeque;
 
-use parquet2::{encoding::Encoding, page::DataPage, schema::Repetition};
+use parquet2::{
+    encoding::Encoding,
+    page::{split_buffer, DataPage},
+    schema::Repetition,
+};
 
 use crate::{
     array::BooleanArray,
@@ -24,13 +28,13 @@ struct Required<'a> {
 }
 
 impl<'a> Required<'a> {
-    pub fn new(page: &'a DataPage) -> Self {
-        let (_, _, values) = utils::split_buffer(page);
-        Self {
+    pub fn try_new(page: &'a DataPage) -> Result<Self> {
+        let (_, _, values) = split_buffer(page)?;
+        Ok(Self {
             values,
             offset: 0,
             length: page.num_values(),
-        }
+        })
     }
 }
 
@@ -71,12 +75,12 @@ impl<'a> Decoder<'a> for BooleanDecoder {
 
         match (page.encoding(), is_optional, is_filtered) {
             (Encoding::Plain, true, false) => {
-                let (_, _, values) = utils::split_buffer(page);
+                let (_, _, values) = split_buffer(page)?;
                 let values = BitmapIter::new(values, 0, values.len() * 8);
 
-                Ok(State::Optional(Optional::new(page), values))
+                Ok(State::Optional(Optional::try_new(page)?, values))
             }
-            (Encoding::Plain, false, false) => Ok(State::Required(Required::new(page))),
+            (Encoding::Plain, false, false) => Ok(State::Required(Required::try_new(page)?)),
             _ => Err(utils::not_implemented(page)),
         }
     }

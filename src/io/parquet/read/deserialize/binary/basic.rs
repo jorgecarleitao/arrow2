@@ -4,7 +4,7 @@ use std::default::Default;
 use parquet2::{
     deserialize::SliceFilteredIter,
     encoding::{hybrid_rle, Encoding},
-    page::{BinaryPageDict, DataPage},
+    page::{split_buffer, BinaryPageDict, DataPage},
     schema::Repetition,
 };
 
@@ -67,11 +67,11 @@ pub(super) struct Required<'a> {
 }
 
 impl<'a> Required<'a> {
-    pub fn new(page: &'a DataPage) -> Self {
-        let (_, _, values) = utils::split_buffer(page);
+    pub fn try_new(page: &'a DataPage) -> Result<Self> {
+        let (_, _, values) = split_buffer(page)?;
         let values = SizedBinaryIter::new(values, page.num_values());
 
-        Self { values }
+        Ok(Self { values })
     }
 
     pub fn len(&self) -> usize {
@@ -106,10 +106,10 @@ pub(super) struct RequiredDictionary<'a> {
 }
 
 impl<'a> RequiredDictionary<'a> {
-    pub fn new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Self {
-        let values = utils::dict_indices_decoder(page);
+    pub fn try_new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Result<Self> {
+        let values = utils::dict_indices_decoder(page)?;
 
-        Self { dict, values }
+        Ok(Self { dict, values })
     }
 
     #[inline]
@@ -125,13 +125,13 @@ pub(super) struct FilteredRequiredDictionary<'a> {
 }
 
 impl<'a> FilteredRequiredDictionary<'a> {
-    pub fn new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Self {
-        let values = utils::dict_indices_decoder(page);
+    pub fn try_new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Result<Self> {
+        let values = utils::dict_indices_decoder(page)?;
 
         let rows = get_selected_rows(page);
         let values = SliceFilteredIter::new(values, rows);
 
-        Self { values, dict }
+        Ok(Self { values, dict })
     }
 
     #[inline]
@@ -147,10 +147,10 @@ pub(super) struct ValuesDictionary<'a> {
 }
 
 impl<'a> ValuesDictionary<'a> {
-    pub fn new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Self {
-        let values = utils::dict_indices_decoder(page);
+    pub fn try_new(page: &'a DataPage, dict: &'a BinaryPageDict) -> Result<Self> {
+        let values = utils::dict_indices_decoder(page)?;
 
-        Self { dict, values }
+        Ok(Self { dict, values })
     }
 
     #[inline]
@@ -246,50 +246,52 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
             is_filtered,
         ) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
-                Ok(State::RequiredDictionary(RequiredDictionary::new(
+                Ok(State::RequiredDictionary(RequiredDictionary::try_new(
                     page,
                     dict.as_any().downcast_ref().unwrap(),
-                )))
+                )?))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
 
                 Ok(State::OptionalDictionary(
-                    OptionalPageValidity::new(page),
-                    ValuesDictionary::new(page, dict),
+                    OptionalPageValidity::try_new(page)?,
+                    ValuesDictionary::try_new(page, dict)?,
                 ))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, true) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
 
-                Ok(State::FilteredRequiredDictionary(
-                    FilteredRequiredDictionary::new(page, dict),
-                ))
+                FilteredRequiredDictionary::try_new(page, dict)
+                    .map(State::FilteredRequiredDictionary)
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, true) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
 
                 Ok(State::FilteredOptionalDictionary(
-                    FilteredOptionalPageValidity::new(page),
-                    ValuesDictionary::new(page, dict),
+                    FilteredOptionalPageValidity::try_new(page)?,
+                    ValuesDictionary::try_new(page, dict)?,
                 ))
             }
             (Encoding::Plain, _, true, false) => {
-                let (_, _, values) = utils::split_buffer(page);
+                let (_, _, values) = split_buffer(page)?;
 
                 let values = BinaryIter::new(values);
 
-                Ok(State::Optional(OptionalPageValidity::new(page), values))
+                Ok(State::Optional(
+                    OptionalPageValidity::try_new(page)?,
+                    values,
+                ))
             }
-            (Encoding::Plain, _, false, false) => Ok(State::Required(Required::new(page))),
+            (Encoding::Plain, _, false, false) => Ok(State::Required(Required::try_new(page)?)),
             (Encoding::Plain, _, false, true) => {
                 Ok(State::FilteredRequired(FilteredRequired::new(page)))
             }
             (Encoding::Plain, _, true, true) => {
-                let (_, _, values) = utils::split_buffer(page);
+                let (_, _, values) = split_buffer(page)?;
 
                 Ok(State::FilteredOptional(
-                    FilteredOptionalPageValidity::new(page),
+                    FilteredOptionalPageValidity::try_new(page)?,
                     BinaryIter::new(values),
                 ))
             }

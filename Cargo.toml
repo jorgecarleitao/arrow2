@@ -67,7 +67,7 @@ futures = { version = "0.3", optional = true }
 ahash = { version = "0.7", optional = true }
 
 # parquet support
-parquet2 = { version = "0.13.1", optional = true, default_features = false }
+parquet2 = { version = "0.14.0", optional = true, default_features = false }
 
 # avro support
 avro-schema = { version = "0.2", optional = true }

@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use parquet2::{
     deserialize::SliceFilteredIter,
     encoding::{hybrid_rle, Encoding},
-    page::{DataPage, FixedLenByteArrayPageDict},
+    page::{split_buffer, DataPage, FixedLenByteArrayPageDict},
     schema::Repetition,
 };
 
@@ -13,8 +13,8 @@ use crate::{
 
 use super::super::utils::{
     dict_indices_decoder, extend_from_decoder, get_selected_rows, next, not_implemented,
-    split_buffer, DecodedState, Decoder, FilteredOptionalPageValidity, MaybeNext,
-    OptionalPageValidity, PageState, Pushable,
+    DecodedState, Decoder, FilteredOptionalPageValidity, MaybeNext, OptionalPageValidity,
+    PageState, Pushable,
 };
 use super::super::DataPages;
 use super::utils::FixedSizeBinary;
@@ -26,15 +26,15 @@ struct Optional<'a> {
 }
 
 impl<'a> Optional<'a> {
-    fn new(page: &'a DataPage, size: usize) -> Self {
-        let (_, _, values_buffer) = split_buffer(page);
+    fn try_new(page: &'a DataPage, size: usize) -> Result<Self> {
+        let (_, _, values) = split_buffer(page)?;
 
-        let values = values_buffer.chunks_exact(size);
+        let values = values.chunks_exact(size);
 
-        Self {
+        Ok(Self {
             values,
-            validity: OptionalPageValidity::new(page),
-        }
+            validity: OptionalPageValidity::try_new(page)?,
+        })
     }
 }
 
@@ -87,10 +87,10 @@ struct RequiredDictionary<'a> {
 }
 
 impl<'a> RequiredDictionary<'a> {
-    fn new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Self {
-        let values = dict_indices_decoder(page);
+    fn try_new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Result<Self> {
+        let values = dict_indices_decoder(page)?;
 
-        Self { dict, values }
+        Ok(Self { dict, values })
     }
 
     #[inline]
@@ -107,14 +107,14 @@ struct OptionalDictionary<'a> {
 }
 
 impl<'a> OptionalDictionary<'a> {
-    fn new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Self {
-        let values = dict_indices_decoder(page);
+    fn try_new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Result<Self> {
+        let values = dict_indices_decoder(page)?;
 
-        Self {
+        Ok(Self {
             values,
-            validity: OptionalPageValidity::new(page),
+            validity: OptionalPageValidity::try_new(page)?,
             dict,
-        }
+        })
     }
 }
 
@@ -170,31 +170,27 @@ impl<'a> Decoder<'a> for BinaryDecoder {
             is_filtered,
         ) {
             (Encoding::Plain, None, true, false) => {
-                Ok(State::Optional(Optional::new(page, self.size)))
+                Ok(State::Optional(Optional::try_new(page, self.size)?))
             }
             (Encoding::Plain, None, false, false) => {
                 Ok(State::Required(Required::new(page, self.size)))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
-                Ok(State::RequiredDictionary(RequiredDictionary::new(
-                    page,
-                    dict.as_any().downcast_ref().unwrap(),
-                )))
+                RequiredDictionary::try_new(page, dict.as_any().downcast_ref().unwrap())
+                    .map(State::RequiredDictionary)
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
-                Ok(State::OptionalDictionary(OptionalDictionary::new(
-                    page,
-                    dict.as_any().downcast_ref().unwrap(),
-                )))
+                OptionalDictionary::try_new(page, dict.as_any().downcast_ref().unwrap())
+                    .map(State::OptionalDictionary)
             }
             (Encoding::Plain, None, false, true) => Ok(State::FilteredRequired(
                 FilteredRequired::new(page, self.size),
             )),
             (Encoding::Plain, _, true, true) => {
-                let (_, _, values) = split_buffer(page);
+                let (_, _, values) = split_buffer(page)?;
 
                 Ok(State::FilteredOptional(
-                    FilteredOptionalPageValidity::new(page),
+                    FilteredOptionalPageValidity::try_new(page)?,
                     values.chunks_exact(self.size),
                 ))
             }
