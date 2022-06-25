@@ -36,6 +36,16 @@ pub struct FileMetadata {
     pub(crate) size: u64,
 }
 
+/// prepare `scratch` to read the message
+pub(super) fn prepare_scratch(scratch: &mut Vec<u8>, message_length: usize) -> &mut [u8] {
+    // ensure that we have enough scratch space
+    if message_length > scratch.len() {
+        scratch.resize(message_length, 0);
+    }
+    // return the buffer that will be overwritten by read
+    &mut scratch[..message_length]
+}
+
 /// Arrow File reader
 pub struct FileReader<R: Read + Seek> {
     reader: R,
@@ -64,11 +74,7 @@ fn read_dictionary_message<R: Read + Seek>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    // prepare `data` to read the message
-    data.clear();
-    data.resize(message_length, 0);
-
-    reader.read_exact(data)?;
+    reader.read_exact(prepare_scratch(data, message_length))?;
     Ok(())
 }
 
@@ -249,7 +255,7 @@ pub fn read_batch<R: Read + Seek>(
     metadata: &FileMetadata,
     projection: Option<&[usize]>,
     index: usize,
-    stratch: &mut Vec<u8>,
+    scratch: &mut Vec<u8>,
 ) -> Result<Chunk<Box<dyn Array>>> {
     let block = metadata.blocks[index];
 
@@ -270,11 +276,9 @@ pub fn read_batch<R: Read + Seek>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    stratch.clear();
-    stratch.resize(meta_len, 0);
-    reader.read_exact(stratch)?;
+    reader.read_exact(prepare_scratch(scratch, meta_len))?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(stratch)
+    let message = arrow_format::ipc::MessageRef::read_as_root(scratch)
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let batch = get_serialized_batch(&message)?;

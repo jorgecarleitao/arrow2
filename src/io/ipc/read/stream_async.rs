@@ -10,6 +10,7 @@ use futures::Stream;
 use crate::array::*;
 use crate::chunk::Chunk;
 use crate::error::{Error, Result};
+use crate::io::ipc::read::reader::prepare_scratch;
 
 use super::super::CONTINUATION_MARKER;
 use super::common::{read_dictionary, read_record_batch};
@@ -103,9 +104,10 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
         return Ok(None);
     }
 
-    state.message_buffer.clear();
-    state.message_buffer.resize(meta_length, 0);
-    state.reader.read_exact(&mut state.message_buffer).await?;
+    state
+        .reader
+        .read_exact(prepare_scratch(&mut state.message_buffer, meta_length))
+        .await?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(&state.message_buffer)
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
@@ -123,9 +125,10 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
 
     match header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
-            state.data_buffer.clear();
-            state.data_buffer.resize(block_length, 0);
-            state.reader.read_exact(&mut state.data_buffer).await?;
+            state
+                .reader
+                .read_exact(prepare_scratch(&mut state.data_buffer, block_length))
+                .await?;
 
             read_record_batch(
                 batch,

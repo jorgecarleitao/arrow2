@@ -8,6 +8,7 @@ use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::Schema;
 use crate::error::{Error, Result};
+use crate::io::ipc::read::reader::prepare_scratch;
 use crate::io::ipc::IpcSchema;
 
 use super::super::CONTINUATION_MARKER;
@@ -129,9 +130,7 @@ fn read_next<R: Read>(
         return Ok(None);
     }
 
-    message_buffer.clear();
-    message_buffer.resize(meta_length, 0);
-    reader.read_exact(message_buffer)?;
+    reader.read_exact(prepare_scratch(message_buffer, meta_length))?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(message_buffer)
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
@@ -149,9 +148,7 @@ fn read_next<R: Read>(
 
     match header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
-            data_buffer.clear();
-            data_buffer.resize(block_length, 0);
-            reader.read_exact(data_buffer)?;
+            reader.read_exact(prepare_scratch(data_buffer, block_length))?;
 
             let file_size = data_buffer.len() as u64;
 

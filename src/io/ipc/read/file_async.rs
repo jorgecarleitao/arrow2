@@ -11,6 +11,7 @@ use crate::array::*;
 use crate::chunk::Chunk;
 use crate::datatypes::{Field, Schema};
 use crate::error::{Error, Result};
+use crate::io::ipc::read::reader::prepare_scratch;
 use crate::io::ipc::{IpcSchema, ARROW_MAGIC, CONTINUATION_MARKER};
 
 use super::common::{apply_projection, prepare_projection, read_dictionary, read_record_batch};
@@ -176,9 +177,9 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    meta_buffer.clear();
-    meta_buffer.resize(meta_len, 0);
-    reader.read_exact(meta_buffer).await?;
+    reader
+        .read_exact(prepare_scratch(meta_buffer, meta_len))
+        .await?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(meta_buffer)
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
@@ -191,9 +192,9 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    block_buffer.clear();
-    block_buffer.resize(block_length, 0);
-    reader.read_exact(block_buffer).await?;
+    reader
+        .read_exact(prepare_scratch(block_buffer, block_length))
+        .await?;
     let mut cursor = std::io::Cursor::new(block_buffer);
 
     read_record_batch(
@@ -247,9 +248,9 @@ where
 
         match header {
             MessageHeaderRef::DictionaryBatch(batch) => {
-                buffer.clear();
-                buffer.resize(length, 0);
-                reader.read_exact(&mut buffer).await?;
+                reader
+                    .read_exact(prepare_scratch(&mut buffer, length))
+                    .await?;
                 let mut cursor = std::io::Cursor::new(&mut buffer);
                 read_dictionary(
                     batch,
@@ -283,9 +284,9 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    data.clear();
-    data.resize(footer_size, 0);
-    reader.read_exact(data).await?;
+    reader
+        .read_exact(prepare_scratch(data, footer_size))
+        .await?;
 
     Ok(())
 }
