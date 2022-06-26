@@ -306,6 +306,7 @@ impl ReadBuffer {
     /// method on `Vec` this is `safe` because this function guarantees that
     /// the underlying data always is initialized.
     pub fn set_len(&mut self, length: usize) {
+        dbg!(length, self.data.len(), self.data.capacity());
         if length > self.data.capacity() {
             self.data = vec![0; length];
         } else if length > self.data.len() {

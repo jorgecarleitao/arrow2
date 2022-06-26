@@ -116,9 +116,9 @@ fn read_dictionary_block<R: Read + Seek>(
 pub fn read_file_dictionaries<R: Read + Seek>(
     reader: &mut R,
     metadata: &FileMetadata,
+    scratch: &mut ReadBuffer,
 ) -> Result<Dictionaries> {
     let mut dictionaries = Default::default();
-    let mut data = vec![].into();
 
     let blocks = if let Some(blocks) = metadata.dictionaries.as_deref() {
         blocks
@@ -127,7 +127,7 @@ pub fn read_file_dictionaries<R: Read + Seek>(
     };
 
     for block in blocks {
-        read_dictionary_block(reader, metadata, block, &mut dictionaries, &mut data)?;
+        read_dictionary_block(reader, metadata, block, &mut dictionaries, scratch)?;
     }
     Ok(dictionaries)
 }
@@ -343,7 +343,11 @@ impl<R: Read + Seek> FileReader<R> {
 
     fn read_dictionaries(&mut self) -> Result<()> {
         if self.dictionaries.is_none() {
-            self.dictionaries = Some(read_file_dictionaries(&mut self.reader, &self.metadata)?);
+            self.dictionaries = Some(read_file_dictionaries(
+                &mut self.reader,
+                &self.metadata,
+                &mut self.buffer,
+            )?);
         };
         Ok(())
     }

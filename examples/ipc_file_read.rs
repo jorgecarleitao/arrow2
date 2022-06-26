@@ -33,7 +33,7 @@ fn read_batch(path: &str) -> Result<(Schema, Chunk<Box<dyn Array>>)> {
     let schema = metadata.schema.clone();
 
     // advanced way: read the dictionary
-    let dictionaries = read::read_file_dictionaries(&mut file, &metadata)?;
+    let dictionaries = read::read_file_dictionaries(&mut file, &metadata, Default::default())?;
 
     let chunk_index = 0;
 
