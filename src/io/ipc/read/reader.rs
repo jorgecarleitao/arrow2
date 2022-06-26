@@ -36,16 +36,6 @@ pub struct FileMetadata {
     pub(crate) size: u64,
 }
 
-/// prepare `scratch` to read the message
-pub(super) fn prepare_scratch(scratch: &mut Vec<u8>, message_length: usize) -> &mut [u8] {
-    // ensure that we have enough scratch space
-    if message_length > scratch.len() {
-        scratch.resize(message_length, 0);
-    }
-    // return the buffer that will be overwritten by read
-    &mut scratch[..message_length]
-}
-
 /// Arrow File reader
 pub struct FileReader<R: Read + Seek> {
     reader: R,
@@ -54,13 +44,13 @@ pub struct FileReader<R: Read + Seek> {
     dictionaries: Option<Dictionaries>,
     current_block: usize,
     projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
-    buffer: Vec<u8>,
+    buffer: ReadBuffer,
 }
 
 fn read_dictionary_message<R: Read + Seek>(
     reader: &mut R,
     offset: u64,
-    data: &mut Vec<u8>,
+    data: &mut ReadBuffer,
 ) -> Result<()> {
     let mut message_size: [u8; 4] = [0; 4];
     reader.seek(SeekFrom::Start(offset))?;
@@ -74,7 +64,8 @@ fn read_dictionary_message<R: Read + Seek>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    reader.read_exact(prepare_scratch(data, message_length))?;
+    data.set_len(message_length);
+    reader.read_exact(data.as_mut())?;
     Ok(())
 }
 
@@ -83,7 +74,7 @@ fn read_dictionary_block<R: Read + Seek>(
     metadata: &FileMetadata,
     block: &arrow_format::ipc::Block,
     dictionaries: &mut Dictionaries,
-    scratch: &mut Vec<u8>,
+    scratch: &mut ReadBuffer,
 ) -> Result<()> {
     let offset: u64 = block
         .offset
@@ -95,7 +86,7 @@ fn read_dictionary_block<R: Read + Seek>(
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
     read_dictionary_message(reader, offset, scratch)?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(scratch)
+    let message = arrow_format::ipc::MessageRef::read_as_root(scratch.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let header = message
@@ -127,7 +118,7 @@ pub fn read_file_dictionaries<R: Read + Seek>(
     metadata: &FileMetadata,
 ) -> Result<Dictionaries> {
     let mut dictionaries = Default::default();
-    let mut data = vec![];
+    let mut data = vec![].into();
 
     let blocks = if let Some(blocks) = metadata.dictionaries.as_deref() {
         blocks
@@ -255,7 +246,7 @@ pub fn read_batch<R: Read + Seek>(
     metadata: &FileMetadata,
     projection: Option<&[usize]>,
     index: usize,
-    scratch: &mut Vec<u8>,
+    scratch: &mut ReadBuffer,
 ) -> Result<Chunk<Box<dyn Array>>> {
     let block = metadata.blocks[index];
 
@@ -276,9 +267,10 @@ pub fn read_batch<R: Read + Seek>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    reader.read_exact(prepare_scratch(scratch, meta_len))?;
+    scratch.set_len(meta_len);
+    reader.read_exact(scratch.as_mut())?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(scratch)
+    let message = arrow_format::ipc::MessageRef::read_as_root(scratch.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let batch = get_serialized_batch(&message)?;
@@ -327,7 +319,7 @@ impl<R: Read + Seek> FileReader<R> {
             dictionaries: Default::default(),
             projection,
             current_block: 0,
-            buffer: vec![],
+            buffer: Default::default(),
         }
     }
 

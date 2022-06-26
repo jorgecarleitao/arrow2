@@ -43,7 +43,7 @@ fn read_batch(path: &str) -> Result<(Schema, Chunk<Box<dyn Array>>)> {
         &metadata,
         None,
         chunk_index,
-        &mut vec![],
+        &mut Default::default(),
     )?;
 
     Ok((schema, chunk))

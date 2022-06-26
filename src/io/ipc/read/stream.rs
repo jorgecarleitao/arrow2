@@ -8,7 +8,6 @@ use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::Schema;
 use crate::error::{Error, Result};
-use crate::io::ipc::read::reader::prepare_scratch;
 use crate::io::ipc::IpcSchema;
 
 use super::super::CONTINUATION_MARKER;
@@ -91,8 +90,8 @@ fn read_next<R: Read>(
     reader: &mut R,
     metadata: &StreamMetadata,
     dictionaries: &mut Dictionaries,
-    message_buffer: &mut Vec<u8>,
-    data_buffer: &mut Vec<u8>,
+    message_buffer: &mut ReadBuffer,
+    data_buffer: &mut ReadBuffer,
     projection: &Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
 ) -> Result<Option<StreamState>> {
     // determine metadata length
@@ -130,9 +129,10 @@ fn read_next<R: Read>(
         return Ok(None);
     }
 
-    reader.read_exact(prepare_scratch(message_buffer, meta_length))?;
+    message_buffer.set_len(meta_length);
+    reader.read_exact(message_buffer.as_mut())?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(message_buffer)
+    let message = arrow_format::ipc::MessageRef::read_as_root(message_buffer.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let header = message
@@ -146,11 +146,12 @@ fn read_next<R: Read>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
+    data_buffer.set_len(block_length);
     match header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
-            reader.read_exact(prepare_scratch(data_buffer, block_length))?;
+            reader.read_exact(data_buffer.as_mut())?;
 
-            let file_size = data_buffer.len() as u64;
+            let file_size = data_buffer.as_ref().len() as u64;
 
             let mut reader = std::io::Cursor::new(data_buffer);
 
@@ -216,8 +217,8 @@ pub struct StreamReader<R: Read> {
     metadata: StreamMetadata,
     dictionaries: Dictionaries,
     finished: bool,
-    data_buffer: Vec<u8>,
-    message_buffer: Vec<u8>,
+    data_buffer: ReadBuffer,
+    message_buffer: ReadBuffer,
     projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
 }
 
@@ -242,8 +243,8 @@ impl<R: Read> StreamReader<R> {
             metadata,
             dictionaries: Default::default(),
             finished: false,
-            data_buffer: vec![],
-            message_buffer: vec![],
+            data_buffer: Default::default(),
+            message_buffer: Default::default(),
             projection,
         }
     }

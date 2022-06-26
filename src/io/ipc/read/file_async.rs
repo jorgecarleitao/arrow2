@@ -11,10 +11,11 @@ use crate::array::*;
 use crate::chunk::Chunk;
 use crate::datatypes::{Field, Schema};
 use crate::error::{Error, Result};
-use crate::io::ipc::read::reader::prepare_scratch;
 use crate::io::ipc::{IpcSchema, ARROW_MAGIC, CONTINUATION_MARKER};
 
-use super::common::{apply_projection, prepare_projection, read_dictionary, read_record_batch};
+use super::common::{
+    apply_projection, prepare_projection, read_dictionary, read_record_batch, ReadBuffer,
+};
 use super::reader::{deserialize_footer, get_serialized_batch};
 use super::Dictionaries;
 use super::FileMetadata;
@@ -78,8 +79,8 @@ impl<'a> FileStream<'a> {
             // read dictionaries
             cached_read_dictionaries(&mut reader, &metadata, &mut dictionaries).await?;
 
-            let mut meta_buffer = vec![];
-            let mut block_buffer = vec![];
+            let mut meta_buffer = Default::default();
+            let mut block_buffer = Default::default();
             for block in 0..metadata.blocks.len() {
                 let chunk = read_batch(
                     &mut reader,
@@ -153,8 +154,8 @@ async fn read_batch<R>(
     metadata: &FileMetadata,
     projection: Option<&[usize]>,
     block: usize,
-    meta_buffer: &mut Vec<u8>,
-    block_buffer: &mut Vec<u8>,
+    meta_buffer: &mut ReadBuffer,
+    block_buffer: &mut ReadBuffer,
 ) -> Result<Chunk<Box<dyn Array>>>
 where
     R: AsyncRead + AsyncSeek + Unpin,
@@ -177,11 +178,10 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    reader
-        .read_exact(prepare_scratch(meta_buffer, meta_len))
-        .await?;
+    meta_buffer.set_len(meta_len);
+    reader.read_exact(meta_buffer.as_mut()).await?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(meta_buffer)
+    let message = arrow_format::ipc::MessageRef::read_as_root(meta_buffer.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let batch = get_serialized_batch(&message)?;
@@ -192,10 +192,9 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    reader
-        .read_exact(prepare_scratch(block_buffer, block_length))
-        .await?;
-    let mut cursor = std::io::Cursor::new(block_buffer);
+    block_buffer.set_len(block_length);
+    reader.read_exact(block_buffer.as_mut()).await?;
+    let mut cursor = std::io::Cursor::new(block_buffer.as_ref());
 
     read_record_batch(
         batch,
@@ -222,8 +221,8 @@ where
     R: AsyncRead + AsyncSeek + Unpin,
 {
     let mut dictionaries = Default::default();
-    let mut data = vec![];
-    let mut buffer = vec![];
+    let mut data = ReadBuffer::new(0);
+    let mut buffer = ReadBuffer::new(0);
 
     for block in blocks {
         let offset: u64 = block
@@ -238,7 +237,7 @@ where
 
         read_dictionary_message(&mut reader, offset, &mut data).await?;
 
-        let message = arrow_format::ipc::MessageRef::read_as_root(&data)
+        let message = arrow_format::ipc::MessageRef::read_as_root(data.as_ref())
             .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
         let header = message
@@ -246,12 +245,11 @@ where
             .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferHeader(err)))?
             .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageHeader))?;
 
+        buffer.set_len(length);
         match header {
             MessageHeaderRef::DictionaryBatch(batch) => {
-                reader
-                    .read_exact(prepare_scratch(&mut buffer, length))
-                    .await?;
-                let mut cursor = std::io::Cursor::new(&mut buffer);
+                reader.read_exact(buffer.as_mut()).await?;
+                let mut cursor = std::io::Cursor::new(buffer.as_ref());
                 read_dictionary(
                     batch,
                     fields,
@@ -268,7 +266,7 @@ where
     Ok(dictionaries)
 }
 
-async fn read_dictionary_message<R>(mut reader: R, offset: u64, data: &mut Vec<u8>) -> Result<()>
+async fn read_dictionary_message<R>(mut reader: R, offset: u64, data: &mut ReadBuffer) -> Result<()>
 where
     R: AsyncRead + AsyncSeek + Unpin,
 {
@@ -284,9 +282,8 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    reader
-        .read_exact(prepare_scratch(data, footer_size))
-        .await?;
+    data.set_len(footer_size);
+    reader.read_exact(data.as_mut()).await?;
 
     Ok(())
 }

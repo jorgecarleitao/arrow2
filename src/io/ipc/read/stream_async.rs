@@ -10,10 +10,9 @@ use futures::Stream;
 use crate::array::*;
 use crate::chunk::Chunk;
 use crate::error::{Error, Result};
-use crate::io::ipc::read::reader::prepare_scratch;
 
 use super::super::CONTINUATION_MARKER;
-use super::common::{read_dictionary, read_record_batch};
+use super::common::{read_dictionary, read_record_batch, ReadBuffer};
 use super::schema::deserialize_stream_metadata;
 use super::Dictionaries;
 use super::OutOfSpecKind;
@@ -25,9 +24,9 @@ struct ReadState<R> {
     pub metadata: StreamMetadata,
     pub dictionaries: Dictionaries,
     /// The internal buffer to read data inside the messages (records and dictionaries) to
-    pub data_buffer: Vec<u8>,
+    pub data_buffer: ReadBuffer,
     /// The internal buffer to read messages to
-    pub message_buffer: Vec<u8>,
+    pub message_buffer: ReadBuffer,
 }
 
 /// The state of an Arrow stream
@@ -104,12 +103,13 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
         return Ok(None);
     }
 
+    state.message_buffer.set_len(meta_length);
     state
         .reader
-        .read_exact(prepare_scratch(&mut state.message_buffer, meta_length))
+        .read_exact(state.message_buffer.as_mut())
         .await?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(&state.message_buffer)
+    let message = arrow_format::ipc::MessageRef::read_as_root(state.message_buffer.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let header = message
@@ -123,12 +123,10 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
+    state.data_buffer.set_len(block_length);
     match header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
-            state
-                .reader
-                .read_exact(prepare_scratch(&mut state.data_buffer, block_length))
-                .await?;
+            state.reader.read_exact(state.data_buffer.as_mut()).await?;
 
             read_record_batch(
                 batch,
@@ -139,7 +137,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
                 state.metadata.version,
                 &mut std::io::Cursor::new(&state.data_buffer),
                 0,
-                state.data_buffer.len() as u64,
+                state.data_buffer.as_ref().len() as u64,
             )
             .map(|chunk| Some(StreamState::Some((state, chunk))))
         }
