@@ -8,8 +8,9 @@ fn _test_round_trip(arrays: Vec<Box<dyn Array>>) -> Result<()> {
 
     let mut stream = Box::new(ffi::ArrowArrayStream::empty());
 
-    unsafe { ffi::export_iterator(iter, field.clone(), &mut *stream) }
+    *stream = ffi::export_iterator(iter, field.clone());
 
+    // import
     let mut stream = unsafe { ffi::ArrowArrayStreamReader::try_new(stream)? };
 
     let mut produced_arrays: Vec<Box<dyn Array>> = vec![];

@@ -1,14 +1,14 @@
 use std::mem::ManuallyDrop;
 use std::ops::{Deref, DerefMut};
 use std::panic::RefUnwindSafe;
-use std::{ptr::NonNull, sync::Arc};
+use std::ptr::NonNull;
 
 /// Mode of deallocating memory regions
 enum Allocation {
     /// Native allocation
     Native,
     // A foreign allocator and its ref count
-    Foreign(Arc<dyn RefUnwindSafe + Send + Sync>),
+    Foreign(Box<dyn RefUnwindSafe + Send + Sync>),
 }
 
 /// A continuous memory region that may be allocated externally.
@@ -35,7 +35,7 @@ impl<T> Bytes<T> {
     pub unsafe fn from_owned(
         ptr: std::ptr::NonNull<T>,
         len: usize,
-        owner: Arc<dyn RefUnwindSafe + Send + Sync>,
+        owner: Box<dyn RefUnwindSafe + Send + Sync>,
     ) -> Self {
         // This line is technically outside the assumptions of `Vec::from_raw_parts`, since
         // `ptr` was not allocated by `Vec`. However, one of the invariants of this struct

@@ -1,5 +1,6 @@
 //! Contains functionality to load an ArrayData from the C Data Interface
-use std::{ptr::NonNull, sync::Arc};
+use std::ptr::NonNull;
+use std::sync::Arc;
 
 use crate::{
     array::*,
@@ -178,7 +179,7 @@ impl ArrowArray {
 unsafe fn create_buffer<T: NativeType>(
     array: &ArrowArray,
     data_type: &DataType,
-    owner: Arc<InternalArrowArray>,
+    owner: Box<InternalArrowArray>,
     index: usize,
 ) -> Result<Buffer<T>> {
     if array.buffers.is_null() {
@@ -209,7 +210,7 @@ unsafe fn create_buffer<T: NativeType>(
 /// This function assumes that `ceil(self.length * bits, 8)` is the size of the buffer
 unsafe fn create_bitmap(
     array: &ArrowArray,
-    owner: Arc<InternalArrowArray>,
+    owner: Box<InternalArrowArray>,
     index: usize,
 ) -> Result<Bitmap> {
     if array.buffers.is_null() {
@@ -310,7 +311,7 @@ fn buffer_len(array: &ArrowArray, data_type: &DataType, i: usize) -> Result<usiz
 fn create_child(
     array: &ArrowArray,
     field: &DataType,
-    parent: Arc<InternalArrowArray>,
+    parent: Box<InternalArrowArray>,
     index: usize,
 ) -> Result<ArrowArrayChild<'static>> {
     let data_type = get_child(field, index)?;
@@ -328,7 +329,7 @@ fn create_child(
 fn create_dictionary(
     array: &ArrowArray,
     data_type: &DataType,
-    parent: Arc<InternalArrowArray>,
+    parent: Box<InternalArrowArray>,
 ) -> Result<Option<ArrowArrayChild<'static>>> {
     if let DataType::Dictionary(_, values, _) = data_type {
         let data_type = values.as_ref().clone();
@@ -341,8 +342,8 @@ fn create_dictionary(
 }
 
 pub trait ArrowArrayRef: std::fmt::Debug {
-    fn owner(&self) -> Arc<InternalArrowArray> {
-        self.parent().clone()
+    fn owner(&self) -> Box<InternalArrowArray> {
+        (*self.parent()).clone()
     }
 
     /// returns the null bit buffer.
@@ -385,7 +386,7 @@ pub trait ArrowArrayRef: std::fmt::Debug {
 
     fn n_buffers(&self) -> usize;
 
-    fn parent(&self) -> &Arc<InternalArrowArray>;
+    fn parent(&self) -> &Box<InternalArrowArray>;
     fn array(&self) -> &ArrowArray;
     fn data_type(&self) -> &DataType;
 }
@@ -409,25 +410,30 @@ pub trait ArrowArrayRef: std::fmt::Debug {
 /// calling [ArrowArray::release] and [ArrowSchema::release] accordingly.
 ///
 /// Furthermore, this struct assumes that the incoming data agrees with the C data interface.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InternalArrowArray {
-    array: Box<ArrowArray>,
-    data_type: DataType,
+    // Arc is used for sharability since this is immutable
+    array: Arc<ArrowArray>,
+    // Arced to reduce cost of cloning
+    data_type: Arc<DataType>,
 }
 
 impl InternalArrowArray {
-    pub fn new(array: Box<ArrowArray>, data_type: DataType) -> Self {
-        Self { array, data_type }
+    pub fn new(array: ArrowArray, data_type: DataType) -> Self {
+        Self {
+            array: Arc::new(array),
+            data_type: Arc::new(data_type),
+        }
     }
 }
 
-impl ArrowArrayRef for Arc<InternalArrowArray> {
+impl ArrowArrayRef for Box<InternalArrowArray> {
     /// the data_type as declared in the schema
     fn data_type(&self) -> &DataType {
         &self.data_type
     }
 
-    fn parent(&self) -> &Arc<InternalArrowArray> {
+    fn parent(&self) -> &Box<InternalArrowArray> {
         self
     }
 
@@ -444,7 +450,7 @@ impl ArrowArrayRef for Arc<InternalArrowArray> {
 pub struct ArrowArrayChild<'a> {
     array: &'a ArrowArray,
     data_type: DataType,
-    parent: Arc<InternalArrowArray>,
+    parent: Box<InternalArrowArray>,
 }
 
 impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
@@ -453,7 +459,7 @@ impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
         &self.data_type
     }
 
-    fn parent(&self) -> &Arc<InternalArrowArray> {
+    fn parent(&self) -> &Box<InternalArrowArray> {
         &self.parent
     }
 
@@ -470,7 +476,7 @@ impl<'a> ArrowArrayChild<'a> {
     fn from_raw(
         array: &'a ArrowArray,
         data_type: DataType,
-        parent: Arc<InternalArrowArray>,
+        parent: Box<InternalArrowArray>,
     ) -> Self {
         Self {
             array,

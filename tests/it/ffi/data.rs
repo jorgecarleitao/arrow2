@@ -7,24 +7,14 @@ use std::collections::BTreeMap;
 fn _test_round_trip(array: Box<dyn Array>, expected: Box<dyn Array>) -> Result<()> {
     let field = Field::new("a", array.data_type().clone(), true);
 
-    let array_ptr = Box::new(ffi::ArrowArray::empty());
-    let schema_ptr = Box::new(ffi::ArrowSchema::empty());
-
-    let array_ptr = Box::into_raw(array_ptr);
-    let schema_ptr = Box::into_raw(schema_ptr);
-
-    unsafe {
-        ffi::export_array_to_c(array, array_ptr);
-        ffi::export_field_to_c(&field, schema_ptr);
-    }
-
-    let array_ptr = unsafe { Box::from_raw(array_ptr) };
-    let schema_ptr = unsafe { Box::from_raw(schema_ptr) };
+    // export array and corresponding data_type
+    let array_ffi = ffi::export_array_to_c(array);
+    let schema_ffi = ffi::export_field_to_c(&field);
 
     // import references
-    let result_field = unsafe { ffi::import_field_from_c(schema_ptr.as_ref())? };
+    let result_field = unsafe { ffi::import_field_from_c(&schema_ffi)? };
     let result_array =
-        unsafe { ffi::import_array_from_c(array_ptr, result_field.data_type.clone())? };
+        unsafe { ffi::import_array_from_c(array_ffi, result_field.data_type.clone())? };
 
     assert_eq!(&result_array, &expected);
     assert_eq!(result_field, field);
@@ -41,16 +31,9 @@ fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
 }
 
 fn test_round_trip_schema(field: Field) -> Result<()> {
-    // create a `InternalArrowArray` from the data.
-    let schema_ptr = Box::new(ffi::ArrowSchema::empty());
+    let schema_ffi = ffi::export_field_to_c(&field);
 
-    let schema_ptr = Box::into_raw(schema_ptr);
-
-    unsafe { ffi::export_field_to_c(&field, schema_ptr) };
-
-    let schema_ptr = unsafe { Box::from_raw(schema_ptr) };
-
-    let result = unsafe { ffi::import_field_from_c(schema_ptr.as_ref())? };
+    let result = unsafe { ffi::import_field_from_c(&schema_ffi)? };
 
     assert_eq!(result, field);
     Ok(())
