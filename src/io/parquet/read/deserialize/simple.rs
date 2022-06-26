@@ -55,7 +55,7 @@ where
 }
 
 /// An iterator adapter that maps an iterator of DataPages into an iterator of Arrays
-/// of [`DataType`] `data_type` and `chunk_size`.
+/// of [`DataType`] `data_type` and length `chunk_size`.
 pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
     pages: I,
     type_: &PrimitiveType,
