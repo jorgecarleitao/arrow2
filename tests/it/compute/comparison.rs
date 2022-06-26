@@ -265,7 +265,7 @@ fn compare_no_propagating_nulls_eq() {
 
     // now mask with a null
     let mask = Bitmap::from_iter([false, true, true]);
-    let a_masked = a.with_validity(Some(mask));
+    let a_masked = a.clone().with_validity(Some(mask));
     let out = comparison::utf8::eq_and_validity(&a, &a_masked);
     check_mask(&out, &[false, true, true]);
 
@@ -306,7 +306,7 @@ fn compare_no_propagating_nulls_neq() {
 
     // now mask with a null
     let mask = Bitmap::from_iter([false, true, true]);
-    let a_masked = a.with_validity(Some(mask));
+    let a_masked = a.clone().with_validity(Some(mask));
     let out = comparison::utf8::neq_and_validity(&a, &a_masked);
     check_mask(&out, &[true, false, false]);
 

@@ -102,9 +102,9 @@ pub trait Array: Send + Sync + dyn_clone::DynClone + 'static {
     /// The caller must ensure that `offset + length <= self.len()`
     unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array>;
 
-    /// Sets the validity bitmap on this [`Array`].
+    /// Clones this [`Array`] with a new new assigned bitmap.
     /// # Panic
-    /// This function panics iff `validity.len() < self.len()`.
+    /// This function panics iff `validity.len() != self.len()`.
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array>;
 
     /// Clone a `&dyn Array` to an owned `Box<dyn Array>`.

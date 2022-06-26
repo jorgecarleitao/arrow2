@@ -109,16 +109,20 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         }
     }
 
-    /// Sets the validity bitmap on this [`Array`].
+    /// Returns this [`DictionaryArray`] with a new validity.
     /// # Panic
     /// This function panics iff `validity.len() != self.len()`.
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
-        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity should be as least as large as the array")
-        }
-        let mut arr = self.clone();
-        arr.values = arr.values.with_validity(validity);
-        arr
+    #[must_use]
+    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
+        self.set_validity(validity);
+        self
+    }
+
+    /// Sets the validity of the keys of this [`DictionaryArray`].
+    /// # Panics
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
+        self.keys.set_validity(validity);
     }
 }
 
@@ -213,7 +217,7 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
         Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
-        Box::new(self.with_validity(validity))
+        Box::new(self.clone().with_validity(validity))
     }
     fn to_boxed(&self) -> Box<dyn Array> {
         Box::new(self.clone())

@@ -43,8 +43,8 @@ pub fn eq(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
 pub fn eq_and_validity(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     let validity_lhs = lhs.validity().cloned();
     let validity_rhs = rhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
-    let rhs = rhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
+    let rhs = rhs.clone().with_validity(None);
     let out = compare_op(&lhs, &rhs, |a, b| !(a ^ b));
 
     finish_eq_validities(out, validity_lhs, validity_rhs)
@@ -62,7 +62,7 @@ pub fn eq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
 /// Perform `lhs == rhs` operation on a [`BooleanArray`] and a scalar value and include validities in comparison.
 pub fn eq_scalar_and_validity(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     let validity = lhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
     if rhs {
         finish_eq_validities(lhs, validity, None)
     } else {
@@ -83,8 +83,8 @@ pub fn neq(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
 pub fn neq_and_validity(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     let validity_lhs = lhs.validity().cloned();
     let validity_rhs = rhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
-    let rhs = rhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
+    let rhs = rhs.clone().with_validity(None);
     let out = compare_op(&lhs, &rhs, |a, b| a ^ b);
 
     finish_neq_validities(out, validity_lhs, validity_rhs)
@@ -98,7 +98,7 @@ pub fn neq_scalar(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
 /// Perform `left != right` operation on an array and a scalar value.
 pub fn neq_scalar_and_validity(lhs: &BooleanArray, rhs: bool) -> BooleanArray {
     let validity = lhs.validity().cloned();
-    let lhs = lhs.with_validity(None);
+    let lhs = lhs.clone().with_validity(None);
     let out = eq_scalar(&lhs, !rhs);
     finish_neq_validities(out, validity, None)
 }

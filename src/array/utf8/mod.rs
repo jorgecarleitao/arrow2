@@ -230,16 +230,23 @@ impl<O: Offset> Utf8Array<O> {
         std::sync::Arc::new(self)
     }
 
-    /// Clones this [`Utf8Array`] and assigns it a new validity
-    /// # Panic
+    /// Returns this [`Utf8Array`] with a new validity.
+    /// # Panics
     /// This function panics iff `validity.len() != self.len()`.
-    pub fn with_validity(&self, validity: Option<Bitmap>) -> Self {
+    #[must_use]
+    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
+        self.set_validity(validity);
+        self
+    }
+
+    /// Sets the validity of this [`Utf8Array`].
+    /// # Panics
+    /// This function panics iff `validity.len() != self.len()`.
+    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
         if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity's len must be equal to the array")
+            panic!("validity's length must be equal to the array's length")
         }
-        let mut arr = self.clone();
-        arr.validity = validity;
-        arr
+        self.validity = validity;
     }
 
     /// Try to convert this `Utf8Array` to a `MutableUtf8Array`
@@ -566,7 +573,7 @@ impl<O: Offset> Array for Utf8Array<O> {
         Box::new(self.slice_unchecked(offset, length))
     }
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
-        Box::new(self.with_validity(validity))
+        Box::new(self.clone().with_validity(validity))
     }
 
     fn to_boxed(&self) -> Box<dyn Array> {
