@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":[["read","APIs to read and deserialize NDJSON."],["write","APIs to serialize and write to NDJSON."]]};
