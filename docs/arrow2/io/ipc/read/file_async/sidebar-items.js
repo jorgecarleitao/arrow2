@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["read_file_metadata_async","Read the metadata from an IPC file."]],"struct":[["FileStream","Async reader for Arrow IPC files"]]};
