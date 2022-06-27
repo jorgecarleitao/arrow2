@@ -467,6 +467,12 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             chunk_size,
             |x: i32| x as u32,
         )),
+        UInt64 => dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
+            iter,
+            data_type,
+            chunk_size,
+            |x: i64| x as u64,
+        )),
         Int8 => dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
             iter,
             data_type,
