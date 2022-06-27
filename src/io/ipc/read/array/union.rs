@@ -9,8 +9,9 @@ use crate::error::{Error, Result};
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
 use super::super::read_basic::*;
-use super::super::Dictionaries;
-use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind, Version};
+use super::super::{
+    Compression, Dictionaries, IpcBuffer, Node, OutOfSpecKind, ReadBuffer, Version,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_union<R: Read + Seek>(
@@ -24,6 +25,7 @@ pub fn read_union<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<Compression>,
     version: Version,
+    scratch: &mut ReadBuffer,
 ) -> Result<UnionArray> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
         Error::oos(format!(
@@ -50,6 +52,7 @@ pub fn read_union<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )?;
 
     let offsets = if let DataType::Union(_, _, mode) = data_type {
@@ -61,6 +64,7 @@ pub fn read_union<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                scratch,
             )?)
         } else {
             None
@@ -86,6 +90,7 @@ pub fn read_union<R: Read + Seek>(
                 is_little_endian,
                 compression,
                 version,
+                scratch,
             )
         })
         .collect::<Result<Vec<_>>>()?;

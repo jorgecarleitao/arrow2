@@ -15,6 +15,7 @@ use super::common::*;
 use super::schema::deserialize_stream_metadata;
 use super::Dictionaries;
 use super::OutOfSpecKind;
+use super::ReadBuffer;
 
 /// Metadata of an Arrow IPC stream, written at the start of the stream
 #[derive(Debug, Clone)]
@@ -90,9 +91,10 @@ fn read_next<R: Read>(
     reader: &mut R,
     metadata: &StreamMetadata,
     dictionaries: &mut Dictionaries,
-    message_buffer: &mut Vec<u8>,
-    data_buffer: &mut Vec<u8>,
+    message_buffer: &mut ReadBuffer,
+    data_buffer: &mut ReadBuffer,
     projection: &Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
+    scratch: &mut ReadBuffer,
 ) -> Result<Option<StreamState>> {
     // determine metadata length
     let mut meta_length: [u8; 4] = [0; 4];
@@ -129,11 +131,10 @@ fn read_next<R: Read>(
         return Ok(None);
     }
 
-    message_buffer.clear();
-    message_buffer.resize(meta_length, 0);
-    reader.read_exact(message_buffer)?;
+    message_buffer.set_len(meta_length);
+    reader.read_exact(message_buffer.as_mut())?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(message_buffer)
+    let message = arrow_format::ipc::MessageRef::read_as_root(message_buffer.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let header = message
@@ -147,13 +148,12 @@ fn read_next<R: Read>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
+    data_buffer.set_len(block_length);
     match header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
-            data_buffer.clear();
-            data_buffer.resize(block_length, 0);
-            reader.read_exact(data_buffer)?;
+            reader.read_exact(data_buffer.as_mut())?;
 
-            let file_size = data_buffer.len() as u64;
+            let file_size = data_buffer.as_ref().len() as u64;
 
             let mut reader = std::io::Cursor::new(data_buffer);
 
@@ -167,6 +167,7 @@ fn read_next<R: Read>(
                 &mut reader,
                 0,
                 file_size,
+                scratch,
             );
 
             if let Some((_, map, _)) = projection {
@@ -192,6 +193,7 @@ fn read_next<R: Read>(
                 &mut dict_reader,
                 0,
                 buf.len() as u64,
+                scratch,
             )?;
 
             // read the next message until we encounter a RecordBatch message
@@ -202,6 +204,7 @@ fn read_next<R: Read>(
                 message_buffer,
                 data_buffer,
                 projection,
+                scratch,
             )
         }
         _ => Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
@@ -219,9 +222,10 @@ pub struct StreamReader<R: Read> {
     metadata: StreamMetadata,
     dictionaries: Dictionaries,
     finished: bool,
-    data_buffer: Vec<u8>,
-    message_buffer: Vec<u8>,
+    data_buffer: ReadBuffer,
+    message_buffer: ReadBuffer,
     projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
+    scratch: ReadBuffer,
 }
 
 impl<R: Read> StreamReader<R> {
@@ -245,9 +249,10 @@ impl<R: Read> StreamReader<R> {
             metadata,
             dictionaries: Default::default(),
             finished: false,
-            data_buffer: vec![],
-            message_buffer: vec![],
+            data_buffer: Default::default(),
+            message_buffer: Default::default(),
             projection,
+            scratch: Default::default(),
         }
     }
 
@@ -280,6 +285,7 @@ impl<R: Read> StreamReader<R> {
             &mut self.message_buffer,
             &mut self.data_buffer,
             &self.projection,
+            &mut self.scratch,
         )?;
         if batch.is_none() {
             self.finished = true;

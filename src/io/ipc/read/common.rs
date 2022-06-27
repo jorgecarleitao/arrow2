@@ -9,6 +9,7 @@ use crate::datatypes::{DataType, Field};
 use crate::error::{Error, Result};
 use crate::io::ipc::read::OutOfSpecKind;
 use crate::io::ipc::{IpcField, IpcSchema};
+use crate::io::ReadBuffer;
 
 use super::deserialize::{read, skip};
 use super::Dictionaries;
@@ -85,6 +86,7 @@ pub fn read_record_batch<R: Read + Seek>(
     reader: &mut R,
     block_offset: u64,
     file_size: u64,
+    scratch: &mut ReadBuffer,
 ) -> Result<Chunk<Box<dyn Array>>> {
     assert_eq!(fields.len(), ipc_schema.fields.len());
     let buffers = batch
@@ -136,6 +138,7 @@ pub fn read_record_batch<R: Read + Seek>(
                         Error::from(OutOfSpecKind::InvalidFlatbufferCompression(err))
                     })?,
                     version,
+                    scratch,
                 )?)),
                 ProjectionResult::NotSelected((field, _)) => {
                     skip(&mut field_nodes, &field.data_type, &mut buffers)?;
@@ -162,6 +165,7 @@ pub fn read_record_batch<R: Read + Seek>(
                         Error::from(OutOfSpecKind::InvalidFlatbufferCompression(err))
                     })?,
                     version,
+                    scratch,
                 )
             })
             .collect::<Result<Vec<_>>>()?
@@ -221,6 +225,7 @@ fn first_dict_field<'a>(
 
 /// Read the dictionary from the buffer and provided metadata,
 /// updating the `dictionaries` with the resulting dictionary
+#[allow(clippy::too_many_arguments)]
 pub fn read_dictionary<R: Read + Seek>(
     batch: arrow_format::ipc::DictionaryBatchRef,
     fields: &[Field],
@@ -229,6 +234,7 @@ pub fn read_dictionary<R: Read + Seek>(
     reader: &mut R,
     block_offset: u64,
     file_size: u64,
+    scratch: &mut ReadBuffer,
 ) -> Result<()> {
     if batch
         .is_delta()
@@ -270,6 +276,7 @@ pub fn read_dictionary<R: Read + Seek>(
                 reader,
                 block_offset,
                 file_size,
+                scratch,
             )?;
             let mut arrays = columns.into_arrays();
             arrays.pop().unwrap()

@@ -10,8 +10,9 @@ use crate::error::{Error, Result};
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
 use super::super::read_basic::*;
-use super::super::Dictionaries;
-use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind, Version};
+use super::super::{
+    Compression, Dictionaries, IpcBuffer, Node, OutOfSpecKind, ReadBuffer, Version,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_list<O: Offset, R: Read + Seek>(
@@ -25,6 +26,7 @@ pub fn read_list<O: Offset, R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<Compression>,
     version: Version,
+    scratch: &mut ReadBuffer,
 ) -> Result<ListArray<O>>
 where
     Vec<u8>: TryInto<O::Bytes>,
@@ -57,6 +59,7 @@ where
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )
     // Older versions of the IPC format sometimes do not report an offset
     .or_else(|_| Result::Ok(Buffer::<O>::from(vec![O::default()])))?;
@@ -74,6 +77,7 @@ where
         is_little_endian,
         compression,
         version,
+        scratch,
     )?;
     ListArray::try_new(data_type, offsets, values, validity)
 }

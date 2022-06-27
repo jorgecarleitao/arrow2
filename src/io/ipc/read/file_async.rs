@@ -18,6 +18,7 @@ use super::reader::{deserialize_footer, get_serialized_batch};
 use super::Dictionaries;
 use super::FileMetadata;
 use super::OutOfSpecKind;
+use super::ReadBuffer;
 
 /// Async reader for Arrow IPC files
 pub struct FileStream<'a> {
@@ -77,8 +78,9 @@ impl<'a> FileStream<'a> {
             // read dictionaries
             cached_read_dictionaries(&mut reader, &metadata, &mut dictionaries).await?;
 
-            let mut meta_buffer = vec![];
-            let mut block_buffer = vec![];
+            let mut meta_buffer = Default::default();
+            let mut block_buffer = Default::default();
+            let mut scratch = Default::default();
             for block in 0..metadata.blocks.len() {
                 let chunk = read_batch(
                     &mut reader,
@@ -88,6 +90,7 @@ impl<'a> FileStream<'a> {
                     block,
                     &mut meta_buffer,
                     &mut block_buffer,
+                    &mut scratch
                 ).await?;
 
                 let chunk = if let Some((_, map)) = &projection {
@@ -146,14 +149,16 @@ where
     deserialize_footer(&footer, u64::MAX)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn read_batch<R>(
     mut reader: R,
     dictionaries: &mut Dictionaries,
     metadata: &FileMetadata,
     projection: Option<&[usize]>,
     block: usize,
-    meta_buffer: &mut Vec<u8>,
-    block_buffer: &mut Vec<u8>,
+    meta_buffer: &mut ReadBuffer,
+    block_buffer: &mut ReadBuffer,
+    scratch: &mut ReadBuffer,
 ) -> Result<Chunk<Box<dyn Array>>>
 where
     R: AsyncRead + AsyncSeek + Unpin,
@@ -176,11 +181,10 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    meta_buffer.clear();
-    meta_buffer.resize(meta_len, 0);
-    reader.read_exact(meta_buffer).await?;
+    meta_buffer.set_len(meta_len);
+    reader.read_exact(meta_buffer.as_mut()).await?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(meta_buffer)
+    let message = arrow_format::ipc::MessageRef::read_as_root(meta_buffer.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let batch = get_serialized_batch(&message)?;
@@ -191,10 +195,9 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    block_buffer.clear();
-    block_buffer.resize(block_length, 0);
-    reader.read_exact(block_buffer).await?;
-    let mut cursor = std::io::Cursor::new(block_buffer);
+    block_buffer.set_len(block_length);
+    reader.read_exact(block_buffer.as_mut()).await?;
+    let mut cursor = std::io::Cursor::new(block_buffer.as_ref());
 
     read_record_batch(
         batch,
@@ -208,6 +211,7 @@ where
         &mut cursor,
         0,
         metadata.size,
+        scratch,
     )
 }
 
@@ -216,13 +220,14 @@ async fn read_dictionaries<R>(
     fields: &[Field],
     ipc_schema: &IpcSchema,
     blocks: &[Block],
+    scratch: &mut ReadBuffer,
 ) -> Result<Dictionaries>
 where
     R: AsyncRead + AsyncSeek + Unpin,
 {
     let mut dictionaries = Default::default();
-    let mut data = vec![];
-    let mut buffer = vec![];
+    let mut data: ReadBuffer = vec![].into();
+    let mut buffer: ReadBuffer = vec![].into();
 
     for block in blocks {
         let offset: u64 = block
@@ -237,7 +242,7 @@ where
 
         read_dictionary_message(&mut reader, offset, &mut data).await?;
 
-        let message = arrow_format::ipc::MessageRef::read_as_root(&data)
+        let message = arrow_format::ipc::MessageRef::read_as_root(data.as_ref())
             .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
         let header = message
@@ -245,12 +250,11 @@ where
             .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferHeader(err)))?
             .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageHeader))?;
 
+        buffer.set_len(length);
         match header {
             MessageHeaderRef::DictionaryBatch(batch) => {
-                buffer.clear();
-                buffer.resize(length, 0);
-                reader.read_exact(&mut buffer).await?;
-                let mut cursor = std::io::Cursor::new(&mut buffer);
+                reader.read_exact(buffer.as_mut()).await?;
+                let mut cursor = std::io::Cursor::new(buffer.as_ref());
                 read_dictionary(
                     batch,
                     fields,
@@ -259,6 +263,7 @@ where
                     &mut cursor,
                     0,
                     u64::MAX,
+                    scratch,
                 )?;
             }
             _ => return Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
@@ -267,7 +272,7 @@ where
     Ok(dictionaries)
 }
 
-async fn read_dictionary_message<R>(mut reader: R, offset: u64, data: &mut Vec<u8>) -> Result<()>
+async fn read_dictionary_message<R>(mut reader: R, offset: u64, data: &mut ReadBuffer) -> Result<()>
 where
     R: AsyncRead + AsyncSeek + Unpin,
 {
@@ -283,9 +288,8 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    data.clear();
-    data.resize(footer_size, 0);
-    reader.read_exact(data).await?;
+    data.set_len(footer_size);
+    reader.read_exact(data.as_mut()).await?;
 
     Ok(())
 }
@@ -302,6 +306,7 @@ async fn cached_read_dictionaries<R: AsyncRead + AsyncSeek + Unpin>(
                 &metadata.schema.fields,
                 &metadata.ipc_schema,
                 blocks,
+                &mut Default::default(),
             )
             .await?;
             *dictionaries = Some(new_dictionaries);

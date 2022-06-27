@@ -296,6 +296,7 @@ async fn record_batch_from_message(
         &mut reader,
         0,
         length as u64,
+        &mut Default::default()
     );
 
     arrow_batch_result.map_err(|e| Status::internal(format!("Could not convert to Chunk: {:?}", e)))
@@ -312,7 +313,7 @@ async fn dictionary_from_message(
     let mut reader = std::io::Cursor::new(data_body);
 
     let dictionary_batch_result =
-        ipc::read::read_dictionary(dict_batch, fields, ipc_schema, dictionaries, &mut reader, 0, length as u64);
+        ipc::read::read_dictionary(dict_batch, fields, ipc_schema, dictionaries, &mut reader, 0, length as u64, &mut Default::default());
     dictionary_batch_result
         .map_err(|e| Status::internal(format!("Could not convert to Dictionary: {:?}", e)))
 }

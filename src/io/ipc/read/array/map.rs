@@ -9,8 +9,9 @@ use crate::error::{Error, Result};
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
 use super::super::read_basic::*;
-use super::super::Dictionaries;
-use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind, Version};
+use super::super::{
+    Compression, Dictionaries, IpcBuffer, Node, OutOfSpecKind, ReadBuffer, Version,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_map<R: Read + Seek>(
@@ -24,6 +25,7 @@ pub fn read_map<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<Compression>,
     version: Version,
+    scratch: &mut ReadBuffer,
 ) -> Result<MapArray> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
         Error::oos(format!(
@@ -53,6 +55,7 @@ pub fn read_map<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )
     // Older versions of the IPC format sometimes do not report an offset
     .or_else(|_| Result::Ok(Buffer::<i32>::from(vec![0i32])))?;
@@ -70,6 +73,7 @@ pub fn read_map<R: Read + Seek>(
         is_little_endian,
         compression,
         version,
+        scratch,
     )?;
     MapArray::try_new(data_type, offsets, field, validity)
 }
