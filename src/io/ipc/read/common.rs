@@ -292,7 +292,7 @@ pub fn read_dictionary<R: Read + Seek>(
     Ok(())
 }
 
-/// A small wrapper around `[Vec<u8>]` that allows us to reuse memory once it is initialized.
+/// A small wrapper around [`Vec<u8>`] that allows us to reuse memory once it is initialized.
 /// This may improve performance of the [`Read`] trait.
 #[derive(Clone, Default)]
 pub struct ReadBuffer {
