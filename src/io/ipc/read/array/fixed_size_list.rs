@@ -4,6 +4,7 @@ use std::io::{Read, Seek};
 use crate::array::FixedSizeListArray;
 use crate::datatypes::DataType;
 use crate::error::{Error, Result};
+use crate::io::ipc::read::common::ReadBuffer;
 
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
@@ -23,6 +24,7 @@ pub fn read_fixed_size_list<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<Compression>,
     version: Version,
+    scratch: &mut ReadBuffer,
 ) -> Result<FixedSizeListArray> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
         Error::oos(format!(
@@ -53,6 +55,7 @@ pub fn read_fixed_size_list<R: Read + Seek>(
         is_little_endian,
         compression,
         version,
+        scratch,
     )?;
     FixedSizeListArray::try_new(data_type, values, validity)
 }

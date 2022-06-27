@@ -44,7 +44,8 @@ pub struct FileReader<R: Read + Seek> {
     dictionaries: Option<Dictionaries>,
     current_block: usize,
     projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
-    buffer: ReadBuffer,
+    data_scratch: ReadBuffer,
+    message_scratch: ReadBuffer,
 }
 
 fn read_dictionary_message<R: Read + Seek>(
@@ -74,7 +75,8 @@ fn read_dictionary_block<R: Read + Seek>(
     metadata: &FileMetadata,
     block: &arrow_format::ipc::Block,
     dictionaries: &mut Dictionaries,
-    scratch: &mut ReadBuffer,
+    message_scratch: &mut ReadBuffer,
+    dictionary_scratch: &mut ReadBuffer,
 ) -> Result<()> {
     let offset: u64 = block
         .offset
@@ -84,9 +86,9 @@ fn read_dictionary_block<R: Read + Seek>(
         .meta_data_length
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
-    read_dictionary_message(reader, offset, scratch)?;
+    read_dictionary_message(reader, offset, message_scratch)?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(scratch.as_ref())
+    let message = arrow_format::ipc::MessageRef::read_as_root(message_scratch.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let header = message
@@ -105,6 +107,7 @@ fn read_dictionary_block<R: Read + Seek>(
                 reader,
                 block_offset,
                 metadata.size,
+                dictionary_scratch,
             )
         }
         _ => Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
@@ -125,9 +128,18 @@ pub fn read_file_dictionaries<R: Read + Seek>(
     } else {
         return Ok(HashMap::new());
     };
+    // use a temporary smaller scratch for the messages
+    let mut message_scratch = Default::default();
 
     for block in blocks {
-        read_dictionary_block(reader, metadata, block, &mut dictionaries, scratch)?;
+        read_dictionary_block(
+            reader,
+            metadata,
+            block,
+            &mut dictionaries,
+            &mut message_scratch,
+            scratch,
+        )?;
     }
     Ok(dictionaries)
 }
@@ -246,7 +258,8 @@ pub fn read_batch<R: Read + Seek>(
     metadata: &FileMetadata,
     projection: Option<&[usize]>,
     index: usize,
-    scratch: &mut ReadBuffer,
+    message_scratch: &mut ReadBuffer,
+    data_scratch: &mut ReadBuffer,
 ) -> Result<Chunk<Box<dyn Array>>> {
     let block = metadata.blocks[index];
 
@@ -267,10 +280,10 @@ pub fn read_batch<R: Read + Seek>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    scratch.set_len(meta_len);
-    reader.read_exact(scratch.as_mut())?;
+    message_scratch.set_len(meta_len);
+    reader.read_exact(message_scratch.as_mut())?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(scratch.as_ref())
+    let message = arrow_format::ipc::MessageRef::read_as_root(message_scratch.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let batch = get_serialized_batch(&message)?;
@@ -297,6 +310,7 @@ pub fn read_batch<R: Read + Seek>(
         reader,
         offset + length,
         metadata.size,
+        data_scratch,
     )
 }
 
@@ -319,7 +333,8 @@ impl<R: Read + Seek> FileReader<R> {
             dictionaries: Default::default(),
             projection,
             current_block: 0,
-            buffer: Default::default(),
+            data_scratch: Default::default(),
+            message_scratch: Default::default(),
         }
     }
 
@@ -346,7 +361,7 @@ impl<R: Read + Seek> FileReader<R> {
             self.dictionaries = Some(read_file_dictionaries(
                 &mut self.reader,
                 &self.metadata,
-                &mut self.buffer,
+                &mut self.data_scratch,
             )?);
         };
         Ok(())
@@ -376,7 +391,8 @@ impl<R: Read + Seek> Iterator for FileReader<R> {
             &self.metadata,
             self.projection.as_ref().map(|x| x.0.as_ref()),
             block,
-            &mut self.buffer,
+            &mut self.message_scratch,
+            &mut self.data_scratch,
         );
 
         let chunk = if let Some((_, map, _)) = &self.projection {

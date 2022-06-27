@@ -142,6 +142,7 @@ pub fn deserialize_batch(
             &mut reader,
             0,
             length as u64,
+            &mut Default::default(),
         ),
         _ => Err(Error::nyi(
             "flight currently only supports reading RecordBatch messages",

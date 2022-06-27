@@ -4,6 +4,7 @@ use std::io::{Read, Seek};
 use crate::array::StructArray;
 use crate::datatypes::DataType;
 use crate::error::{Error, Result};
+use crate::io::ipc::read::common::ReadBuffer;
 
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
@@ -23,6 +24,7 @@ pub fn read_struct<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<Compression>,
     version: Version,
+    scratch: &mut ReadBuffer,
 ) -> Result<StructArray> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
         Error::oos(format!(
@@ -57,6 +59,7 @@ pub fn read_struct<R: Read + Seek>(
                 is_little_endian,
                 compression,
                 version,
+                scratch,
             )
         })
         .collect::<Result<Vec<_>>>()?;

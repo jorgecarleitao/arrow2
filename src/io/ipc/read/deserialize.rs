@@ -7,6 +7,7 @@ use arrow_format::ipc::MetadataVersion;
 use crate::array::*;
 use crate::datatypes::{DataType, Field, PhysicalType};
 use crate::error::Result;
+use crate::io::ipc::read::common::ReadBuffer;
 use crate::io::ipc::IpcField;
 
 use super::{array::*, Dictionaries};
@@ -24,6 +25,7 @@ pub fn read<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<BodyCompressionRef>,
     version: MetadataVersion,
+    scratch: &mut ReadBuffer,
 ) -> Result<Box<dyn Array>> {
     use PhysicalType::*;
     let data_type = field.data_type.clone();
@@ -49,6 +51,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                scratch
             )
             .map(|x| x.boxed())
         }),
@@ -61,6 +64,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                scratch,
             )?;
             Ok(Box::new(array))
         }
@@ -73,6 +77,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                scratch,
             )?;
             Ok(Box::new(array))
         }
@@ -85,6 +90,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                scratch,
             )?;
             Ok(Box::new(array))
         }
@@ -97,6 +103,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                scratch,
             )?;
             Ok(Box::new(array))
         }
@@ -109,6 +116,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                scratch,
             )?;
             Ok(Box::new(array))
         }
@@ -123,6 +131,7 @@ pub fn read<R: Read + Seek>(
             is_little_endian,
             compression,
             version,
+            scratch,
         )
         .map(|x| x.boxed()),
         LargeList => read_list::<i64, _>(
@@ -136,6 +145,7 @@ pub fn read<R: Read + Seek>(
             is_little_endian,
             compression,
             version,
+            scratch,
         )
         .map(|x| x.boxed()),
         FixedSizeList => read_fixed_size_list(
@@ -149,6 +159,7 @@ pub fn read<R: Read + Seek>(
             is_little_endian,
             compression,
             version,
+            scratch,
         )
         .map(|x| x.boxed()),
         Struct => read_struct(
@@ -162,6 +173,7 @@ pub fn read<R: Read + Seek>(
             is_little_endian,
             compression,
             version,
+            scratch,
         )
         .map(|x| x.boxed()),
         Dictionary(key_type) => {
@@ -175,6 +187,7 @@ pub fn read<R: Read + Seek>(
                     block_offset,
                     compression,
                     is_little_endian,
+                    scratch
                 )
                 .map(|x| x.boxed())
             })
@@ -190,6 +203,7 @@ pub fn read<R: Read + Seek>(
             is_little_endian,
             compression,
             version,
+            scratch,
         )
         .map(|x| x.boxed()),
         Map => read_map(
@@ -203,6 +217,7 @@ pub fn read<R: Read + Seek>(
             is_little_endian,
             compression,
             version,
+            scratch,
         )
         .map(|x| x.boxed()),
     }

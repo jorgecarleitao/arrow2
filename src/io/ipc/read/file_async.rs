@@ -81,6 +81,7 @@ impl<'a> FileStream<'a> {
 
             let mut meta_buffer = Default::default();
             let mut block_buffer = Default::default();
+            let mut scratch = Default::default();
             for block in 0..metadata.blocks.len() {
                 let chunk = read_batch(
                     &mut reader,
@@ -90,6 +91,7 @@ impl<'a> FileStream<'a> {
                     block,
                     &mut meta_buffer,
                     &mut block_buffer,
+                    &mut scratch
                 ).await?;
 
                 let chunk = if let Some((_, map)) = &projection {
@@ -148,6 +150,7 @@ where
     deserialize_footer(&footer, u64::MAX)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn read_batch<R>(
     mut reader: R,
     dictionaries: &mut Dictionaries,
@@ -156,6 +159,7 @@ async fn read_batch<R>(
     block: usize,
     meta_buffer: &mut ReadBuffer,
     block_buffer: &mut ReadBuffer,
+    scratch: &mut ReadBuffer,
 ) -> Result<Chunk<Box<dyn Array>>>
 where
     R: AsyncRead + AsyncSeek + Unpin,
@@ -208,6 +212,7 @@ where
         &mut cursor,
         0,
         metadata.size,
+        scratch,
     )
 }
 
@@ -216,6 +221,7 @@ async fn read_dictionaries<R>(
     fields: &[Field],
     ipc_schema: &IpcSchema,
     blocks: &[Block],
+    scratch: &mut ReadBuffer,
 ) -> Result<Dictionaries>
 where
     R: AsyncRead + AsyncSeek + Unpin,
@@ -258,6 +264,7 @@ where
                     &mut cursor,
                     0,
                     u64::MAX,
+                    scratch,
                 )?;
             }
             _ => return Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
@@ -300,6 +307,7 @@ async fn cached_read_dictionaries<R: AsyncRead + AsyncSeek + Unpin>(
                 &metadata.schema.fields,
                 &metadata.ipc_schema,
                 blocks,
+                &mut Default::default(),
             )
             .await?;
             *dictionaries = Some(new_dictionaries);

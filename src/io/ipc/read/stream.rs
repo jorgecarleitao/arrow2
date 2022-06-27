@@ -93,6 +93,7 @@ fn read_next<R: Read>(
     message_buffer: &mut ReadBuffer,
     data_buffer: &mut ReadBuffer,
     projection: &Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
+    scratch: &mut ReadBuffer,
 ) -> Result<Option<StreamState>> {
     // determine metadata length
     let mut meta_length: [u8; 4] = [0; 4];
@@ -165,6 +166,7 @@ fn read_next<R: Read>(
                 &mut reader,
                 0,
                 file_size,
+                scratch,
             );
 
             if let Some((_, map, _)) = projection {
@@ -190,6 +192,7 @@ fn read_next<R: Read>(
                 &mut dict_reader,
                 0,
                 buf.len() as u64,
+                scratch,
             )?;
 
             // read the next message until we encounter a RecordBatch message
@@ -200,6 +203,7 @@ fn read_next<R: Read>(
                 message_buffer,
                 data_buffer,
                 projection,
+                scratch,
             )
         }
         _ => Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
@@ -220,6 +224,7 @@ pub struct StreamReader<R: Read> {
     data_buffer: ReadBuffer,
     message_buffer: ReadBuffer,
     projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
+    scratch: ReadBuffer,
 }
 
 impl<R: Read> StreamReader<R> {
@@ -246,6 +251,7 @@ impl<R: Read> StreamReader<R> {
             data_buffer: Default::default(),
             message_buffer: Default::default(),
             projection,
+            scratch: Default::default(),
         }
     }
 
@@ -278,6 +284,7 @@ impl<R: Read> StreamReader<R> {
             &mut self.message_buffer,
             &mut self.data_buffer,
             &self.projection,
+            &mut self.scratch,
         )?;
         if batch.is_none() {
             self.finished = true;

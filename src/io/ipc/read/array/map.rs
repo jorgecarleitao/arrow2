@@ -5,6 +5,7 @@ use crate::array::MapArray;
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::{Error, Result};
+use crate::io::ipc::read::common::ReadBuffer;
 
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
@@ -24,6 +25,7 @@ pub fn read_map<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<Compression>,
     version: Version,
+    scratch: &mut ReadBuffer,
 ) -> Result<MapArray> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
         Error::oos(format!(
@@ -53,6 +55,7 @@ pub fn read_map<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )
     // Older versions of the IPC format sometimes do not report an offset
     .or_else(|_| Result::Ok(Buffer::<i32>::from(vec![0i32])))?;
@@ -70,6 +73,7 @@ pub fn read_map<R: Read + Seek>(
         is_little_endian,
         compression,
         version,
+        scratch,
     )?;
     MapArray::try_new(data_type, offsets, field, validity)
 }

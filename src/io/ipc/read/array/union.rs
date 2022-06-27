@@ -5,6 +5,7 @@ use crate::array::UnionArray;
 use crate::datatypes::DataType;
 use crate::datatypes::UnionMode::Dense;
 use crate::error::{Error, Result};
+use crate::io::ipc::read::common::ReadBuffer;
 
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
@@ -24,6 +25,7 @@ pub fn read_union<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<Compression>,
     version: Version,
+    scratch: &mut ReadBuffer,
 ) -> Result<UnionArray> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
         Error::oos(format!(
@@ -50,6 +52,7 @@ pub fn read_union<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )?;
 
     let offsets = if let DataType::Union(_, _, mode) = data_type {
@@ -61,6 +64,7 @@ pub fn read_union<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                scratch,
             )?)
         } else {
             None
@@ -86,6 +90,7 @@ pub fn read_union<R: Read + Seek>(
                 is_little_endian,
                 compression,
                 version,
+                scratch,
             )
         })
         .collect::<Result<Vec<_>>>()?;

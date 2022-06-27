@@ -3,11 +3,13 @@ use std::{collections::VecDeque, convert::TryInto};
 
 use crate::datatypes::DataType;
 use crate::error::{Error, Result};
+use crate::io::ipc::read::common::ReadBuffer;
 use crate::{array::PrimitiveArray, types::NativeType};
 
 use super::super::read_basic::*;
 use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
 
+#[allow(clippy::too_many_arguments)]
 pub fn read_primitive<T: NativeType, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
@@ -16,6 +18,7 @@ pub fn read_primitive<T: NativeType, R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    scratch: &mut ReadBuffer,
 ) -> Result<PrimitiveArray<T>>
 where
     Vec<u8>: TryInto<T::Bytes>,
@@ -48,6 +51,7 @@ where
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )?;
     PrimitiveArray::<T>::try_new(data_type, values, validity)
 }

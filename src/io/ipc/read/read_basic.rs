@@ -3,6 +3,7 @@ use std::{collections::VecDeque, convert::TryInto};
 
 use crate::buffer::Buffer;
 use crate::error::{Error, Result};
+use crate::io::ipc::read::common::ReadBuffer;
 use crate::{bitmap::Bitmap, types::NativeType};
 
 use super::super::compression;
@@ -93,6 +94,7 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
     length: usize,
     is_little_endian: bool,
     compression: Compression,
+    scratch: &mut ReadBuffer,
 ) -> Result<Vec<T>> {
     if is_little_endian != is_native_little_endian() {
         return Err(Error::NotYetImplemented(
@@ -105,9 +107,8 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
     let mut buffer = vec![T::default(); length];
 
     // decompress first
-    // todo: move this allocation to an external buffer for re-use
-    let mut slice = vec![0u8; buffer_length];
-    reader.read_exact(&mut slice)?;
+    scratch.set_len(buffer_length);
+    reader.read_exact(scratch.as_mut())?;
 
     let out_slice = bytemuck::cast_slice_mut(&mut buffer);
 
@@ -117,10 +118,10 @@ fn read_compressed_buffer<T: NativeType, R: Read + Seek>(
 
     match compression {
         arrow_format::ipc::CompressionType::Lz4Frame => {
-            compression::decompress_lz4(&slice[8..], out_slice)?;
+            compression::decompress_lz4(&scratch.as_ref()[8..], out_slice)?;
         }
         arrow_format::ipc::CompressionType::Zstd => {
-            compression::decompress_zstd(&slice[8..], out_slice)?;
+            compression::decompress_zstd(&scratch.as_ref()[8..], out_slice)?;
         }
     }
     Ok(buffer)
@@ -133,6 +134,7 @@ pub fn read_buffer<T: NativeType, R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    scratch: &mut ReadBuffer,
 ) -> Result<Buffer<T>> {
     let buf = buf
         .pop_front()
@@ -151,10 +153,15 @@ pub fn read_buffer<T: NativeType, R: Read + Seek>(
     reader.seek(SeekFrom::Start(block_offset + offset))?;
 
     if let Some(compression) = compression {
-        Ok(
-            read_compressed_buffer(reader, buffer_length, length, is_little_endian, compression)?
-                .into(),
-        )
+        Ok(read_compressed_buffer(
+            reader,
+            buffer_length,
+            length,
+            is_little_endian,
+            compression,
+            scratch,
+        )?
+        .into())
     } else {
         Ok(read_uncompressed_buffer(reader, buffer_length, length, is_little_endian)?.into())
     }

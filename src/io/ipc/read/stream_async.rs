@@ -68,6 +68,7 @@ pub async fn read_stream_metadata_async<R: AsyncRead + Unpin + Send>(
 async fn maybe_next<R: AsyncRead + Unpin + Send>(
     mut state: ReadState<R>,
 ) -> Result<Option<StreamState<R>>> {
+    let mut scratch = Default::default();
     // determine metadata length
     let mut meta_length: [u8; 4] = [0; 4];
 
@@ -124,6 +125,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
     state.data_buffer.set_len(block_length);
+
     match header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
             state.reader.read_exact(state.data_buffer.as_mut()).await?;
@@ -138,6 +140,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
                 &mut std::io::Cursor::new(&state.data_buffer),
                 0,
                 state.data_buffer.as_ref().len() as u64,
+                &mut scratch,
             )
             .map(|chunk| Some(StreamState::Some((state, chunk))))
         }
@@ -157,6 +160,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
                 &mut dict_reader,
                 0,
                 file_size,
+                &mut scratch,
             )?;
 
             // read the next message until we encounter a Chunk<Box<dyn Array>> message

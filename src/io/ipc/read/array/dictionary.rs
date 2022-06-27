@@ -4,6 +4,7 @@ use std::io::{Read, Seek};
 
 use crate::array::{DictionaryArray, DictionaryKey};
 use crate::error::{Error, Result};
+use crate::io::ipc::read::common::ReadBuffer;
 
 use super::super::Dictionaries;
 use super::super::{Compression, IpcBuffer, Node};
@@ -19,6 +20,7 @@ pub fn read_dictionary<T: DictionaryKey, R: Read + Seek>(
     block_offset: u64,
     compression: Option<Compression>,
     is_little_endian: bool,
+    scratch: &mut ReadBuffer,
 ) -> Result<DictionaryArray<T>>
 where
     Vec<u8>: TryInto<T::Bytes>,
@@ -47,6 +49,7 @@ where
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )?;
 
     Ok(DictionaryArray::<T>::from_data(keys, values))
