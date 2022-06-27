@@ -172,8 +172,8 @@ async fn main() -&gt; Result&lt;()&gt; {
             decompress_block(&amp;mut block, &amp;mut decompressed, compression)?;
             deserialize(&amp;decompressed, &amp;schema.fields, &amp;avro_schemas, &amp;projection)
         });
-        let batch = handle.await.unwrap()?;
-        assert!(!batch.is_empty());
+        let chunk = handle.await.unwrap()?;
+        assert!(!chunk.is_empty());
     }
 
     Ok(())

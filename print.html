@@ -1159,7 +1159,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let reader = File::open(file_path)?;
-    let reader = read::FileReader::try_new(reader, None, None, None, None)?;
+    let reader = read::FileReader::try_new(reader, None, Some(1024 * 8 * 8), None, None)?;
 
     println!(&quot;{:#?}&quot;, reader.schema());
 
@@ -1371,7 +1371,7 @@ impl FallibleStreamingIterator for Bla {
     }
 }
 
-fn parallel_write(path: &amp;str, schema: Schema, batches: &amp;[Chunk]) -&gt; Result&lt;()&gt; {
+fn parallel_write(path: &amp;str, schema: Schema, chunks: &amp;[Chunk]) -&gt; Result&lt;()&gt; {
     // declare the options
     let options = WriteOptions {
         write_statistics: true,
@@ -1400,9 +1400,9 @@ fn parallel_write(path: &amp;str, schema: Schema, batches: &amp;[Chunk]) -&gt; R
     // derive the parquet schema (physical types) from arrow's schema.
     let parquet_schema = to_parquet_schema(&amp;schema)?;
 
-    let row_groups = batches.iter().map(|batch| {
+    let row_groups = chunks.iter().map(|batch| {
         // write batch to pages; parallelized by rayon
-        let columns = batch
+        let columns = chunk
             .columns()
             .par_iter()
             .zip(parquet_schema.fields().to_vec())
@@ -1470,7 +1470,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let schema = Schema {
         fields: vec![
             Field::new(&quot;c1&quot;, DataType::Int32, true),
-            Field::new(&quot;c1&quot;, DataType::Utf8, true),
+            Field::new(&quot;c2&quot;, DataType::Utf8, true),
         ],
         metadata: Default::default(),
     };
@@ -1713,8 +1713,8 @@ async fn main() -&gt; Result&lt;()&gt; {
             decompress_block(&amp;mut block, &amp;mut decompressed, compression)?;
             deserialize(&amp;decompressed, &amp;schema.fields, &amp;avro_schemas, &amp;projection)
         });
-        let batch = handle.await.unwrap()?;
-        assert!(!batch.is_empty());
+        let chunk = handle.await.unwrap()?;
+        assert!(!chunk.is_empty());
     }
 
     Ok(())
