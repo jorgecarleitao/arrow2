@@ -178,7 +178,7 @@ fn read_batch(path: &amp;str) -&gt; Result&lt;(Schema, Chunk&lt;Box&lt;dyn Array
     let schema = metadata.schema.clone();
 
     // advanced way: read the dictionary
-    let dictionaries = read::read_file_dictionaries(&amp;mut file, &amp;metadata)?;
+    let dictionaries = read::read_file_dictionaries(&amp;mut file, &amp;metadata, &amp;mut Default::default())?;
 
     let chunk_index = 0;
 
@@ -188,7 +188,8 @@ fn read_batch(path: &amp;str) -&gt; Result&lt;(Schema, Chunk&lt;Box&lt;dyn Array
         &amp;metadata,
         None,
         chunk_index,
-        &amp;mut vec![],
+        &amp;mut Default::default(),
+        &amp;mut Default::default(),
     )?;
 
     Ok((schema, chunk))
