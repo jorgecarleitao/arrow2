@@ -33,8 +33,8 @@ async fn main() -> Result<()> {
             decompress_block(&mut block, &mut decompressed, compression)?;
             deserialize(&decompressed, &schema.fields, &avro_schemas, &projection)
         });
-        let batch = handle.await.unwrap()?;
-        assert!(!batch.is_empty());
+        let chunk = handle.await.unwrap()?;
+        assert!(!chunk.is_empty());
     }
 
     Ok(())

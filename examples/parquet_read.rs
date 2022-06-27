@@ -11,7 +11,7 @@ fn main() -> Result<()> {
     let file_path = &args[1];
 
     let reader = File::open(file_path)?;
-    let reader = read::FileReader::try_new(reader, None, None, None, None)?;
+    let reader = read::FileReader::try_new(reader, None, Some(1024 * 8 * 8), None, None)?;
 
     println!("{:#?}", reader.schema());
 
