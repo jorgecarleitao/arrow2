@@ -41,7 +41,7 @@ impl FallibleStreamingIterator for Bla {
     }
 }
 
-fn parallel_write(path: &str, schema: Schema, batches: &[Chunk]) -> Result<()> {
+fn parallel_write(path: &str, schema: Schema, chunks: &[Chunk]) -> Result<()> {
     // declare the options
     let options = WriteOptions {
         write_statistics: true,
@@ -70,9 +70,9 @@ fn parallel_write(path: &str, schema: Schema, batches: &[Chunk]) -> Result<()> {
     // derive the parquet schema (physical types) from arrow's schema.
     let parquet_schema = to_parquet_schema(&schema)?;
 
-    let row_groups = batches.iter().map(|batch| {
+    let row_groups = chunks.iter().map(|batch| {
         // write batch to pages; parallelized by rayon
-        let columns = batch
+        let columns = chunk
             .columns()
             .par_iter()
             .zip(parquet_schema.fields().to_vec())
@@ -140,7 +140,7 @@ fn main() -> Result<()> {
     let schema = Schema {
         fields: vec![
             Field::new("c1", DataType::Int32, true),
-            Field::new("c1", DataType::Utf8, true),
+            Field::new("c2", DataType::Utf8, true),
         ],
         metadata: Default::default(),
     };

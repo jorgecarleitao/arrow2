@@ -15,32 +15,37 @@ use arrow2::{
 
 mod logger;
 
+/// Advances each iterator in parallel
 /// # Panic
 /// If the iterators are empty
-fn deserialize_parallel(columns: &mut [ArrayIter<'static>]) -> Result<Chunk<Box<dyn Array>>> {
+fn deserialize_parallel(iters: &mut [ArrayIter<'static>]) -> Result<Chunk<Box<dyn Array>>> {
     // CPU-bounded
-    let columns = columns
+    let arrays = iters
         .par_iter_mut()
         .map(|iter| iter.next().transpose())
         .collect::<Result<Vec<_>>>()?;
 
-    Chunk::try_new(columns.into_iter().map(|x| x.unwrap()).collect())
+    Chunk::try_new(arrays.into_iter().map(|x| x.unwrap()).collect())
 }
 
 fn parallel_read(path: &str, row_group: usize) -> Result<()> {
+    // open the file
     let mut file = BufReader::new(File::open(path)?);
+
+    // read Parquet's metadata and infer Arrow schema
     let metadata = read::read_metadata(&mut file)?;
     let schema = read::infer_schema(&metadata)?;
 
+    // select the row group from the metadata
     let row_group = &metadata.row_groups[row_group];
 
-    let chunk_size = 1024 * 8;
+    let chunk_size = 1024 * 8 * 8;
 
     // read (IO-bounded) all columns into memory (use a subset of the fields to project)
     let mut columns =
         read::read_columns_many(&mut file, row_group, schema.fields, Some(chunk_size))?;
 
-    // deserialize (CPU-bounded) to arrow
+    // deserialize (CPU-bounded) to Arrow in chunks
     let mut num_rows = row_group.num_rows();
     while num_rows > 0 {
         num_rows = num_rows.saturating_sub(chunk_size);
