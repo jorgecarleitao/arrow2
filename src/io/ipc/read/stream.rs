@@ -15,6 +15,7 @@ use super::common::*;
 use super::schema::deserialize_stream_metadata;
 use super::Dictionaries;
 use super::OutOfSpecKind;
+use super::ReadBuffer;
 
 /// Metadata of an Arrow IPC stream, written at the start of the stream
 #[derive(Debug, Clone)]

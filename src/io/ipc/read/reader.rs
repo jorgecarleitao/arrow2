@@ -13,6 +13,7 @@ use super::common::*;
 use super::schema::fb_to_schema;
 use super::Dictionaries;
 use super::OutOfSpecKind;
+use super::ReadBuffer;
 use arrow_format::ipc::planus::ReadAsRoot;
 
 /// Metadata of an Arrow IPC file, written in the footer of the file.

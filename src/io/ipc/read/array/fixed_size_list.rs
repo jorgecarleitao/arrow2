@@ -4,13 +4,11 @@ use std::io::{Read, Seek};
 use crate::array::FixedSizeListArray;
 use crate::datatypes::DataType;
 use crate::error::{Error, Result};
-use crate::io::ipc::read::common::ReadBuffer;
 
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
 use super::super::read_basic::*;
-use super::super::Dictionaries;
-use super::super::{Compression, IpcBuffer, Node, Version};
+use super::super::{Compression, Dictionaries, IpcBuffer, Node, ReadBuffer, Version};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_fixed_size_list<R: Read + Seek>(

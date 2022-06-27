@@ -4,10 +4,9 @@ use std::io::{Read, Seek};
 
 use crate::array::{DictionaryArray, DictionaryKey};
 use crate::error::{Error, Result};
-use crate::io::ipc::read::common::ReadBuffer;
 
 use super::super::Dictionaries;
-use super::super::{Compression, IpcBuffer, Node};
+use super::super::{Compression, IpcBuffer, Node, ReadBuffer};
 use super::{read_primitive, skip_primitive};
 
 #[allow(clippy::too_many_arguments)]

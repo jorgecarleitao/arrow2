@@ -5,10 +5,9 @@ use crate::array::{Offset, Utf8Array};
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::{Error, Result};
-use crate::io::ipc::read::common::ReadBuffer;
 
 use super::super::read_basic::*;
-use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
+use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind, ReadBuffer};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_utf8<O: Offset, R: Read + Seek>(

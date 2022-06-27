@@ -12,10 +12,11 @@ use crate::chunk::Chunk;
 use crate::error::{Error, Result};
 
 use super::super::CONTINUATION_MARKER;
-use super::common::{read_dictionary, read_record_batch, ReadBuffer};
+use super::common::{read_dictionary, read_record_batch};
 use super::schema::deserialize_stream_metadata;
 use super::Dictionaries;
 use super::OutOfSpecKind;
+use super::ReadBuffer;
 use super::StreamMetadata;
 
 /// A (private) state of stream messages

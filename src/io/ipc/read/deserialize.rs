@@ -7,11 +7,10 @@ use arrow_format::ipc::MetadataVersion;
 use crate::array::*;
 use crate::datatypes::{DataType, Field, PhysicalType};
 use crate::error::Result;
-use crate::io::ipc::read::common::ReadBuffer;
 use crate::io::ipc::IpcField;
 
 use super::{array::*, Dictionaries};
-use super::{IpcBuffer, Node};
+use super::{IpcBuffer, Node, ReadBuffer};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read<R: Read + Seek>(

@@ -4,10 +4,9 @@ use std::io::{Read, Seek};
 use crate::array::FixedSizeBinaryArray;
 use crate::datatypes::DataType;
 use crate::error::{Error, Result};
-use crate::io::ipc::read::common::ReadBuffer;
 
 use super::super::read_basic::*;
-use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
+use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind, ReadBuffer};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_fixed_size_binary<R: Read + Seek>(

@@ -13,13 +13,12 @@ use crate::datatypes::{Field, Schema};
 use crate::error::{Error, Result};
 use crate::io::ipc::{IpcSchema, ARROW_MAGIC, CONTINUATION_MARKER};
 
-use super::common::{
-    apply_projection, prepare_projection, read_dictionary, read_record_batch, ReadBuffer,
-};
+use super::common::{apply_projection, prepare_projection, read_dictionary, read_record_batch};
 use super::reader::{deserialize_footer, get_serialized_batch};
 use super::Dictionaries;
 use super::FileMetadata;
 use super::OutOfSpecKind;
+use super::ReadBuffer;
 
 /// Async reader for Arrow IPC files
 pub struct FileStream<'a> {

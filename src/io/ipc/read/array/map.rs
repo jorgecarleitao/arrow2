@@ -5,13 +5,13 @@ use crate::array::MapArray;
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::{Error, Result};
-use crate::io::ipc::read::common::ReadBuffer;
 
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
 use super::super::read_basic::*;
-use super::super::Dictionaries;
-use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind, Version};
+use super::super::{
+    Compression, Dictionaries, IpcBuffer, Node, OutOfSpecKind, ReadBuffer, Version,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_map<R: Read + Seek>(
