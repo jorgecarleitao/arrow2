@@ -227,8 +227,8 @@ where
     R: AsyncRead + AsyncSeek + Unpin,
 {
     let mut dictionaries = Default::default();
-    let mut data = ReadBuffer::new(0);
-    let mut buffer = ReadBuffer::new(0);
+    let mut data: ReadBuffer = vec![].into();
+    let mut buffer: ReadBuffer = vec![].into();
 
     for block in blocks {
         let offset: u64 = block
