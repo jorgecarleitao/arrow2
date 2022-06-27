@@ -308,13 +308,15 @@ impl ReadBuffer {
         Self { data, length }
     }
 
-    /// Set the length of the [`ReadBuf`]. Contrary to the
+    /// Set the minimal length of the [`ReadBuf`]. Contrary to the
     /// method on `Vec` this is `safe` because this function guarantees that
     /// the underlying data always is initialized.
     pub fn set_len(&mut self, length: usize) {
-        dbg!(length, self.data.len(), self.data.capacity());
         if length > self.data.capacity() {
-            self.data = vec![0; length];
+            // exponential growing strategy
+            // benchmark showed it was ~5% faster
+            // in reading lz4 yellow-trip dataset
+            self.data = vec![0; length * 2];
         } else if length > self.data.len() {
             self.data.resize(length, 0);
         }
