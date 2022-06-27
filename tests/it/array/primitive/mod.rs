@@ -72,7 +72,7 @@ fn from() {
 }
 
 #[test]
-fn months_days_ns() {
+fn months_days_ns_from_slice() {
     let data = &[
         months_days_ns::new(1, 1, 2),
         months_days_ns::new(1, 1, 3),
