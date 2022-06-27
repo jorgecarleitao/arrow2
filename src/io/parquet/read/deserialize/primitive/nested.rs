@@ -92,19 +92,20 @@ where
         ) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
-                Ok(State::RequiredDictionary(ValuesDictionary::new(page, dict)))
+                ValuesDictionary::try_new(page, dict).map(State::RequiredDictionary)
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
                 Ok(State::OptionalDictionary(
-                    Optional::new(page),
-                    ValuesDictionary::new(page, dict),
+                    Optional::try_new(page)?,
+                    ValuesDictionary::try_new(page, dict)?,
                 ))
             }
-            (Encoding::Plain, _, true, false) => {
-                Ok(State::Optional(Optional::new(page), Values::new::<P>(page)))
-            }
-            (Encoding::Plain, _, false, false) => Ok(State::Required(Values::new::<P>(page))),
+            (Encoding::Plain, _, true, false) => Ok(State::Optional(
+                Optional::try_new(page)?,
+                Values::try_new::<P>(page)?,
+            )),
+            (Encoding::Plain, _, false, false) => Ok(State::Required(Values::try_new::<P>(page)?)),
             _ => Err(utils::not_implemented(page)),
         }
     }

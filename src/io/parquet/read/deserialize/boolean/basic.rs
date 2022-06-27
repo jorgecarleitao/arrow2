@@ -1,7 +1,10 @@
 use std::collections::VecDeque;
 
 use parquet2::{
-    deserialize::SliceFilteredIter, encoding::Encoding, page::DataPage, schema::Repetition,
+    deserialize::SliceFilteredIter,
+    encoding::Encoding,
+    page::{split_buffer, DataPage},
+    schema::Repetition,
 };
 
 use crate::{
@@ -13,7 +16,7 @@ use crate::{
 
 use super::super::utils;
 use super::super::utils::{
-    extend_from_decoder, get_selected_rows, next, split_buffer, DecodedState, Decoder,
+    extend_from_decoder, get_selected_rows, next, DecodedState, Decoder,
     FilteredOptionalPageValidity, MaybeNext, OptionalPageValidity,
 };
 use super::super::DataPages;
@@ -22,10 +25,10 @@ use super::super::DataPages;
 struct Values<'a>(BitmapIter<'a>);
 
 impl<'a> Values<'a> {
-    pub fn new(page: &'a DataPage) -> Self {
-        let (_, _, values) = split_buffer(page);
+    pub fn try_new(page: &'a DataPage) -> Result<Self> {
+        let (_, _, values) = split_buffer(page)?;
 
-        Self(BitmapIter::new(values, 0, values.len() * 8))
+        Ok(Self(BitmapIter::new(values, 0, values.len() * 8)))
     }
 }
 
@@ -54,15 +57,15 @@ struct FilteredRequired<'a> {
 }
 
 impl<'a> FilteredRequired<'a> {
-    pub fn new(page: &'a DataPage) -> Self {
-        let (_, _, values) = utils::split_buffer(page);
+    pub fn try_new(page: &'a DataPage) -> Result<Self> {
+        let (_, _, values) = split_buffer(page)?;
         // todo: replace this by an iterator over slices, for faster deserialization
         let values = BitmapIter::new(values, 0, page.num_values());
 
         let rows = get_selected_rows(page);
         let values = SliceFilteredIter::new(values, rows);
 
-        Self { values }
+        Ok(Self { values })
     }
 
     #[inline]
@@ -117,16 +120,16 @@ impl<'a> Decoder<'a> for BooleanDecoder {
 
         match (page.encoding(), is_optional, is_filtered) {
             (Encoding::Plain, true, false) => Ok(State::Optional(
-                OptionalPageValidity::new(page),
-                Values::new(page),
+                OptionalPageValidity::try_new(page)?,
+                Values::try_new(page)?,
             )),
             (Encoding::Plain, false, false) => Ok(State::Required(Required::new(page))),
             (Encoding::Plain, true, true) => Ok(State::FilteredOptional(
-                FilteredOptionalPageValidity::new(page),
-                Values::new(page),
+                FilteredOptionalPageValidity::try_new(page)?,
+                Values::try_new(page)?,
             )),
             (Encoding::Plain, false, true) => {
-                Ok(State::FilteredRequired(FilteredRequired::new(page)))
+                Ok(State::FilteredRequired(FilteredRequired::try_new(page)?))
             }
             _ => Err(utils::not_implemented(page)),
         }

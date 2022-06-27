@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use parquet2::{
     deserialize::SliceFilteredIter,
     encoding::{hybrid_rle, Encoding},
-    page::{DataPage, PrimitivePageDict},
+    page::{split_buffer, DataPage, PrimitivePageDict},
     schema::Repetition,
     types::decode,
     types::NativeType as ParquetNativeType,
@@ -24,8 +24,8 @@ struct FilteredRequiredValues<'a> {
 }
 
 impl<'a> FilteredRequiredValues<'a> {
-    pub fn new<P: ParquetNativeType>(page: &'a DataPage) -> Self {
-        let (_, _, values) = utils::split_buffer(page);
+    pub fn try_new<P: ParquetNativeType>(page: &'a DataPage) -> Result<Self> {
+        let (_, _, values) = split_buffer(page)?;
         assert_eq!(values.len() % std::mem::size_of::<P>(), 0);
 
         let values = values.chunks_exact(std::mem::size_of::<P>());
@@ -33,7 +33,7 @@ impl<'a> FilteredRequiredValues<'a> {
         let rows = get_selected_rows(page);
         let values = SliceFilteredIter::new(values, rows);
 
-        Self { values }
+        Ok(Self { values })
     }
 
     #[inline]
@@ -48,12 +48,12 @@ pub(super) struct Values<'a> {
 }
 
 impl<'a> Values<'a> {
-    pub fn new<P: ParquetNativeType>(page: &'a DataPage) -> Self {
-        let (_, _, values) = utils::split_buffer(page);
+    pub fn try_new<P: ParquetNativeType>(page: &'a DataPage) -> Result<Self> {
+        let (_, _, values) = split_buffer(page)?;
         assert_eq!(values.len() % std::mem::size_of::<P>(), 0);
-        Self {
+        Ok(Self {
             values: values.chunks_exact(std::mem::size_of::<P>()),
-        }
+        })
     }
 
     #[inline]
@@ -75,13 +75,13 @@ impl<'a, P> ValuesDictionary<'a, P>
 where
     P: ParquetNativeType,
 {
-    pub fn new(page: &'a DataPage, dict: &'a PrimitivePageDict<P>) -> Self {
-        let values = utils::dict_indices_decoder(page);
+    pub fn try_new(page: &'a DataPage, dict: &'a PrimitivePageDict<P>) -> Result<Self> {
+        let values = utils::dict_indices_decoder(page)?;
 
-        Self {
+        Ok(Self {
             dict: dict.values(),
             values,
-        }
+        })
     }
 
     #[inline]
@@ -176,29 +176,29 @@ where
         ) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
-                Ok(State::RequiredDictionary(ValuesDictionary::new(page, dict)))
+                ValuesDictionary::try_new(page, dict).map(State::RequiredDictionary)
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
 
                 Ok(State::OptionalDictionary(
-                    OptionalPageValidity::new(page),
-                    ValuesDictionary::new(page, dict),
+                    OptionalPageValidity::try_new(page)?,
+                    ValuesDictionary::try_new(page, dict)?,
                 ))
             }
             (Encoding::Plain, _, true, false) => {
-                let validity = OptionalPageValidity::new(page);
-                let values = Values::new::<P>(page);
+                let validity = OptionalPageValidity::try_new(page)?;
+                let values = Values::try_new::<P>(page)?;
 
                 Ok(State::Optional(validity, values))
             }
-            (Encoding::Plain, _, false, false) => Ok(State::Required(Values::new::<P>(page))),
+            (Encoding::Plain, _, false, false) => Ok(State::Required(Values::try_new::<P>(page)?)),
             (Encoding::Plain, _, false, true) => Ok(State::FilteredRequired(
-                FilteredRequiredValues::new::<P>(page),
+                FilteredRequiredValues::try_new::<P>(page)?,
             )),
             (Encoding::Plain, _, true, true) => Ok(State::FilteredOptional(
-                FilteredOptionalPageValidity::new(page),
-                Values::new::<P>(page),
+                FilteredOptionalPageValidity::try_new(page)?,
+                Values::try_new::<P>(page)?,
             )),
             _ => Err(utils::not_implemented(page)),
         }

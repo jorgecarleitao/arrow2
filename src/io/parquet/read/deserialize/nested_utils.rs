@@ -1,14 +1,16 @@
 use std::collections::VecDeque;
 
 use parquet2::{
-    encoding::hybrid_rle::HybridRleDecoder, page::DataPage, read::levels::get_bit_width,
+    encoding::hybrid_rle::HybridRleDecoder,
+    page::{split_buffer, DataPage},
+    read::levels::get_bit_width,
 };
 
 use crate::{array::Array, bitmap::MutableBitmap, error::Result};
 
 use super::super::DataPages;
 pub use super::utils::Zip;
-use super::utils::{split_buffer, DecodedState, Decoder, MaybeNext, Pushable};
+use super::utils::{DecodedState, Decoder, MaybeNext, Pushable};
 
 /// trait describing deserialized repetition and definition levels
 pub trait Nested: std::fmt::Debug + Send + Sync {
@@ -271,8 +273,8 @@ pub struct NestedPage<'a> {
 }
 
 impl<'a> NestedPage<'a> {
-    pub fn new(page: &'a DataPage) -> Self {
-        let (rep_levels, def_levels, _) = split_buffer(page);
+    pub fn try_new(page: &'a DataPage) -> Result<Self> {
+        let (rep_levels, def_levels, _) = split_buffer(page)?;
 
         let max_rep_level = page.descriptor.max_rep_level;
         let max_def_level = page.descriptor.max_def_level;
@@ -284,7 +286,7 @@ impl<'a> NestedPage<'a> {
 
         let iter = reps.zip(defs).peekable();
 
-        Self { iter }
+        Ok(Self { iter })
     }
 
     // number of values (!= number of rows)
@@ -458,15 +460,15 @@ impl<'a> Iterator for Optional<'a> {
 }
 
 impl<'a> Optional<'a> {
-    pub fn new(page: &'a DataPage) -> Self {
-        let (_, def_levels, _) = split_buffer(page);
+    pub fn try_new(page: &'a DataPage) -> Result<Self> {
+        let (_, def_levels, _) = split_buffer(page)?;
 
         let max_def = page.descriptor.max_def_level;
 
-        Self {
+        Ok(Self {
             iter: HybridRleDecoder::new(def_levels, get_bit_width(max_def), page.num_values()),
             max_def: max_def as u32,
-        }
+        })
     }
 
     #[inline]
@@ -508,7 +510,11 @@ where
         }
         Ok(Some(page)) => {
             // there is a new page => consume the page from the start
-            let mut nested_page = NestedPage::new(page);
+            let nested_page = NestedPage::try_new(page);
+            let mut nested_page = match nested_page {
+                Ok(page) => page,
+                Err(e) => return MaybeNext::Some(Err(e)),
+            };
 
             extend_offsets1(&mut nested_page, init, nested_items, chunk_size);
 

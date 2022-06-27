@@ -5,7 +5,7 @@ use parquet2::deserialize::{
 };
 use parquet2::encoding::hybrid_rle;
 use parquet2::indexes::Interval;
-use parquet2::page::{split_buffer as _split_buffer, DataPage};
+use parquet2::page::{split_buffer, DataPage};
 use parquet2::schema::Repetition;
 
 use crate::bitmap::utils::BitmapIter;
@@ -32,11 +32,6 @@ pub fn not_implemented(page: &DataPage) -> Error {
         required,
         is_filtered,
     ))
-}
-
-#[inline]
-pub fn split_buffer(page: &DataPage) -> (&[u8], &[u8], &[u8]) {
-    _split_buffer(page)
 }
 
 /// A private trait representing structs that can receive elements.
@@ -104,18 +99,18 @@ pub struct FilteredOptionalPageValidity<'a> {
 }
 
 impl<'a> FilteredOptionalPageValidity<'a> {
-    pub fn new(page: &'a DataPage) -> Self {
-        let (_, validity, _) = split_buffer(page);
+    pub fn try_new(page: &'a DataPage) -> Result<Self, Error> {
+        let (_, validity, _) = split_buffer(page)?;
 
         let iter = hybrid_rle::Decoder::new(validity, 1);
         let iter = HybridDecoderBitmapIter::new(iter, page.num_values());
         let selected_rows = get_selected_rows(page);
         let iter = FilteredHybridRleDecoderIter::new(iter, selected_rows);
 
-        Self {
+        Ok(Self {
             iter,
             current: None,
-        }
+        })
     }
 
     pub fn len(&self) -> usize {
@@ -219,15 +214,15 @@ pub struct OptionalPageValidity<'a> {
 }
 
 impl<'a> OptionalPageValidity<'a> {
-    pub fn new(page: &'a DataPage) -> Self {
-        let (_, validity, _) = split_buffer(page);
+    pub fn try_new(page: &'a DataPage) -> Result<Self, Error> {
+        let (_, validity, _) = split_buffer(page)?;
 
         let iter = hybrid_rle::Decoder::new(validity, 1);
         let iter = HybridDecoderBitmapIter::new(iter, page.num_values());
-        Self {
+        Ok(Self {
             iter,
             current: None,
-        }
+        })
     }
 
     /// Number of items remaining
@@ -459,13 +454,17 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
 }
 
 #[inline]
-pub(super) fn dict_indices_decoder(page: &DataPage) -> hybrid_rle::HybridRleDecoder {
-    let (_, _, indices_buffer) = split_buffer(page);
+pub(super) fn dict_indices_decoder(page: &DataPage) -> Result<hybrid_rle::HybridRleDecoder, Error> {
+    let (_, _, indices_buffer) = split_buffer(page)?;
 
     // SPEC: Data page format: the bit width used to encode the entry ids stored as 1 byte (max bit width = 32),
     // SPEC: followed by the values encoded using RLE/Bit packed described above (with the given bit width).
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    hybrid_rle::HybridRleDecoder::new(indices_buffer, bit_width as u32, page.num_values())
+    Ok(hybrid_rle::HybridRleDecoder::new(
+        indices_buffer,
+        bit_width as u32,
+        page.num_values(),
+    ))
 }
