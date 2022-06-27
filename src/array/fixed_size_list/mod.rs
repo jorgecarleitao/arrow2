@@ -84,6 +84,11 @@ impl FixedSizeListArray {
         Self::try_new(data_type, values, validity).unwrap()
     }
 
+    /// Returns the size (number of elements per slot) of this [`FixedSizeListArray`].
+    pub const fn size(&self) -> usize {
+        self.size
+    }
+
     /// Alias for `new`
     pub fn from_data(
         data_type: DataType,
@@ -101,10 +106,9 @@ impl FixedSizeListArray {
 
     /// Returns a new null [`FixedSizeListArray`].
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        let values = new_null_array(
-            Self::get_child_and_size(&data_type).0.data_type().clone(),
-            length,
-        );
+        let (field, size) = Self::get_child_and_size(&data_type);
+
+        let values = new_null_array(field.data_type().clone(), length * size);
         Self::new(data_type, values, Some(Bitmap::new_zeroed(length)))
     }
 
