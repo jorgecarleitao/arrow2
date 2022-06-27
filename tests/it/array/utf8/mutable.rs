@@ -141,3 +141,29 @@ fn test_extend_values() {
     assert_eq!(array.offsets().as_slice(), &[0, 2, 7, 12, 17]);
     assert_eq!(array.validity(), None,);
 }
+
+#[test]
+fn test_extend() {
+    let mut array = MutableUtf8Array::<i32>::new();
+
+    array.extend([Some("hi"), None, Some("there"), None].into_iter());
+
+    let array: Utf8Array<i32> = array.into();
+
+    assert_eq!(
+        array,
+        Utf8Array::<i32>::from([Some("hi"), None, Some("there"), None])
+    );
+}
+
+#[test]
+fn as_arc() {
+    let mut array = MutableUtf8Array::<i32>::new();
+
+    array.extend([Some("hi"), None, Some("there"), None].into_iter());
+
+    assert_eq!(
+        Utf8Array::<i32>::from([Some("hi"), None, Some("there"), None]),
+        array.as_arc().as_ref()
+    );
+}

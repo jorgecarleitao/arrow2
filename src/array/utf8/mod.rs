@@ -486,8 +486,7 @@ impl<O: Offset> Utf8Array<O> {
         P: AsRef<str>,
         I: TrustedLen<Item = Option<P>>,
     {
-        // soundness: I is `TrustedLen`
-        unsafe { Self::from_trusted_len_iter_unchecked(iterator) }
+        MutableUtf8Array::<O>::from_trusted_len_iter(iterator).into()
     }
 
     /// Creates a [`Utf8Array`] from an falible iterator of trusted length.
@@ -512,8 +511,7 @@ impl<O: Offset> Utf8Array<O> {
         P: AsRef<str>,
         I: TrustedLen<Item = std::result::Result<Option<P>, E>>,
     {
-        // soundness: I: TrustedLen
-        unsafe { Self::try_from_trusted_len_iter_unchecked(iter) }
+        MutableUtf8Array::<O>::try_from_trusted_len_iter(iter).map(|x| x.into())
     }
 
     /// Alias for `new`

@@ -215,3 +215,21 @@ fn into_mut_4() {
     let array = Utf8Array::<i32>::new(DataType::Utf8, offsets, values, validity);
     assert!(array.into_mut().is_right());
 }
+
+#[test]
+fn rev_iter() {
+    let array = Utf8Array::<i32>::from(&[Some("hello"), Some(" "), None]);
+
+    assert_eq!(
+        array.into_iter().rev().collect::<Vec<_>>(),
+        vec![None, Some(" "), Some("hello")]
+    );
+}
+
+#[test]
+fn iter_nth() {
+    let array = Utf8Array::<i32>::from(&[Some("hello"), Some(" "), None]);
+
+    assert_eq!(array.iter().nth(1), Some(Some(" ")));
+    assert_eq!(array.iter().nth(10), None);
+}
