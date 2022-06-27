@@ -230,6 +230,7 @@ impl<'a> OptionalPageValidity<'a> {
         }
     }
 
+    /// Number of items remaining
     pub fn len(&self) -> usize {
         self.iter.len()
             + self
@@ -300,10 +301,9 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
 ) {
     let limit = limit.unwrap_or(usize::MAX);
 
-    // todo: remove `consumed_here` and compute next limit from `consumed`
-    let mut consumed_here = 0;
-    while consumed_here < limit {
-        let run = page_validity.next_limited(limit);
+    let mut remaining = limit;
+    while remaining > 0 {
+        let run = page_validity.next_limited(remaining);
         let run = if let Some(run) = run { run } else { break };
 
         match run {
@@ -325,7 +325,7 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
                 }
                 validity.extend_from_slice(values, offset, length);
 
-                consumed_here += length;
+                remaining -= length;
             }
             FilteredHybridEncoded::Repeated { is_set, length } => {
                 validity.extend_constant(length, is_set);
@@ -335,7 +335,7 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
                     pushable.extend_constant(length, T::default());
                 }
 
-                consumed_here += length;
+                remaining -= length;
             }
             FilteredHybridEncoded::Skipped(valids) => for _ in values_iter.by_ref().take(valids) {},
         };

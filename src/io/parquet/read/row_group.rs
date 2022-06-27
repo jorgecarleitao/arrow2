@@ -74,7 +74,7 @@ impl Iterator for RowGroupDeserializer {
                 })
             })
             .collect::<Result<Vec<_>>>()
-            .map(Chunk::new);
+            .and_then(Chunk::try_new);
         self.remaining_rows = self.remaining_rows.saturating_sub(
             chunk
                 .as_ref()
