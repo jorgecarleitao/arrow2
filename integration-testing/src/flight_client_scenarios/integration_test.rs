@@ -276,7 +276,7 @@ async fn receive_batch_flight_data(
     {
         let length = data.data_body.len();
         let mut reader = std::io::Cursor::new(&data.data_body);
-        read::read_dictionary(batch, fields, ipc_schema, dictionaries, &mut reader, 0, length as u64)
+        read::read_dictionary(batch, fields, ipc_schema, dictionaries, &mut reader, 0, length as u64, &mut Default::default())
             .expect("Error reading dictionary");
 
         data = resp.next().await?.ok()?;
