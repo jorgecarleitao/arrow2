@@ -149,7 +149,7 @@ pub fn array_to_pages<K: DictionaryKey>(
                 DataType::UInt8 => dyn_prim!(u8, i32, array, options, type_),
                 DataType::UInt16 => dyn_prim!(u16, i32, array, options, type_),
                 DataType::UInt32 => dyn_prim!(u32, i32, array, options, type_),
-                DataType::UInt64 => dyn_prim!(i64, i64, array, options, type_),
+                DataType::UInt64 => dyn_prim!(u64, i64, array, options, type_),
                 DataType::Float32 => dyn_prim!(f32, f32, array, options, type_),
                 DataType::Float64 => dyn_prim!(f64, f64, array, options, type_),
                 DataType::Utf8 => {
