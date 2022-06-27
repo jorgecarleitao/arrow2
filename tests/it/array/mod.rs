@@ -99,8 +99,8 @@ fn test_with_validity() {
     assert_eq!(arr_ref, &expected);
 }
 
-// check that `PartialEq` can be derived
-#[derive(PartialEq)]
+// check that we ca derive stuff
+#[derive(PartialEq, Clone, Debug)]
 struct A {
     array: Box<dyn Array>,
 }
