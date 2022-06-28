@@ -3,6 +3,7 @@ use std::io::{Cursor, Read, Seek};
 use arrow2::{
     array::*, bitmap::Bitmap, buffer::Buffer, chunk::Chunk, datatypes::*, error::Result,
     io::parquet::read::statistics::*, io::parquet::read::*, io::parquet::write::*,
+    types::NativeType,
 };
 
 #[cfg(feature = "io_json_integration")]
@@ -1044,61 +1045,136 @@ fn arrow_type() -> Result<()> {
     Ok(())
 }
 
-fn data() -> Vec<Option<Vec<Option<i32>>>> {
+fn data<T: NativeType, I: Iterator<Item = T>>(
+    mut iter: I,
+    inner_is_nullable: bool,
+) -> ListArray<i32> {
     // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
-    vec![
-        Some(vec![Some(0), Some(1)]),
+    let data = vec![
+        Some(vec![Some(iter.next().unwrap()), Some(iter.next().unwrap())]),
         Some(vec![]),
-        Some(vec![Some(2), Some(0), Some(3)]),
-        Some(vec![Some(4), Some(5), Some(6)]),
+        Some(vec![
+            Some(iter.next().unwrap()),
+            Some(iter.next().unwrap()),
+            Some(iter.next().unwrap()),
+        ]),
+        Some(vec![
+            Some(iter.next().unwrap()),
+            Some(iter.next().unwrap()),
+            Some(iter.next().unwrap()),
+        ]),
         Some(vec![]),
-        Some(vec![Some(7), Some(8), Some(9)]),
+        Some(vec![
+            Some(iter.next().unwrap()),
+            Some(iter.next().unwrap()),
+            Some(iter.next().unwrap()),
+        ]),
         Some(vec![]),
-        Some(vec![Some(10)]),
-    ]
-}
-
-fn list_array_generic(inner_is_nullable: bool, is_nullable: bool) -> Result<()> {
+        Some(vec![Some(iter.next().unwrap())]),
+    ];
     let mut array = MutableListArray::<i32, _>::new_with_field(
-        MutablePrimitiveArray::<i32>::new(),
+        MutablePrimitiveArray::<T>::new(),
         "item",
         inner_is_nullable,
     );
-    array.try_extend(data()).unwrap();
-    let array: ListArray<i32> = array.into();
+    array.try_extend(data).unwrap();
+    array.into()
+}
 
+fn list_array_generic<O: Offset>(is_nullable: bool, array: ListArray<O>) -> Result<()> {
     let schema = Schema::from(vec![Field::new(
         "a1",
         array.data_type().clone(),
         is_nullable,
     )]);
-    let batch = Chunk::try_new(vec![array.boxed()])?;
+    let chunk = Chunk::try_new(vec![array.boxed()])?;
 
-    let r = integration_write(&schema, &[batch.clone()])?;
+    let r = integration_write(&schema, &[chunk.clone()])?;
 
-    let (new_schema, new_batches) = integration_read(&r)?;
+    let (new_schema, new_chunks) = integration_read(&r)?;
 
     assert_eq!(new_schema, schema);
-    assert_eq!(new_batches, vec![batch]);
+    assert_eq!(new_chunks, vec![chunk]);
     Ok(())
 }
 
 #[test]
 fn list_array_required_required() -> Result<()> {
-    list_array_generic(false, false)
+    list_array_generic(false, data(0..12i8, false))?;
+    list_array_generic(false, data(0..12i16, false))?;
+    list_array_generic(false, data(0..12i32, false))?;
+    list_array_generic(false, data(0..12i64, false))?;
+    list_array_generic(false, data(0..12u8, false))?;
+    list_array_generic(false, data(0..12u16, false))?;
+    list_array_generic(false, data(0..12u32, false))?;
+    list_array_generic(false, data(0..12u64, false))?;
+    list_array_generic(false, data((0..12).map(|x| (x as f32) * 1.0), false))?;
+    list_array_generic(false, data((0..12).map(|x| (x as f64) * 1.0f64), false))
 }
 
 #[test]
 fn list_array_optional_optional() -> Result<()> {
-    list_array_generic(true, true)
+    list_array_generic(true, data(0..12, true))
 }
 
 #[test]
 fn list_array_required_optional() -> Result<()> {
-    list_array_generic(false, true)
+    list_array_generic(true, data(0..12, false))
 }
 
 #[test]
 fn list_array_optional_required() -> Result<()> {
-    list_array_generic(true, false)
+    list_array_generic(false, data(0..12, true))
+}
+
+#[test]
+fn list_utf8() -> Result<()> {
+    let data = vec![
+        Some(vec![Some("a".to_string())]),
+        Some(vec![]),
+        Some(vec![Some("b".to_string())]),
+    ];
+    let mut array =
+        MutableListArray::<i32, _>::new_with_field(MutableUtf8Array::<i32>::new(), "item", true);
+    array.try_extend(data).unwrap();
+    list_array_generic(false, array.into())
+}
+
+#[test]
+fn list_large_utf8() -> Result<()> {
+    let data = vec![
+        Some(vec![Some("a".to_string())]),
+        Some(vec![]),
+        Some(vec![Some("b".to_string())]),
+    ];
+    let mut array =
+        MutableListArray::<i32, _>::new_with_field(MutableUtf8Array::<i64>::new(), "item", true);
+    array.try_extend(data).unwrap();
+    list_array_generic(false, array.into())
+}
+
+#[test]
+fn list_binary() -> Result<()> {
+    let data = vec![
+        Some(vec![Some(b"a".to_vec())]),
+        Some(vec![]),
+        Some(vec![Some(b"b".to_vec())]),
+    ];
+    let mut array =
+        MutableListArray::<i32, _>::new_with_field(MutableBinaryArray::<i32>::new(), "item", true);
+    array.try_extend(data).unwrap();
+    list_array_generic(false, array.into())
+}
+
+#[test]
+fn large_list_large_binary() -> Result<()> {
+    let data = vec![
+        Some(vec![Some(b"a".to_vec())]),
+        Some(vec![]),
+        Some(vec![Some(b"b".to_vec())]),
+    ];
+    let mut array =
+        MutableListArray::<i64, _>::new_with_field(MutableBinaryArray::<i64>::new(), "item", true);
+    array.try_extend(data).unwrap();
+    list_array_generic(false, array.into())
 }
