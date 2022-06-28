@@ -1,9 +1,12 @@
 #![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 
 use arrow2::array::*;
-use arrow2::compute::arithmetics::decimal::{adaptive_div, checked_div, div, saturating_div};
+use arrow2::compute::arithmetics::decimal::{
+    adaptive_div, checked_div, div, div_scalar, saturating_div,
+};
 use arrow2::compute::arithmetics::{ArrayCheckedDiv, ArrayDiv};
 use arrow2::datatypes::DataType;
+use arrow2::scalar::PrimitiveScalar;
 
 #[test]
 fn test_divide_normal() {
@@ -63,6 +66,28 @@ fn test_divide_panic() {
     let a = PrimitiveArray::from([Some(99999i128)]).to(DataType::Decimal(5, 2));
     let b = PrimitiveArray::from([Some(000_01i128)]).to(DataType::Decimal(5, 2));
     div(&a, &b);
+}
+
+#[test]
+fn test_div_scalar() {
+    //   222.222 -->  222222000
+    //   123.456 -->     123456
+    // --------       ---------
+    //     1.800 <--       1800
+    let a = PrimitiveArray::from([Some(222_222i128), None]).to(DataType::Decimal(7, 3));
+    let b = PrimitiveScalar::from(Some(123_456i128)).to(DataType::Decimal(7, 3));
+    let result = div_scalar(&a, &b);
+
+    let expected = PrimitiveArray::from([Some(1_800i128), None]).to(DataType::Decimal(7, 3));
+    assert_eq!(result, expected);
+}
+
+#[test]
+#[should_panic(expected = "Overflow in multiplication presented for precision 5")]
+fn test_divide_scalar_panic() {
+    let a = PrimitiveArray::from([Some(99999i128)]).to(DataType::Decimal(5, 2));
+    let b = PrimitiveScalar::from(Some(000_01i128)).to(DataType::Decimal(5, 2));
+    div_scalar(&a, &b);
 }
 
 #[test]
