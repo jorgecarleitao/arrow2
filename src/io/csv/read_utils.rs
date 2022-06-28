@@ -201,20 +201,6 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
                 .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                 .map(|x| x.timestamp_millis())
         }),
-        Timestamp(TimeUnit::Nanosecond, None) => {
-            deserialize_primitive(rows, column, datatype, |bytes| {
-                to_utf8(bytes)
-                    .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
-                    .map(|x| x.timestamp_nanos())
-            })
-        }
-        Timestamp(TimeUnit::Microsecond, None) => {
-            deserialize_primitive(rows, column, datatype, |bytes| {
-                to_utf8(bytes)
-                    .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
-                    .map(|x| x.timestamp_nanos() / 1000)
-            })
-        }
         Timestamp(time_unit, None) => deserialize_primitive(rows, column, datatype, |bytes| {
             to_utf8(bytes)
                 .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())

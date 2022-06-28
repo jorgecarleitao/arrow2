@@ -84,53 +84,67 @@ d|-556132.25|1||2019-04-18 02:45:55.555|11:46:03 PM|c
     Ok(())
 }
 
-fn data_array(column: usize) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
+fn data_array(column: &str) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
     let (array, expected) = match column {
-        0 => (
+        "utf8" => (
+            Utf8Array::<i32>::from_slice(["a b", "c", "d"]).boxed(),
+            vec!["a b", "c", "d"],
+        ),
+        "large_utf8" => (
             Utf8Array::<i64>::from_slice(["a b", "c", "d"]).boxed(),
             vec!["a b", "c", "d"],
         ),
-        1 => (
+        "binary" => (
             BinaryArray::<i32>::from_slice(["a b", "c", "d"]).boxed(),
             vec!["a b", "c", "d"],
         ),
-        2 => (
+        "large_binary" => (
             BinaryArray::<i64>::from_slice(["a b", "c", "d"]).boxed(),
             vec!["a b", "c", "d"],
         ),
-        3 => (
+        "i8" => (
             Int8Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
-        4 => (
+        "i16" => (
             Int16Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
-        5 => (
+        "i32" => (
             Int32Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
-        6 => (
+        "i64" => (
             Int64Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
-        7 => (
+        "u8" => (
             UInt8Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
-        8 => (
+        "u16" => (
             UInt16Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
-        9 => (
+        "u32" => (
             UInt32Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
-        10 => (
+        "u64" => (
             UInt64Array::from_slice(&[3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
-        11 => {
+        "f32" => (Float32Array::from_slice(&[3.1]).boxed(), vec!["3.1"]),
+        "f64" => (Float64Array::from_slice(&[3.1]).boxed(), vec!["3.1"]),
+        "date32" => {
+            let array = PrimitiveArray::<i32>::from_vec(vec![1]).to(DataType::Date32);
+            (array.boxed(), vec!["1970-01-02 00:00:00"])
+        }
+        "date64" => {
+            let array = PrimitiveArray::<i64>::from_vec(vec![1_000]).to(DataType::Date64);
+            (array.boxed(), vec!["1970-01-01 00:00:01"])
+        }
+        "time32[ms]" => {
             let array = PrimitiveArray::<i32>::from_vec(vec![1_234_001, 24_680_001, 85_563_001])
                 .to(DataType::Time32(TimeUnit::Millisecond));
             (
@@ -138,7 +152,7 @@ fn data_array(column: usize) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
                 vec!["00:20:34.001", "06:51:20.001", "23:46:03.001"],
             )
         }
-        12 => {
+        "time64[us]" => {
             let array = PrimitiveArray::<i64>::from_vec(vec![
                 1_234_000_001,
                 24_680_000_001,
@@ -150,7 +164,7 @@ fn data_array(column: usize) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
                 vec!["00:20:34.000001", "06:51:20.000001", "23:46:03.000001"],
             )
         }
-        13 => {
+        "time64[ns]" => {
             let array = PrimitiveArray::<i64>::from_vec(vec![
                 1_234_000_000_001,
                 24_680_000_000_001,
@@ -166,7 +180,32 @@ fn data_array(column: usize) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
                 ],
             )
         }
-        14 => {
+        "ts[s]" => {
+            let array = PrimitiveArray::<i64>::from_slice([1_555_584_887, 1_555_555_555])
+                .to(DataType::Timestamp(TimeUnit::Second, None));
+            (
+                array.boxed(),
+                vec!["2019-04-18 10:54:47", "2019-04-18 02:45:55"],
+            )
+        }
+        "ts[ms]" => {
+            let array = PrimitiveArray::<i64>::from_slice([1_555_584_887_378, 1_555_555_555_555])
+                .to(DataType::Timestamp(TimeUnit::Millisecond, None));
+            (
+                array.boxed(),
+                vec!["2019-04-18 10:54:47.378", "2019-04-18 02:45:55.555"],
+            )
+        }
+        "ts[us]" => {
+            let array =
+                PrimitiveArray::<i64>::from_slice([1_555_584_887_378_001, 1_555_555_555_555_001])
+                    .to(DataType::Timestamp(TimeUnit::Microsecond, None));
+            (
+                array.boxed(),
+                vec!["2019-04-18 10:54:47.378001", "2019-04-18 02:45:55.555001"],
+            )
+        }
+        "ts[ns]" => {
             let array = PrimitiveArray::<i64>::from_slice([
                 1_555_584_887_378_000_001,
                 1_555_555_555_555_000_001,
@@ -180,7 +219,7 @@ fn data_array(column: usize) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
                 ],
             )
         }
-        15 => {
+        "ts[ns,offset]" => {
             let array = PrimitiveArray::<i64>::from_slice([
                 1_555_584_887_378_000_001,
                 1_555_555_555_555_000_001,
@@ -197,13 +236,7 @@ fn data_array(column: usize) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
                 ],
             )
         }
-        16 => {
-            let keys = UInt32Array::from_slice(&[2, 1, 0]);
-            let values = Utf8Array::<i64>::from_slice(["a b", "c", "d"]).boxed();
-            let array = DictionaryArray::from_data(keys, values);
-            (array.boxed(), vec!["d", "c", "a b"])
-        }
-        17 => {
+        "ts[ns,tz]" => {
             let array = PrimitiveArray::<i64>::from_slice([
                 1_555_584_887_378_000_001,
                 1_555_555_555_555_000_001,
@@ -220,6 +253,18 @@ fn data_array(column: usize) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
                 ],
             )
         }
+        "dictionary[u32]" => {
+            let keys = UInt32Array::from_slice(&[2, 1, 0]);
+            let values = Utf8Array::<i64>::from_slice(["a b", "c", "d"]).boxed();
+            let array = DictionaryArray::from_data(keys, values);
+            (array.boxed(), vec!["d", "c", "a b"])
+        }
+        "dictionary[u64]" => {
+            let keys = UInt64Array::from_slice(&[2, 1, 0]);
+            let values = Utf8Array::<i64>::from_slice(["a b", "c", "d"]).boxed();
+            let array = DictionaryArray::from_data(keys, values);
+            (array.boxed(), vec!["d", "c", "a b"])
+        }
         _ => todo!(),
     };
 
@@ -227,14 +272,14 @@ fn data_array(column: usize) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
 }
 
 fn test_array(
-    columns: Chunk<Box<dyn Array>>,
+    chunk: Chunk<Box<dyn Array>>,
     data: Vec<&'static str>,
     options: SerializeOptions,
 ) -> Result<()> {
     let mut writer = Cursor::new(Vec::<u8>::new());
 
     write_header(&mut writer, &["c1"], &options)?;
-    write_chunk(&mut writer, &columns, &options)?;
+    write_chunk(&mut writer, &chunk, &options)?;
 
     // check
     let buffer = writer.into_inner();
@@ -246,15 +291,42 @@ fn test_array(
     Ok(())
 }
 
-fn write_single(column: usize) -> Result<()> {
-    let (columns, data) = data_array(column);
+fn write_single(column: &str) -> Result<()> {
+    let (chunk, data) = data_array(column);
 
-    test_array(columns, data, SerializeOptions::default())
+    test_array(chunk, data, SerializeOptions::default())
 }
 
 #[test]
 fn write_each() -> Result<()> {
-    for i in 0..=16 {
+    for i in [
+        "utf8",
+        "large_utf8",
+        "binary",
+        "large_binary",
+        "i8",
+        "i16",
+        "i32",
+        "i64",
+        "u8",
+        "u16",
+        "u32",
+        "u64",
+        "f32",
+        "f64",
+        "date32",
+        "date64",
+        "time32[ms]",
+        "time64[us]",
+        "time64[ns]",
+        "ts[s]",
+        "ts[ms]",
+        "ts[us]",
+        "ts[ns]",
+        "ts[ns,offset]",
+        "dictionary[u32]",
+        "dictionary[u64]",
+    ] {
         write_single(i)?;
     }
     Ok(())
@@ -263,7 +335,7 @@ fn write_each() -> Result<()> {
 #[test]
 #[cfg(feature = "chrono-tz")]
 fn write_tz_timezone() -> Result<()> {
-    write_single(17)
+    write_single("ts[ns,tz]")
 }
 
 #[test]
@@ -315,52 +387,39 @@ fn write_tz_timezone_formatted_tz() -> Result<()> {
     )
 }
 
+fn test_generic(chunk: Chunk<Box<dyn Array>>, expected: &str) {
+    let mut writer = vec![];
+    let options = SerializeOptions::default();
+    write_chunk(&mut writer, &chunk, &options).unwrap();
+    let csv = std::str::from_utf8(&writer).unwrap();
+
+    assert_eq!(csv, expected);
+}
+
 #[test]
 fn write_empty_and_missing() {
     let a = Utf8Array::<i32>::from(&[Some(""), None]);
     let b = Utf8Array::<i32>::from(&[None, Some("")]);
-    let columns = Chunk::new(vec![a.boxed(), b.boxed()]);
-
-    let mut writer = vec![];
-    let options = SerializeOptions::default();
-    write_chunk(&mut writer, &columns, &options).unwrap();
-    let csv = std::str::from_utf8(&writer).unwrap();
-
-    assert_eq!(csv, "\"\",\n,\"\"\n");
-}
-
-#[test]
-fn write_escaping() {
-    let a = Utf8Array::<i32>::from_slice(&["Acme co., Ltd."]);
-    let columns = Chunk::new(vec![a.boxed()]);
-
-    let mut writer = vec![];
-    let options = SerializeOptions::default();
-    write_chunk(&mut writer, &columns, &options).unwrap();
-    let csv = std::str::from_utf8(&writer).unwrap();
-
-    assert_eq!(csv, "\"Acme co., Ltd.\"\n");
+    let chunk = Chunk::new(vec![a.boxed(), b.boxed()]);
+    test_generic(chunk, "\"\",\n,\"\"\n");
 }
 
 #[test]
 fn write_escaping_resize_local_buf() {
     // tests if local buffer reallocates properly
     for payload in [
+        "Acme co., Ltd.",
         "bar,1234567890123456789012345678901234567890123456789012345678900293480293847",
         "This is the mail system at host smtp.sciprofiles.com.I'm sorry to have to inform you that your message could notbe delivered to one or more recipients. It's attached below.For further assistance,bar",
     ] {
-        let a = Utf8Array::<i32>::from_slice(&[
-            payload
-        ]);
-        let columns = Chunk::new(vec![a.boxed()]);
+        let a = Utf8Array::<i32>::from_slice(&[payload]);
+        let chunk = Chunk::new(vec![a.boxed()]);
 
-        let mut writer = vec![];
-        let options = SerializeOptions::default();
-        write_chunk(&mut writer, &columns, &options).unwrap();
-        let csv = std::str::from_utf8(&writer).unwrap();
-        assert_eq!(
-            csv,
-            format!("\"{}\"\n", payload)
-        );
+        test_generic(chunk,  &format!("\"{}\"\n", payload));
+
+        let a = Utf8Array::<i64>::from_slice(&[payload]);
+        let chunk = Chunk::new(vec![a.boxed()]);
+
+        test_generic(chunk,  &format!("\"{}\"\n", payload));
     }
 }
