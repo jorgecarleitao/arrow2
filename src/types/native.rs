@@ -33,9 +33,6 @@ pub trait NativeType:
     /// To bytes in little endian
     fn to_le_bytes(&self) -> Self::Bytes;
 
-    /// To bytes in native endian
-    fn to_ne_bytes(&self) -> Self::Bytes;
-
     /// To bytes in big endian
     fn to_be_bytes(&self) -> Self::Bytes;
 
@@ -57,11 +54,6 @@ macro_rules! native_type {
             #[inline]
             fn to_be_bytes(&self) -> Self::Bytes {
                 Self::to_be_bytes(*self)
-            }
-
-            #[inline]
-            fn to_ne_bytes(&self) -> Self::Bytes {
-                Self::to_ne_bytes(*self)
             }
 
             #[inline]
@@ -88,25 +80,25 @@ native_type!(i128, PrimitiveType::Int128);
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Zeroable, Pod)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
-pub struct days_ms([i32; 2]);
+pub struct days_ms(pub i32, pub i32);
 
 impl days_ms {
     /// A new [`days_ms`].
     #[inline]
     pub fn new(days: i32, milliseconds: i32) -> Self {
-        Self([days, milliseconds])
+        Self(days, milliseconds)
     }
 
     /// The number of days
     #[inline]
     pub fn days(&self) -> i32 {
-        self.0[0]
+        self.0
     }
 
     /// The number of milliseconds
     #[inline]
     pub fn milliseconds(&self) -> i32 {
-        self.0[1]
+        self.1
     }
 }
 
@@ -115,24 +107,8 @@ impl NativeType for days_ms {
     type Bytes = [u8; 8];
     #[inline]
     fn to_le_bytes(&self) -> Self::Bytes {
-        let days = self.0[0].to_le_bytes();
-        let ms = self.0[1].to_le_bytes();
-        let mut result = [0; 8];
-        result[0] = days[0];
-        result[1] = days[1];
-        result[2] = days[2];
-        result[3] = days[3];
-        result[4] = ms[0];
-        result[5] = ms[1];
-        result[6] = ms[2];
-        result[7] = ms[3];
-        result
-    }
-
-    #[inline]
-    fn to_ne_bytes(&self) -> Self::Bytes {
-        let days = self.0[0].to_ne_bytes();
-        let ms = self.0[1].to_ne_bytes();
+        let days = self.0.to_le_bytes();
+        let ms = self.1.to_le_bytes();
         let mut result = [0; 8];
         result[0] = days[0];
         result[1] = days[1];
@@ -147,8 +123,8 @@ impl NativeType for days_ms {
 
     #[inline]
     fn to_be_bytes(&self) -> Self::Bytes {
-        let days = self.0[0].to_be_bytes();
-        let ms = self.0[1].to_be_bytes();
+        let days = self.0.to_be_bytes();
+        let ms = self.1.to_be_bytes();
         let mut result = [0; 8];
         result[0] = days[0];
         result[1] = days[1];
@@ -173,7 +149,7 @@ impl NativeType for days_ms {
         ms[1] = bytes[5];
         ms[2] = bytes[6];
         ms[3] = bytes[7];
-        Self([i32::from_be_bytes(days), i32::from_be_bytes(ms)])
+        Self(i32::from_be_bytes(days), i32::from_be_bytes(ms))
     }
 }
 
@@ -181,7 +157,7 @@ impl NativeType for days_ms {
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Zeroable, Pod)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
-pub struct months_days_ns(i32, i32, i64);
+pub struct months_days_ns(pub i32, pub i32, pub i64);
 
 impl months_days_ns {
     /// A new [`months_days_ns`].
@@ -217,26 +193,6 @@ impl NativeType for months_days_ns {
         let months = self.months().to_le_bytes();
         let days = self.days().to_le_bytes();
         let ns = self.ns().to_le_bytes();
-        let mut result = [0; 16];
-        result[0] = months[0];
-        result[1] = months[1];
-        result[2] = months[2];
-        result[3] = months[3];
-        result[4] = days[0];
-        result[5] = days[1];
-        result[6] = days[2];
-        result[7] = days[3];
-        (0..8).for_each(|i| {
-            result[8 + i] = ns[i];
-        });
-        result
-    }
-
-    #[inline]
-    fn to_ne_bytes(&self) -> Self::Bytes {
-        let months = self.months().to_ne_bytes();
-        let days = self.days().to_ne_bytes();
-        let ns = self.ns().to_ne_bytes();
         let mut result = [0; 16];
         result[0] = months[0];
         result[1] = months[1];
@@ -418,11 +374,6 @@ impl NativeType for f16 {
     #[inline]
     fn to_le_bytes(&self) -> Self::Bytes {
         self.0.to_le_bytes()
-    }
-
-    #[inline]
-    fn to_ne_bytes(&self) -> Self::Bytes {
-        self.0.to_ne_bytes()
     }
 
     #[inline]
