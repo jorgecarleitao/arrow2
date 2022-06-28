@@ -584,5 +584,5 @@ pub fn months_to_months_days_ns(from: &PrimitiveArray<i32>) -> PrimitiveArray<mo
 
 /// Casts f16 into f32
 pub fn f16_to_f32(from: &PrimitiveArray<f16>) -> PrimitiveArray<f32> {
-    unary(from, |x| x.as_f32(), DataType::Float32)
+    unary(from, |x| x.to_f32(), DataType::Float32)
 }
