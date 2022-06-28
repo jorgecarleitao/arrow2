@@ -301,6 +301,9 @@ impl PartialEq for f16 {
 
 // see https://github.com/starkat99/half-rs/blob/main/src/binary16.rs
 impl f16 {
+    /// The difference between 1.0 and the next largest representable number.
+    pub const EPSILON: f16 = f16(0x1400u16);
+
     #[inline]
     #[must_use]
     pub(crate) const fn is_nan(self) -> bool {
@@ -308,8 +311,7 @@ impl f16 {
     }
 
     /// Casts this `f16` to `f32`
-    #[inline]
-    pub fn as_f32(self) -> f32 {
+    pub fn to_f32(self) -> f32 {
         let i = self.0;
         // Check for signed zero
         if i & 0x7FFFu16 == 0 {
@@ -354,17 +356,76 @@ impl f16 {
         let man = (half_man & 0x03FFu32) << 13;
         f32::from_bits(sign | exp | man)
     }
+
+    /// Casts an `f32` into `f16`
+    pub fn from_f32(value: f32) -> Self {
+        let x: u32 = value.to_bits();
+
+        // Extract IEEE754 components
+        let sign = x & 0x8000_0000u32;
+        let exp = x & 0x7F80_0000u32;
+        let man = x & 0x007F_FFFFu32;
+
+        // Check for all exponent bits being set, which is Infinity or NaN
+        if exp == 0x7F80_0000u32 {
+            // Set mantissa MSB for NaN (and also keep shifted mantissa bits)
+            let nan_bit = if man == 0 { 0 } else { 0x0200u32 };
+            return f16(((sign >> 16) | 0x7C00u32 | nan_bit | (man >> 13)) as u16);
+        }
+
+        // The number is normalized, start assembling half precision version
+        let half_sign = sign >> 16;
+        // Unbias the exponent, then bias for half precision
+        let unbiased_exp = ((exp >> 23) as i32) - 127;
+        let half_exp = unbiased_exp + 15;
+
+        // Check for exponent overflow, return +infinity
+        if half_exp >= 0x1F {
+            return f16((half_sign | 0x7C00u32) as u16);
+        }
+
+        // Check for underflow
+        if half_exp <= 0 {
+            // Check mantissa for what we can do
+            if 14 - half_exp > 24 {
+                // No rounding possibility, so this is a full underflow, return signed zero
+                return f16(half_sign as u16);
+            }
+            // Don't forget about hidden leading mantissa bit when assembling mantissa
+            let man = man | 0x0080_0000u32;
+            let mut half_man = man >> (14 - half_exp);
+            // Check for rounding (see comment above functions)
+            let round_bit = 1 << (13 - half_exp);
+            if (man & round_bit) != 0 && (man & (3 * round_bit - 1)) != 0 {
+                half_man += 1;
+            }
+            // No exponent for subnormals
+            return f16((half_sign | half_man) as u16);
+        }
+
+        // Rebias the exponent
+        let half_exp = (half_exp as u32) << 10;
+        let half_man = man >> 13;
+        // Check for rounding (see comment above functions)
+        let round_bit = 0x0000_1000u32;
+        if (man & round_bit) != 0 && (man & (3 * round_bit - 1)) != 0 {
+            // Round it
+            f16(((half_sign | half_exp | half_man) + 1) as u16)
+        } else {
+            f16((half_sign | half_exp | half_man) as u16)
+        }
+    }
 }
 
 impl std::fmt::Debug for f16 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.as_f32())
+        write!(f, "{:?}", self.to_f32())
     }
 }
 
 impl std::fmt::Display for f16 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_f32())
+        write!(f, "{}", self.to_f32())
     }
 }
 
@@ -384,5 +445,30 @@ impl NativeType for f16 {
     #[inline]
     fn from_be_bytes(bytes: Self::Bytes) -> Self {
         Self(u16::from_be_bytes(bytes))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_f16_to_f32() {
+        let f = f16::from_f32(7.0);
+        assert_eq!(f.to_f32(), 7.0f32);
+
+        // 7.1 is NOT exactly representable in 16-bit, it's rounded
+        let f = f16::from_f32(7.1);
+        let diff = (f.to_f32() - 7.1f32).abs();
+        // diff must be <= 4 * EPSILON, as 7 has two more significant bits than 1
+        assert!(diff <= 4.0 * f16::EPSILON.to_f32());
+
+        assert_eq!(f16(0x0000_0001).to_f32(), 2.0f32.powi(-24));
+        assert_eq!(f16(0x0000_0005).to_f32(), 5.0 * 2.0f32.powi(-24));
+
+        assert_eq!(f16(0x0000_0001), f16::from_f32(2.0f32.powi(-24)));
+        assert_eq!(f16(0x0000_0005), f16::from_f32(5.0 * 2.0f32.powi(-24)));
+
+        assert_eq!(format!("{}", f16::from_f32(7.0)), "7".to_string());
+        assert_eq!(format!("{:?}", f16::from_f32(7.0)), "7.0".to_string());
     }
 }
