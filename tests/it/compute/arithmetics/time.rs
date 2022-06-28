@@ -2,6 +2,7 @@ use arrow2::array::*;
 use arrow2::compute::arithmetics::time::*;
 use arrow2::datatypes::{DataType, TimeUnit};
 use arrow2::scalar::*;
+use arrow2::types::months_days_ns;
 
 #[test]
 fn test_adding_timestamp() {
@@ -315,5 +316,70 @@ fn test_date64() {
     let expected = PrimitiveArray::from([Some(99_990i64), Some(99_900i64), None, Some(99_000i64)])
         .to(DataType::Date64);
 
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_add_interval() {
+    let timestamp =
+        PrimitiveArray::from_slice([1i64]).to(DataType::Timestamp(TimeUnit::Second, None));
+
+    let interval = months_days_ns::new(0, 1, 0);
+
+    let intervals = PrimitiveArray::from_slice([interval]);
+
+    let expected = PrimitiveArray::from_slice([1i64 + 24 * 60 * 60])
+        .to(DataType::Timestamp(TimeUnit::Second, None));
+
+    let result = add_interval(&timestamp, &intervals).unwrap();
+    assert_eq!(result, expected);
+
+    let result = add_interval_scalar(&timestamp, &Some(interval).into()).unwrap();
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_add_interval_offset() {
+    let timestamp = PrimitiveArray::from_slice([1i64]).to(DataType::Timestamp(
+        TimeUnit::Second,
+        Some("+01:00".to_string()),
+    ));
+
+    let interval = months_days_ns::new(0, 1, 0);
+
+    let intervals = PrimitiveArray::from_slice([interval]);
+
+    let expected = PrimitiveArray::from_slice([1i64 + 24 * 60 * 60]).to(DataType::Timestamp(
+        TimeUnit::Second,
+        Some("+01:00".to_string()),
+    ));
+
+    let result = add_interval(&timestamp, &intervals).unwrap();
+    assert_eq!(result, expected);
+
+    let result = add_interval_scalar(&timestamp, &Some(interval).into()).unwrap();
+    assert_eq!(result, expected);
+}
+
+#[cfg(feature = "chrono-tz")]
+#[test]
+fn test_add_interval_tz() {
+    let timestamp = PrimitiveArray::from_slice([1i64]).to(DataType::Timestamp(
+        TimeUnit::Second,
+        Some("GMT".to_string()),
+    ));
+
+    let interval = months_days_ns::new(0, 1, 0);
+    let intervals = PrimitiveArray::from_slice([interval]);
+
+    let expected = PrimitiveArray::from_slice([1i64 + 24 * 60 * 60]).to(DataType::Timestamp(
+        TimeUnit::Second,
+        Some("GMT".to_string()),
+    ));
+
+    let result = add_interval(&timestamp, &intervals).unwrap();
+    assert_eq!(result, expected);
+
+    let result = add_interval_scalar(&timestamp, &Some(interval).into()).unwrap();
     assert_eq!(result, expected);
 }

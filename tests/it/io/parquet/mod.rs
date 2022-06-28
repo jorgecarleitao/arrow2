@@ -962,8 +962,8 @@ fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
 /// logical types.
 #[test]
 fn arrow_type() -> Result<()> {
-    let dt1 = DataType::Duration(TimeUnit::Second);
-    let array = PrimitiveArray::<i64>::from([Some(1), None, Some(2)]).to(dt1.clone());
+    let array1 = PrimitiveArray::<i64>::from([Some(1), None, Some(2)])
+        .to(DataType::Duration(TimeUnit::Second));
     let array2 = Utf8Array::<i64>::from([Some("a"), None, Some("bb")]);
 
     let indices = PrimitiveArray::from_values((0..3u64).map(|x| x % 2));
@@ -978,23 +978,61 @@ fn arrow_type() -> Result<()> {
         vec![b'a', b'b', b'a', b'c'].into(),
         None,
     );
-    let array5 = DictionaryArray::from_data(indices, Box::new(values));
+    let array5 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+
+    let values = PrimitiveArray::from_slice([1i16, 3]);
+    let array6 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+
+    let values = PrimitiveArray::from_slice([1i64, 3]).to(DataType::Timestamp(
+        TimeUnit::Millisecond,
+        Some("UTC".to_string()),
+    ));
+    let array7 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+
+    let values = PrimitiveArray::from_slice([1.0f64, 3.0]);
+    let array8 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+
+    let values = PrimitiveArray::from_slice([1u8, 3]);
+    let array9 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+
+    let values = PrimitiveArray::from_slice([1u16, 3]);
+    let array10 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+
+    let values = PrimitiveArray::from_slice([1u32, 3]);
+    let array11 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+
+    let values = PrimitiveArray::from_slice([1u64, 3]);
+    let array12 = DictionaryArray::from_data(indices, Box::new(values));
 
     let schema = Schema::from(vec![
-        Field::new("a1", dt1, true),
+        Field::new("a1", array1.data_type().clone(), true),
         Field::new("a2", array2.data_type().clone(), true),
         Field::new("a3", array3.data_type().clone(), true),
         Field::new("a4", array4.data_type().clone(), true),
         Field::new("a5", array5.data_type().clone(), true),
-        Field::new("a6", array5.data_type().clone(), false),
+        Field::new("a5a", array5.data_type().clone(), false),
+        Field::new("a6", array6.data_type().clone(), true),
+        Field::new("a7", array7.data_type().clone(), true),
+        Field::new("a8", array8.data_type().clone(), true),
+        Field::new("a9", array9.data_type().clone(), true),
+        Field::new("a10", array10.data_type().clone(), true),
+        Field::new("a11", array11.data_type().clone(), true),
+        Field::new("a12", array12.data_type().clone(), true),
     ]);
     let batch = Chunk::try_new(vec![
-        array.boxed(),
+        array1.boxed(),
         array2.boxed(),
         array3.boxed(),
         array4.boxed(),
         array5.clone().boxed(),
         array5.boxed(),
+        array6.boxed(),
+        array7.boxed(),
+        array8.boxed(),
+        array9.boxed(),
+        array10.boxed(),
+        array11.boxed(),
+        array12.boxed(),
     ])?;
 
     let r = integration_write(&schema, &[batch.clone()])?;
