@@ -126,7 +126,6 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                 }
             }
             State::OptionalDictionary(page_validity, page_values) => {
-                println!("optional_dict");
                 let dict_values = page_values.dict.values();
                 let dict_offsets = page_values.dict.offsets();
 

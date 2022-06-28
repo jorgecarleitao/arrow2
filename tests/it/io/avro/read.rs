@@ -236,45 +236,51 @@ fn read_without_codec() -> Result<()> {
     test(Codec::Null)
 }
 
+#[cfg(feature = "io_avro_compression")]
 #[test]
 fn read_deflate() -> Result<()> {
     test(Codec::Deflate)
 }
 
+#[cfg(feature = "io_avro_compression")]
 #[test]
 fn read_snappy() -> Result<()> {
     test(Codec::Snappy)
 }
 
-fn test_projected(projection: Vec<bool>) -> Result<()> {
-    let avro = write_avro(Codec::Null).unwrap();
-    let expected = data();
-    let expected = expected
-        .into_arrays()
-        .into_iter()
-        .zip(projection.iter())
-        .filter_map(|x| if *x.1 { Some(x.0) } else { None })
-        .collect();
-    let expected = Chunk::new(expected);
-    let (_, expected_schema) = schema();
-    let expected_fields = expected_schema
-        .fields
-        .into_iter()
-        .zip(projection.iter())
-        .filter_map(|x| if *x.1 { Some(x.0) } else { None })
-        .collect::<Vec<_>>();
-    let expected_schema = Schema::from(expected_fields);
-
-    let (result, schema) = read_avro(&avro, Some(projection))?;
-
-    assert_eq!(schema, expected_schema);
-    assert_eq!(result, expected);
-    Ok(())
-}
-
 #[test]
-fn read_projected() -> Result<()> {
-    test_projected(vec![
-        true, false, false, false, false, false, false, false, false, false, false, false,
-    ])
+fn test_projected() -> Result<()> {
+    let expected = data();
+    let (_, expected_schema) = schema();
+
+    let avro = write_avro(Codec::Null).unwrap();
+
+    for i in 0..expected_schema.fields.len() {
+        let mut projection = vec![false; expected_schema.fields.len()];
+        projection[i] = true;
+
+        let expected = expected
+            .clone()
+            .into_arrays()
+            .into_iter()
+            .zip(projection.iter())
+            .filter_map(|x| if *x.1 { Some(x.0) } else { None })
+            .collect();
+        let expected = Chunk::new(expected);
+
+        let expected_fields = expected_schema
+            .clone()
+            .fields
+            .into_iter()
+            .zip(projection.iter())
+            .filter_map(|x| if *x.1 { Some(x.0) } else { None })
+            .collect::<Vec<_>>();
+        let expected_schema = Schema::from(expected_fields);
+
+        let (result, schema) = read_avro(&avro, Some(projection))?;
+
+        assert_eq!(schema, expected_schema);
+        assert_eq!(result, expected);
+    }
+    Ok(())
 }

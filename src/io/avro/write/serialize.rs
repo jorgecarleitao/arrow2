@@ -62,6 +62,29 @@ fn binary_optional<O: Offset>(array: &BinaryArray<O>) -> BoxSerializer {
     ))
 }
 
+fn fixed_size_binary_required(array: &FixedSizeBinaryArray) -> BoxSerializer {
+    Box::new(BufStreamingIterator::new(
+        array.values_iter(),
+        |x, buf| {
+            buf.extend_from_slice(x);
+        },
+        vec![],
+    ))
+}
+
+fn fixed_size_binary_optional(array: &FixedSizeBinaryArray) -> BoxSerializer {
+    Box::new(BufStreamingIterator::new(
+        array.iter(),
+        |x, buf| {
+            util::zigzag_encode(x.is_some() as i64, buf).unwrap();
+            if let Some(x) = x {
+                buf.extend_from_slice(x);
+            }
+        },
+        vec![],
+    ))
+}
+
 fn list_required<'a, O: Offset>(array: &'a ListArray<O>, schema: &AvroSchema) -> BoxSerializer<'a> {
     let mut inner = new_serializer(array.values().as_ref(), schema);
     let lengths = array
@@ -218,11 +241,17 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
         (PhysicalType::LargeBinary, AvroSchema::Union(_)) => {
             binary_optional::<i64>(array.as_any().downcast_ref().unwrap())
         }
+        (PhysicalType::FixedSizeBinary, AvroSchema::Union(_)) => {
+            fixed_size_binary_optional(array.as_any().downcast_ref().unwrap())
+        }
         (PhysicalType::Binary, AvroSchema::Bytes(_)) => {
             binary_required::<i32>(array.as_any().downcast_ref().unwrap())
         }
         (PhysicalType::LargeBinary, AvroSchema::Bytes(_)) => {
             binary_required::<i64>(array.as_any().downcast_ref().unwrap())
+        }
+        (PhysicalType::FixedSizeBinary, AvroSchema::Fixed(_)) => {
+            fixed_size_binary_required(array.as_any().downcast_ref().unwrap())
         }
 
         (PhysicalType::Primitive(PrimitiveType::Int32), AvroSchema::Union(_)) => {
@@ -446,6 +475,7 @@ pub fn can_serialize(data_type: &DataType) -> bool {
     match data_type.to_logical_type() {
         List(inner) => return can_serialize(&inner.data_type),
         LargeList(inner) => return can_serialize(&inner.data_type),
+        Struct(inner) => return inner.iter().all(|inner| can_serialize(&inner.data_type)),
         _ => {}
     };
 
@@ -454,8 +484,12 @@ pub fn can_serialize(data_type: &DataType) -> bool {
         Boolean
             | Int32
             | Int64
+            | Float32
+            | Float64
+            | Decimal(_, _)
             | Utf8
             | Binary
+            | FixedSizeBinary(_)
             | LargeUtf8
             | LargeBinary
             | Interval(IntervalUnit::MonthDayNano)
