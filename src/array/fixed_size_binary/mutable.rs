@@ -235,7 +235,7 @@ impl MutableArray for MutableFixedSizeBinaryArray {
     }
 
     fn push_null(&mut self) {
-        self.values.resize(self.values.len() + self.size, 0);
+        self.push::<&[u8]>(None);
     }
 
     fn shrink_to_fit(&mut self) {

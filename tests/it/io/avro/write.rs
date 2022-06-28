@@ -19,6 +19,8 @@ pub(super) fn schema() -> Schema {
         Field::new("date nullable", DataType::Date32, true),
         Field::new("binary", DataType::Binary, false),
         Field::new("binary nullable", DataType::Binary, true),
+        Field::new("fs binary", DataType::FixedSizeBinary(3), false),
+        Field::new("fs binary nullable", DataType::FixedSizeBinary(3), true),
         Field::new("float32", DataType::Float32, false),
         Field::new("float32 nullable", DataType::Float32, true),
         Field::new("float64", DataType::Float64, false),
@@ -63,6 +65,8 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
         Box::new(Int32Array::from([Some(1), None]).to(DataType::Date32)),
         Box::new(BinaryArray::<i32>::from_slice([b"foo", b"bar"])),
         Box::new(BinaryArray::<i32>::from([Some(b"foo"), None])),
+        Box::new(FixedSizeBinaryArray::from_slice([[1, 2, 3], [1, 2, 3]])),
+        Box::new(FixedSizeBinaryArray::from([Some([1, 2, 3]), None])),
         Box::new(PrimitiveArray::<f32>::from_slice([1.0, 2.0])),
         Box::new(PrimitiveArray::<f32>::from([Some(1.0), None])),
         Box::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0])),
@@ -162,11 +166,13 @@ fn no_compression() -> Result<()> {
     roundtrip(None)
 }
 
+#[cfg(feature = "io_avro_compression")]
 #[test]
 fn snappy() -> Result<()> {
     roundtrip(Some(write::Compression::Snappy))
 }
 
+#[cfg(feature = "io_avro_compression")]
 #[test]
 fn deflate() -> Result<()> {
     roundtrip(Some(write::Compression::Deflate))
