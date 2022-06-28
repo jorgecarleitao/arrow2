@@ -51,11 +51,6 @@ fn parallel_write(path: &str, schema: Schema, chunks: &[Chunk]) -> Result<()> {
 
     let encoding_map = |data_type: &DataType| {
         match data_type.to_physical_type() {
-            // let's be fancy and use delta-encoding for binary fields
-            PhysicalType::Binary
-            | PhysicalType::LargeBinary
-            | PhysicalType::Utf8
-            | PhysicalType::LargeUtf8 => Encoding::DeltaLengthByteArray,
             // remaining is plain
             _ => Encoding::Plain,
         }
@@ -70,7 +65,7 @@ fn parallel_write(path: &str, schema: Schema, chunks: &[Chunk]) -> Result<()> {
     // derive the parquet schema (physical types) from arrow's schema.
     let parquet_schema = to_parquet_schema(&schema)?;
 
-    let row_groups = chunks.iter().map(|batch| {
+    let row_groups = chunks.iter().map(|chunk| {
         // write batch to pages; parallelized by rayon
         let columns = chunk
             .columns()
@@ -106,7 +101,7 @@ fn parallel_write(path: &str, schema: Schema, chunks: &[Chunk]) -> Result<()> {
     });
 
     // Create a new empty file
-    let file = std::fs::File::create(path)?;
+    let file = std::io::BufWriter::new(std::fs::File::create(path)?);
 
     let mut writer = FileWriter::try_new(file, schema, options)?;
 
@@ -123,7 +118,7 @@ fn create_batch(size: usize) -> Result<Chunk> {
     let c1: Int32Array = (0..size)
         .map(|x| if x % 9 == 0 { None } else { Some(x as i32) })
         .collect();
-    let c2: Utf8Array<i32> = (0..size)
+    let c2: Utf8Array<i64> = (0..size)
         .map(|x| {
             if x % 8 == 0 {
                 None
@@ -133,18 +128,25 @@ fn create_batch(size: usize) -> Result<Chunk> {
         })
         .collect();
 
-    Chunk::try_new(vec![c1.boxed(), c2.boxed()])
+    Chunk::try_new(vec![
+        c1.clone().boxed(),
+        c1.clone().boxed(),
+        c1.boxed(),
+        c2.boxed(),
+    ])
 }
 
 fn main() -> Result<()> {
-    let schema = Schema {
-        fields: vec![
-            Field::new("c1", DataType::Int32, true),
-            Field::new("c2", DataType::Utf8, true),
-        ],
-        metadata: Default::default(),
-    };
-    let batch = create_batch(5_000_000)?;
+    let fields = vec![
+        Field::new("c1", DataType::Int32, true),
+        Field::new("c2", DataType::Int32, true),
+        Field::new("c3", DataType::Int32, true),
+        Field::new("c4", DataType::LargeUtf8, true),
+    ];
+    let batch = create_batch(100_000_000)?;
 
-    parallel_write("example.parquet", schema, &[batch.clone(), batch])
+    let start = std::time::SystemTime::now();
+    parallel_write("example.parquet", fields.into(), &[batch])?;
+    println!("took: {} ms", start.elapsed().unwrap().as_millis());
+    Ok(())
 }
