@@ -88,7 +88,7 @@ jobs:
 
       - name: Run
         # --skip io: miri can't handle opening of files, so we skip those
-        run: cargo miri test --features full -- --skip io::parquet --skip io::ipc --skip io::flight
+        run: cargo miri test --tests --features compute,chrono-tz
 
   miri-checks-io:
     name: MIRI on IO IPC

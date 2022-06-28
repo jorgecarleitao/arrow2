@@ -260,7 +260,7 @@ pub fn array_to_page_simple(
             array.values().iter().for_each(|x| {
                 let bytes = &x.to_le_bytes();
                 values.extend_from_slice(bytes);
-                values.resize(values.len() + 8, 0);
+                values.extend_from_slice(&[0; 8]);
             });
             let array = FixedSizeBinaryArray::new(
                 DataType::FixedSizeBinary(12),
@@ -283,7 +283,7 @@ pub fn array_to_page_simple(
             let mut values = Vec::<u8>::with_capacity(12 * array.len());
             array.values().iter().for_each(|x| {
                 let bytes = &x.to_le_bytes();
-                values.resize(values.len() + 4, 0); // months
+                values.extend_from_slice(&[0; 4]); // months
                 values.extend_from_slice(bytes); // days and seconds
             });
             let array = FixedSizeBinaryArray::from_data(

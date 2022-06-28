@@ -405,9 +405,9 @@ fn push(
         Boolean => boolean::push(from, min, max),
         Int8 => primitive::push(from, min, max, |x: i32| Ok(x as i8)),
         Int16 => primitive::push(from, min, max, |x: i32| Ok(x as i16)),
-        Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
-            primitive::push(from, min, max, |x: i32| Ok(x as i32))
-        }
+        Date32 | Time32(_) => primitive::push(from, min, max, |x: i32| Ok(x as i32)),
+        Interval(IntervalUnit::YearMonth) => fixlen::push_year_month(from, min, max),
+        Interval(IntervalUnit::DayTime) => fixlen::push_days_ms(from, min, max),
         UInt8 => primitive::push(from, min, max, |x: i32| Ok(x as u8)),
         UInt16 => primitive::push(from, min, max, |x: i32| Ok(x as u16)),
         UInt32 => match physical_type {

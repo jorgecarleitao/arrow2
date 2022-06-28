@@ -9,7 +9,7 @@ use crate::{
     array::{Array, BinaryArray, DictionaryKey, MutablePrimitiveArray, PrimitiveArray, Utf8Array},
     datatypes::{DataType, IntervalUnit, TimeUnit},
     error::{Error, Result},
-    types::NativeType,
+    types::{days_ms, NativeType},
 };
 
 use super::super::{ArrayIter, DataPages};
@@ -115,9 +115,12 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
             chunk_size,
             |x: i32| x as i16,
         ))),
-        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => dyn_iter(iden(
-            primitive::Iter::new(pages, data_type, chunk_size, |x: i32| x as i32),
-        )),
+        Int32 | Date32 | Time32(_) => dyn_iter(iden(primitive::Iter::new(
+            pages,
+            data_type,
+            chunk_size,
+            |x: i32| x as i32,
+        ))),
 
         Timestamp(time_unit, _) => {
             let time_unit = *time_unit;
@@ -133,6 +136,50 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
 
         FixedSizeBinary(_) => dyn_iter(fixed_size_binary::Iter::new(pages, data_type, chunk_size)),
 
+        Interval(IntervalUnit::YearMonth) => {
+            let n = 12;
+            let pages =
+                fixed_size_binary::Iter::new(pages, DataType::FixedSizeBinary(n), chunk_size);
+
+            let pages = pages.map(move |maybe_array| {
+                let array = maybe_array?;
+                let values = array
+                    .values()
+                    .chunks_exact(n)
+                    .map(|value: &[u8]| i32::from_le_bytes(value[..4].try_into().unwrap()))
+                    .collect::<Vec<_>>();
+                let validity = array.validity().cloned();
+
+                PrimitiveArray::<i32>::try_new(data_type.clone(), values.into(), validity)
+            });
+
+            let arrays = pages.map(|x| x.map(|x| x.boxed()));
+
+            Box::new(arrays) as _
+        }
+
+        Interval(IntervalUnit::DayTime) => {
+            let n = 12;
+            let pages =
+                fixed_size_binary::Iter::new(pages, DataType::FixedSizeBinary(n), chunk_size);
+
+            let pages = pages.map(move |maybe_array| {
+                let array = maybe_array?;
+                let values = array
+                    .values()
+                    .chunks_exact(n)
+                    .map(super::super::convert_days_ms)
+                    .collect::<Vec<_>>();
+                let validity = array.validity().cloned();
+
+                PrimitiveArray::<days_ms>::try_new(data_type.clone(), values.into(), validity)
+            });
+
+            let arrays = pages.map(|x| x.map(|x| x.boxed()));
+
+            Box::new(arrays) as _
+        }
+
         Decimal(_, _) => match physical_type {
             PhysicalType::Int32 => dyn_iter(iden(primitive::Iter::new(
                 pages,
@@ -146,14 +193,14 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                 chunk_size,
                 |x: i64| x as i128,
             ))),
-            &PhysicalType::FixedLenByteArray(n) if n > 16 => {
+            PhysicalType::FixedLenByteArray(n) if *n > 16 => {
                 return Err(Error::NotYetImplemented(format!(
                     "Can't decode Decimal128 type from Fixed Size Byte Array of len {:?}",
                     n
                 )))
             }
-            &PhysicalType::FixedLenByteArray(n) => {
-                let n = n as usize;
+            PhysicalType::FixedLenByteArray(n) => {
+                let n = *n;
 
                 let pages =
                     fixed_size_binary::Iter::new(pages, DataType::FixedSizeBinary(n), chunk_size);
@@ -163,15 +210,7 @@ pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
                     let values = array
                         .values()
                         .chunks_exact(n)
-                        .map(|value: &[u8]| {
-                            // Copy the fixed-size byte value to the start of a 16 byte stack
-                            // allocated buffer, then use an arithmetic right shift to fill in
-                            // MSBs, which accounts for leading 1's in negative (two's complement)
-                            // values.
-                            let mut bytes = [0u8; 16];
-                            bytes[..n].copy_from_slice(value);
-                            i128::from_be_bytes(bytes) >> (8 * (16 - n))
-                        })
+                        .map(|value: &[u8]| super::super::convert_i128(value, n))
                         .collect::<Vec<_>>();
                     let validity = array.validity().cloned();
 

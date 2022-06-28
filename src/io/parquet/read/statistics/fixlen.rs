@@ -2,16 +2,9 @@ use parquet2::statistics::{FixedLenStatistics, Statistics as ParquetStatistics};
 
 use crate::array::*;
 use crate::error::Result;
+use crate::types::days_ms;
 
-fn convert(value: &[u8], n: usize) -> i128 {
-    // Copy the fixed-size byte value to the start of a 16 byte stack
-    // allocated buffer, then use an arithmetic right shift to fill in
-    // MSBs, which accounts for leading 1's in negative (two's complement)
-    // values.
-    let mut bytes = [0u8; 16];
-    bytes[..n].copy_from_slice(value);
-    i128::from_be_bytes(bytes) >> (8 * (16 - n))
-}
+use super::super::{convert_days_ms, convert_i128};
 
 pub(super) fn push_i128(
     from: Option<&dyn ParquetStatistics>,
@@ -29,8 +22,8 @@ pub(super) fn push_i128(
         .unwrap();
     let from = from.map(|s| s.as_any().downcast_ref::<FixedLenStatistics>().unwrap());
 
-    min.push(from.and_then(|s| s.min_value.as_deref().map(|x| convert(x, n))));
-    max.push(from.and_then(|s| s.max_value.as_deref().map(|x| convert(x, n))));
+    min.push(from.and_then(|s| s.min_value.as_deref().map(|x| convert_i128(x, n))));
+    max.push(from.and_then(|s| s.max_value.as_deref().map(|x| convert_i128(x, n))));
 
     Ok(())
 }
@@ -51,5 +44,51 @@ pub(super) fn push(
     let from = from.map(|s| s.as_any().downcast_ref::<FixedLenStatistics>().unwrap());
     min.push(from.and_then(|s| s.min_value.as_ref()));
     max.push(from.and_then(|s| s.max_value.as_ref()));
+    Ok(())
+}
+
+fn convert_year_month(value: &[u8]) -> i32 {
+    i32::from_le_bytes(value[..4].try_into().unwrap())
+}
+
+pub(super) fn push_year_month(
+    from: Option<&dyn ParquetStatistics>,
+    min: &mut dyn MutableArray,
+    max: &mut dyn MutableArray,
+) -> Result<()> {
+    let min = min
+        .as_mut_any()
+        .downcast_mut::<MutablePrimitiveArray<i32>>()
+        .unwrap();
+    let max = max
+        .as_mut_any()
+        .downcast_mut::<MutablePrimitiveArray<i32>>()
+        .unwrap();
+    let from = from.map(|s| s.as_any().downcast_ref::<FixedLenStatistics>().unwrap());
+
+    min.push(from.and_then(|s| s.min_value.as_deref().map(convert_year_month)));
+    max.push(from.and_then(|s| s.max_value.as_deref().map(convert_year_month)));
+
+    Ok(())
+}
+
+pub(super) fn push_days_ms(
+    from: Option<&dyn ParquetStatistics>,
+    min: &mut dyn MutableArray,
+    max: &mut dyn MutableArray,
+) -> Result<()> {
+    let min = min
+        .as_mut_any()
+        .downcast_mut::<MutablePrimitiveArray<days_ms>>()
+        .unwrap();
+    let max = max
+        .as_mut_any()
+        .downcast_mut::<MutablePrimitiveArray<days_ms>>()
+        .unwrap();
+    let from = from.map(|s| s.as_any().downcast_ref::<FixedLenStatistics>().unwrap());
+
+    min.push(from.and_then(|s| s.min_value.as_deref().map(convert_days_ms)));
+    max.push(from.and_then(|s| s.max_value.as_deref().map(convert_days_ms)));
+
     Ok(())
 }

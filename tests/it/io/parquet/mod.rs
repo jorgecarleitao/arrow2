@@ -1,9 +1,16 @@
 use std::io::{Cursor, Read, Seek};
 
 use arrow2::{
-    array::*, bitmap::Bitmap, buffer::Buffer, chunk::Chunk, datatypes::*, error::Result,
-    io::parquet::read::statistics::*, io::parquet::read::*, io::parquet::write::*,
-    types::NativeType,
+    array::*,
+    bitmap::Bitmap,
+    buffer::Buffer,
+    chunk::Chunk,
+    datatypes::*,
+    error::Result,
+    io::parquet::read::statistics::*,
+    io::parquet::read::*,
+    io::parquet::write::*,
+    types::{days_ms, NativeType},
 };
 
 #[cfg(feature = "io_json_integration")]
@@ -909,7 +916,7 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
     }
 }
 
-fn integration_write(schema: &Schema, batches: &[Chunk<Box<dyn Array>>]) -> Result<Vec<u8>> {
+fn integration_write(schema: &Schema, chunks: &[Chunk<Box<dyn Array>>]) -> Result<Vec<u8>> {
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
@@ -929,7 +936,7 @@ fn integration_write(schema: &Schema, batches: &[Chunk<Box<dyn Array>>]) -> Resu
         .collect();
 
     let row_groups =
-        RowGroupIterator::try_new(batches.iter().cloned().map(Ok), schema, options, encodings)?;
+        RowGroupIterator::try_new(chunks.iter().cloned().map(Ok), schema, options, encodings)?;
 
     let writer = Cursor::new(vec![]);
 
@@ -1005,6 +1012,13 @@ fn arrow_type() -> Result<()> {
     let values = PrimitiveArray::from_slice([1u64, 3]);
     let array12 = DictionaryArray::from_data(indices, Box::new(values));
 
+    let array13 = PrimitiveArray::<i32>::from_slice([1, 2, 3])
+        .to(DataType::Interval(IntervalUnit::YearMonth));
+
+    let array14 =
+        PrimitiveArray::<days_ms>::from_slice([days_ms(1, 1), days_ms(2, 2), days_ms(3, 3)])
+            .to(DataType::Interval(IntervalUnit::DayTime));
+
     let schema = Schema::from(vec![
         Field::new("a1", array1.data_type().clone(), true),
         Field::new("a2", array2.data_type().clone(), true),
@@ -1019,8 +1033,10 @@ fn arrow_type() -> Result<()> {
         Field::new("a10", array10.data_type().clone(), true),
         Field::new("a11", array11.data_type().clone(), true),
         Field::new("a12", array12.data_type().clone(), true),
+        Field::new("a13", array13.data_type().clone(), true),
+        Field::new("a14", array14.data_type().clone(), true),
     ]);
-    let batch = Chunk::try_new(vec![
+    let chunk = Chunk::try_new(vec![
         array1.boxed(),
         array2.boxed(),
         array3.boxed(),
@@ -1034,14 +1050,16 @@ fn arrow_type() -> Result<()> {
         array10.boxed(),
         array11.boxed(),
         array12.boxed(),
+        array13.boxed(),
+        array14.boxed(),
     ])?;
 
-    let r = integration_write(&schema, &[batch.clone()])?;
+    let r = integration_write(&schema, &[chunk.clone()])?;
 
-    let (new_schema, new_batches) = integration_read(&r)?;
+    let (new_schema, new_chunks) = integration_read(&r)?;
 
     assert_eq!(new_schema, schema);
-    assert_eq!(new_batches, vec![batch]);
+    assert_eq!(new_chunks, vec![chunk]);
     Ok(())
 }
 
