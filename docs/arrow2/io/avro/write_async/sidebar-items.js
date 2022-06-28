@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":[["write_block","Writes a [`CompressedBlock`] to `writer`"],["write_metadata","Writes Avro’s metadata to `writer`."]]};

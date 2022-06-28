@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":[["concatenate","Concatenate multiple [Array] of the same type into a single [`Array`]."]]};
