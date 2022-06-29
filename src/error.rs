@@ -62,6 +62,12 @@ impl From<simdutf8::basic::Utf8Error> for Error {
     }
 }
 
+impl From<std::collections::TryReserveError> for Error {
+    fn from(_: std::collections::TryReserveError) -> Error {
+        Error::Overflow
+    }
+}
+
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {

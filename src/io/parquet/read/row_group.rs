@@ -120,10 +120,15 @@ fn _read_single_column<'a, R>(
 where
     R: Read + Seek,
 {
-    let (start, len) = meta.byte_range();
+    let (start, length) = meta.byte_range();
     reader.seek(std::io::SeekFrom::Start(start))?;
-    let mut chunk = vec![0; len as usize];
-    reader.read_exact(&mut chunk)?;
+
+    let mut chunk = vec![];
+    chunk.try_reserve(length as usize)?;
+    reader
+        .by_ref()
+        .take(length as u64)
+        .read_to_end(&mut chunk)?;
     Ok((meta, chunk))
 }
 
@@ -136,10 +141,12 @@ where
     F: Fn() -> BoxFuture<'b, std::io::Result<R>>,
 {
     let mut reader = factory().await?;
-    let (start, len) = meta.byte_range();
+    let (start, length) = meta.byte_range();
     reader.seek(std::io::SeekFrom::Start(start)).await?;
-    let mut chunk = vec![0; len as usize];
-    reader.read_exact(&mut chunk).await?;
+
+    let mut chunk = vec![];
+    chunk.try_reserve(length as usize)?;
+    reader.take(length as u64).read_to_end(&mut chunk).await?;
     Result::Ok((meta, chunk))
 }
 
