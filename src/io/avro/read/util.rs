@@ -23,8 +23,9 @@ fn decode_variable<R: Read>(reader: &mut R) -> Result<u64> {
 
 fn _read_binary<R: Read>(reader: &mut R) -> Result<Vec<u8>> {
     let len: usize = zigzag_i64(reader)? as usize;
-    let mut buf = vec![0u8; len];
-    reader.read_exact(&mut buf)?;
+    let mut buf = vec![];
+    buf.try_reserve(len)?;
+    reader.take(len as u64).read_to_end(&mut buf)?;
     Ok(buf)
 }
 

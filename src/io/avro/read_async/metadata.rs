@@ -48,8 +48,9 @@ async fn read_file_marker<R: AsyncRead + Unpin + Send>(reader: &mut R) -> Result
 
 async fn _read_binary<R: AsyncRead + Unpin + Send>(reader: &mut R) -> Result<Vec<u8>> {
     let len: usize = zigzag_i64(reader).await? as usize;
-    let mut buf = vec![0u8; len];
-    reader.read_exact(&mut buf).await?;
+    let mut buf = vec![];
+    buf.try_reserve(len)?;
+    reader.take(len as u64).read_to_end(&mut buf).await?;
     Ok(buf)
 }
 

@@ -40,8 +40,8 @@ fn read_block<R: Read>(
     };
 
     block.data.clear();
-    block.data.resize(bytes, 0);
-    reader.read_exact(&mut block.data)?;
+    block.data.try_reserve(bytes)?;
+    reader.take(bytes as u64).read_to_end(&mut block.data)?;
 
     let mut marker = [0u8; 16];
     reader.read_exact(&mut marker)?;
