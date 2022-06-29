@@ -36,7 +36,7 @@ pub fn row_group_iter<A: AsRef<dyn Array> + 'static + Send + Sync>(
             .zip(fields.into_iter())
             .zip(encodings.into_iter())
             .flat_map(move |((array, type_), encoding)| {
-                let encoded_columns = array_to_columns(array, type_, options, encoding).unwrap();
+                let encoded_columns = array_to_columns(array, type_, options, &encoding).unwrap();
                 encoded_columns
                     .into_iter()
                     .map(|encoded_pages| {

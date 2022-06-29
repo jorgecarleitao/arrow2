@@ -198,7 +198,7 @@ pub fn array_to_columns<A: AsRef<dyn Array> + Send + Sync>(
     array: A,
     type_: ParquetType,
     options: WriteOptions,
-    encoding: Vec<Encoding>,
+    encoding: &[Encoding],
 ) -> Result<Vec<DynIter<'static, Result<EncodedPage>>>> {
     let array = array.as_ref();
     let nested = to_nested(array, &type_)?;
@@ -213,9 +213,9 @@ pub fn array_to_columns<A: AsRef<dyn Array> + Send + Sync>(
         .iter()
         .zip(nested.into_iter())
         .zip(types.into_iter())
-        .zip(encoding.into_iter())
+        .zip(encoding.iter())
         .map(|(((values, nested), type_), encoding)| {
-            array_to_pages(*values, type_, nested, options, encoding)
+            array_to_pages(*values, type_, nested, options, *encoding)
         })
         .collect()
 }
