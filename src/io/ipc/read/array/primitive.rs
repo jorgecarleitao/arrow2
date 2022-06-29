@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 use crate::{array::PrimitiveArray, types::NativeType};
 
 use super::super::read_basic::*;
-use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind, ReadBuffer};
+use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_primitive<T: NativeType, R: Read + Seek>(
@@ -17,7 +17,7 @@ pub fn read_primitive<T: NativeType, R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
-    scratch: &mut ReadBuffer,
+    scratch: &mut Vec<u8>,
 ) -> Result<PrimitiveArray<T>>
 where
     Vec<u8>: TryInto<T::Bytes>,

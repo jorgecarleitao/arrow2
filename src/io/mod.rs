@@ -53,9 +53,3 @@ pub mod print;
 
 #[cfg(any(feature = "io_csv_write", feature = "io_avro", feature = "io_json"))]
 mod iterator;
-
-#[cfg(feature = "io_ipc")]
-mod readbuf;
-
-#[cfg(feature = "io_ipc")]
-pub use readbuf::ReadBuffer;

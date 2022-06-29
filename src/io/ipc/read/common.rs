@@ -9,7 +9,6 @@ use crate::datatypes::{DataType, Field};
 use crate::error::{Error, Result};
 use crate::io::ipc::read::OutOfSpecKind;
 use crate::io::ipc::{IpcField, IpcSchema};
-use crate::io::ReadBuffer;
 
 use super::deserialize::{read, skip};
 use super::Dictionaries;
@@ -86,7 +85,7 @@ pub fn read_record_batch<R: Read + Seek>(
     reader: &mut R,
     block_offset: u64,
     file_size: u64,
-    scratch: &mut ReadBuffer,
+    scratch: &mut Vec<u8>,
 ) -> Result<Chunk<Box<dyn Array>>> {
     assert_eq!(fields.len(), ipc_schema.fields.len());
     let buffers = batch
@@ -234,7 +233,7 @@ pub fn read_dictionary<R: Read + Seek>(
     reader: &mut R,
     block_offset: u64,
     file_size: u64,
-    scratch: &mut ReadBuffer,
+    scratch: &mut Vec<u8>,
 ) -> Result<()> {
     if batch
         .is_delta()

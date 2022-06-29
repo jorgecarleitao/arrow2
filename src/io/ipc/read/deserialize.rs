@@ -10,7 +10,7 @@ use crate::error::Result;
 use crate::io::ipc::IpcField;
 
 use super::{array::*, Dictionaries};
-use super::{IpcBuffer, Node, ReadBuffer};
+use super::{IpcBuffer, Node};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read<R: Read + Seek>(
@@ -24,7 +24,7 @@ pub fn read<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<BodyCompressionRef>,
     version: MetadataVersion,
-    scratch: &mut ReadBuffer,
+    scratch: &mut Vec<u8>,
 ) -> Result<Box<dyn Array>> {
     use PhysicalType::*;
     let data_type = field.data_type.clone();
