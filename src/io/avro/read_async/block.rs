@@ -42,8 +42,11 @@ async fn read_block<R: AsyncRead + Unpin + Send>(
     };
 
     block.data.clear();
-    block.data.resize(bytes, 0);
-    reader.read_exact(&mut block.data).await?;
+    block.data.try_reserve(bytes)?;
+    reader
+        .take(bytes as u64)
+        .read_to_end(&mut block.data)
+        .await?;
 
     let mut marker = [0u8; 16];
     reader.read_exact(&mut marker).await?;
