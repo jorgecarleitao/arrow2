@@ -423,3 +423,23 @@ fn write_escaping_resize_local_buf() {
         test_generic(chunk,  &format!("\"{}\"\n", payload));
     }
 }
+
+#[test]
+fn serialize_vec() -> Result<()> {
+    let columns = data();
+
+    let options = SerializeOptions::default();
+
+    let data = serialize(&columns, &options)?;
+
+    // check
+    assert_eq!(
+        vec![
+            b"a b,123.564532,3,true,,00:20:34,d\n".to_vec(),
+            b"c,,2,false,2019-04-18 10:54:47.378,06:51:20,a b\n".to_vec(),
+            b"d,-556132.25,1,,2019-04-18 02:45:55.555,23:46:03,c\n".to_vec(),
+        ],
+        data
+    );
+    Ok(())
+}

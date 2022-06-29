@@ -27,16 +27,16 @@ fn new_serializers<'a, A: AsRef<dyn Array>>(
 /// The vector is guaranteed to have `columns.len()` entries.
 /// Each `row` is guaranteed to have `columns.array().len()` fields.
 pub fn serialize<A: AsRef<dyn Array>>(
-    columns: &Chunk<A>,
+    chunk: &Chunk<A>,
     options: &SerializeOptions,
 ) -> Result<Vec<Vec<u8>>> {
-    let mut serializers = new_serializers(columns, options)?;
+    let mut serializers = new_serializers(chunk, options)?;
 
-    let mut rows = Vec::with_capacity(columns.len());
+    let mut rows = Vec::with_capacity(chunk.len());
     let mut row = vec![];
 
     // this is where the (expensive) transposition happens: the outer loop is on rows, the inner on columns
-    (0..columns.len()).try_for_each(|_| {
+    (0..chunk.len()).try_for_each(|_| {
         serializers
             .iter_mut()
             // `unwrap` is infalible because `array.len()` equals `Chunk::len`
@@ -49,8 +49,7 @@ pub fn serialize<A: AsRef<dyn Array>>(
             // replace last delimiter with new line
             let last_byte = row.len() - 1;
             row[last_byte] = b'\n';
-            rows.push(row.clone());
-            row.clear();
+            rows.push(std::mem::take(&mut row));
         }
         Result::Ok(())
     })?;
