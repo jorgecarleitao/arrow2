@@ -20,7 +20,7 @@ fn equal() {
 fn basics() {
     let a = PrimitiveScalar::from(Some(2i32));
 
-    assert_eq!(a.value(), Some(2i32));
+    assert_eq!(a.value(), &Some(2i32));
     assert_eq!(a.data_type(), &DataType::Int32);
 
     let a = a.to(DataType::Date32);

@@ -27,8 +27,8 @@ impl<T: NativeType> PrimitiveScalar<T> {
 
     /// Returns the optional value.
     #[inline]
-    pub fn value(&self) -> Option<T> {
-        self.value
+    pub fn value(&self) -> &Option<T> {
+        &self.value
     }
 
     /// Returns a new `PrimitiveScalar` with the same value but different [`DataType`]

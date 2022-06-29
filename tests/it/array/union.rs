@@ -106,11 +106,11 @@ fn iter_sparse() -> Result<()> {
 
     assert_eq!(
         next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
-        Some(1)
+        &Some(1)
     );
     assert_eq!(
         next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
-        None
+        &None
     );
     assert_eq!(
         next_unchecked::<Utf8Scalar<i32>, _>(&mut iter).value(),
@@ -140,11 +140,11 @@ fn iter_dense() -> Result<()> {
 
     assert_eq!(
         next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
-        Some(1)
+        &Some(1)
     );
     assert_eq!(
         next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
-        None
+        &None
     );
     assert_eq!(
         next_unchecked::<Utf8Scalar<i32>, _>(&mut iter).value(),
@@ -174,7 +174,7 @@ fn iter_sparse_slice() -> Result<()> {
 
     assert_eq!(
         next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
-        Some(3)
+        &Some(3)
     );
     assert_eq!(iter.next(), None);
 
@@ -201,7 +201,7 @@ fn iter_dense_slice() -> Result<()> {
 
     assert_eq!(
         next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
-        Some(3)
+        &Some(3)
     );
     assert_eq!(iter.next(), None);
 
@@ -233,7 +233,7 @@ fn scalar() -> Result<()> {
             .downcast_ref::<PrimitiveScalar<i32>>()
             .unwrap()
             .value(),
-        Some(1)
+        &Some(1)
     );
     assert_eq!(union_scalar.type_(), 0);
     let scalar = new_scalar(&array, 1);
@@ -245,7 +245,7 @@ fn scalar() -> Result<()> {
             .downcast_ref::<PrimitiveScalar<i32>>()
             .unwrap()
             .value(),
-        None
+        &None
     );
     assert_eq!(union_scalar.type_(), 0);
 

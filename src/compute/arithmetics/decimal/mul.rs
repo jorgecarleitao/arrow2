@@ -75,7 +75,7 @@ pub fn mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
 pub fn mul_scalar(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveScalar<i128>) -> PrimitiveArray<i128> {
     let (precision, scale) = get_parameters(lhs.data_type(), rhs.data_type()).unwrap();
 
-    let rhs = if let Some(rhs) = rhs.value() {
+    let rhs = if let Some(rhs) = *rhs.value() {
         rhs
     } else {
         return PrimitiveArray::<i128>::new_null(lhs.data_type().clone(), lhs.len());
