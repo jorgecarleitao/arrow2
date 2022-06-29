@@ -38,6 +38,7 @@ pub fn read_fixed_size_list<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )?;
 
     let (field, _) = FixedSizeListArray::get_child_and_size(&data_type);

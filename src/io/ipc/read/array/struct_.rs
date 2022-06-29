@@ -38,6 +38,7 @@ pub fn read_struct<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )?;
 
     let fields = StructArray::get_fields(&data_type);

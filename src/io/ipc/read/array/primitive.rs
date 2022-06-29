@@ -36,6 +36,7 @@ where
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )?;
 
     let length: usize = field_node
