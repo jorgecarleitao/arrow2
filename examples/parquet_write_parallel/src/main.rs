@@ -71,7 +71,7 @@ fn parallel_write(path: &str, schema: Schema, chunks: &[Chunk]) -> Result<()> {
             .columns()
             .par_iter()
             .zip(parquet_schema.fields().to_vec())
-            .zip(encodings.clone())
+            .zip(encodings.par_iter())
             .flat_map(move |((array, type_), encoding)| {
                 let encoded_columns = array_to_columns(array, type_, options, encoding).unwrap();
                 encoded_columns
@@ -114,7 +114,7 @@ fn parallel_write(path: &str, schema: Schema, chunks: &[Chunk]) -> Result<()> {
     Ok(())
 }
 
-fn create_batch(size: usize) -> Result<Chunk> {
+fn create_chunk(size: usize) -> Result<Chunk> {
     let c1: Int32Array = (0..size)
         .map(|x| if x % 9 == 0 { None } else { Some(x as i32) })
         .collect();
@@ -143,10 +143,10 @@ fn main() -> Result<()> {
         Field::new("c3", DataType::Int32, true),
         Field::new("c4", DataType::LargeUtf8, true),
     ];
-    let batch = create_batch(100_000_000)?;
+    let chunk = create_chunk(100_000_000)?;
 
     let start = std::time::SystemTime::now();
-    parallel_write("example.parquet", fields.into(), &[batch])?;
+    parallel_write("example.parquet", fields.into(), &[chunk])?;
     println!("took: {} ms", start.elapsed().unwrap().as_millis());
     Ok(())
 }
