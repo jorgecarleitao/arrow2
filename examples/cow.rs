@@ -19,4 +19,20 @@ fn main() {
 
     // confirm that it gives the right result :)
     assert_eq!(array, &PrimitiveArray::from_vec(vec![10i32, 20]));
+
+    // alternatively, you can use `get_mut_values`. Unwrap works because it is single owned
+    let values = array.get_mut_values().unwrap();
+    values[0] = 0;
+
+    assert_eq!(array, &PrimitiveArray::from_vec(vec![0, 20]));
+
+    // you can also modify the validity:
+    array.set_validity(Some([true, false].into()));
+    array.apply_validity(|bitmap| {
+        let mut mut_bitmap = bitmap.into_mut().right().unwrap();
+        mut_bitmap.set(1, true);
+        mut_bitmap.into()
+    });
+
+    assert_eq!(array, &PrimitiveArray::from_vec(vec![0, 20]));
 }
