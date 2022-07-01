@@ -17,7 +17,7 @@ async fn test_file(version: &str, file_name: &str) -> Result<()> {
     .compat();
 
     let metadata = read_file_metadata_async(&mut file).await?;
-    let mut reader = FileStream::new(file, metadata, None);
+    let mut reader = FileStream::new(file, metadata, None, None);
 
     // read expected JSON output
     let (schema, ipc_fields, batches) = read_gzip_json(version, file_name)?;
