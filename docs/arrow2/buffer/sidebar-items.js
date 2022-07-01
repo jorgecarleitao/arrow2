@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["Buffer","[`Buffer`] is a contiguous memory region of plain old data types that can be shared across thread boundaries."]]};
