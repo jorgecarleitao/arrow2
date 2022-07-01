@@ -4,7 +4,7 @@ use super::Scalar;
 
 /// The implementation of [`Scalar`] for primitive, semantically equivalent to [`Option<T>`]
 /// with [`DataType`].
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrimitiveScalar<T: NativeType> {
     value: Option<T>,
     data_type: DataType,

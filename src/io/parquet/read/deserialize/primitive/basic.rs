@@ -132,7 +132,7 @@ where
     op: F,
 }
 
-impl<'a, T, P, F> PrimitiveDecoder<T, P, F>
+impl<T, P, F> PrimitiveDecoder<T, P, F>
 where
     T: NativeType,
     P: ParquetNativeType,

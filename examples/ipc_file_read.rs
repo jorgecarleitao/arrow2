@@ -8,6 +8,7 @@ use arrow2::io::ipc::read;
 use arrow2::io::print;
 
 /// Simplest way: read all record batches from the file. This can be used e.g. for random access.
+#[allow(clippy::type_complexity)]
 fn read_batches(path: &str) -> Result<(Schema, Vec<Chunk<Box<dyn Array>>>)> {
     let mut file = File::open(path)?;
 

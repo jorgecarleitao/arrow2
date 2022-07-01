@@ -3,7 +3,7 @@ use crate::{array::*, datatypes::DataType};
 use super::Scalar;
 
 /// The [`Scalar`] implementation of binary ([`Option<Vec<u8>>`]).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BinaryScalar<O: Offset> {
     value: Option<Vec<u8>>,
     phantom: std::marker::PhantomData<O>,
