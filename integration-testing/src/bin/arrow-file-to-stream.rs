@@ -32,7 +32,7 @@ fn main() -> Result<()> {
     let filename = args.file_name;
     let mut f = File::open(filename)?;
     let metadata = read::read_file_metadata(&mut f)?;
-    let mut reader = read::FileReader::new(f, metadata.clone(), None);
+    let mut reader = read::FileReader::new(f, metadata.clone(), None, None);
 
     let options = write::WriteOptions { compression: None };
     let mut writer = write::StreamWriter::new(std::io::stdout(), options);

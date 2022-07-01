@@ -80,7 +80,7 @@ fn arrow_to_json(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()>
 
     let mut arrow_file = File::open(arrow_name)?;
     let metadata = read::read_file_metadata(&mut arrow_file)?;
-    let reader = read::FileReader::new(arrow_file, metadata.clone(), None);
+    let reader = read::FileReader::new(arrow_file, metadata.clone(), None, None);
 
     let names = metadata
         .schema
@@ -118,7 +118,7 @@ fn validate(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()> {
     // open Arrow file
     let mut arrow_file = File::open(arrow_name)?;
     let metadata = read::read_file_metadata(&mut arrow_file)?;
-    let reader = read::FileReader::new(arrow_file, metadata, None);
+    let reader = read::FileReader::new(arrow_file, metadata, None, None);
     let arrow_schema = reader.schema();
 
     // compare schemas

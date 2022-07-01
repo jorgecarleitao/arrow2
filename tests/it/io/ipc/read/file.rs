@@ -269,8 +269,8 @@ fn read_limited() -> Result<()> {
     test_limit("1.0.0-littleendian", "generated_primitive", 2)?;
     test_limit("1.0.0-littleendian", "generated_dictionary", 2)?;
     test_limit("1.0.0-littleendian", "generated_union", 2)?;
-    //test_limit("1.0.0-littleendian", "generated_map", 2)?;
-    //test_limit("1.0.0-littleendian", "generated_nested_dictionary", 2)?;
-    //test_limit("1.0.0-littleendian", "generated_nested", 2)?;
+    test_limit("1.0.0-littleendian", "generated_map", 2)?;
+    test_limit("1.0.0-littleendian", "generated_nested_dictionary", 2)?;
+    test_limit("1.0.0-littleendian", "generated_nested", 2)?;
     Ok(())
 }
