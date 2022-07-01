@@ -1,5 +1,5 @@
 [package]
-name = "parquet_write_parallel"
+name = "parquet_read_parallel"
 version = "0.1.0"
 edition = "2021"
 
