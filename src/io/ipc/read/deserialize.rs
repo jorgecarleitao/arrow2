@@ -23,6 +23,7 @@ pub fn read<R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<BodyCompressionRef>,
+    limit: Option<usize>,
     version: MetadataVersion,
     scratch: &mut Vec<u8>,
 ) -> Result<Box<dyn Array>> {
@@ -39,6 +40,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            limit,
             scratch,
         )
         .map(|x| x.boxed()),
@@ -51,6 +53,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                limit,
                 scratch,
             )
             .map(|x| x.boxed())
@@ -64,6 +67,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                limit,
                 scratch,
             )?;
             Ok(Box::new(array))
@@ -77,6 +81,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                limit,
                 scratch,
             )?;
             Ok(Box::new(array))
@@ -90,6 +95,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                limit,
                 scratch,
             )?;
             Ok(Box::new(array))
@@ -103,6 +109,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                limit,
                 scratch,
             )?;
             Ok(Box::new(array))
@@ -116,6 +123,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                limit,
                 scratch,
             )?;
             Ok(Box::new(array))
@@ -130,6 +138,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            limit,
             version,
             scratch,
         )
@@ -144,6 +153,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            limit,
             version,
             scratch,
         )
@@ -158,6 +168,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            limit,
             version,
             scratch,
         )
@@ -172,6 +183,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            limit,
             version,
             scratch,
         )
@@ -186,8 +198,9 @@ pub fn read<R: Read + Seek>(
                     dictionaries,
                     block_offset,
                     compression,
+                    limit,
                     is_little_endian,
-                    scratch
+                    scratch,
                 )
                 .map(|x| x.boxed())
             })
@@ -202,6 +215,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            limit,
             version,
             scratch,
         )
@@ -216,6 +230,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            limit,
             version,
             scratch,
         )

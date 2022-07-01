@@ -22,6 +22,7 @@ pub fn read_union<R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    limit: Option<usize>,
     version: Version,
     scratch: &mut Vec<u8>,
 ) -> Result<UnionArray> {
@@ -42,6 +43,7 @@ pub fn read_union<R: Read + Seek>(
         .length()
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+    let length = limit.map(|limit| limit.min(length)).unwrap_or(length);
 
     let types = read_buffer(
         buffers,
@@ -87,6 +89,7 @@ pub fn read_union<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                None,
                 version,
                 scratch,
             )

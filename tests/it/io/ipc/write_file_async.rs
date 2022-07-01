@@ -38,7 +38,7 @@ async fn test_file(version: &str, file_name: &str) -> Result<()> {
 
     let mut reader = Cursor::new(result);
     let metadata = read::read_file_metadata(&mut reader)?;
-    let reader = read::FileReader::new(reader, metadata, None);
+    let reader = read::FileReader::new(reader, metadata, None, None);
 
     let schema = &reader.metadata().schema;
     let ipc_fields = reader.metadata().ipc_schema.fields.clone();

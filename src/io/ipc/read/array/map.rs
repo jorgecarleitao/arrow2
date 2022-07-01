@@ -22,6 +22,7 @@ pub fn read_map<R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    limit: Option<usize>,
     version: Version,
     scratch: &mut Vec<u8>,
 ) -> Result<MapArray> {
@@ -39,6 +40,7 @@ pub fn read_map<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        limit,
         scratch,
     )?;
 
@@ -46,6 +48,7 @@ pub fn read_map<R: Read + Seek>(
         .length()
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+    let length = limit.map(|limit| limit.min(length)).unwrap_or(length);
 
     let offsets = read_buffer::<i32, _>(
         buffers,
@@ -61,6 +64,8 @@ pub fn read_map<R: Read + Seek>(
 
     let field = MapArray::get_field(&data_type);
 
+    let last_offset: usize = offsets.last().copied().unwrap() as usize;
+
     let field = read(
         field_nodes,
         field,
@@ -71,6 +76,7 @@ pub fn read_map<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        Some(last_offset),
         version,
         scratch,
     )?;

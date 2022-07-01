@@ -58,7 +58,7 @@ fn parallel_write(path: &str, schema: Schema, chunks: &[Chunk]) -> Result<()> {
 
     // declare encodings
     let encodings = (&schema.fields)
-        .par_iter()
+        .iter()
         .map(|f| transverse(&f.data_type, encoding_map))
         .collect::<Vec<_>>();
 

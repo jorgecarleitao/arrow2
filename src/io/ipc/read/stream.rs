@@ -173,6 +173,7 @@ fn read_next<R: Read>(
                 &metadata.schema.fields,
                 &metadata.ipc_schema,
                 projection.as_ref().map(|x| x.0.as_ref()),
+                None,
                 dictionaries,
                 metadata.version,
                 &mut reader,

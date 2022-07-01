@@ -217,6 +217,7 @@ where
         &metadata.schema.fields,
         &metadata.ipc_schema,
         projection,
+        None,
         dictionaries,
         message
             .version()

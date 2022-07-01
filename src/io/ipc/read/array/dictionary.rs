@@ -18,6 +18,7 @@ pub fn read_dictionary<T: DictionaryKey, R: Read + Seek>(
     dictionaries: &Dictionaries,
     block_offset: u64,
     compression: Option<Compression>,
+    limit: Option<usize>,
     is_little_endian: bool,
     scratch: &mut Vec<u8>,
 ) -> Result<DictionaryArray<T>>
@@ -48,6 +49,7 @@ where
         block_offset,
         is_little_endian,
         compression,
+        limit,
         scratch,
     )?;
 

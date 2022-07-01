@@ -17,6 +17,7 @@ pub fn read_fixed_size_binary<R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    limit: Option<usize>,
     scratch: &mut Vec<u8>,
 ) -> Result<FixedSizeBinaryArray> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
@@ -33,6 +34,7 @@ pub fn read_fixed_size_binary<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        limit,
         scratch,
     )?;
 
@@ -40,6 +42,7 @@ pub fn read_fixed_size_binary<R: Read + Seek>(
         .length()
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+    let length = limit.map(|limit| limit.min(length)).unwrap_or(length);
 
     let length = length.saturating_mul(FixedSizeBinaryArray::maybe_get_size(&data_type)?);
     let values = read_buffer(

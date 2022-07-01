@@ -9,7 +9,7 @@ use arrow2::io::print;
 
 /// Simplest way: read all record batches from the file. This can be used e.g. for random access.
 #[allow(clippy::type_complexity)]
-fn read_batches(path: &str) -> Result<(Schema, Vec<Chunk<Box<dyn Array>>>)> {
+fn read_chunks(path: &str) -> Result<(Schema, Vec<Chunk<Box<dyn Array>>>)> {
     let mut file = File::open(path)?;
 
     // read the files' metadata. At this point, we can distribute the read whatever we like.
@@ -18,10 +18,10 @@ fn read_batches(path: &str) -> Result<(Schema, Vec<Chunk<Box<dyn Array>>>)> {
     let schema = metadata.schema.clone();
 
     // Simplest way: use the reader, an iterator over batches.
-    let reader = read::FileReader::new(file, metadata, None);
+    let reader = read::FileReader::new(file, metadata, None, None);
 
-    let columns = reader.collect::<Result<Vec<_>>>()?;
-    Ok((schema, columns))
+    let chunks = reader.collect::<Result<Vec<_>>>()?;
+    Ok((schema, chunks))
 }
 
 /// Random access way: read a single record batch from the file. This can be used e.g. for random access.
@@ -36,12 +36,14 @@ fn read_batch(path: &str) -> Result<(Schema, Chunk<Box<dyn Array>>)> {
     // advanced way: read the dictionary
     let dictionaries = read::read_file_dictionaries(&mut file, &metadata, &mut Default::default())?;
 
+    // and the chunk
     let chunk_index = 0;
 
     let chunk = read::read_batch(
         &mut file,
         &dictionaries,
         &metadata,
+        None,
         None,
         chunk_index,
         &mut Default::default(),
@@ -57,12 +59,12 @@ fn main() -> Result<()> {
 
     let file_path = &args[1];
 
-    let (schema, batches) = read_batches(file_path)?;
+    let (schema, chunks) = read_chunks(file_path)?;
     let names = schema.fields.iter().map(|f| &f.name).collect::<Vec<_>>();
-    println!("{}", print::write(&batches, &names));
+    println!("{}", print::write(&chunks, &names));
 
-    let (schema, batch) = read_batch(file_path)?;
+    let (schema, chunk) = read_batch(file_path)?;
     let names = schema.fields.iter().map(|f| &f.name).collect::<Vec<_>>();
-    println!("{}", print::write(&[batch], &names));
+    println!("{}", print::write(&[chunk], &names));
     Ok(())
 }

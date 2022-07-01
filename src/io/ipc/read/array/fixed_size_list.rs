@@ -21,6 +21,7 @@ pub fn read_fixed_size_list<R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    limit: Option<usize>,
     version: Version,
     scratch: &mut Vec<u8>,
 ) -> Result<FixedSizeListArray> {
@@ -38,10 +39,13 @@ pub fn read_fixed_size_list<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        limit,
         scratch,
     )?;
 
-    let (field, _) = FixedSizeListArray::get_child_and_size(&data_type);
+    let (field, size) = FixedSizeListArray::get_child_and_size(&data_type);
+
+    let limit = limit.map(|x| x.saturating_mul(size));
 
     let values = read(
         field_nodes,
@@ -53,6 +57,7 @@ pub fn read_fixed_size_list<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        limit,
         version,
         scratch,
     )?;

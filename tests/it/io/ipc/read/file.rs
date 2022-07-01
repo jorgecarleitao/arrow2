@@ -17,7 +17,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     let (schema, _, batches) = read_gzip_json(version, file_name)?;
 
     let metadata = read_file_metadata(&mut file)?;
-    let reader = FileReader::new(file, metadata, None);
+    let reader = FileReader::new(file, metadata, None, None);
 
     assert_eq!(&schema, reader.schema());
 
@@ -165,14 +165,12 @@ fn test_projection(version: &str, file_name: &str, columns: Vec<usize>) -> Resul
         testdata, version, file_name
     ))?;
 
-    let metadata = read_file_metadata(&mut file)?;
-
-    let (_, _, chunks) = read_gzip_json(version, file_name)?;
+    let (schema, _, chunks) = read_gzip_json(version, file_name)?;
 
     let expected_fields = columns
         .iter()
         .copied()
-        .map(|x| metadata.schema.fields[x].clone())
+        .map(|x| schema.fields[x].clone())
         .collect::<Vec<_>>();
 
     let expected_chunks = chunks.into_iter().map(|chunk| {
@@ -184,7 +182,8 @@ fn test_projection(version: &str, file_name: &str, columns: Vec<usize>) -> Resul
         Chunk::new(columns)
     });
 
-    let reader = FileReader::new(&mut file, metadata, Some(columns.clone()));
+    let metadata = read_file_metadata(&mut file)?;
+    let reader = FileReader::new(&mut file, metadata, Some(columns.clone()), None);
 
     assert_eq!(reader.schema().fields, expected_fields);
 
@@ -210,7 +209,7 @@ fn read_corrupted_ipc(data: Vec<u8>) -> Result<()> {
     let mut file = std::io::Cursor::new(data);
 
     let metadata = read_file_metadata(&mut file)?;
-    let mut reader = FileReader::new(file, metadata, None);
+    let mut reader = FileReader::new(file, metadata, None, None);
 
     reader.try_for_each(|rhs| {
         rhs?;
@@ -240,4 +239,38 @@ fn test_does_not_panic() {
         data[position] = new_byte;
         let _ = read_corrupted_ipc(data);
     }
+}
+
+fn test_limit(version: &str, file_name: &str, limit: usize) -> Result<()> {
+    let testdata = crate::test_util::arrow_test_data();
+    let mut file = File::open(format!(
+        "{}/arrow-ipc-stream/integration/{}/{}.arrow_file",
+        testdata, version, file_name
+    ))?;
+
+    let (schema, _, _) = read_gzip_json(version, file_name)?;
+
+    let metadata = read_file_metadata(&mut file)?;
+    let unlimited_chunk = FileReader::new(&mut file, metadata.clone(), None, None)
+        .next()
+        .unwrap()?;
+    let mut reader = FileReader::new(&mut file, metadata, None, Some(limit));
+
+    assert_eq!(reader.schema(), &schema);
+
+    let chunk = reader.next().unwrap()?;
+    assert_eq!(chunk.len(), unlimited_chunk.len().min(limit));
+
+    Ok(())
+}
+
+#[test]
+fn read_limited() -> Result<()> {
+    test_limit("1.0.0-littleendian", "generated_primitive", 2)?;
+    test_limit("1.0.0-littleendian", "generated_dictionary", 2)?;
+    test_limit("1.0.0-littleendian", "generated_union", 2)?;
+    //test_limit("1.0.0-littleendian", "generated_map", 2)?;
+    //test_limit("1.0.0-littleendian", "generated_nested_dictionary", 2)?;
+    //test_limit("1.0.0-littleendian", "generated_nested", 2)?;
+    Ok(())
 }
