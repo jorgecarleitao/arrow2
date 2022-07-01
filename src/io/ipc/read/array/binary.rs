@@ -34,6 +34,7 @@ pub fn read_binary<O: Offset, R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )?;
 
     let length: usize = field_node

@@ -8,6 +8,7 @@ use crate::error::{Error, Result};
 use super::super::read_basic::*;
 use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
 
+#[allow(clippy::too_many_arguments)]
 pub fn read_boolean<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
     data_type: DataType,
@@ -16,6 +17,7 @@ pub fn read_boolean<R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    scratch: &mut Vec<u8>,
 ) -> Result<BooleanArray> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
         Error::oos(format!(
@@ -36,6 +38,7 @@ pub fn read_boolean<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )?;
 
     let values = read_bitmap(
@@ -45,6 +48,7 @@ pub fn read_boolean<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        scratch,
     )?;
     BooleanArray::try_new(data_type, values, validity)
 }

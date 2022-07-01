@@ -230,9 +230,14 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     let (end, footer_len) = read_footer_len(reader)?;
 
     // read footer
-    let mut serialized_footer = vec![0; footer_len];
     reader.seek(SeekFrom::End(-10 - footer_len as i64))?;
-    reader.read_exact(&mut serialized_footer)?;
+
+    let mut serialized_footer = vec![];
+    serialized_footer.try_reserve(footer_len)?;
+    reader
+        .by_ref()
+        .take(footer_len as u64)
+        .read_to_end(&mut serialized_footer)?;
 
     deserialize_footer(&serialized_footer, end - start)
 }

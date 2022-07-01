@@ -181,10 +181,13 @@ fn read_uncompressed_bitmap<R: Read + Seek>(
             number_of_bits: bytes * 8,
         }));
     }
-    // it is undefined behavior to call read_exact on un-initialized, https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read
-    // see also https://github.com/MaikKlein/ash/issues/354#issue-781730580
-    let mut buffer = vec![0; bytes];
-    reader.read_exact(buffer.as_mut_slice())?;
+
+    let mut buffer = vec![];
+    buffer.try_reserve(bytes)?;
+    reader
+        .by_ref()
+        .take(bytes as u64)
+        .read_to_end(&mut buffer)?;
 
     Ok(buffer)
 }
@@ -194,13 +197,13 @@ fn read_compressed_bitmap<R: Read + Seek>(
     bytes: usize,
     compression: Compression,
     reader: &mut R,
+    scratch: &mut Vec<u8>,
 ) -> Result<Vec<u8>> {
     let mut buffer = vec![0; (length + 7) / 8];
 
-    // read all first
-    // todo: move this allocation to an external buffer for re-use
-    let mut slice = vec![0u8; bytes];
-    reader.read_exact(&mut slice)?;
+    scratch.clear();
+    scratch.try_reserve(bytes)?;
+    reader.by_ref().take(bytes as u64).read_to_end(scratch)?;
 
     let compression = compression
         .codec()
@@ -208,10 +211,10 @@ fn read_compressed_bitmap<R: Read + Seek>(
 
     match compression {
         arrow_format::ipc::CompressionType::Lz4Frame => {
-            compression::decompress_lz4(&slice[8..], &mut buffer)?;
+            compression::decompress_lz4(&scratch[8..], &mut buffer)?;
         }
         arrow_format::ipc::CompressionType::Zstd => {
-            compression::decompress_zstd(&slice[8..], &mut buffer)?;
+            compression::decompress_zstd(&scratch[8..], &mut buffer)?;
         }
     }
     Ok(buffer)
@@ -224,6 +227,7 @@ pub fn read_bitmap<R: Read + Seek>(
     block_offset: u64,
     _: bool,
     compression: Option<Compression>,
+    scratch: &mut Vec<u8>,
 ) -> Result<Bitmap> {
     let buf = buf
         .pop_front()
@@ -242,7 +246,7 @@ pub fn read_bitmap<R: Read + Seek>(
     reader.seek(SeekFrom::Start(block_offset + offset))?;
 
     let buffer = if let Some(compression) = compression {
-        read_compressed_bitmap(length, bytes, compression, reader)
+        read_compressed_bitmap(length, bytes, compression, reader, scratch)
     } else {
         read_uncompressed_bitmap(length, bytes, reader)
     }?;
@@ -257,6 +261,7 @@ pub fn read_validity<R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    scratch: &mut Vec<u8>,
 ) -> Result<Option<Bitmap>> {
     let length: usize = field_node
         .length()
@@ -271,6 +276,7 @@ pub fn read_validity<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            scratch,
         )?)
     } else {
         let _ = buffers

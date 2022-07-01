@@ -39,6 +39,7 @@ pub fn read<R: Read + Seek>(
             block_offset,
             is_little_endian,
             compression,
+            scratch,
         )
         .map(|x| x.boxed()),
         Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
@@ -50,7 +51,7 @@ pub fn read<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
-                scratch
+                scratch,
             )
             .map(|x| x.boxed())
         }),
