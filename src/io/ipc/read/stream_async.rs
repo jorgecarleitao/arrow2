@@ -16,7 +16,6 @@ use super::common::{read_dictionary, read_record_batch};
 use super::schema::deserialize_stream_metadata;
 use super::Dictionaries;
 use super::OutOfSpecKind;
-use super::ReadBuffer;
 use super::StreamMetadata;
 
 /// A (private) state of stream messages
@@ -25,9 +24,9 @@ struct ReadState<R> {
     pub metadata: StreamMetadata,
     pub dictionaries: Dictionaries,
     /// The internal buffer to read data inside the messages (records and dictionaries) to
-    pub data_buffer: ReadBuffer,
+    pub data_buffer: Vec<u8>,
     /// The internal buffer to read messages to
-    pub message_buffer: ReadBuffer,
+    pub message_buffer: Vec<u8>,
 }
 
 /// The state of an Arrow stream
@@ -58,8 +57,12 @@ pub async fn read_stream_metadata_async<R: AsyncRead + Unpin + Send>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let mut meta_buffer = vec![0; meta_len];
-    reader.read_exact(&mut meta_buffer).await?;
+    let mut meta_buffer = vec![];
+    meta_buffer.try_reserve(meta_len as usize)?;
+    reader
+        .take(meta_len as u64)
+        .read_to_end(&mut meta_buffer)
+        .await?;
 
     deserialize_stream_metadata(&meta_buffer)
 }
@@ -105,10 +108,11 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
         return Ok(None);
     }
 
-    state.message_buffer.set_len(meta_length);
-    state
-        .reader
-        .read_exact(state.message_buffer.as_mut())
+    state.message_buffer.clear();
+    state.message_buffer.try_reserve(meta_length as usize)?;
+    (&mut state.reader)
+        .take(meta_length as u64)
+        .read_to_end(&mut state.message_buffer)
         .await?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(state.message_buffer.as_ref())
@@ -125,11 +129,14 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    state.data_buffer.set_len(block_length);
-
     match header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
-            state.reader.read_exact(state.data_buffer.as_mut()).await?;
+            state.data_buffer.clear();
+            state.data_buffer.try_reserve(block_length as usize)?;
+            (&mut state.reader)
+                .take(block_length as u64)
+                .read_to_end(&mut state.data_buffer)
+                .await?;
 
             read_record_batch(
                 batch,
@@ -140,18 +147,22 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
                 state.metadata.version,
                 &mut std::io::Cursor::new(&state.data_buffer),
                 0,
-                state.data_buffer.as_ref().len() as u64,
+                state.data_buffer.len() as u64,
                 &mut scratch,
             )
             .map(|chunk| Some(StreamState::Some((state, chunk))))
         }
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
-            let mut body = vec![0; block_length];
-            state.reader.read_exact(&mut body).await?;
+            state.data_buffer.clear();
+            state.data_buffer.try_reserve(block_length as usize)?;
+            (&mut state.reader)
+                .take(block_length as u64)
+                .read_to_end(&mut state.data_buffer)
+                .await?;
 
-            let file_size = body.len() as u64;
+            let file_size = state.data_buffer.len() as u64;
 
-            let mut dict_reader = std::io::Cursor::new(body);
+            let mut dict_reader = std::io::Cursor::new(&state.data_buffer);
 
             read_dictionary(
                 batch,

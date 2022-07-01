@@ -15,7 +15,6 @@ use super::common::*;
 use super::schema::deserialize_stream_metadata;
 use super::Dictionaries;
 use super::OutOfSpecKind;
-use super::ReadBuffer;
 
 /// Metadata of an Arrow IPC stream, written at the start of the stream
 #[derive(Debug, Clone)]
@@ -44,14 +43,18 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
         i32::from_le_bytes(meta_size)
     };
 
-    let meta_length: usize = meta_length
+    let length: usize = meta_length
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let mut meta_buffer = vec![0; meta_length];
-    reader.read_exact(&mut meta_buffer)?;
+    let mut buffer = vec![];
+    buffer.try_reserve(length as usize)?;
+    reader
+        .by_ref()
+        .take(length as u64)
+        .read_to_end(&mut buffer)?;
 
-    deserialize_stream_metadata(&meta_buffer)
+    deserialize_stream_metadata(&buffer)
 }
 
 /// Encodes the stream's status after each read.
@@ -91,10 +94,10 @@ fn read_next<R: Read>(
     reader: &mut R,
     metadata: &StreamMetadata,
     dictionaries: &mut Dictionaries,
-    message_buffer: &mut ReadBuffer,
-    data_buffer: &mut ReadBuffer,
+    message_buffer: &mut Vec<u8>,
+    data_buffer: &mut Vec<u8>,
     projection: &Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
-    scratch: &mut ReadBuffer,
+    scratch: &mut Vec<u8>,
 ) -> Result<Option<StreamState>> {
     // determine metadata length
     let mut meta_length: [u8; 4] = [0; 4];
@@ -131,8 +134,12 @@ fn read_next<R: Read>(
         return Ok(None);
     }
 
-    message_buffer.set_len(meta_length);
-    reader.read_exact(message_buffer.as_mut())?;
+    message_buffer.clear();
+    message_buffer.try_reserve(meta_length as usize)?;
+    reader
+        .by_ref()
+        .take(meta_length as u64)
+        .read_to_end(message_buffer)?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(message_buffer.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
@@ -148,12 +155,16 @@ fn read_next<R: Read>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    data_buffer.set_len(block_length);
     match header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
-            reader.read_exact(data_buffer.as_mut())?;
+            data_buffer.clear();
+            data_buffer.try_reserve(block_length as usize)?;
+            reader
+                .by_ref()
+                .take(block_length as u64)
+                .read_to_end(data_buffer)?;
 
-            let file_size = data_buffer.as_ref().len() as u64;
+            let file_size = data_buffer.len() as u64;
 
             let mut reader = std::io::Cursor::new(data_buffer);
 
@@ -180,10 +191,15 @@ fn read_next<R: Read>(
             }
         }
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
-            let mut buf = vec![0; block_length];
-            reader.read_exact(&mut buf)?;
+            data_buffer.clear();
+            data_buffer.try_reserve(block_length as usize)?;
+            reader
+                .by_ref()
+                .take(block_length as u64)
+                .read_to_end(data_buffer)?;
 
-            let mut dict_reader = std::io::Cursor::new(&buf);
+            let file_size = data_buffer.len() as u64;
+            let mut dict_reader = std::io::Cursor::new(&data_buffer);
 
             read_dictionary(
                 batch,
@@ -192,7 +208,7 @@ fn read_next<R: Read>(
                 dictionaries,
                 &mut dict_reader,
                 0,
-                buf.len() as u64,
+                file_size,
                 scratch,
             )?;
 
@@ -222,10 +238,10 @@ pub struct StreamReader<R: Read> {
     metadata: StreamMetadata,
     dictionaries: Dictionaries,
     finished: bool,
-    data_buffer: ReadBuffer,
-    message_buffer: ReadBuffer,
+    data_buffer: Vec<u8>,
+    message_buffer: Vec<u8>,
     projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
-    scratch: ReadBuffer,
+    scratch: Vec<u8>,
 }
 
 impl<R: Read> StreamReader<R> {

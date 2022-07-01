@@ -13,7 +13,6 @@ use super::common::*;
 use super::schema::fb_to_schema;
 use super::Dictionaries;
 use super::OutOfSpecKind;
-use super::ReadBuffer;
 use arrow_format::ipc::planus::ReadAsRoot;
 
 /// Metadata of an Arrow IPC file, written in the footer of the file.
@@ -45,14 +44,14 @@ pub struct FileReader<R: Read + Seek> {
     dictionaries: Option<Dictionaries>,
     current_block: usize,
     projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
-    data_scratch: ReadBuffer,
-    message_scratch: ReadBuffer,
+    data_scratch: Vec<u8>,
+    message_scratch: Vec<u8>,
 }
 
 fn read_dictionary_message<R: Read + Seek>(
     reader: &mut R,
     offset: u64,
-    data: &mut ReadBuffer,
+    data: &mut Vec<u8>,
 ) -> Result<()> {
     let mut message_size: [u8; 4] = [0; 4];
     reader.seek(SeekFrom::Start(offset))?;
@@ -66,8 +65,13 @@ fn read_dictionary_message<R: Read + Seek>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    data.set_len(message_length);
-    reader.read_exact(data.as_mut())?;
+    data.clear();
+    data.try_reserve(message_length)?;
+    reader
+        .by_ref()
+        .take(message_length as u64)
+        .read_to_end(data)?;
+
     Ok(())
 }
 
@@ -76,8 +80,8 @@ fn read_dictionary_block<R: Read + Seek>(
     metadata: &FileMetadata,
     block: &arrow_format::ipc::Block,
     dictionaries: &mut Dictionaries,
-    message_scratch: &mut ReadBuffer,
-    dictionary_scratch: &mut ReadBuffer,
+    message_scratch: &mut Vec<u8>,
+    dictionary_scratch: &mut Vec<u8>,
 ) -> Result<()> {
     let offset: u64 = block
         .offset
@@ -120,7 +124,7 @@ fn read_dictionary_block<R: Read + Seek>(
 pub fn read_file_dictionaries<R: Read + Seek>(
     reader: &mut R,
     metadata: &FileMetadata,
-    scratch: &mut ReadBuffer,
+    scratch: &mut Vec<u8>,
 ) -> Result<Dictionaries> {
     let mut dictionaries = Default::default();
 
@@ -259,8 +263,8 @@ pub fn read_batch<R: Read + Seek>(
     metadata: &FileMetadata,
     projection: Option<&[usize]>,
     index: usize,
-    message_scratch: &mut ReadBuffer,
-    data_scratch: &mut ReadBuffer,
+    message_scratch: &mut Vec<u8>,
+    data_scratch: &mut Vec<u8>,
 ) -> Result<Chunk<Box<dyn Array>>> {
     let block = metadata.blocks[index];
 
@@ -281,8 +285,12 @@ pub fn read_batch<R: Read + Seek>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    message_scratch.set_len(meta_len);
-    reader.read_exact(message_scratch.as_mut())?;
+    message_scratch.clear();
+    message_scratch.try_reserve(meta_len)?;
+    reader
+        .by_ref()
+        .take(meta_len as u64)
+        .read_to_end(message_scratch)?;
 
     let message = arrow_format::ipc::MessageRef::read_as_root(message_scratch.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;

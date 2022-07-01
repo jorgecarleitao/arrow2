@@ -18,7 +18,6 @@ use super::reader::{deserialize_footer, get_serialized_batch};
 use super::Dictionaries;
 use super::FileMetadata;
 use super::OutOfSpecKind;
-use super::ReadBuffer;
 
 /// Async reader for Arrow IPC files
 pub struct FileStream<'a> {
@@ -142,9 +141,14 @@ where
 {
     let footer_size = read_footer_len(reader).await?;
     // Read footer
-    let mut footer = vec![0; footer_size];
     reader.seek(SeekFrom::End(-10 - footer_size as i64)).await?;
-    reader.read_exact(&mut footer).await?;
+
+    let mut footer = vec![];
+    footer.try_reserve(footer_size)?;
+    reader
+        .take(footer_size as u64)
+        .read_to_end(&mut footer)
+        .await?;
 
     deserialize_footer(&footer, u64::MAX)
 }
@@ -156,9 +160,9 @@ async fn read_batch<R>(
     metadata: &FileMetadata,
     projection: Option<&[usize]>,
     block: usize,
-    meta_buffer: &mut ReadBuffer,
-    block_buffer: &mut ReadBuffer,
-    scratch: &mut ReadBuffer,
+    meta_buffer: &mut Vec<u8>,
+    block_buffer: &mut Vec<u8>,
+    scratch: &mut Vec<u8>,
 ) -> Result<Chunk<Box<dyn Array>>>
 where
     R: AsyncRead + AsyncSeek + Unpin,
@@ -181,10 +185,14 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    meta_buffer.set_len(meta_len);
-    reader.read_exact(meta_buffer.as_mut()).await?;
+    meta_buffer.clear();
+    meta_buffer.try_reserve(meta_len)?;
+    (&mut reader)
+        .take(meta_len as u64)
+        .read_to_end(meta_buffer)
+        .await?;
 
-    let message = arrow_format::ipc::MessageRef::read_as_root(meta_buffer.as_ref())
+    let message = arrow_format::ipc::MessageRef::read_as_root(meta_buffer)
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let batch = get_serialized_batch(&message)?;
@@ -195,9 +203,14 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::UnexpectedNegativeInteger))?;
 
-    block_buffer.set_len(block_length);
-    reader.read_exact(block_buffer.as_mut()).await?;
-    let mut cursor = std::io::Cursor::new(block_buffer.as_ref());
+    block_buffer.clear();
+    block_buffer.try_reserve(block_length)?;
+    reader
+        .take(block_length as u64)
+        .read_to_end(block_buffer)
+        .await?;
+
+    let mut cursor = std::io::Cursor::new(&block_buffer);
 
     read_record_batch(
         batch,
@@ -220,14 +233,14 @@ async fn read_dictionaries<R>(
     fields: &[Field],
     ipc_schema: &IpcSchema,
     blocks: &[Block],
-    scratch: &mut ReadBuffer,
+    scratch: &mut Vec<u8>,
 ) -> Result<Dictionaries>
 where
     R: AsyncRead + AsyncSeek + Unpin,
 {
     let mut dictionaries = Default::default();
-    let mut data: ReadBuffer = vec![].into();
-    let mut buffer: ReadBuffer = vec![].into();
+    let mut data: Vec<u8> = vec![];
+    let mut buffer: Vec<u8> = vec![];
 
     for block in blocks {
         let offset: u64 = block
@@ -250,11 +263,15 @@ where
             .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferHeader(err)))?
             .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageHeader))?;
 
-        buffer.set_len(length);
         match header {
             MessageHeaderRef::DictionaryBatch(batch) => {
-                reader.read_exact(buffer.as_mut()).await?;
-                let mut cursor = std::io::Cursor::new(buffer.as_ref());
+                buffer.clear();
+                buffer.try_reserve(length)?;
+                (&mut reader)
+                    .take(length as u64)
+                    .read_to_end(&mut buffer)
+                    .await?;
+                let mut cursor = std::io::Cursor::new(&buffer);
                 read_dictionary(
                     batch,
                     fields,
@@ -272,7 +289,7 @@ where
     Ok(dictionaries)
 }
 
-async fn read_dictionary_message<R>(mut reader: R, offset: u64, data: &mut ReadBuffer) -> Result<()>
+async fn read_dictionary_message<R>(mut reader: R, offset: u64, data: &mut Vec<u8>) -> Result<()>
 where
     R: AsyncRead + AsyncSeek + Unpin,
 {
@@ -288,8 +305,12 @@ where
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    data.set_len(footer_size);
-    reader.read_exact(data.as_mut()).await?;
+    data.clear();
+    data.try_reserve(footer_size)?;
+    (&mut reader)
+        .take(footer_size as u64)
+        .read_to_end(data)
+        .await?;
 
     Ok(())
 }

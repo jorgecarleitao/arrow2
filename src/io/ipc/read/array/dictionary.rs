@@ -6,7 +6,7 @@ use crate::array::{DictionaryArray, DictionaryKey};
 use crate::error::{Error, Result};
 
 use super::super::Dictionaries;
-use super::super::{Compression, IpcBuffer, Node, ReadBuffer};
+use super::super::{Compression, IpcBuffer, Node};
 use super::{read_primitive, skip_primitive};
 
 #[allow(clippy::too_many_arguments)]
@@ -19,7 +19,7 @@ pub fn read_dictionary<T: DictionaryKey, R: Read + Seek>(
     block_offset: u64,
     compression: Option<Compression>,
     is_little_endian: bool,
-    scratch: &mut ReadBuffer,
+    scratch: &mut Vec<u8>,
 ) -> Result<DictionaryArray<T>>
 where
     Vec<u8>: TryInto<T::Bytes>,
