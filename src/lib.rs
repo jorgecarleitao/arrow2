@@ -6,6 +6,8 @@
 #![allow(clippy::len_without_is_empty)]
 // Trait objects must be returned as a &Box<dyn Array> so that they can be cloned
 #![allow(clippy::borrowed_box)]
+// Allow type complexity warning to avoid API break.
+#![allow(clippy::type_complexity)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "simd", feature(portable_simd))]
 

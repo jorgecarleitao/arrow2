@@ -96,7 +96,7 @@ impl<R: Read> Decompressor<R> {
     }
 }
 
-impl<'a, R: Read> FallibleStreamingIterator for Decompressor<R> {
+impl<R: Read> FallibleStreamingIterator for Decompressor<R> {
     type Error = Error;
     type Item = Block;
 

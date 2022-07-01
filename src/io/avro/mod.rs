@@ -93,7 +93,7 @@ macro_rules! read_metadata {
 pub(crate) use {avro_decode, read_header, read_metadata};
 
 /// A compressed Avro block.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CompressedBlock {
     /// The number of rows
     pub number_of_rows: usize,
@@ -112,7 +112,7 @@ impl CompressedBlock {
 }
 
 /// An uncompressed Avro block.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Block {
     /// The number of rows
     pub number_of_rows: usize,

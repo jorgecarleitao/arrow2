@@ -414,12 +414,10 @@ fn push(
             // some implementations of parquet write arrow's u32 into i64.
             ParquetPhysicalType::Int64 => primitive::push(from, min, max, |x: i64| Ok(x as u32)),
             ParquetPhysicalType::Int32 => primitive::push(from, min, max, |x: i32| Ok(x as u32)),
-            other => {
-                return Err(Error::NotYetImplemented(format!(
-                    "Can't decode UInt32 type from parquet type {:?}",
-                    other
-                )))
-            }
+            other => Err(Error::NotYetImplemented(format!(
+                "Can't decode UInt32 type from parquet type {:?}",
+                other
+            ))),
         },
         Int32 => primitive::push(from, min, max, |x: i32| Ok(x as i32)),
         Int64 | Date64 | Time64(_) | Duration(_) => {
@@ -442,7 +440,7 @@ fn push(
             ParquetPhysicalType::Int32 => primitive::push(from, min, max, |x: i32| Ok(x as i128)),
             ParquetPhysicalType::Int64 => primitive::push(from, min, max, |x: i64| Ok(x as i128)),
             ParquetPhysicalType::FixedLenByteArray(n) if *n > 16 => {
-                return Err(Error::NotYetImplemented(format!(
+                Err(Error::NotYetImplemented(format!(
                     "Can't decode Decimal128 type from Fixed Size Byte Array of len {:?}",
                     n
                 )))

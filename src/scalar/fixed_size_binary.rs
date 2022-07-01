@@ -2,7 +2,7 @@ use crate::datatypes::DataType;
 
 use super::Scalar;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// The [`Scalar`] implementation of fixed size binary ([`Option<Box<[u8]>>`]).
 pub struct FixedSizeBinaryScalar {
     value: Option<Box<[u8]>>,

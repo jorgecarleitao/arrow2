@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 
 /// A vector of trait objects of [`Array`] where every item has
 /// the same length, [`Chunk::len`].
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Chunk<A: AsRef<dyn Array>> {
     arrays: Vec<A>,
 }

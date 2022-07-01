@@ -118,14 +118,14 @@ fn or_assign<T: BitChunk>(lhs: &mut MutableBitmap, rhs: &Bitmap) {
     }
 }
 
-impl<'a, 'b> std::ops::BitOrAssign<&'a Bitmap> for &'b mut MutableBitmap {
+impl<'a> std::ops::BitOrAssign<&'a Bitmap> for &mut MutableBitmap {
     #[inline]
     fn bitor_assign(&mut self, rhs: &'a Bitmap) {
         or_assign::<u64>(self, rhs)
     }
 }
 
-impl<'a, 'b> std::ops::BitOr<&'a Bitmap> for MutableBitmap {
+impl<'a> std::ops::BitOr<&'a Bitmap> for MutableBitmap {
     type Output = Self;
 
     #[inline]
@@ -150,14 +150,14 @@ fn and_assign<T: BitChunk>(lhs: &mut MutableBitmap, rhs: &Bitmap) {
     }
 }
 
-impl<'a, 'b> std::ops::BitAndAssign<&'a Bitmap> for &'b mut MutableBitmap {
+impl<'a> std::ops::BitAndAssign<&'a Bitmap> for &mut MutableBitmap {
     #[inline]
     fn bitand_assign(&mut self, rhs: &'a Bitmap) {
         and_assign::<u64>(self, rhs)
     }
 }
 
-impl<'a, 'b> std::ops::BitAnd<&'a Bitmap> for MutableBitmap {
+impl<'a> std::ops::BitAnd<&'a Bitmap> for MutableBitmap {
     type Output = Self;
 
     #[inline]
@@ -173,14 +173,14 @@ fn xor_assign<T: BitChunk>(lhs: &mut MutableBitmap, rhs: &Bitmap) {
     binary_assign(lhs, rhs, |x: T, y| x ^ y)
 }
 
-impl<'a, 'b> std::ops::BitXorAssign<&'a Bitmap> for &'b mut MutableBitmap {
+impl<'a> std::ops::BitXorAssign<&'a Bitmap> for &mut MutableBitmap {
     #[inline]
     fn bitxor_assign(&mut self, rhs: &'a Bitmap) {
         xor_assign::<u64>(self, rhs)
     }
 }
 
-impl<'a, 'b> std::ops::BitXor<&'a Bitmap> for MutableBitmap {
+impl<'a> std::ops::BitXor<&'a Bitmap> for MutableBitmap {
     type Output = Self;
 
     #[inline]

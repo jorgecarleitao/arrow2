@@ -3,7 +3,7 @@ use crate::datatypes::DataType;
 use super::Scalar;
 
 /// The [`Scalar`] implementation of a boolean.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BooleanScalar {
     value: Option<bool>,
 }

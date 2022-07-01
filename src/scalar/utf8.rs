@@ -3,7 +3,7 @@ use crate::{array::*, datatypes::DataType};
 use super::Scalar;
 
 /// The implementation of [`Scalar`] for utf8, semantically equivalent to [`Option<String>`].
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Utf8Scalar<O: Offset> {
     value: Option<String>,
     phantom: std::marker::PhantomData<O>,
