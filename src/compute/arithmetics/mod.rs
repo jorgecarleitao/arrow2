@@ -106,7 +106,7 @@ fn binary_scalar<T: NativeType, F: Fn(&PrimitiveArray<T>, &T) -> PrimitiveArray<
     rhs: &PrimitiveScalar<T>,
     op: F,
 ) -> PrimitiveArray<T> {
-    let rhs = if let Some(rhs) = rhs.value() {
+    let rhs = if let Some(rhs) = *rhs.value() {
         rhs
     } else {
         return PrimitiveArray::<T>::new_null(lhs.data_type().clone(), lhs.len());

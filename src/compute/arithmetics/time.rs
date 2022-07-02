@@ -130,7 +130,7 @@ where
     T: NativeType + Add<T, Output = T>,
 {
     let scale = create_scale(time.data_type(), duration.data_type()).unwrap();
-    let duration = if let Some(duration) = duration.value() {
+    let duration = if let Some(duration) = *duration.value() {
         duration
     } else {
         return PrimitiveArray::<T>::new_null(time.data_type().clone(), time.len());
@@ -211,7 +211,7 @@ where
     T: NativeType + Sub<T, Output = T>,
 {
     let scale = create_scale(time.data_type(), duration.data_type()).unwrap();
-    let duration = if let Some(duration) = duration.value() {
+    let duration = if let Some(duration) = *duration.value() {
         duration
     } else {
         return PrimitiveArray::<T>::new_null(time.data_type().clone(), time.len());
@@ -297,7 +297,7 @@ pub fn sub_timestamps_scalar(
             ));
         };
 
-    let rhs = if let Some(value) = rhs.value() {
+    let rhs = if let Some(value) = *rhs.value() {
         value
     } else {
         return Ok(PrimitiveArray::<i64>::new_null(
@@ -374,7 +374,7 @@ pub fn add_interval_scalar(
     timestamp: &PrimitiveArray<i64>,
     interval: &PrimitiveScalar<months_days_ns>,
 ) -> Result<PrimitiveArray<i64>> {
-    let interval = if let Some(interval) = interval.value() {
+    let interval = if let Some(interval) = *interval.value() {
         interval
     } else {
         return Ok(PrimitiveArray::<i64>::new_null(
