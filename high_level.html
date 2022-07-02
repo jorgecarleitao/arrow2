@@ -232,7 +232,7 @@ let physical_type: PhysicalType = array.data_type().to_physical_type();
 </span></code></pre></pre>
 <p>There is a one to one relationship between each variant of <code>PhysicalType</code> (an enum) and
 an each implementation of <code>Array</code> (a struct):</p>
-<table><thead><tr><th><code>PhysicalType</code></th><th><code>Array</code></th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th><code>PhysicalType</code></th><th><code>Array</code></th></tr></thead><tbody>
 <tr><td><code>Primitive(_)</code></td><td><code>PrimitiveArray&lt;_&gt;</code></td></tr>
 <tr><td><code>Binary</code></td><td><code>BinaryArray&lt;i32&gt;</code></td></tr>
 <tr><td><code>LargeBinary</code></td><td><code>BinaryArray&lt;i64&gt;</code></td></tr>
@@ -247,10 +247,10 @@ an each implementation of <code>Array</code> (a struct):</p>
 <tr><td><code>Map</code></td><td><code>MapArray</code></td></tr>
 <tr><td><code>Dictionary(_)</code></td><td><code>DictionaryArray&lt;_&gt;</code></td></tr>
 </tbody></table>
+</div>
 <p>where <code>_</code> represents each of the variants (e.g. <code>PrimitiveType::Int32 &lt;-&gt; i32</code>).</p>
 <p>In this context, a common idiom in using <code>Array</code> as a trait object is as follows:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use arrow2::datatypes::{PhysicalType, PrimitiveType};
 use arrow2::array::{Array, PrimitiveArray};
@@ -330,8 +330,7 @@ perform bitmap operations.</li>
 <p>One of the main advantages of the arrow format and its memory layout is that
 it often enables SIMD. For example, an unary operation <code>op</code> on a <code>PrimitiveArray</code>
 likely emits SIMD instructions on the following code:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">use arrow2::buffer::Buffer;
 </span><span class="boring">use arrow2::{

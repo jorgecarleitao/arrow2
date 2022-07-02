@@ -415,7 +415,7 @@ let physical_type: PhysicalType = array.data_type().to_physical_type();
 </span></code></pre></pre>
 <p>There is a one to one relationship between each variant of <code>PhysicalType</code> (an enum) and
 an each implementation of <code>Array</code> (a struct):</p>
-<table><thead><tr><th><code>PhysicalType</code></th><th><code>Array</code></th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th><code>PhysicalType</code></th><th><code>Array</code></th></tr></thead><tbody>
 <tr><td><code>Primitive(_)</code></td><td><code>PrimitiveArray&lt;_&gt;</code></td></tr>
 <tr><td><code>Binary</code></td><td><code>BinaryArray&lt;i32&gt;</code></td></tr>
 <tr><td><code>LargeBinary</code></td><td><code>BinaryArray&lt;i64&gt;</code></td></tr>
@@ -430,10 +430,10 @@ an each implementation of <code>Array</code> (a struct):</p>
 <tr><td><code>Map</code></td><td><code>MapArray</code></td></tr>
 <tr><td><code>Dictionary(_)</code></td><td><code>DictionaryArray&lt;_&gt;</code></td></tr>
 </tbody></table>
+</div>
 <p>where <code>_</code> represents each of the variants (e.g. <code>PrimitiveType::Int32 &lt;-&gt; i32</code>).</p>
 <p>In this context, a common idiom in using <code>Array</code> as a trait object is as follows:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use arrow2::datatypes::{PhysicalType, PrimitiveType};
 use arrow2::array::{Array, PrimitiveArray};
@@ -513,8 +513,7 @@ perform bitmap operations.</li>
 <p>One of the main advantages of the arrow format and its memory layout is that
 it often enables SIMD. For example, an unary operation <code>op</code> on a <code>PrimitiveArray</code>
 likely emits SIMD instructions on the following code:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">use arrow2::buffer::Buffer;
 </span><span class="boring">use arrow2::{
@@ -1184,8 +1183,7 @@ fn main() -&gt; Result&lt;()&gt; {
 on the same thread, which may hurt performance if one of them is a bottleneck.</p>
 <p>For single-threaded reading, buffers used to read and decompress pages can be re-used.
 This create offers an API that encapsulates the above logic:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>{{#include ../../../examples/parquet_read_record.rs}}
 <span class="boring">}
@@ -1198,8 +1196,7 @@ decoding, etc.).</p>
 <p>The example below assumes that CPU starves the consumption of pages,
 and that it is advantageous to have a single thread performing all IO-intensive work,
 by delegating all CPU-intensive tasks to separate threads.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>{{#include ../../../examples/parquet_read_parallel.rs}}
 <span class="boring">}
@@ -1212,7 +1209,7 @@ in file readers, and a single consumer that performs all CPU-intensive work.</p>
 When reading Parquet, we must <em>infer</em> to which types we are reading the data to.
 This inference is based on Parquet's physical, logical and converted types.</p>
 <p>When a logical type is defined, we use it as follows:</p>
-<table><thead><tr><th><code>Parquet</code></th><th><code>Parquet logical</code></th><th><code>DataType</code></th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th><code>Parquet</code></th><th><code>Parquet logical</code></th><th><code>DataType</code></th></tr></thead><tbody>
 <tr><td>Int32</td><td>Int8</td><td>Int8</td></tr>
 <tr><td>Int32</td><td>Int16</td><td>Int16</td></tr>
 <tr><td>Int32</td><td>Int32</td><td>Int32</td></tr>
@@ -1235,10 +1232,11 @@ This inference is based on Parquet's physical, logical and converted types.</p>
 <tr><td>ByteArray</td><td>Decimal</td><td>Decimal</td></tr>
 <tr><td>FixedLenByteArray</td><td>Decimal</td><td>Decimal</td></tr>
 </tbody></table>
+</div>
 <p>When a logical type is not defined but a converted type is defined, we use
 the equivalent conversion as above, mutatis mutandis.</p>
 <p>When neither is defined, we fall back to the physical representation:</p>
-<table><thead><tr><th><code>Parquet</code></th><th><code>DataType</code></th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th><code>Parquet</code></th><th><code>DataType</code></th></tr></thead><tbody>
 <tr><td>Boolean</td><td>Boolean</td></tr>
 <tr><td>Int32</td><td>Int32</td></tr>
 <tr><td>Int64</td><td>Int64</td></tr>
@@ -1248,7 +1246,7 @@ the equivalent conversion as above, mutatis mutandis.</p>
 <tr><td>ByteArray</td><td>Binary</td></tr>
 <tr><td>FixedLenByteArray</td><td>FixedSizeBinary</td></tr>
 </tbody></table>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="write-to-parquet"><a class="header" href="#write-to-parquet">Write to Parquet</a></h1>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="write-to-parquet"><a class="header" href="#write-to-parquet">Write to Parquet</a></h1>
 <p>When compiled with feature <code>io_parquet</code>, this crate can be used to write parquet files
 from arrow.
 It makes minimal assumptions on how you to decompose CPU and IO intensive tasks, as well
@@ -1868,7 +1866,7 @@ fn main() -&gt; Result&lt;()&gt; {
 </code></pre></pre>
 <h2 id="metadata-and-inference"><a class="header" href="#metadata-and-inference">Metadata and inference</a></h2>
 <p>This crate uses the following mapping between Arrow's data type and JSON:</p>
-<table><thead><tr><th><code>JSON</code></th><th><code>DataType</code></th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th><code>JSON</code></th><th><code>DataType</code></th></tr></thead><tbody>
 <tr><td>Bool</td><td>Boolean</td></tr>
 <tr><td>Int</td><td>Int64</td></tr>
 <tr><td>Float</td><td>Float64</td></tr>
@@ -1876,7 +1874,7 @@ fn main() -&gt; Result&lt;()&gt; {
 <tr><td>List</td><td>List</td></tr>
 <tr><td>Object</td><td>Struct</td></tr>
 </tbody></table>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="write-json"><a class="header" href="#write-json">Write JSON</a></h1>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="write-json"><a class="header" href="#write-json">Write JSON</a></h1>
 <p>When compiled with feature <code>io_json</code>, you can use this crate to write JSON.
 The following example writes an array to JSON:</p>
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
@@ -1952,8 +1950,7 @@ fn main() -&gt; Result&lt;()&gt; {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="odbc"><a class="header" href="#odbc">ODBC</a></h1>
 <p>When compiled with feature <code>io_odbc</code>, this crate can be used to read from, and write to
 any <a href="https://en.wikipedia.org/wiki/Open_Database_Connectivity">ODBC</a> interface:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>{{#include ../../../examples/odbc.rs}}
 <span class="boring">}
