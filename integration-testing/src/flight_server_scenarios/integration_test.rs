@@ -16,30 +16,29 @@
 // under the License.
 
 use std::collections::HashMap;
-use std::pin::Pin;
 use std::sync::Arc;
 
-use arrow2::array::Array;
-use arrow2::chunk::Chunk;
-use arrow2::io::flight::{deserialize_schemas, serialize_batch, serialize_schema};
-use arrow2::io::ipc::read::Dictionaries;
-use arrow2::io::ipc::IpcSchema;
+use async_stream::try_stream;
+use futures::pin_mut;
+use tokio::sync::Mutex;
+use tonic::{transport::Server, Request, Response, Status, Streaming};
+
 use arrow_format::flight::data::flight_descriptor::*;
 use arrow_format::flight::data::*;
 use arrow_format::flight::service::flight_service_server::*;
 use arrow_format::ipc::planus::ReadAsRoot;
 use arrow_format::ipc::MessageHeaderRef;
 
-use arrow2::{datatypes::*, io::flight::serialize_schema_to_info, io::ipc};
+use arrow2::array::Array;
+use arrow2::chunk::Chunk;
+use arrow2::datatypes::{Field, Schema};
+use arrow2::io::flight::{
+    deserialize_schemas, serialize_batch, serialize_schema, serialize_schema_to_info,
+};
+use arrow2::io::ipc;
+use arrow2::io::ipc::read::Dictionaries;
 
-use futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
-use tokio::sync::Mutex;
-use tonic::{transport::Server, Request, Response, Status, Streaming};
-
-type TonicStream<T> = Pin<Box<dyn Stream<Item = T> + Send + Sync + 'static>>;
-
-type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
-type Result<T = (), E = Error> = std::result::Result<T, E>;
+use super::{Result, TonicStream};
 
 pub async fn scenario_setup(port: u16) -> Result {
     let addr = super::listen_on(port).await?;
@@ -61,7 +60,7 @@ pub async fn scenario_setup(port: u16) -> Result {
 #[derive(Debug, Clone)]
 struct IntegrationDataset {
     schema: Schema,
-    ipc_schema: IpcSchema,
+    ipc_schema: ipc::IpcSchema,
     chunks: Vec<Chunk<Box<dyn Array>>>,
 }
 
@@ -111,30 +110,31 @@ impl FlightService for FlightServiceImpl {
 
         let options = ipc::write::WriteOptions { compression: None };
 
-        let schema = std::iter::once(Ok(serialize_schema(
-            &flight.schema,
-            Some(&flight.ipc_schema.fields),
-        )));
+        let schema = serialize_schema(&flight.schema, Some(&flight.ipc_schema.fields));
 
         let batches = flight
             .chunks
             .iter()
             .enumerate()
             .flat_map(|(counter, batch)| {
-                let (dictionary_flight_data, mut batch_flight_data) =
+                let (dictionaries, mut chunk) =
                     serialize_batch(batch, &flight.ipc_schema.fields, &options).unwrap();
 
                 // Only the record batch's FlightData gets app_metadata
                 let metadata = counter.to_string().into_bytes();
-                batch_flight_data.app_metadata = metadata;
+                chunk.app_metadata = metadata;
 
-                dictionary_flight_data
+                dictionaries
                     .into_iter()
-                    .chain(std::iter::once(batch_flight_data))
+                    .chain(std::iter::once(chunk))
                     .map(Ok)
             });
 
-        let output = futures::stream::iter(schema.chain(batches).collect::<Vec<_>>());
+        let output = futures::stream::iter(
+            std::iter::once(Ok(schema))
+                .chain(batches)
+                .collect::<Vec<_>>(),
+        );
 
         Ok(Response::new(Box::pin(output) as Self::DoGetStream))
     }
@@ -220,27 +220,32 @@ impl FlightService for FlightServiceImpl {
         let (schema, ipc_schema) = deserialize_schemas(&flight_data.data_header)
             .map_err(|e| Status::invalid_argument(format!("Invalid schema: {:?}", e)))?;
 
-        let (response_tx, response_rx) = mpsc::channel(10);
-
         let uploaded_chunks = self.uploaded_chunks.clone();
 
-        tokio::spawn(async {
-            let mut error_tx = response_tx.clone();
-            if let Err(e) = save_uploaded_chunks(
-                uploaded_chunks,
-                schema,
-                ipc_schema,
-                input_stream,
-                response_tx,
-                key,
-            )
-            .await
-            {
-                error_tx.send(Err(e)).await.expect("Error sending error")
-            }
-        });
+        let mut dictionaries = Dictionaries::default();
+        let mut chunks = vec![];
 
-        Ok(Response::new(Box::pin(response_rx) as Self::DoPutStream))
+        let stream = try_stream! {
+            pin_mut!(input_stream);
+            for await item in input_stream {
+                let FlightData {data_header, data_body, app_metadata, ..} = item.map_err(|_| Status::invalid_argument(format!("Invalid")))?;
+                save_message(&data_header,
+                    &data_body,
+                    &schema,
+                    &ipc_schema,
+                    &mut dictionaries,
+                    &mut chunks)?;
+                yield PutResult {app_metadata}
+            }
+            let dataset = IntegrationDataset {
+                schema,
+                chunks,
+                ipc_schema,
+            };
+            let mut uploaded_chunks = uploaded_chunks.lock().await;
+            uploaded_chunks.insert(key, dataset);
+        };
+        Ok(Response::new(Box::pin(stream)))
     }
 
     async fn do_action(
@@ -265,28 +270,17 @@ impl FlightService for FlightServiceImpl {
     }
 }
 
-async fn send_app_metadata(
-    tx: &mut mpsc::Sender<Result<PutResult, Status>>,
-    app_metadata: &[u8],
-) -> Result<(), Status> {
-    tx.send(Ok(PutResult {
-        app_metadata: app_metadata.to_vec(),
-    }))
-    .await
-    .map_err(|e| Status::internal(format!("Could not send PutResult: {:?}", e)))
-}
-
-async fn record_batch_from_message(
+fn chunk_from_message(
     batch: arrow_format::ipc::RecordBatchRef<'_>,
     data_body: &[u8],
     fields: &[Field],
-    ipc_schema: &IpcSchema,
+    ipc_schema: &ipc::IpcSchema,
     dictionaries: &mut Dictionaries,
 ) -> Result<Chunk<Box<dyn Array>>, Status> {
     let length = data_body.len();
     let mut reader = std::io::Cursor::new(data_body);
 
-    let arrow_batch_result = ipc::read::read_record_batch(
+    ipc::read::read_record_batch(
         batch,
         fields,
         ipc_schema,
@@ -296,99 +290,64 @@ async fn record_batch_from_message(
         &mut reader,
         0,
         length as u64,
-        &mut Default::default()
-    );
-
-    arrow_batch_result.map_err(|e| Status::internal(format!("Could not convert to Chunk: {:?}", e)))
+        &mut Default::default(),
+    )
+    .map_err(|e| Status::internal(format!("Could not convert to Chunk: {:?}", e)))
 }
 
-async fn dictionary_from_message(
+fn dictionary_from_message(
     dict_batch: arrow_format::ipc::DictionaryBatchRef<'_>,
     data_body: &[u8],
     fields: &[Field],
-    ipc_schema: &IpcSchema,
+    ipc_schema: &ipc::IpcSchema,
     dictionaries: &mut Dictionaries,
 ) -> Result<(), Status> {
     let length = data_body.len();
     let mut reader = std::io::Cursor::new(data_body);
 
-    let dictionary_batch_result =
-        ipc::read::read_dictionary(dict_batch, fields, ipc_schema, dictionaries, &mut reader, 0, length as u64, &mut Default::default());
-    dictionary_batch_result
-        .map_err(|e| Status::internal(format!("Could not convert to Dictionary: {:?}", e)))
+    ipc::read::read_dictionary(
+        dict_batch,
+        fields,
+        ipc_schema,
+        dictionaries,
+        &mut reader,
+        0,
+        length as u64,
+        &mut Default::default(),
+    )
+    .map_err(|e| Status::internal(format!("Could not convert to Dictionary: {:?}", e)))
 }
 
-async fn save_uploaded_chunks(
-    uploaded_chunks: Arc<Mutex<HashMap<String, IntegrationDataset>>>,
-    schema: Schema,
-    ipc_schema: IpcSchema,
-    mut input_stream: Streaming<FlightData>,
-    mut response_tx: mpsc::Sender<Result<PutResult, Status>>,
-    key: String,
+fn save_message(
+    header: &[u8],
+    body: &[u8],
+    schema: &Schema,
+    ipc_schema: &ipc::IpcSchema,
+    dictionaries: &mut Dictionaries,
+    chunks: &mut Vec<Chunk<Box<dyn Array>>>,
 ) -> Result<(), Status> {
-    let mut chunks = vec![];
-    let mut uploaded_chunks = uploaded_chunks.lock().await;
+    let message = arrow_format::ipc::MessageRef::read_as_root(header)
+        .map_err(|e| Status::internal(format!("Could not parse message: {:?}", e)))?;
+    let header = message
+        .header()
+        .map_err(|x| Status::internal(x.to_string()))?
+        .ok_or_else(|| Status::internal("Message must contain a header".to_string()))?;
 
-    let mut dictionaries = Default::default();
+    match header {
+        MessageHeaderRef::RecordBatch(batch) => {
+            let chunk = chunk_from_message(batch, body, &schema.fields, ipc_schema, dictionaries)?;
 
-    while let Some(Ok(data)) = input_stream.next().await {
-        let message = arrow_format::ipc::MessageRef::read_as_root(&data.data_header)
-            .map_err(|e| Status::internal(format!("Could not parse message: {:?}", e)))?;
-        let header = message
-            .header()
-            .map_err(|x| Status::internal(x.to_string()))?
-            .ok_or_else(|| {
-                Status::internal(
-                    "Unable to convert flight data header to a record batch".to_string(),
-                )
-            })?;
-
-        match header {
-            MessageHeaderRef::Schema(_) => {
-                return Err(Status::internal(
-                    "Not expecting a schema when messages are read",
-                ))
-            }
-            MessageHeaderRef::RecordBatch(batch) => {
-                send_app_metadata(&mut response_tx, &data.app_metadata).await?;
-
-                let batch = record_batch_from_message(
-                    batch,
-                    &data.data_body,
-                    &schema.fields,
-                    &ipc_schema,
-                    &mut dictionaries,
-                )
-                .await?;
-
-                chunks.push(batch);
-            }
-            MessageHeaderRef::DictionaryBatch(dict_batch) => {
-                dictionary_from_message(
-                    dict_batch,
-                    &data.data_body,
-                    &schema.fields,
-                    &ipc_schema,
-                    &mut dictionaries,
-                )
-                .await?;
-            }
-            t => {
-                return Err(Status::internal(format!(
-                    "Reading types other than record batches not yet supported, \
-                                              unable to read {:?}",
-                    t
-                )));
-            }
+            chunks.push(chunk);
+        }
+        MessageHeaderRef::DictionaryBatch(dict_batch) => {
+            dictionary_from_message(dict_batch, body, &schema.fields, ipc_schema, dictionaries)?;
+        }
+        t => {
+            return Err(Status::internal(format!(
+                "Reading types other than record batches not yet supported, unable to read {:?}",
+                t
+            )));
         }
     }
-
-    let dataset = IntegrationDataset {
-        schema,
-        chunks,
-        ipc_schema,
-    };
-    uploaded_chunks.insert(key, dataset);
-
     Ok(())
 }
