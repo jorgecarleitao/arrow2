@@ -55,7 +55,7 @@ pub async fn run_scenario(host: &str, port: u16, path: &str) -> Result {
 
     let ArrowFile {
         schema,
-        batches,
+        chunks,
         fields,
         ..
     } = read_json_file(path)?;
@@ -63,8 +63,6 @@ pub async fn run_scenario(host: &str, port: u16, path: &str) -> Result {
         fields,
         is_little_endian: true,
     };
-
-    let schema = Box::new(schema);
 
     let mut descriptor = FlightDescriptor::default();
     descriptor.set_type(DescriptorType::Path);
@@ -75,10 +73,10 @@ pub async fn run_scenario(host: &str, port: u16, path: &str) -> Result {
         &schema,
         &ipc_schema.fields,
         descriptor.clone(),
-        batches.clone(),
+        &chunks,
     )
     .await?;
-    verify_data(client, descriptor, &schema, &ipc_schema, &batches).await?;
+    verify_data(client, descriptor, &schema, &ipc_schema, &chunks).await?;
 
     Ok(())
 }
@@ -88,7 +86,7 @@ async fn upload_data(
     schema: &Schema,
     fields: &[IpcField],
     descriptor: FlightDescriptor,
-    original_data: Vec<ChunkBox>,
+    chunks: &[ChunkBox],
 ) -> Result {
     let (mut upload_tx, upload_rx) = mpsc::channel(10);
 
@@ -98,12 +96,12 @@ async fn upload_data(
     schema.flight_descriptor = Some(descriptor.clone());
     upload_tx.send(schema).await?;
 
-    let mut original_data_iter = original_data.iter().enumerate();
+    let mut original_data_iter = chunks.iter().enumerate();
 
-    if let Some((counter, first_batch)) = original_data_iter.next() {
+    if let Some((counter, first_chunk)) = original_data_iter.next() {
         let metadata = counter.to_string().into_bytes();
-        // Preload the first batch into the channel before starting the request
-        send_batch(&mut upload_tx, &metadata, first_batch, fields, &options).await?;
+        // Preload the first chunk into the channel before starting the request
+        send_chunk(&mut upload_tx, &metadata, first_chunk, fields, &options).await?;
 
         let outer = client.do_put(Request::new(upload_rx)).await?;
         let mut inner = outer.into_inner();
@@ -115,10 +113,10 @@ async fn upload_data(
             .expect("Invalid response received");
         assert_eq!(metadata, r.app_metadata);
 
-        // Stream the rest of the batches
-        for (counter, batch) in original_data_iter {
+        // Stream the rest of the chunkes
+        for (counter, chunk) in original_data_iter {
             let metadata = counter.to_string().into_bytes();
-            send_batch(&mut upload_tx, &metadata, batch, fields, &options).await?;
+            send_chunk(&mut upload_tx, &metadata, chunk, fields, &options).await?;
 
             let r = inner
                 .next()
@@ -140,22 +138,22 @@ async fn upload_data(
     Ok(())
 }
 
-async fn send_batch(
+async fn send_chunk(
     upload_tx: &mut mpsc::Sender<FlightData>,
     metadata: &[u8],
-    batch: &ChunkBox,
+    chunk: &ChunkBox,
     fields: &[IpcField],
     options: &write::WriteOptions,
 ) -> Result {
-    let (dictionary_flight_data, mut batch_flight_data) = serialize_batch(batch, fields, options)?;
+    let (dictionary_flight_data, mut chunk_flight_data) = serialize_batch(chunk, fields, options)?;
 
     upload_tx
         .send_all(&mut stream::iter(dictionary_flight_data).map(Ok))
         .await?;
 
-    // Only the record batch's FlightData gets app_metadata
-    batch_flight_data.app_metadata = metadata.to_vec();
-    upload_tx.send(batch_flight_data).await?;
+    // Only the record chunk's FlightData gets app_metadata
+    chunk_flight_data.app_metadata = metadata.to_vec();
+    upload_tx.send(chunk_flight_data).await?;
     Ok(())
 }
 
@@ -164,7 +162,7 @@ async fn verify_data(
     descriptor: FlightDescriptor,
     expected_schema: &Schema,
     ipc_schema: &IpcSchema,
-    expected_data: &[ChunkBox],
+    expected_chunks: &[ChunkBox],
 ) -> Result {
     let resp = client.get_flight_info(Request::new(descriptor)).await?;
     let info = resp.into_inner();
@@ -186,7 +184,7 @@ async fn verify_data(
             consume_flight_location(
                 location,
                 ticket.clone(),
-                expected_data,
+                expected_chunks,
                 expected_schema,
                 ipc_schema,
             )
@@ -200,7 +198,7 @@ async fn verify_data(
 async fn consume_flight_location(
     location: Location,
     ticket: Ticket,
-    expected_data: &[ChunkBox],
+    expected_chunks: &[ChunkBox],
     schema: &Schema,
     ipc_schema: &IpcSchema,
 ) -> Result {
@@ -219,47 +217,36 @@ async fn consume_flight_location(
 
     let mut dictionaries = Default::default();
 
-    for (counter, expected_batch) in expected_data.iter().enumerate() {
-        let data =
-            receive_batch_flight_data(&mut resp, &schema.fields, ipc_schema, &mut dictionaries)
-                .await
-                .unwrap_or_else(|| {
-                    panic!(
-                        "Got fewer batches than expected, received so far: {} expected: {}",
-                        counter,
-                        expected_data.len(),
-                    )
-                });
+    for (counter, expected_chunk) in expected_chunks.iter().enumerate() {
+        let data = read_dictionaries(&mut resp, &schema.fields, ipc_schema, &mut dictionaries)
+            .await
+            .unwrap_or_else(|| {
+                panic!(
+                    "Got fewer chunkes than expected, received so far: {} expected: {}",
+                    counter,
+                    expected_chunks.len(),
+                )
+            });
 
         let metadata = counter.to_string().into_bytes();
         assert_eq!(metadata, data.app_metadata);
 
-        let actual_batch = deserialize_batch(&data, &schema.fields, ipc_schema, &dictionaries)
-            .expect("Unable to convert flight data to Arrow batch");
+        let chunk = deserialize_batch(&data, &schema.fields, ipc_schema, &dictionaries)
+            .expect("Unable to convert flight data to Arrow chunk");
 
-        assert_eq!(expected_batch.columns().len(), actual_batch.columns().len());
-        assert_eq!(expected_batch.len(), actual_batch.len());
-        for (i, (expected, actual)) in expected_batch
-            .columns()
-            .iter()
-            .zip(actual_batch.columns().iter())
-            .enumerate()
-        {
-            let field_name = &schema.fields[i].name;
-            assert_eq!(expected, actual, "Data for field {}", field_name);
-        }
+        assert_eq!(&chunk, expected_chunk);
     }
 
     assert!(
         resp.next().await.is_none(),
-        "Got more batches than the expected: {}",
-        expected_data.len(),
+        "Got more chunkes than the expected: {}",
+        expected_chunks.len(),
     );
 
     Ok(())
 }
 
-async fn receive_batch_flight_data(
+async fn read_dictionaries(
     resp: &mut Streaming<FlightData>,
     fields: &[Field],
     ipc_schema: &IpcSchema,
@@ -269,15 +256,24 @@ async fn receive_batch_flight_data(
     let mut message =
         ipc::MessageRef::read_as_root(&data.data_header).expect("Error parsing first message");
 
-    while let ipc::MessageHeaderRef::DictionaryBatch(batch) = message
+    while let ipc::MessageHeaderRef::DictionaryBatch(chunk) = message
         .header()
         .expect("Header to be valid flatbuffers")
         .expect("Header to be present")
     {
         let length = data.data_body.len();
         let mut reader = std::io::Cursor::new(&data.data_body);
-        read::read_dictionary(batch, fields, ipc_schema, dictionaries, &mut reader, 0, length as u64, &mut Default::default())
-            .expect("Error reading dictionary");
+        read::read_dictionary(
+            chunk,
+            fields,
+            ipc_schema,
+            dictionaries,
+            &mut reader,
+            0,
+            length as u64,
+            &mut Default::default(),
+        )
+        .expect("Error reading dictionary");
 
         data = resp.next().await?.ok()?;
         message = ipc::MessageRef::read_as_root(&data.data_header).expect("Error parsing message");

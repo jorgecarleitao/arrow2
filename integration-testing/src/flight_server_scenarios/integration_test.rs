@@ -43,7 +43,7 @@ use super::{Result, TonicStream};
 pub async fn scenario_setup(port: u16) -> Result {
     let addr = super::listen_on(port).await?;
 
-    let service = FlightServiceImpl {
+    let service = Service {
         server_location: format!("grpc+tcp://{}", addr),
         ..Default::default()
     };
@@ -65,19 +65,19 @@ struct IntegrationDataset {
 }
 
 #[derive(Clone, Default)]
-pub struct FlightServiceImpl {
+struct Service {
     server_location: String,
     uploaded_chunks: Arc<Mutex<HashMap<String, IntegrationDataset>>>,
 }
 
-impl FlightServiceImpl {
+impl Service {
     fn endpoint_from_path(&self, path: &str) -> FlightEndpoint {
         super::endpoint(path, &self.server_location)
     }
 }
 
 #[tonic::async_trait]
-impl FlightService for FlightServiceImpl {
+impl FlightService for Service {
     type HandshakeStream = TonicStream<Result<HandshakeResponse, Status>>;
     type ListFlightsStream = TonicStream<Result<FlightInfo, Status>>;
     type DoGetStream = TonicStream<Result<FlightData, Status>>;
@@ -90,7 +90,7 @@ impl FlightService for FlightServiceImpl {
         &self,
         _request: Request<FlightDescriptor>,
     ) -> Result<Response<SchemaResult>, Status> {
-        Err(Status::unimplemented("Not yet implemented"))
+        Err(Status::unimplemented("get_schema"))
     }
 
     async fn do_get(
@@ -143,14 +143,14 @@ impl FlightService for FlightServiceImpl {
         &self,
         _request: Request<Streaming<HandshakeRequest>>,
     ) -> Result<Response<Self::HandshakeStream>, Status> {
-        Err(Status::unimplemented("Not yet implemented"))
+        Err(Status::unimplemented("handshake"))
     }
 
     async fn list_flights(
         &self,
         _request: Request<Criteria>,
     ) -> Result<Response<Self::ListFlightsStream>, Status> {
-        Err(Status::unimplemented("Not yet implemented"))
+        Err(Status::unimplemented("list_flights"))
     }
 
     async fn get_flight_info(
@@ -252,21 +252,21 @@ impl FlightService for FlightServiceImpl {
         &self,
         _request: Request<Action>,
     ) -> Result<Response<Self::DoActionStream>, Status> {
-        Err(Status::unimplemented("Not yet implemented"))
+        Err(Status::unimplemented("do_action"))
     }
 
     async fn list_actions(
         &self,
         _request: Request<Empty>,
     ) -> Result<Response<Self::ListActionsStream>, Status> {
-        Err(Status::unimplemented("Not yet implemented"))
+        Err(Status::unimplemented("list_actions"))
     }
 
     async fn do_exchange(
         &self,
         _request: Request<Streaming<FlightData>>,
     ) -> Result<Response<Self::DoExchangeStream>, Status> {
-        Err(Status::unimplemented("Not yet implemented"))
+        Err(Status::unimplemented("do_exchange"))
     }
 }
 

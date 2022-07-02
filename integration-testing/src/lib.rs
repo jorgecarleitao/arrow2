@@ -44,7 +44,7 @@ pub struct ArrowFile {
     // we can evolve this into a concrete Arrow type
     // this is temporarily not being read from
     pub _dictionaries: HashMap<i64, ArrowJsonDictionaryBatch>,
-    pub batches: Vec<Chunk<Box<dyn Array>>>,
+    pub chunks: Vec<Chunk<Box<dyn Array>>>,
 }
 
 pub fn read_json_file(json_name: &str) -> Result<ArrowFile> {
@@ -67,7 +67,7 @@ pub fn read_json_file(json_name: &str) -> Result<ArrowFile> {
         }
     }
 
-    let batches = arrow_json["batches"]
+    let chunks = arrow_json["batches"]
         .as_array()
         .unwrap()
         .iter()
@@ -80,6 +80,6 @@ pub fn read_json_file(json_name: &str) -> Result<ArrowFile> {
         schema,
         fields,
         _dictionaries: dictionaries,
-        batches,
+        chunks,
     })
 }

@@ -64,7 +64,7 @@ fn json_to_arrow(json_name: &str, arrow_name: &str, verbose: bool) -> Result<()>
         options,
     )?;
 
-    for b in json_file.batches {
+    for b in json_file.chunks {
         writer.write(&b, None)?;
     }
 
@@ -129,7 +129,7 @@ fn validate(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()> {
         )));
     }
 
-    let json_batches = json_file.batches;
+    let json_batches = json_file.chunks;
 
     if verbose {
         eprintln!(
