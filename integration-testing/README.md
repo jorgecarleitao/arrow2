@@ -21,10 +21,11 @@ cargo run --bin flight-test-integration-client -- --host localhost --port 3333 -
 to run an integration test against a file, use
 
 ```bash
-FILE="../testing/arrow-testing/data/arrow-ipc-stream/integration/1.0.0-littleendian/generated_primitive.json.gz"
+FILE="../testing/arrow-testing/data/arrow-ipc-stream/integration/1.0.0-littleendian/generated_dictionary.json.gz"
 gzip -dc $FILE > generated.json
 
 cargo build --bin flight-test-integration-server
 cargo run --bin flight-test-integration-server -- --port 3333 &
 cargo run --bin flight-test-integration-client -- --host localhost --port 3333 --path generated.json
+# kill with `fg` and stop process
 ```
