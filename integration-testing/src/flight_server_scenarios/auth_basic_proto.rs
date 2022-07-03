@@ -1,44 +1,18 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-use std::pin::Pin;
-use std::sync::Arc;
+use async_stream::try_stream;
+use futures::pin_mut;
+use prost::Message;
+use tonic::{metadata::MetadataMap, transport::Server, Request, Response, Status, Streaming};
 
 use arrow_format::flight::data::*;
 use arrow_format::flight::service::flight_service_server::{FlightService, FlightServiceServer};
-use futures::{channel::mpsc, sink::SinkExt, Stream, StreamExt};
-use tonic::{metadata::MetadataMap, transport::Server, Request, Response, Status, Streaming};
 
-type TonicStream<T> = Pin<Box<dyn Stream<Item = T> + Send + Sync + 'static>>;
-
-type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
-type Result<T = (), E = Error> = std::result::Result<T, E>;
-
-use prost::Message;
+use super::{Result, TonicStream};
 
 use crate::{AUTH_PASSWORD, AUTH_USERNAME};
 
 pub async fn scenario_setup(port: u16) -> Result {
-    let service = AuthBasicProtoScenarioImpl {
-        username: AUTH_USERNAME.into(),
-        password: AUTH_PASSWORD.into(),
-    };
     let addr = super::listen_on(port).await?;
-    let svc = FlightServiceServer::new(service);
+    let svc = FlightServiceServer::new(Service {});
 
     let server = Server::builder().add_service(svc).serve(addr);
 
@@ -49,42 +23,21 @@ pub async fn scenario_setup(port: u16) -> Result {
 }
 
 #[derive(Clone)]
-pub struct AuthBasicProtoScenarioImpl {
-    username: Arc<str>,
-    password: Arc<str>,
-}
+struct Service {}
 
-impl AuthBasicProtoScenarioImpl {
-    async fn check_auth(&self, metadata: &MetadataMap) -> Result<GrpcServerCallContext, Status> {
-        let token = metadata
+impl Service {
+    fn check_auth(&self, metadata: &MetadataMap) -> Result<String, Status> {
+        metadata
             .get_bin("auth-token-bin")
             .and_then(|v| v.to_bytes().ok())
-            .and_then(|b| String::from_utf8(b.to_vec()).ok());
-        self.is_valid(token).await
-    }
-
-    async fn is_valid(&self, token: Option<String>) -> Result<GrpcServerCallContext, Status> {
-        match token {
-            Some(t) if t == *self.username => Ok(GrpcServerCallContext {
-                peer_identity: self.username.to_string(),
-            }),
-            _ => Err(Status::unauthenticated("Invalid token")),
-        }
-    }
-}
-
-struct GrpcServerCallContext {
-    peer_identity: String,
-}
-
-impl GrpcServerCallContext {
-    pub fn peer_identity(&self) -> &str {
-        &self.peer_identity
+            .and_then(|b| String::from_utf8(b.to_vec()).ok())
+            .and_then(|username| (username == AUTH_USERNAME).then(|| AUTH_USERNAME.to_string()))
+            .ok_or_else(|| Status::unauthenticated("Invalid token"))
     }
 }
 
 #[tonic::async_trait]
-impl FlightService for AuthBasicProtoScenarioImpl {
+impl FlightService for Service {
     type HandshakeStream = TonicStream<Result<HandshakeResponse, Status>>;
     type ListFlightsStream = TonicStream<Result<FlightInfo, Status>>;
     type DoGetStream = TonicStream<Result<FlightData, Status>>;
@@ -97,79 +50,48 @@ impl FlightService for AuthBasicProtoScenarioImpl {
         &self,
         request: Request<FlightDescriptor>,
     ) -> Result<Response<SchemaResult>, Status> {
-        self.check_auth(request.metadata()).await?;
-        Err(Status::unimplemented("Not yet implemented"))
+        self.check_auth(request.metadata())?;
+        Err(Status::unimplemented("get_schema"))
     }
 
     async fn do_get(
         &self,
         request: Request<Ticket>,
     ) -> Result<Response<Self::DoGetStream>, Status> {
-        self.check_auth(request.metadata()).await?;
-        Err(Status::unimplemented("Not yet implemented"))
+        self.check_auth(request.metadata())?;
+        Err(Status::unimplemented("do_get"))
     }
 
     async fn handshake(
         &self,
         request: Request<Streaming<HandshakeRequest>>,
     ) -> Result<Response<Self::HandshakeStream>, Status> {
-        let (tx, rx) = mpsc::channel(10);
+        let stream = request.into_inner();
 
-        tokio::spawn({
-            let username = self.username.clone();
-            let password = self.password.clone();
-
-            async move {
-                let requests = request.into_inner();
-
-                requests
-                    .for_each(move |req| {
-                        let mut tx = tx.clone();
-                        let req = req.expect("Error reading handshake request");
-                        let HandshakeRequest { payload, .. } = req;
-
-                        let auth =
-                            BasicAuth::decode(&*payload).expect("Error parsing handshake request");
-
-                        let resp = if *auth.username == *username && *auth.password == *password {
-                            Ok(HandshakeResponse {
-                                payload: username.as_bytes().to_vec(),
-                                ..HandshakeResponse::default()
-                            })
-                        } else {
-                            Err(Status::unauthenticated(format!(
-                                "Don't know user {}",
-                                auth.username
-                            )))
-                        };
-
-                        async move {
-                            tx.send(resp)
-                                .await
-                                .expect("Error sending handshake response");
-                        }
-                    })
-                    .await;
+        let stream = try_stream! {
+            pin_mut!(stream);
+            for await item in stream {
+                let HandshakeRequest {payload, ..} = item.map_err(|_| Status::invalid_argument(format!("Invalid"))).unwrap();
+                yield handle(&payload, AUTH_USERNAME, AUTH_PASSWORD).unwrap()
             }
-        });
-
-        Ok(Response::new(Box::pin(rx)))
+        };
+        Ok(Response::new(Box::pin(stream)))
     }
 
     async fn list_flights(
         &self,
         request: Request<Criteria>,
     ) -> Result<Response<Self::ListFlightsStream>, Status> {
-        self.check_auth(request.metadata()).await?;
-        Err(Status::unimplemented("Not yet implemented"))
+        self.check_auth(request.metadata())?;
+        Err(Status::unimplemented("list_flights"))
     }
 
     async fn get_flight_info(
         &self,
         request: Request<FlightDescriptor>,
     ) -> Result<Response<FlightInfo>, Status> {
-        self.check_auth(request.metadata()).await?;
-        Err(Status::unimplemented("Not yet implemented"))
+        self.check_auth(request.metadata())?;
+        Err(Status::unimplemented("get_flight_info"))
     }
 
     async fn do_put(
@@ -177,36 +99,52 @@ impl FlightService for AuthBasicProtoScenarioImpl {
         request: Request<Streaming<FlightData>>,
     ) -> Result<Response<Self::DoPutStream>, Status> {
         let metadata = request.metadata();
-        self.check_auth(metadata).await?;
-        Err(Status::unimplemented("Not yet implemented"))
+        self.check_auth(metadata)?;
+        Err(Status::unimplemented("do_put"))
     }
 
     async fn do_action(
         &self,
         request: Request<Action>,
     ) -> Result<Response<Self::DoActionStream>, Status> {
-        let flight_context = self.check_auth(request.metadata()).await?;
+        let username = self.check_auth(request.metadata())?;
         // Respond with the authenticated username.
-        let buf = flight_context.peer_identity().as_bytes().to_vec();
-        let result = arrow_format::flight::data::Result { body: buf };
+        let result = arrow_format::flight::data::Result {
+            body: username.as_bytes().to_vec(),
+        };
         let output = futures::stream::once(async { Ok(result) });
-        Ok(Response::new(Box::pin(output) as Self::DoActionStream))
+        Ok(Response::new(Box::pin(output)))
     }
 
     async fn list_actions(
         &self,
         request: Request<Empty>,
     ) -> Result<Response<Self::ListActionsStream>, Status> {
-        self.check_auth(request.metadata()).await?;
-        Err(Status::unimplemented("Not yet implemented"))
+        self.check_auth(request.metadata())?;
+        Err(Status::unimplemented("list_actions"))
     }
 
     async fn do_exchange(
         &self,
         request: Request<Streaming<FlightData>>,
     ) -> Result<Response<Self::DoExchangeStream>, Status> {
-        let metadata = request.metadata();
-        self.check_auth(metadata).await?;
-        Err(Status::unimplemented("Not yet implemented"))
+        self.check_auth(request.metadata())?;
+        Err(Status::unimplemented("do_exchange"))
+    }
+}
+
+fn handle(payload: &[u8], username: &str, password: &str) -> Result<HandshakeResponse> {
+    let auth = BasicAuth::decode(payload)?;
+
+    if auth.username == username && auth.password == password {
+        Ok(HandshakeResponse {
+            payload: username.as_bytes().to_vec(),
+            ..HandshakeResponse::default()
+        })
+    } else {
+        Err(Box::new(Status::unauthenticated(format!(
+            "Don't know user {}",
+            auth.username
+        ))))
     }
 }
