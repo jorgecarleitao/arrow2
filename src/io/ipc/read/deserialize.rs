@@ -180,6 +180,7 @@ pub fn read<R: Read + Seek>(
             match_integer_type!(key_type, |$T| {
                 read_dictionary::<$T, _>(
                     field_nodes,
+                    data_type,
                     ipc_field.dictionary_id,
                     buffers,
                     reader,

@@ -1,6 +1,5 @@
 use arrow2::array::growable::{Growable, GrowableDictionary};
 use arrow2::array::*;
-use arrow2::datatypes::DataType;
 use arrow2::error::Result;
 
 #[test]
@@ -13,10 +12,11 @@ fn test_single() -> Result<()> {
     let array = array.into();
 
     // same values, less keys
-    let expected = DictionaryArray::<i32>::from_data(
-        PrimitiveArray::from(vec![Some(1), Some(0)]),
+    let expected = DictionaryArray::try_from_keys(
+        PrimitiveArray::from_vec(vec![1, 0]),
         Box::new(Utf8Array::<i32>::from(&original_data)),
-    );
+    )
+    .unwrap();
 
     let mut growable = GrowableDictionary::new(&[&array], false, 0);
 
@@ -26,25 +26,6 @@ fn test_single() -> Result<()> {
 
     assert_eq!(result, expected);
     Ok(())
-}
-
-#[test]
-fn test_negative_keys() {
-    let vals = vec![Some("a"), Some("b"), Some("c")];
-    let keys = vec![0, 1, 2, -1];
-
-    let keys = PrimitiveArray::from_data(
-        DataType::Int32,
-        keys.into(),
-        Some(vec![true, true, true, false].into()),
-    );
-
-    let arr = DictionaryArray::from_data(keys, Box::new(Utf8Array::<i32>::from(vals)));
-    // check that we don't panic with negative keys to usize conversion
-    let mut growable = GrowableDictionary::new(&[&arr], false, 0);
-    growable.extend(0, 0, 4);
-    let out: DictionaryArray<i32> = growable.into();
-    assert_eq!(out, arr);
 }
 
 #[test]
@@ -65,10 +46,11 @@ fn test_multi() -> Result<()> {
 
     // same values, less keys
     original_data1.extend(original_data2.iter().cloned());
-    let expected = DictionaryArray::<i32>::from_data(
-        PrimitiveArray::from(vec![Some(1), None, Some(3), None]),
-        Box::new(Utf8Array::<i32>::from_slice(&["a", "b", "c", "b", "a"])),
-    );
+    let expected = DictionaryArray::try_from_keys(
+        PrimitiveArray::from(&[Some(1), None, Some(3), None]),
+        Utf8Array::<i32>::from_slice(&["a", "b", "c", "b", "a"]).boxed(),
+    )
+    .unwrap();
 
     let mut growable = GrowableDictionary::new(&[&array1, &array2], false, 0);
 

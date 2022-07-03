@@ -1,4 +1,4 @@
-use crate::bitmap::utils::{zip_validity, ZipValidity};
+use crate::bitmap::utils::ZipValidity;
 use crate::scalar::Scalar;
 use crate::trusted_len::TrustedLen;
 
@@ -64,20 +64,5 @@ impl<'a, K: DictionaryKey> IntoIterator for &'a DictionaryArray<K> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
-    }
-}
-
-impl<'a, K: DictionaryKey> DictionaryArray<K> {
-    /// Returns an iterator of `Option<Box<dyn Array>>`
-    pub fn iter(&'a self) -> ZipIter<'a, K> {
-        zip_validity(
-            DictionaryValuesIter::new(self),
-            self.keys.validity().as_ref().map(|x| x.iter()),
-        )
-    }
-
-    /// Returns an iterator of `Box<dyn Array>`
-    pub fn values_iter(&'a self) -> ValuesIter<'a, K> {
-        DictionaryValuesIter::new(self)
     }
 }

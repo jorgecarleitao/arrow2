@@ -97,6 +97,22 @@ pub fn try_check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> Result<
     }
 }
 
+pub fn check_indexes<K>(keys: &[K], len: usize) -> Result<()>
+where
+    K: Copy + TryInto<usize>,
+{
+    keys.iter().try_for_each(|key| {
+        let key: usize = (*key)
+            .try_into()
+            .map_err(|_| Error::oos("The dictionary key must fit in a `usize`"))?;
+        if key >= len {
+            Err(Error::oos("The dictionary key must be smaller"))
+        } else {
+            Ok(())
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;

@@ -359,7 +359,7 @@ pub fn pyarrow_nullable(column: &str) -> Box<dyn Array> {
         "int32_dict" => {
             let keys = PrimitiveArray::<i32>::from([Some(0), Some(1), None, Some(1)]);
             let values = Box::new(PrimitiveArray::<i32>::from_slice([10, 200]));
-            Box::new(DictionaryArray::<i32>::from_data(keys, values))
+            Box::new(DictionaryArray::try_from_keys(keys, values).unwrap())
         }
         "decimal_9" => {
             let values = i64_values
@@ -440,10 +440,7 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
         },
         "int32_dict" => {
             let new_dict = |array: Box<dyn Array>| -> Box<dyn Array> {
-                Box::new(DictionaryArray::<i32>::from_data(
-                    vec![Some(0)].into(),
-                    array,
-                ))
+                Box::new(DictionaryArray::try_from_keys(vec![Some(0)].into(), array).unwrap())
             };
 
             Statistics {
@@ -975,42 +972,45 @@ fn arrow_type() -> Result<()> {
     let array2 = Utf8Array::<i64>::from([Some("a"), None, Some("bb")]);
 
     let indices = PrimitiveArray::from_values((0..3u64).map(|x| x % 2));
-    let values = PrimitiveArray::from_slice([1.0f32, 3.0]);
-    let array3 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+    let values = PrimitiveArray::from_slice([1.0f32, 3.0]).boxed();
+    let array3 = DictionaryArray::try_from_keys(indices.clone(), values).unwrap();
 
-    let values = BinaryArray::<i32>::from_slice([b"ab", b"ac"]);
-    let array4 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+    let values = BinaryArray::<i32>::from_slice([b"ab", b"ac"]).boxed();
+    let array4 = DictionaryArray::try_from_keys(indices.clone(), values).unwrap();
 
     let values = FixedSizeBinaryArray::from_data(
         DataType::FixedSizeBinary(2),
         vec![b'a', b'b', b'a', b'c'].into(),
         None,
-    );
-    let array5 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+    )
+    .boxed();
+    let array5 = DictionaryArray::try_from_keys(indices.clone(), values).unwrap();
 
-    let values = PrimitiveArray::from_slice([1i16, 3]);
-    let array6 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+    let values = PrimitiveArray::from_slice([1i16, 3]).boxed();
+    let array6 = DictionaryArray::try_from_keys(indices.clone(), values).unwrap();
 
-    let values = PrimitiveArray::from_slice([1i64, 3]).to(DataType::Timestamp(
-        TimeUnit::Millisecond,
-        Some("UTC".to_string()),
-    ));
-    let array7 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+    let values = PrimitiveArray::from_slice([1i64, 3])
+        .to(DataType::Timestamp(
+            TimeUnit::Millisecond,
+            Some("UTC".to_string()),
+        ))
+        .boxed();
+    let array7 = DictionaryArray::try_from_keys(indices.clone(), values).unwrap();
 
-    let values = PrimitiveArray::from_slice([1.0f64, 3.0]);
-    let array8 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+    let values = PrimitiveArray::from_slice([1.0f64, 3.0]).boxed();
+    let array8 = DictionaryArray::try_from_keys(indices.clone(), values).unwrap();
 
-    let values = PrimitiveArray::from_slice([1u8, 3]);
-    let array9 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+    let values = PrimitiveArray::from_slice([1u8, 3]).boxed();
+    let array9 = DictionaryArray::try_from_keys(indices.clone(), values).unwrap();
 
-    let values = PrimitiveArray::from_slice([1u16, 3]);
-    let array10 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+    let values = PrimitiveArray::from_slice([1u16, 3]).boxed();
+    let array10 = DictionaryArray::try_from_keys(indices.clone(), values).unwrap();
 
-    let values = PrimitiveArray::from_slice([1u32, 3]);
-    let array11 = DictionaryArray::from_data(indices.clone(), Box::new(values));
+    let values = PrimitiveArray::from_slice([1u32, 3]).boxed();
+    let array11 = DictionaryArray::try_from_keys(indices.clone(), values).unwrap();
 
-    let values = PrimitiveArray::from_slice([1u64, 3]);
-    let array12 = DictionaryArray::from_data(indices, Box::new(values));
+    let values = PrimitiveArray::from_slice([1u64, 3]).boxed();
+    let array12 = DictionaryArray::try_from_keys(indices, values).unwrap();
 
     let array13 = PrimitiveArray::<i32>::from_slice([1, 2, 3])
         .to(DataType::Interval(IntervalUnit::YearMonth));

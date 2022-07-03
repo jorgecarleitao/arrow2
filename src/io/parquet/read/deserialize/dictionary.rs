@@ -10,6 +10,7 @@ use parquet2::{
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
     bitmap::MutableBitmap,
+    datatypes::DataType,
     error::{Error, Result},
 };
 
@@ -158,13 +159,30 @@ where
                 &mut page.validity,
                 Some(remaining),
                 values,
-                &mut page.values.by_ref().map(|x| K::from_u32(x).unwrap()),
+                &mut page.values.by_ref().map(|x| {
+                    let x: usize = x.try_into().unwrap();
+                    match x.try_into() {
+                        Ok(key) => key,
+                        // todo: convert this to an error.
+                        Err(_) => panic!("The maximum key is too small"),
+                    }
+                }),
             ),
             State::Required(page) => {
                 values.extend(
                     page.values
                         .by_ref()
-                        .map(|x| K::from_u32(x).unwrap())
+                        .map(|x| {
+                            let x: usize = x.try_into().unwrap();
+                            let x: K = match x.try_into() {
+                                Ok(key) => key,
+                                // todo: convert this to an error.
+                                Err(_) => {
+                                    panic!("The maximum key is too small")
+                                }
+                            };
+                            x
+                        })
                         .take(remaining),
                 );
             }
@@ -173,13 +191,33 @@ where
                 page_validity,
                 Some(remaining),
                 values,
-                &mut page_values.by_ref().map(|x| K::from_u32(x).unwrap()),
+                &mut page_values.by_ref().map(|x| {
+                    let x: usize = x.try_into().unwrap();
+                    let x: K = match x.try_into() {
+                        Ok(key) => key,
+                        // todo: convert this to an error.
+                        Err(_) => {
+                            panic!("The maximum key is too small")
+                        }
+                    };
+                    x
+                }),
             ),
             State::FilteredRequired(page) => {
                 values.extend(
                     page.values
                         .by_ref()
-                        .map(|x| K::from_u32(x).unwrap())
+                        .map(|x| {
+                            let x: usize = x.try_into().unwrap();
+                            let x: K = match x.try_into() {
+                                Ok(key) => key,
+                                // todo: convert this to an error.
+                                Err(_) => {
+                                    panic!("The maximum key is too small")
+                                }
+                            };
+                            x
+                        })
                         .take(remaining),
                 );
             }
@@ -203,7 +241,7 @@ impl Dict {
 }
 
 fn finish_key<K: DictionaryKey>(values: Vec<K>, validity: MutableBitmap) -> PrimitiveArray<K> {
-    PrimitiveArray::from_data(K::PRIMITIVE.into(), values.into(), validity.into())
+    PrimitiveArray::new(K::PRIMITIVE.into(), values.into(), validity.into())
 }
 
 #[inline]
@@ -216,13 +254,14 @@ pub(super) fn next_dict<
     iter: &'a mut I,
     items: &mut VecDeque<(Vec<K>, MutableBitmap)>,
     dict: &mut Dict,
+    data_type: DataType,
     chunk_size: Option<usize>,
     read_dict: F,
 ) -> MaybeNext<Result<DictionaryArray<K>>> {
     if items.len() > 1 {
         let (values, validity) = items.pop_front().unwrap();
         let keys = finish_key(values, validity);
-        return MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())));
+        return MaybeNext::Some(DictionaryArray::try_new(data_type, keys, dict.unwrap()));
     }
     match iter.next() {
         Err(e) => MaybeNext::Some(Err(e.into())),
@@ -255,7 +294,7 @@ pub(super) fn next_dict<
                 let (values, validity) = items.pop_front().unwrap();
                 let keys =
                     PrimitiveArray::from_data(K::PRIMITIVE.into(), values.into(), validity.into());
-                MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())))
+                MaybeNext::Some(DictionaryArray::try_new(data_type, keys, dict.unwrap()))
             }
         }
         Ok(None) => {
@@ -266,7 +305,7 @@ pub(super) fn next_dict<
 
                 let keys = finish_key(values, validity);
 
-                MaybeNext::Some(Ok(DictionaryArray::from_data(keys, dict.unwrap())))
+                MaybeNext::Some(DictionaryArray::try_new(data_type, keys, dict.unwrap()))
             } else {
                 MaybeNext::None
             }

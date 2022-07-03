@@ -282,7 +282,7 @@ fn deserialize_dictionary<'a, K: DictionaryKey, A: Borrow<Value<'a>>>(
     rows: &[A],
     data_type: DataType,
 ) -> DictionaryArray<K> {
-    let child = DictionaryArray::<K>::get_child(&data_type);
+    let child = DictionaryArray::<K>::try_get_child(&data_type).unwrap();
 
     let mut map = HashedMap::<u64, K>::default();
 
@@ -296,8 +296,11 @@ fn deserialize_dictionary<'a, K: DictionaryKey, A: Borrow<Value<'a>>>(
             Some((hash, v)) => match map.get(&hash) {
                 Some(key) => Some(*key),
                 None => {
-                    // todo: convert this to an error.
-                    let key = K::from_usize(map.len()).unwrap();
+                    let key = match map.len().try_into() {
+                        Ok(key) => key,
+                        // todo: convert this to an error.
+                        Err(_) => panic!("The maximum key is too small for this json struct"),
+                    };
                     inner.push(v);
                     map.insert(hash, key);
                     Some(key)
@@ -307,8 +310,9 @@ fn deserialize_dictionary<'a, K: DictionaryKey, A: Borrow<Value<'a>>>(
         })
         .collect::<PrimitiveArray<K>>();
 
+    drop(extractor);
     let values = _deserialize(&inner, child.clone());
-    DictionaryArray::<K>::from_data(keys, values)
+    DictionaryArray::<K>::try_new(data_type, keys, values).unwrap()
 }
 
 pub(crate) fn _deserialize<'a, A: Borrow<Value<'a>>>(

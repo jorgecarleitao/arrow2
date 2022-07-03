@@ -6,7 +6,7 @@ fn create_dictionary_array(values: &[Option<&str>], keys: &[Option<i16>]) -> Dic
     let keys = Int16Array::from(keys);
     let values = Utf8Array::<i32>::from(values);
 
-    DictionaryArray::from_data(keys, Box::new(values))
+    DictionaryArray::try_from_keys(keys, values.boxed()).unwrap()
 }
 
 #[test]

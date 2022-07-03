@@ -15,9 +15,7 @@ macro_rules! key_cast {
         if cast_keys.null_count() > $keys.null_count() {
             return Err(Error::Overflow);
         }
-        Ok(Box::new(DictionaryArray::<$to_type>::from_data(
-            cast_keys, $values,
-        )))
+        DictionaryArray::try_new($array.data_type().clone(), $keys.clone(), $values.clone())
     }};
 }
 
@@ -31,9 +29,14 @@ pub fn dictionary_to_dictionary_values<K: DictionaryKey>(
 ) -> Result<DictionaryArray<K>> {
     let keys = from.keys();
     let values = from.values();
+    let length = values.len();
 
     let values = cast(values.as_ref(), values_type, CastOptions::default())?;
-    Ok(DictionaryArray::from_data(keys.clone(), values))
+
+    assert_eq!(values.len(), length); // this is guaranteed by `cast`
+    unsafe {
+        DictionaryArray::try_new_unchecked(from.data_type().clone(), keys.clone(), values.clone())
+    }
 }
 
 /// Similar to dictionary_to_dictionary_values, but overflowing cast is wrapped
@@ -43,6 +46,7 @@ pub fn wrapping_dictionary_to_dictionary_values<K: DictionaryKey>(
 ) -> Result<DictionaryArray<K>> {
     let keys = from.keys();
     let values = from.values();
+    let length = values.len();
 
     let values = cast(
         values.as_ref(),
@@ -52,7 +56,10 @@ pub fn wrapping_dictionary_to_dictionary_values<K: DictionaryKey>(
             partial: false,
         },
     )?;
-    Ok(DictionaryArray::from_data(keys.clone(), values))
+    assert_eq!(values.len(), length); // this is guaranteed by `cast`
+    unsafe {
+        DictionaryArray::try_new_unchecked(from.data_type().clone(), keys.clone(), values.clone())
+    }
 }
 
 /// Casts a [`DictionaryArray`] to a new [`DictionaryArray`] backed by a
@@ -64,18 +71,25 @@ pub fn dictionary_to_dictionary_keys<K1, K2>(
     from: &DictionaryArray<K1>,
 ) -> Result<DictionaryArray<K2>>
 where
-    K1: DictionaryKey,
-    K2: DictionaryKey,
+    K1: DictionaryKey + num_traits::NumCast,
+    K2: DictionaryKey + num_traits::NumCast,
 {
     let keys = from.keys();
     let values = from.values();
+    let is_ordered = from.is_ordered();
 
     let casted_keys = primitive_to_primitive::<K1, K2>(keys, &K2::PRIMITIVE.into());
 
     if casted_keys.null_count() > keys.null_count() {
         Err(Error::Overflow)
     } else {
-        Ok(DictionaryArray::from_data(casted_keys, values.clone()))
+        let data_type = DataType::Dictionary(
+            K2::KEY_TYPE,
+            Box::new(values.data_type().clone()),
+            is_ordered,
+        );
+        // some of the values may not fit in `usize` and thus this needs to be checked
+        DictionaryArray::try_new(data_type, casted_keys, values.clone())
     }
 }
 
@@ -89,17 +103,24 @@ where
 {
     let keys = from.keys();
     let values = from.values();
+    let is_ordered = from.is_ordered();
 
     let casted_keys = primitive_as_primitive::<K1, K2>(keys, &K2::PRIMITIVE.into());
 
     if casted_keys.null_count() > keys.null_count() {
         Err(Error::Overflow)
     } else {
-        Ok(DictionaryArray::from_data(casted_keys, values.clone()))
+        let data_type = DataType::Dictionary(
+            K2::KEY_TYPE,
+            Box::new(values.data_type().clone()),
+            is_ordered,
+        );
+        // some of the values may not fit in `usize` and thus this needs to be checked
+        DictionaryArray::try_new(data_type, casted_keys, values.clone())
     }
 }
 
-pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
+pub(super) fn dictionary_cast_dyn<K: DictionaryKey + num_traits::NumCast>(
     array: &dyn Array,
     to_type: &DataType,
     options: CastOptions,
@@ -117,6 +138,7 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey>(
             match_integer_type!(to_keys_type, |$T| {
                 key_cast!(keys, values, array, &data_type, $T)
             })
+            .map(|x| x.boxed())
         }
         _ => unpack_dictionary::<K>(keys, values.as_ref(), to_type, options),
     }
@@ -130,7 +152,7 @@ fn unpack_dictionary<K>(
     options: CastOptions,
 ) -> Result<Box<dyn Array>>
 where
-    K: DictionaryKey,
+    K: DictionaryKey + num_traits::NumCast,
 {
     // attempt to cast the dict values to the target type
     // use the take kernel to expand out the dictionary
@@ -146,7 +168,7 @@ where
 /// The resulting array has the same length.
 pub fn dictionary_to_values<K>(from: &DictionaryArray<K>) -> Box<dyn Array>
 where
-    K: DictionaryKey,
+    K: DictionaryKey + num_traits::NumCast,
 {
     // take requires first casting i64
     let indices = primitive_to_primitive::<_, i64>(from.keys(), &DataType::Int64);

@@ -106,10 +106,11 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
             None,
         )
         .boxed(),
-        DictionaryArray::<i32>::from_data(
+        DictionaryArray::try_from_keys(
             Int32Array::from_slice([1, 0]),
             Box::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
         )
+        .unwrap()
         .boxed(),
         PrimitiveArray::<i128>::from_slice([12345678i128, -12345678i128])
             .to(DataType::Decimal(18, 5))

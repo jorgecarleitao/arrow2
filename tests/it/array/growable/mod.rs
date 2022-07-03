@@ -38,9 +38,10 @@ fn test_make_growable() {
         FixedSizeBinaryArray::new(DataType::FixedSizeBinary(2), b"abcd".to_vec().into(), None);
     make_growable(&[&array], false, 2);
 
-    let array = DictionaryArray::<i32>::from_data(
-        Int32Array::from_slice([1, 2]),
-        Box::new(Int32Array::from_slice([1, 2])),
-    );
+    let array = DictionaryArray::try_from_keys(
+        Int32Array::from_slice([1, 0]),
+        Int32Array::from_slice([1, 2]).boxed(),
+    )
+    .unwrap();
     make_growable(&[&array], false, 2);
 }

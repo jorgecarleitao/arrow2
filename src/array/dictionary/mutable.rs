@@ -32,12 +32,21 @@ pub struct MutableDictionaryArray<K: DictionaryKey, M: MutableArray> {
     data_type: DataType,
     keys: MutablePrimitiveArray<K>,
     map: HashedMap<u64, K>,
+    // invariant: `keys.len() <= values.len()`
     values: M,
 }
 
 impl<K: DictionaryKey, M: MutableArray> From<MutableDictionaryArray<K, M>> for DictionaryArray<K> {
     fn from(mut other: MutableDictionaryArray<K, M>) -> Self {
-        DictionaryArray::<K>::from_data(other.keys.into(), other.values.as_box())
+        // Safety - the invariant of this struct ensures that this is up-held
+        unsafe {
+            DictionaryArray::<K>::try_new_unchecked(
+                other.data_type,
+                other.keys.into(),
+                other.values.as_box(),
+            )
+            .unwrap()
+        }
     }
 }
 
@@ -91,7 +100,7 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
                 Ok(false)
             }
             None => {
-                let key = K::from_usize(self.map.len()).ok_or(Error::Overflow)?;
+                let key = K::try_from(self.map.len()).map_err(|_| Error::Overflow)?;
                 self.map.insert(hash, key);
                 self.keys.push(Some(key));
                 Ok(true)
@@ -105,7 +114,7 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
     }
 
     /// returns a mutable reference to the inner values.
-    pub fn mut_values(&mut self) -> &mut M {
+    fn mut_values(&mut self) -> &mut M {
         &mut self.values
     }
 
@@ -141,6 +150,18 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
     pub fn keys(&self) -> &MutablePrimitiveArray<K> {
         &self.keys
     }
+
+    fn take_into(&mut self) -> DictionaryArray<K> {
+        // Safety - the invariant of this struct ensures that this is up-held
+        unsafe {
+            DictionaryArray::<K>::try_new(
+                self.data_type.clone(),
+                std::mem::take(&mut self.keys).into(),
+                self.values.as_box(),
+            )
+            .unwrap()
+        }
+    }
 }
 
 impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictionaryArray<K, M> {
@@ -153,17 +174,11 @@ impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictio
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(DictionaryArray::<K>::from_data(
-            std::mem::take(&mut self.keys).into(),
-            self.values.as_box(),
-        ))
+        Box::new(self.take_into())
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(DictionaryArray::<K>::from_data(
-            std::mem::take(&mut self.keys).into(),
-            self.values.as_box(),
-        ))
+        Arc::new(self.take_into())
     }
 
     fn data_type(&self) -> &DataType {

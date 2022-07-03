@@ -30,5 +30,13 @@ where
     I: Index,
 {
     let keys = take_primitive::<K, I>(values.keys(), indices);
-    DictionaryArray::<K>::from_data(keys, values.values().clone())
+    // safety - this operation takes a subset of keys and thus preserves the dictionary's invariant
+    unsafe {
+        DictionaryArray::<K>::try_new_unchecked(
+            values.data_type().clone(),
+            keys,
+            values.values().clone(),
+        )
+        .unwrap()
+    }
 }

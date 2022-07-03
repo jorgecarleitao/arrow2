@@ -1,4 +1,4 @@
-use crate::array::{Array, DictionaryArray, DictionaryKey};
+use crate::array::{DictionaryArray, DictionaryKey};
 
 pub(super) fn equal<K: DictionaryKey>(lhs: &DictionaryArray<K>, rhs: &DictionaryArray<K>) -> bool {
     if !(lhs.data_type() == rhs.data_type() && lhs.len() == rhs.len()) {

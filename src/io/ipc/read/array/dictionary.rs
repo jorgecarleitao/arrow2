@@ -3,6 +3,7 @@ use std::convert::TryInto;
 use std::io::{Read, Seek};
 
 use crate::array::{DictionaryArray, DictionaryKey};
+use crate::datatypes::DataType;
 use crate::error::{Error, Result};
 
 use super::super::Dictionaries;
@@ -12,6 +13,7 @@ use super::{read_primitive, skip_primitive};
 #[allow(clippy::too_many_arguments)]
 pub fn read_dictionary<T: DictionaryKey, R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
+    data_type: DataType,
     id: Option<i64>,
     buffers: &mut VecDeque<IpcBuffer>,
     reader: &mut R,
@@ -51,7 +53,7 @@ where
         scratch,
     )?;
 
-    Ok(DictionaryArray::<T>::from_data(keys, values))
+    DictionaryArray::<T>::try_new(data_type, keys, values)
 }
 
 pub fn skip_dictionary(
