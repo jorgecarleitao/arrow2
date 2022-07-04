@@ -34,8 +34,12 @@ use super::get_field_columns;
 /// Enum of a count statistics
 #[derive(Debug, PartialEq)]
 pub enum Count {
-    /// simple arrays (every type not a Struct) have a count of UInt64
+    /// simple arrays have a count of UInt64
     Single(UInt64Array),
+    /// list arrays have a count as a list of UInt64
+    List(ListArray<i32>),
+    /// list arrays have a count as a list of UInt64
+    LargeList(ListArray<i64>),
     /// struct arrays have a count as a struct of UInt64
     Struct(StructArray),
     /// map arrays have a count as a map of UInt64
@@ -88,6 +92,24 @@ impl From<MutableStatistics> for Statistics {
                 .unwrap()
                 .clone();
             Count::Map(a)
+        } else if let PhysicalType::List = s.null_count.data_type().to_physical_type() {
+            let a = s
+                .null_count
+                .as_box()
+                .as_any()
+                .downcast_ref::<ListArray<i32>>()
+                .unwrap()
+                .clone();
+            Count::List(a)
+        } else if let PhysicalType::LargeList = s.null_count.data_type().to_physical_type() {
+            let a = s
+                .null_count
+                .as_box()
+                .as_any()
+                .downcast_ref::<ListArray<i64>>()
+                .unwrap()
+                .clone();
+            Count::LargeList(a)
         } else {
             let a = s
                 .null_count
@@ -98,35 +120,54 @@ impl From<MutableStatistics> for Statistics {
                 .clone();
             Count::Single(a)
         };
-        let distinct_count =
-            if let PhysicalType::Struct = s.distinct_count.data_type().to_physical_type() {
-                let a = s
-                    .distinct_count
-                    .as_box()
-                    .as_any()
-                    .downcast_ref::<StructArray>()
-                    .unwrap()
-                    .clone();
-                Count::Struct(a)
-            } else if let PhysicalType::Map = s.null_count.data_type().to_physical_type() {
-                let a = s
-                    .null_count
-                    .as_box()
-                    .as_any()
-                    .downcast_ref::<MapArray>()
-                    .unwrap()
-                    .clone();
-                Count::Map(a)
-            } else {
-                let a = s
-                    .distinct_count
-                    .as_box()
-                    .as_any()
-                    .downcast_ref::<UInt64Array>()
-                    .unwrap()
-                    .clone();
-                Count::Single(a)
-            };
+        let distinct_count = if let PhysicalType::Struct =
+            s.distinct_count.data_type().to_physical_type()
+        {
+            let a = s
+                .distinct_count
+                .as_box()
+                .as_any()
+                .downcast_ref::<StructArray>()
+                .unwrap()
+                .clone();
+            Count::Struct(a)
+        } else if let PhysicalType::Map = s.distinct_count.data_type().to_physical_type() {
+            let a = s
+                .distinct_count
+                .as_box()
+                .as_any()
+                .downcast_ref::<MapArray>()
+                .unwrap()
+                .clone();
+            Count::Map(a)
+        } else if let PhysicalType::List = s.distinct_count.data_type().to_physical_type() {
+            let a = s
+                .distinct_count
+                .as_box()
+                .as_any()
+                .downcast_ref::<ListArray<i32>>()
+                .unwrap()
+                .clone();
+            Count::List(a)
+        } else if let PhysicalType::LargeList = s.distinct_count.data_type().to_physical_type() {
+            let a = s
+                .distinct_count
+                .as_box()
+                .as_any()
+                .downcast_ref::<ListArray<i64>>()
+                .unwrap()
+                .clone();
+            Count::LargeList(a)
+        } else {
+            let a = s
+                .distinct_count
+                .as_box()
+                .as_any()
+                .downcast_ref::<UInt64Array>()
+                .unwrap()
+                .clone();
+            Count::Single(a)
+        };
         Self {
             null_count,
             distinct_count,
@@ -198,6 +239,18 @@ fn create_dt(data_type: &DataType) -> DataType {
             Box::new(Field::new(&f.name, create_dt(&f.data_type), f.is_nullable)),
             *ordered,
         )
+    } else if let DataType::List(f) = data_type.to_logical_type() {
+        DataType::List(Box::new(Field::new(
+            &f.name,
+            create_dt(&f.data_type),
+            f.is_nullable,
+        )))
+    } else if let DataType::LargeList(f) = data_type.to_logical_type() {
+        DataType::LargeList(Box::new(Field::new(
+            &f.name,
+            create_dt(&f.data_type),
+            f.is_nullable,
+        )))
     } else {
         DataType::UInt64
     }
@@ -301,12 +354,20 @@ fn push(
                 .as_mut_any()
                 .downcast_mut::<list::DynMutableListArray>()
                 .unwrap();
+            let distinct_count = distinct_count
+                .as_mut_any()
+                .downcast_mut::<list::DynMutableListArray>()
+                .unwrap();
+            let null_count = null_count
+                .as_mut_any()
+                .downcast_mut::<list::DynMutableListArray>()
+                .unwrap();
             return push(
                 stats,
                 min.inner.as_mut(),
                 max.inner.as_mut(),
-                distinct_count,
-                null_count,
+                distinct_count.inner.as_mut(),
+                null_count.inner.as_mut(),
             );
         }
         Dictionary(_, _, _) => {
