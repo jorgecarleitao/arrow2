@@ -21,6 +21,7 @@ pub fn read_struct<R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    limit: Option<usize>,
     version: Version,
     scratch: &mut Vec<u8>,
 ) -> Result<StructArray> {
@@ -38,6 +39,7 @@ pub fn read_struct<R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        limit,
         scratch,
     )?;
 
@@ -57,6 +59,7 @@ pub fn read_struct<R: Read + Seek>(
                 block_offset,
                 is_little_endian,
                 compression,
+                limit,
                 version,
                 scratch,
             )

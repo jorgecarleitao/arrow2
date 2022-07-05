@@ -254,6 +254,7 @@ pub fn read_bitmap<R: Read + Seek>(
     Bitmap::try_new(buffer, length)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn read_validity<R: Read + Seek>(
     buffers: &mut VecDeque<IpcBuffer>,
     field_node: Node,
@@ -261,12 +262,14 @@ pub fn read_validity<R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    limit: Option<usize>,
     scratch: &mut Vec<u8>,
 ) -> Result<Option<Bitmap>> {
     let length: usize = field_node
         .length()
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+    let length = limit.map(|limit| limit.min(length)).unwrap_or(length);
 
     Ok(if field_node.null_count() > 0 {
         Some(read_bitmap(

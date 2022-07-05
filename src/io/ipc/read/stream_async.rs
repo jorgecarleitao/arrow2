@@ -143,6 +143,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
                 &state.metadata.schema.fields,
                 &state.metadata.ipc_schema,
                 None,
+                None,
                 &state.dictionaries,
                 state.metadata.version,
                 &mut std::io::Cursor::new(&state.data_buffer),

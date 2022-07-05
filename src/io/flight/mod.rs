@@ -137,6 +137,7 @@ pub fn deserialize_batch(
             fields,
             ipc_schema,
             None,
+            None,
             dictionaries,
             message.version()?,
             &mut reader,

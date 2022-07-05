@@ -31,7 +31,12 @@ impl<'a> FileStream<'a> {
     ///
     /// # Examples
     /// See [`FileSink`](crate::io::ipc::write::file_async::FileSink).
-    pub fn new<R>(reader: R, metadata: FileMetadata, projection: Option<Vec<usize>>) -> Self
+    pub fn new<R>(
+        reader: R,
+        metadata: FileMetadata,
+        projection: Option<Vec<usize>>,
+        limit: Option<usize>,
+    ) -> Self
     where
         R: AsyncRead + AsyncSeek + Unpin + Send + 'a,
     {
@@ -46,7 +51,7 @@ impl<'a> FileStream<'a> {
             (None, None)
         };
 
-        let stream = Self::stream(reader, None, metadata.clone(), projection);
+        let stream = Self::stream(reader, None, metadata.clone(), projection, limit);
         Self {
             stream,
             metadata,
@@ -69,6 +74,7 @@ impl<'a> FileStream<'a> {
         mut dictionaries: Option<Dictionaries>,
         metadata: FileMetadata,
         projection: Option<(Vec<usize>, HashMap<usize, usize>)>,
+        limit: Option<usize>,
     ) -> BoxStream<'a, Result<Chunk<Box<dyn Array>>>>
     where
         R: AsyncRead + AsyncSeek + Unpin + Send + 'a,
@@ -80,17 +86,20 @@ impl<'a> FileStream<'a> {
             let mut meta_buffer = Default::default();
             let mut block_buffer = Default::default();
             let mut scratch = Default::default();
+            let mut remaining = limit.unwrap_or(usize::MAX);
             for block in 0..metadata.blocks.len() {
                 let chunk = read_batch(
                     &mut reader,
                     dictionaries.as_mut().unwrap(),
                     &metadata,
                     projection.as_ref().map(|x| x.0.as_ref()),
+                    Some(remaining),
                     block,
                     &mut meta_buffer,
                     &mut block_buffer,
                     &mut scratch
                 ).await?;
+                remaining -= chunk.len();
 
                 let chunk = if let Some((_, map)) = &projection {
                     // re-order according to projection
@@ -159,6 +168,7 @@ async fn read_batch<R>(
     dictionaries: &mut Dictionaries,
     metadata: &FileMetadata,
     projection: Option<&[usize]>,
+    limit: Option<usize>,
     block: usize,
     meta_buffer: &mut Vec<u8>,
     block_buffer: &mut Vec<u8>,
@@ -217,6 +227,7 @@ where
         &metadata.schema.fields,
         &metadata.ipc_schema,
         projection,
+        limit,
         dictionaries,
         message
             .version()

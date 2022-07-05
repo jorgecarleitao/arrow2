@@ -18,6 +18,7 @@ pub fn read_binary<O: Offset, R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    limit: Option<usize>,
     scratch: &mut Vec<u8>,
 ) -> Result<BinaryArray<O>> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
@@ -34,6 +35,7 @@ pub fn read_binary<O: Offset, R: Read + Seek>(
         block_offset,
         is_little_endian,
         compression,
+        limit,
         scratch,
     )?;
 
@@ -41,6 +43,7 @@ pub fn read_binary<O: Offset, R: Read + Seek>(
         .length()
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+    let length = limit.map(|limit| limit.min(length)).unwrap_or(length);
 
     let offsets: Buffer<O> = read_buffer(
         buffers,
@@ -54,7 +57,7 @@ pub fn read_binary<O: Offset, R: Read + Seek>(
     // Older versions of the IPC format sometimes do not report an offset
     .or_else(|_| Result::Ok(Buffer::<O>::from(vec![O::default()])))?;
 
-    let last_offset = offsets.as_slice()[offsets.len() - 1].to_usize();
+    let last_offset = offsets.last().unwrap().to_usize();
     let values = read_buffer(
         buffers,
         last_offset,

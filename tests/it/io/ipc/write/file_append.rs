@@ -34,7 +34,7 @@ fn basic() -> Result<()> {
     // read the file again and confirm that it contains both messages
     let metadata = read::read_file_metadata(&mut reader)?;
     assert_eq!(schema, expected_schema);
-    let reader = read::FileReader::new(reader, metadata, None);
+    let reader = read::FileReader::new(reader, metadata, None, None);
 
     let chunks = reader.collect::<Result<Vec<_>>>()?;
 

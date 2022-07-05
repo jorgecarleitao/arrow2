@@ -23,6 +23,7 @@ pub fn read_list<O: Offset, R: Read + Seek>(
     block_offset: u64,
     is_little_endian: bool,
     compression: Option<Compression>,
+    limit: Option<usize>,
     version: Version,
     scratch: &mut Vec<u8>,
 ) -> Result<ListArray<O>>
@@ -43,6 +44,7 @@ where
         block_offset,
         is_little_endian,
         compression,
+        limit,
         scratch,
     )?;
 
@@ -50,6 +52,7 @@ where
         .length()
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+    let length = limit.map(|limit| limit.min(length)).unwrap_or(length);
 
     let offsets = read_buffer::<O, _>(
         buffers,
@@ -63,6 +66,8 @@ where
     // Older versions of the IPC format sometimes do not report an offset
     .or_else(|_| Result::Ok(Buffer::<O>::from(vec![O::default()])))?;
 
+    let last_offset = offsets.last().unwrap().to_usize();
+
     let field = ListArray::<O>::get_child_field(&data_type);
 
     let values = read(
@@ -75,6 +80,7 @@ where
         block_offset,
         is_little_endian,
         compression,
+        Some(last_offset),
         version,
         scratch,
     )?;

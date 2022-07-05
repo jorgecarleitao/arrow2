@@ -285,6 +285,7 @@ fn chunk_from_message(
         fields,
         ipc_schema,
         None,
+        None,
         dictionaries,
         arrow_format::ipc::MetadataVersion::V5,
         &mut reader,

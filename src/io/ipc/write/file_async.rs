@@ -54,7 +54,7 @@ type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 /// // Read chunks from file
 /// buffer.set_position(0);
 /// let metadata = read_file_metadata_async(&mut buffer).await?;
-/// let mut stream = FileStream::new(buffer, metadata, None);
+/// let mut stream = FileStream::new(buffer, metadata, None, None);
 /// let chunks = stream.try_collect::<Vec<_>>().await?;
 /// # arrow2::error::Result::Ok(())
 /// # }).unwrap();

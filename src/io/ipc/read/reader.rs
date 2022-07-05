@@ -36,18 +36,6 @@ pub struct FileMetadata {
     pub(crate) size: u64,
 }
 
-/// Arrow File reader
-pub struct FileReader<R: Read + Seek> {
-    reader: R,
-    metadata: FileMetadata,
-    // the dictionaries are going to be read
-    dictionaries: Option<Dictionaries>,
-    current_block: usize,
-    projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
-    data_scratch: Vec<u8>,
-    message_scratch: Vec<u8>,
-}
-
 fn read_dictionary_message<R: Read + Seek>(
     reader: &mut R,
     offset: u64,
@@ -262,11 +250,13 @@ pub(super) fn get_serialized_batch<'a>(
 /// certain parts of the file.
 /// # Panics
 /// This function panics iff `index >= metadata.blocks.len()`
+#[allow(clippy::too_many_arguments)]
 pub fn read_batch<R: Read + Seek>(
     reader: &mut R,
     dictionaries: &Dictionaries,
     metadata: &FileMetadata,
     projection: Option<&[usize]>,
+    limit: Option<usize>,
     index: usize,
     message_scratch: &mut Vec<u8>,
     data_scratch: &mut Vec<u8>,
@@ -317,6 +307,7 @@ pub fn read_batch<R: Read + Seek>(
         &metadata.schema.fields,
         &metadata.ipc_schema,
         projection,
+        limit,
         dictionaries,
         message
             .version()
@@ -328,11 +319,29 @@ pub fn read_batch<R: Read + Seek>(
     )
 }
 
+/// An iterator of [`Chunk`]s from an Arrow IPC file.
+pub struct FileReader<R: Read + Seek> {
+    reader: R,
+    metadata: FileMetadata,
+    // the dictionaries are going to be read
+    dictionaries: Option<Dictionaries>,
+    current_block: usize,
+    projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
+    remaining: usize,
+    data_scratch: Vec<u8>,
+    message_scratch: Vec<u8>,
+}
+
 impl<R: Read + Seek> FileReader<R> {
     /// Creates a new [`FileReader`]. Use `projection` to only take certain columns.
     /// # Panic
     /// Panics iff the projection is not in increasing order (e.g. `[1, 0]` nor `[0, 1, 1]` are valid)
-    pub fn new(reader: R, metadata: FileMetadata, projection: Option<Vec<usize>>) -> Self {
+    pub fn new(
+        reader: R,
+        metadata: FileMetadata,
+        projection: Option<Vec<usize>>,
+        limit: Option<usize>,
+    ) -> Self {
         let projection = projection.map(|projection| {
             let (p, h, fields) = prepare_projection(&metadata.schema.fields, projection);
             let schema = Schema {
@@ -346,6 +355,7 @@ impl<R: Read + Seek> FileReader<R> {
             metadata,
             dictionaries: Default::default(),
             projection,
+            remaining: limit.unwrap_or(usize::MAX),
             current_block: 0,
             data_scratch: Default::default(),
             message_scratch: Default::default(),
@@ -404,10 +414,12 @@ impl<R: Read + Seek> Iterator for FileReader<R> {
             self.dictionaries.as_ref().unwrap(),
             &self.metadata,
             self.projection.as_ref().map(|x| x.0.as_ref()),
+            Some(self.remaining),
             block,
             &mut self.message_scratch,
             &mut self.data_scratch,
         );
+        self.remaining -= chunk.as_ref().map(|x| x.len()).unwrap_or_default();
 
         let chunk = if let Some((_, map, _)) = &self.projection {
             // re-order according to projection

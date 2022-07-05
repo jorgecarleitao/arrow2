@@ -58,10 +58,10 @@
 //! // Fetch some of the data and get the reader back
 //! let mut reader = File::open(&path)?;
 //! let metadata = read_file_metadata(&mut reader)?;
-//! let mut filereader = FileReader::new(reader, metadata, None);
-//! let row1 = filereader.next().unwrap();  // [[-1, 1], [1, -1]]
-//! let row2 = filereader.next().unwrap();  // [[-1, 1], [1, -1]]
-//! let mut reader = filereader.into_inner();
+//! let mut reader = FileReader::new(reader, metadata, None, None);
+//! let row1 = reader.next().unwrap();  // [[-1, 1], [1, -1]]
+//! let row2 = reader.next().unwrap();  // [[-1, 1], [1, -1]]
+//! let mut reader = reader.into_inner();
 //! // Do more stuff with the reader, like seeking ahead.
 //! # Ok::<(), Error>(())
 //! ```

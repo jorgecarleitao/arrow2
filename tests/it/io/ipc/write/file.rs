@@ -39,7 +39,7 @@ fn round_trip(
     let metadata = read_file_metadata(&mut reader)?;
     let schema = metadata.schema.clone();
 
-    let reader = FileReader::new(reader, metadata, None);
+    let reader = FileReader::new(reader, metadata, None, None);
 
     assert_eq!(schema, expected_schema);
 
@@ -64,7 +64,7 @@ fn test_file(version: &str, file_name: &str, compressed: bool) -> Result<()> {
     let schema = metadata.schema.clone();
     let ipc_fields = metadata.ipc_schema.fields.clone();
 
-    let reader = FileReader::new(reader, metadata, None);
+    let reader = FileReader::new(reader, metadata, None, None);
 
     // read expected JSON output
     let (expected_schema, expected_ipc_fields, expected_batches) =

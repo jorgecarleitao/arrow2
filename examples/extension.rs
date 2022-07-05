@@ -51,6 +51,6 @@ fn write_ipc<W: Write + Seek>(writer: W, array: impl Array + 'static) -> Result<
 fn read_ipc(buf: &[u8]) -> Result<Chunk<Box<dyn Array>>> {
     let mut cursor = Cursor::new(buf);
     let metadata = read::read_file_metadata(&mut cursor)?;
-    let mut reader = read::FileReader::new(cursor, metadata, None);
+    let mut reader = read::FileReader::new(cursor, metadata, None, None);
     reader.next().unwrap()
 }
