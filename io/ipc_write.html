@@ -146,15 +146,15 @@ use arrow2::datatypes::{DataType, Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::write;
 
-fn write_batches(path: &amp;str, schema: Schema, columns: &amp;[Chunk&lt;Box&lt;dyn Array&gt;&gt;]) -&gt; Result&lt;()&gt; {
+fn write_batches(path: &amp;str, schema: Schema, chunks: &amp;[Chunk&lt;Box&lt;dyn Array&gt;&gt;]) -&gt; Result&lt;()&gt; {
     let file = File::create(path)?;
 
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::new(file, schema, None, options);
 
     writer.start()?;
-    for columns in columns {
-        writer.write(columns, None)?
+    for chunk in chunks {
+        writer.write(chunk, None)?
     }
     writer.finish()
 }
@@ -174,10 +174,10 @@ fn main() -&gt; Result&lt;()&gt; {
     let a = Int32Array::from_slice(&amp;[1, 2, 3, 4, 5]);
     let b = Utf8Array::&lt;i32&gt;::from_slice(&amp;[&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;, &quot;e&quot;]);
 
-    let batch = Chunk::try_new(vec![a.boxed(), b.boxed()])?;
+    let chunk = Chunk::try_new(vec![a.boxed(), b.boxed()])?;
 
     // write it
-    write_batches(file_path, schema, &amp;[batch])?;
+    write_batches(file_path, schema, &amp;[chunk])?;
     Ok(())
 }
 </code></pre></pre>

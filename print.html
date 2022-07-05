@@ -829,7 +829,7 @@ fn write_ipc&lt;W: Write + Seek&gt;(writer: W, array: impl Array + 'static) -&gt
 fn read_ipc(buf: &amp;[u8]) -&gt; Result&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt; {
     let mut cursor = Cursor::new(buf);
     let metadata = read::read_file_metadata(&amp;mut cursor)?;
-    let mut reader = read::FileReader::new(cursor, metadata, None);
+    let mut reader = read::FileReader::new(cursor, metadata, None, None);
     reader.next().unwrap()
 }
 </code></pre></pre>
@@ -1386,7 +1386,7 @@ fn parallel_write(path: &amp;str, schema: Schema, chunks: &amp;[Chunk]) -&gt; Re
 
     // declare encodings
     let encodings = (&amp;schema.fields)
-        .par_iter()
+        .iter()
         .map(|f| transverse(&amp;f.data_type, encoding_map))
         .collect::&lt;Vec&lt;_&gt;&gt;();
 
@@ -1499,7 +1499,7 @@ use arrow2::io::print;
 
 /// Simplest way: read all record batches from the file. This can be used e.g. for random access.
 #[allow(clippy::type_complexity)]
-fn read_batches(path: &amp;str) -&gt; Result&lt;(Schema, Vec&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt;)&gt; {
+fn read_chunks(path: &amp;str) -&gt; Result&lt;(Schema, Vec&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt;)&gt; {
     let mut file = File::open(path)?;
 
     // read the files' metadata. At this point, we can distribute the read whatever we like.
@@ -1508,10 +1508,10 @@ fn read_batches(path: &amp;str) -&gt; Result&lt;(Schema, Vec&lt;Chunk&lt;Box&lt;
     let schema = metadata.schema.clone();
 
     // Simplest way: use the reader, an iterator over batches.
-    let reader = read::FileReader::new(file, metadata, None);
+    let reader = read::FileReader::new(file, metadata, None, None);
 
-    let columns = reader.collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
-    Ok((schema, columns))
+    let chunks = reader.collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
+    Ok((schema, chunks))
 }
 
 /// Random access way: read a single record batch from the file. This can be used e.g. for random access.
@@ -1526,12 +1526,14 @@ fn read_batch(path: &amp;str) -&gt; Result&lt;(Schema, Chunk&lt;Box&lt;dyn Array
     // advanced way: read the dictionary
     let dictionaries = read::read_file_dictionaries(&amp;mut file, &amp;metadata, &amp;mut Default::default())?;
 
+    // and the chunk
     let chunk_index = 0;
 
     let chunk = read::read_batch(
         &amp;mut file,
         &amp;dictionaries,
         &amp;metadata,
+        None,
         None,
         chunk_index,
         &amp;mut Default::default(),
@@ -1547,13 +1549,13 @@ fn main() -&gt; Result&lt;()&gt; {
 
     let file_path = &amp;args[1];
 
-    let (schema, batches) = read_batches(file_path)?;
+    let (schema, chunks) = read_chunks(file_path)?;
     let names = schema.fields.iter().map(|f| &amp;f.name).collect::&lt;Vec&lt;_&gt;&gt;();
-    println!(&quot;{}&quot;, print::write(&amp;batches, &amp;names));
+    println!(&quot;{}&quot;, print::write(&amp;chunks, &amp;names));
 
-    let (schema, batch) = read_batch(file_path)?;
+    let (schema, chunk) = read_batch(file_path)?;
     let names = schema.fields.iter().map(|f| &amp;f.name).collect::&lt;Vec&lt;_&gt;&gt;();
-    println!(&quot;{}&quot;, print::write(&amp;[batch], &amp;names));
+    println!(&quot;{}&quot;, print::write(&amp;[chunk], &amp;names));
     Ok(())
 }
 </code></pre></pre>
@@ -1641,15 +1643,15 @@ use arrow2::datatypes::{DataType, Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::write;
 
-fn write_batches(path: &amp;str, schema: Schema, columns: &amp;[Chunk&lt;Box&lt;dyn Array&gt;&gt;]) -&gt; Result&lt;()&gt; {
+fn write_batches(path: &amp;str, schema: Schema, chunks: &amp;[Chunk&lt;Box&lt;dyn Array&gt;&gt;]) -&gt; Result&lt;()&gt; {
     let file = File::create(path)?;
 
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::new(file, schema, None, options);
 
     writer.start()?;
-    for columns in columns {
-        writer.write(columns, None)?
+    for chunk in chunks {
+        writer.write(chunk, None)?
     }
     writer.finish()
 }
@@ -1669,10 +1671,10 @@ fn main() -&gt; Result&lt;()&gt; {
     let a = Int32Array::from_slice(&amp;[1, 2, 3, 4, 5]);
     let b = Utf8Array::&lt;i32&gt;::from_slice(&amp;[&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;, &quot;e&quot;]);
 
-    let batch = Chunk::try_new(vec![a.boxed(), b.boxed()])?;
+    let chunk = Chunk::try_new(vec![a.boxed(), b.boxed()])?;
 
     // write it
-    write_batches(file_path, schema, &amp;[batch])?;
+    write_batches(file_path, schema, &amp;[chunk])?;
     Ok(())
 }
 </code></pre></pre>
