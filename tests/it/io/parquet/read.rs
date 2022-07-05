@@ -65,6 +65,7 @@ fn test_pyarrow_integration(
         "list_bool",
         "list_nested_inner_required_required_i64",
         "list_nested_inner_required_i64",
+        "struct_nullable", // it counts null struct items as nulls
         // pyarrow reports an incorrect min/max for MapArray
         "map",
         "map_nullable",
@@ -447,14 +448,18 @@ fn v2_decimal_26_required_dict() -> Result<()> {
 }
 
 #[test]
-fn v1_struct_optional() -> Result<()> {
+fn v1_struct_required_optional() -> Result<()> {
     test_pyarrow_integration("struct", 1, "struct", false, false, None)
 }
 
 #[test]
-#[ignore]
-fn v1_struct_struct_optional() -> Result<()> {
+fn v1_struct_struct() -> Result<()> {
     test_pyarrow_integration("struct_struct", 1, "struct", false, false, None)
+}
+
+#[test]
+fn v1_struct_optional_optional() -> Result<()> {
+    test_pyarrow_integration("struct_nullable", 1, "struct", false, false, None)
 }
 
 #[test]

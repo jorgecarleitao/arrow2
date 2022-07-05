@@ -17,25 +17,24 @@ use super::basic::ValuesDictionary;
 use super::utils::*;
 use super::{
     super::utils,
-    basic::{finish, Required, TraitBinaryArray},
+    basic::{finish, TraitBinaryArray},
 };
 
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum State<'a> {
-    Optional(Optional<'a>, BinaryIter<'a>),
-    Required(Required<'a>),
+    Optional(BinaryIter<'a>),
+    Required(BinaryIter<'a>),
     RequiredDictionary(ValuesDictionary<'a>),
-    OptionalDictionary(Optional<'a>, ValuesDictionary<'a>),
+    OptionalDictionary(ValuesDictionary<'a>),
 }
 
 impl<'a> utils::PageState<'a> for State<'a> {
     fn len(&self) -> usize {
         match self {
-            State::Optional(validity, _) => validity.len(),
-            State::Required(state) => state.len(),
+            State::Optional(validity) => validity.size_hint().0,
+            State::Required(state) => state.size_hint().0,
             State::RequiredDictionary(required) => required.len(),
-            State::OptionalDictionary(optional, _) => optional.len(),
+            State::OptionalDictionary(optional) => optional.len(),
         }
     }
 }
@@ -45,7 +44,7 @@ struct BinaryDecoder<O: Offset> {
     phantom_o: std::marker::PhantomData<O>,
 }
 
-impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
+impl<'a, O: Offset> NestedDecoder<'a> for BinaryDecoder<O> {
     type State = State<'a>;
     type DecodedState = (Binary<O>, MutableBitmap);
 
@@ -62,25 +61,26 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
         ) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
-                Ok(State::RequiredDictionary(ValuesDictionary::try_new(
-                    page, dict,
-                )?))
+                ValuesDictionary::try_new(page, dict).map(State::RequiredDictionary)
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
-                Ok(State::OptionalDictionary(
-                    Optional::try_new(page)?,
-                    ValuesDictionary::try_new(page, dict)?,
-                ))
+                ValuesDictionary::try_new(page, dict).map(State::OptionalDictionary)
             }
             (Encoding::Plain, _, true, false) => {
                 let (_, _, values) = split_buffer(page)?;
 
                 let values = BinaryIter::new(values);
 
-                Ok(State::Optional(Optional::try_new(page)?, values))
+                Ok(State::Optional(values))
             }
-            (Encoding::Plain, _, false, false) => Ok(State::Required(Required::try_new(page)?)),
+            (Encoding::Plain, _, false, false) => {
+                let (_, _, values) = split_buffer(page)?;
+
+                let values = BinaryIter::new(values);
+
+                Ok(State::Required(values))
+            }
             _ => Err(utils::not_implemented(page)),
         }
     }
@@ -92,24 +92,17 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
         )
     }
 
-    fn extend_from_state(
-        &self,
-        state: &mut Self::State,
-        decoded: &mut Self::DecodedState,
-        additional: usize,
-    ) {
+    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState) {
         let (values, validity) = decoded;
         match state {
-            State::Optional(page_validity, page_values) => {
-                let items = page_validity.by_ref().take(additional);
-                let items = Zip::new(items, page_values.by_ref());
-
-                read_optional_values(items, values, validity)
+            State::Optional(page) => {
+                let value = page.next().unwrap_or_default();
+                values.push(value);
+                validity.push(true);
             }
             State::Required(page) => {
-                for x in page.values.by_ref().take(additional) {
-                    values.push(x)
-                }
+                let value = page.next().unwrap_or_default();
+                values.push(value);
             }
             State::RequiredDictionary(page) => {
                 let dict_values = page.dict.values();
@@ -121,13 +114,12 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                     let dict_offset_ip1 = dict_offsets[index + 1] as usize;
                     &dict_values[dict_offset_i..dict_offset_ip1]
                 };
-                for x in page.values.by_ref().map(op).take(additional) {
-                    values.push(x)
-                }
+                let item = page.values.next().map(op).unwrap_or_default();
+                values.push(item);
             }
-            State::OptionalDictionary(page_validity, page_values) => {
-                let dict_values = page_values.dict.values();
-                let dict_offsets = page_values.dict.offsets();
+            State::OptionalDictionary(page) => {
+                let dict_values = page.dict.values();
+                let dict_offsets = page.dict.offsets();
 
                 let op = move |index: u32| {
                     let index = index as usize;
@@ -135,13 +127,17 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                     let dict_offset_ip1 = dict_offsets[index + 1] as usize;
                     &dict_values[dict_offset_i..dict_offset_ip1]
                 };
-
-                let items = page_validity.by_ref().take(additional);
-                let items = Zip::new(items, page_values.values.by_ref().map(op));
-
-                read_optional_values(items, values, validity)
+                let item = page.values.next().map(op).unwrap_or_default();
+                values.push(item);
+                validity.push(true);
             }
         }
+    }
+
+    fn push_null(&self, decoded: &mut Self::DecodedState) {
+        let (values, validity) = decoded;
+        values.push(&[]);
+        validity.push(false);
     }
 }
 
@@ -149,8 +145,7 @@ pub struct ArrayIterator<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
     iter: I,
     data_type: DataType,
     init: Vec<InitNested>,
-    items: VecDeque<(Binary<O>, MutableBitmap)>,
-    nested: VecDeque<NestedState>,
+    items: VecDeque<(NestedState, (Binary<O>, MutableBitmap))>,
     chunk_size: Option<usize>,
     phantom_a: std::marker::PhantomData<A>,
 }
@@ -167,7 +162,6 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> ArrayIterator<O, A, I> {
             data_type,
             init,
             items: VecDeque::new(),
-            nested: VecDeque::new(),
             chunk_size,
             phantom_a: Default::default(),
         }
@@ -181,7 +175,6 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for ArrayIterator
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
-            &mut self.nested,
             &self.init,
             self.chunk_size,
             &BinaryDecoder::<O>::default(),

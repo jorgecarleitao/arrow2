@@ -26,7 +26,7 @@ assert sum([x for x in get_f32(1000, 0.9)[1] if x]) > 750
 
 
 def bench_add_f32_pyarrow(log2_size, null_density):
-    size = 2 ** log2_size
+    size = 2**log2_size
 
     values, validity = get_f32(size, null_density)
     array1 = pa.array(values, pa.float32(), mask=validity)
@@ -50,7 +50,7 @@ def bench_add_f32_pyarrow(log2_size, null_density):
 
 
 def bench_add_f32_numpy(log2_size):
-    size = 2 ** log2_size
+    size = 2**log2_size
 
     array1, _ = get_f32(size, 0)
     array2, _ = get_f32(size, 0)
@@ -71,7 +71,7 @@ def bench_add_f32_numpy(log2_size):
 
 
 def _bench_unary_f32_pyarrow(log2_size, null_density, name, op):
-    size = 2 ** log2_size
+    size = 2**log2_size
 
     values, validity = get_f32(size, null_density)
     array = pa.array(values, pa.float32(), mask=validity)
@@ -100,7 +100,7 @@ def bench_min_f32_pyarrow(log2_size, null_density):
 
 
 def _bench_unary_f32_numpy(log2_size, name, op):
-    size = 2 ** log2_size
+    size = 2**log2_size
 
     values, _ = get_f32(size, 0)
 
@@ -128,7 +128,7 @@ def bench_min_f32_numpy(log2_size):
 
 
 def bench_sort_f32_pyarrow(log2_size, null_density):
-    size = 2 ** log2_size
+    size = 2**log2_size
 
     values, validity = get_f32(size, null_density)
     array = pa.array(values, pa.float32(), mask=validity)
@@ -151,7 +151,7 @@ def bench_sort_f32_pyarrow(log2_size, null_density):
 
 def bench_sort_f32_numpy(log2_size):
     null_density = 0
-    size = 2 ** log2_size
+    size = 2**log2_size
 
     array, _ = get_f32(size, null_density)
 
@@ -171,7 +171,7 @@ def bench_sort_f32_numpy(log2_size):
 
 
 def bench_filter_f32_pyarrow(log2_size, null_density):
-    size = 2 ** log2_size
+    size = 2**log2_size
 
     values, validity = get_f32(size, null_density)
     _, mask = get_f32(size, 0.9)
@@ -198,7 +198,7 @@ def bench_filter_f32_pyarrow(log2_size, null_density):
 
 def bench_filter_f32_numpy(log2_size):
     null_density = 0
-    size = 2 ** log2_size
+    size = 2**log2_size
 
     array, _ = get_f32(size, null_density)
     _, mask = get_f32(size, 0.1)

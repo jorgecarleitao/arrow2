@@ -706,36 +706,44 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
         Some(true),
     ];
     let boolean = BooleanArray::from(boolean).boxed();
+
+    let string = [
+        Some("Hello"),
+        None,
+        Some("aa"),
+        Some(""),
+        None,
+        Some("abc"),
+        None,
+        None,
+        Some("def"),
+        Some("aaa"),
+    ];
+    let string = Utf8Array::<i32>::from(string).boxed();
+
     let fields = vec![
         Field::new("f1", DataType::Utf8, true),
         Field::new("f2", DataType::Boolean, true),
     ];
     match column {
-        "struct" => {
-            let string = [
-                Some("Hello"),
-                None,
-                Some("aa"),
-                Some(""),
-                None,
-                Some("abc"),
-                None,
-                None,
-                Some("def"),
-                Some("aaa"),
-            ];
-            let values = vec![Utf8Array::<i32>::from(string).boxed(), boolean];
-            StructArray::from_data(DataType::Struct(fields), values, None).boxed()
+        "struct" => StructArray::new(DataType::Struct(fields), vec![string, boolean], None).boxed(),
+        "struct_nullable" => {
+            let values = vec![string, boolean];
+            StructArray::new(
+                DataType::Struct(fields),
+                values,
+                Some([true, true, false, true, true, true, true, true, true, true].into()),
+            )
+            .boxed()
         }
         "struct_struct" => {
             let struct_ = pyarrow_struct("struct");
-            let values = vec![struct_, boolean];
-            Box::new(StructArray::from_data(
+            Box::new(StructArray::new(
                 DataType::Struct(vec![
                     Field::new("f1", DataType::Struct(fields), true),
                     Field::new("f2", DataType::Boolean, true),
                 ]),
-                values,
+                vec![struct_, boolean],
                 None,
             ))
         }
@@ -756,7 +764,7 @@ pub fn pyarrow_struct_statistics(column: &str) -> Statistics {
     let names = vec!["f1".to_string(), "f2".to_string()];
 
     match column {
-        "struct" => Statistics {
+        "struct" | "struct_nullable" => Statistics {
             distinct_count: Count::Struct(new_struct(
                 vec![
                     Box::new(UInt64Array::from([None])),
@@ -787,10 +795,64 @@ pub fn pyarrow_struct_statistics(column: &str) -> Statistics {
             )),
         },
         "struct_struct" => Statistics {
-            distinct_count: Count::Single(UInt64Array::from([None])),
-            null_count: Count::Single(UInt64Array::from([Some(1)])),
-            min_value: Box::new(BooleanArray::from_slice([false])),
-            max_value: Box::new(BooleanArray::from_slice([true])),
+            distinct_count: Count::Struct(new_struct(
+                vec![
+                    new_struct(
+                        vec![
+                            Box::new(UInt64Array::from([None])),
+                            Box::new(UInt64Array::from([None])),
+                        ],
+                        names.clone(),
+                    )
+                    .boxed(),
+                    UInt64Array::from([None]).boxed(),
+                ],
+                names.clone(),
+            )),
+            null_count: Count::Struct(new_struct(
+                vec![
+                    new_struct(
+                        vec![
+                            Box::new(UInt64Array::from([Some(4)])),
+                            Box::new(UInt64Array::from([Some(4)])),
+                        ],
+                        names.clone(),
+                    )
+                    .boxed(),
+                    UInt64Array::from([Some(4)]).boxed(),
+                ],
+                names.clone(),
+            )),
+            min_value: new_struct(
+                vec![
+                    new_struct(
+                        vec![
+                            Utf8Array::<i32>::from_slice([""]).boxed(),
+                            BooleanArray::from_slice([false]).boxed(),
+                        ],
+                        names.clone(),
+                    )
+                    .boxed(),
+                    BooleanArray::from_slice([false]).boxed(),
+                ],
+                names.clone(),
+            )
+            .boxed(),
+            max_value: new_struct(
+                vec![
+                    new_struct(
+                        vec![
+                            Utf8Array::<i32>::from_slice(["def"]).boxed(),
+                            BooleanArray::from_slice([true]).boxed(),
+                        ],
+                        names.clone(),
+                    )
+                    .boxed(),
+                    BooleanArray::from_slice([true]).boxed(),
+                ],
+                names,
+            )
+            .boxed(),
         },
         _ => todo!(),
     }

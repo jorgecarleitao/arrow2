@@ -22,10 +22,10 @@ enum State<'a, P>
 where
     P: ParquetNativeType,
 {
-    Optional(Optional<'a>, Values<'a>),
+    Optional(Values<'a>),
     Required(Values<'a>),
     RequiredDictionary(ValuesDictionary<'a, P>),
-    OptionalDictionary(Optional<'a>, ValuesDictionary<'a, P>),
+    OptionalDictionary(ValuesDictionary<'a, P>),
 }
 
 impl<'a, P> utils::PageState<'a> for State<'a, P>
@@ -34,10 +34,10 @@ where
 {
     fn len(&self) -> usize {
         match self {
-            State::Optional(optional, _) => optional.len(),
-            State::Required(required) => required.len(),
-            State::RequiredDictionary(required) => required.len(),
-            State::OptionalDictionary(optional, _) => optional.len(),
+            State::Optional(values) => values.len(),
+            State::Required(values) => values.len(),
+            State::RequiredDictionary(values) => values.len(),
+            State::OptionalDictionary(values) => values.len(),
         }
     }
 }
@@ -70,7 +70,7 @@ where
     }
 }
 
-impl<'a, T, P, F> utils::Decoder<'a> for PrimitiveDecoder<T, P, F>
+impl<'a, T, P, F> NestedDecoder<'a> for PrimitiveDecoder<T, P, F>
 where
     T: NativeType,
     P: ParquetNativeType,
@@ -96,20 +96,15 @@ where
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 let dict = dict.as_any().downcast_ref().unwrap();
-                Ok(State::OptionalDictionary(
-                    Optional::try_new(page)?,
-                    ValuesDictionary::try_new(page, dict)?,
-                ))
+                ValuesDictionary::try_new(page, dict).map(State::OptionalDictionary)
             }
-            (Encoding::Plain, _, true, false) => Ok(State::Optional(
-                Optional::try_new(page)?,
-                Values::try_new::<P>(page)?,
-            )),
-            (Encoding::Plain, _, false, false) => Ok(State::Required(Values::try_new::<P>(page)?)),
+            (Encoding::Plain, _, true, false) => Values::try_new::<P>(page).map(State::Optional),
+            (Encoding::Plain, _, false, false) => Values::try_new::<P>(page).map(State::Required),
             _ => Err(utils::not_implemented(page)),
         }
     }
 
+    /// Initializes a new state
     fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
         (
             Vec::<T>::with_capacity(capacity),
@@ -117,42 +112,40 @@ where
         )
     }
 
-    fn extend_from_state(
-        &self,
-        state: &mut Self::State,
-        decoded: &mut Self::DecodedState,
-        additional: usize,
-    ) {
+    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState) {
         let (values, validity) = decoded;
         match state {
-            State::Optional(page_validity, page_values) => {
-                let items = page_validity.by_ref().take(additional);
-                let items = Zip::new(items, page_values.values.by_ref().map(decode).map(self.op));
-
-                read_optional_values(items, values, validity)
+            State::Optional(page_values) => {
+                let value = page_values.values.by_ref().next().map(decode).map(self.op);
+                // convert unwrap to error
+                values.push(value.unwrap_or_default());
+                validity.push(true);
             }
-            State::Required(page) => {
-                values.extend(
-                    page.values
-                        .by_ref()
-                        .map(decode)
-                        .map(self.op)
-                        .take(additional),
-                );
+            State::Required(page_values) => {
+                let value = page_values.values.by_ref().next().map(decode).map(self.op);
+                // convert unwrap to error
+                values.push(value.unwrap_or_default());
             }
             State::RequiredDictionary(page) => {
                 let op1 = |index: u32| page.dict[index as usize];
-                values.extend(page.values.by_ref().map(op1).map(self.op).take(additional));
+                let value = page.values.next().map(op1).map(self.op);
+
+                values.push(value.unwrap_or_default());
             }
-            State::OptionalDictionary(page_validity, page_values) => {
-                let op1 = |index: u32| page_values.dict[index as usize];
+            State::OptionalDictionary(page) => {
+                let op1 = |index: u32| page.dict[index as usize];
+                let value = page.values.next().map(op1).map(self.op);
 
-                let items = page_validity.by_ref().take(additional);
-                let items = Zip::new(items, page_values.values.by_ref().map(op1).map(self.op));
-
-                read_optional_values(items, values, validity)
+                values.push(value.unwrap_or_default());
+                validity.push(true);
             }
         }
+    }
+
+    fn push_null(&self, decoded: &mut Self::DecodedState) {
+        let (values, validity) = decoded;
+        values.push(T::default());
+        validity.push(false)
     }
 }
 
@@ -177,9 +170,7 @@ where
     iter: I,
     init: Vec<InitNested>,
     data_type: DataType,
-    // invariant: items.len() == nested.len()
-    items: VecDeque<(Vec<T>, MutableBitmap)>,
-    nested: VecDeque<NestedState>,
+    items: VecDeque<(NestedState, (Vec<T>, MutableBitmap))>,
     chunk_size: Option<usize>,
     decoder: PrimitiveDecoder<T, P, F>,
 }
@@ -204,7 +195,6 @@ where
             init,
             data_type,
             items: VecDeque::new(),
-            nested: VecDeque::new(),
             chunk_size,
             decoder: PrimitiveDecoder::new(op),
         }
@@ -225,7 +215,6 @@ where
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
-            &mut self.nested,
             &self.init,
             self.chunk_size,
             &self.decoder,
