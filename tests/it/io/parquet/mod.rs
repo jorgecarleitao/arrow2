@@ -563,7 +563,7 @@ pub fn pyarrow_required_statistics(column: &str) -> Statistics {
 
 pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
     let new_list = |array: Box<dyn Array>, nullable: bool| {
-        Box::new(ListArray::<i32>::new(
+        ListArray::<i32>::new(
             DataType::List(Box::new(Field::new(
                 "item",
                 array.data_type().clone(),
@@ -572,69 +572,93 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
             vec![0, array.len() as i32].into(),
             array,
             None,
-        )) as Box<dyn Array>
+        )
     };
 
     match column {
         "list_int16" => Statistics {
-            distinct_count: Count::Single(UInt64Array::from([None])),
-            null_count: Count::Single(UInt64Array::from([Some(1)])),
-            min_value: new_list(Box::new(Int16Array::from_slice([0])), true),
-            max_value: new_list(Box::new(Int16Array::from_slice([10])), true),
+            distinct_count: Count::List(new_list(UInt64Array::from([None]).boxed(), true)),
+            null_count: Count::List(new_list(UInt64Array::from([Some(1)]).boxed(), true)),
+            min_value: new_list(Box::new(Int16Array::from_slice([0])), true).boxed(),
+            max_value: new_list(Box::new(Int16Array::from_slice([10])), true).boxed(),
         },
         "list_bool" => Statistics {
-            distinct_count: Count::Single(UInt64Array::from([None])),
-            null_count: Count::Single(UInt64Array::from([Some(1)])),
-            min_value: new_list(Box::new(BooleanArray::from_slice([false])), true),
-            max_value: new_list(Box::new(BooleanArray::from_slice([true])), true),
+            distinct_count: Count::List(new_list(UInt64Array::from([None]).boxed(), true)),
+            null_count: Count::List(new_list(UInt64Array::from([Some(1)]).boxed(), true)),
+            min_value: new_list(Box::new(BooleanArray::from_slice([false])), true).boxed(),
+            max_value: new_list(Box::new(BooleanArray::from_slice([true])), true).boxed(),
         },
         "list_utf8" => Statistics {
-            distinct_count: Count::Single(UInt64Array::from([None])),
-            null_count: Count::Single([Some(1)].into()),
-            min_value: new_list(Box::new(Utf8Array::<i32>::from_slice([""])), true),
-            max_value: new_list(Box::new(Utf8Array::<i32>::from_slice(["ccc"])), true),
+            distinct_count: Count::List(new_list(UInt64Array::from([None]).boxed(), true)),
+            null_count: Count::List(new_list(UInt64Array::from([Some(1)]).boxed(), true)),
+            min_value: new_list(Box::new(Utf8Array::<i32>::from_slice([""])), true).boxed(),
+            max_value: new_list(Box::new(Utf8Array::<i32>::from_slice(["ccc"])), true).boxed(),
         },
         "list_large_binary" => Statistics {
-            distinct_count: Count::Single(UInt64Array::from([None])),
-            null_count: Count::Single([Some(1)].into()),
-            min_value: new_list(Box::new(BinaryArray::<i64>::from_slice([b""])), true),
-            max_value: new_list(Box::new(BinaryArray::<i64>::from_slice([b"ccc"])), true),
+            distinct_count: Count::List(new_list(UInt64Array::from([None]).boxed(), true)),
+            null_count: Count::List(new_list(UInt64Array::from([Some(1)]).boxed(), true)),
+            min_value: new_list(Box::new(BinaryArray::<i64>::from_slice([b""])), true).boxed(),
+            max_value: new_list(Box::new(BinaryArray::<i64>::from_slice([b"ccc"])), true).boxed(),
         },
         "list_int64" => Statistics {
-            distinct_count: Count::Single(UInt64Array::from([None])),
-            null_count: Count::Single([Some(1)].into()),
-            min_value: new_list(Box::new(Int64Array::from_slice([0])), true),
-            max_value: new_list(Box::new(Int64Array::from_slice([10])), true),
+            distinct_count: Count::List(new_list(UInt64Array::from([None]).boxed(), true)),
+            null_count: Count::List(new_list(UInt64Array::from([Some(1)]).boxed(), true)),
+            min_value: new_list(Box::new(Int64Array::from_slice([0])), true).boxed(),
+            max_value: new_list(Box::new(Int64Array::from_slice([10])), true).boxed(),
         },
         "list_int64_required" => Statistics {
-            distinct_count: Count::Single(UInt64Array::from([None])),
-            null_count: Count::Single([Some(1)].into()),
-            min_value: new_list(Box::new(Int64Array::from_slice([0])), false),
-            max_value: new_list(Box::new(Int64Array::from_slice([10])), false),
+            distinct_count: Count::List(new_list(UInt64Array::from([None]).boxed(), true)),
+            null_count: Count::List(new_list(UInt64Array::from([Some(1)]).boxed(), true)),
+            min_value: new_list(Box::new(Int64Array::from_slice([0])), false).boxed(),
+            max_value: new_list(Box::new(Int64Array::from_slice([10])), false).boxed(),
         },
         "list_int64_required_required" | "list_int64_optional_required" => Statistics {
-            distinct_count: Count::Single(UInt64Array::from([None])),
-            null_count: Count::Single([Some(0)].into()),
-            min_value: new_list(Box::new(Int64Array::from_slice([0])), false),
-            max_value: new_list(Box::new(Int64Array::from_slice([10])), false),
+            distinct_count: Count::List(new_list(UInt64Array::from([None]).boxed(), false)),
+            null_count: Count::List(new_list(UInt64Array::from([Some(0)]).boxed(), false)),
+            min_value: new_list(Box::new(Int64Array::from_slice([0])), false).boxed(),
+            max_value: new_list(Box::new(Int64Array::from_slice([10])), false).boxed(),
         },
         "list_nested_i64" => Statistics {
-            distinct_count: Count::Single(UInt64Array::from([None])),
-            null_count: Count::Single([Some(2)].into()),
-            min_value: new_list(new_list(Box::new(Int64Array::from_slice([0])), true), true),
-            max_value: new_list(new_list(Box::new(Int64Array::from_slice([10])), true), true),
+            distinct_count: Count::List(new_list(UInt64Array::from([None]).boxed(), true)),
+            null_count: Count::List(new_list(UInt64Array::from([Some(2)]).boxed(), true)),
+            min_value: new_list(
+                new_list(Box::new(Int64Array::from_slice([0])), true).boxed(),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                new_list(Box::new(Int64Array::from_slice([10])), true).boxed(),
+                true,
+            )
+            .boxed(),
         },
         "list_nested_inner_required_required_i64" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single([Some(0)].into()),
-            min_value: new_list(new_list(Box::new(Int64Array::from_slice([0])), true), true),
-            max_value: new_list(new_list(Box::new(Int64Array::from_slice([10])), true), true),
+            min_value: new_list(
+                new_list(Box::new(Int64Array::from_slice([0])), true).boxed(),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                new_list(Box::new(Int64Array::from_slice([10])), true).boxed(),
+                true,
+            )
+            .boxed(),
         },
         "list_nested_inner_required_i64" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single([Some(0)].into()),
-            min_value: new_list(new_list(Box::new(Int64Array::from_slice([0])), true), true),
-            max_value: new_list(new_list(Box::new(Int64Array::from_slice([10])), true), true),
+            min_value: new_list(
+                new_list(Box::new(Int64Array::from_slice([0])), true).boxed(),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                new_list(Box::new(Int64Array::from_slice([10])), true).boxed(),
+                true,
+            )
+            .boxed(),
         },
         other => todo!("{}", other),
     }
@@ -642,7 +666,7 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
 
 pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
     let new_list = |array: Box<dyn Array>| {
-        Box::new(ListArray::<i32>::new(
+        ListArray::<i32>::new(
             DataType::List(Box::new(Field::new(
                 "item",
                 array.data_type().clone(),
@@ -651,21 +675,21 @@ pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
             vec![0, array.len() as i32].into(),
             array,
             None,
-        ))
+        )
     };
 
     match column {
         "simple" => Statistics {
-            distinct_count: Count::Single(UInt64Array::from([None])),
-            null_count: Count::Single(UInt64Array::from([Some(0)])),
-            min_value: new_list(Box::new(Int64Array::from([Some(0)]))),
-            max_value: new_list(Box::new(Int64Array::from([Some(1)]))),
+            distinct_count: Count::List(new_list(UInt64Array::from([None]).boxed())),
+            null_count: Count::List(new_list(UInt64Array::from([Some(0)]).boxed())),
+            min_value: new_list(Box::new(Int64Array::from([Some(0)]))).boxed(),
+            max_value: new_list(Box::new(Int64Array::from([Some(1)]))).boxed(),
         },
         "null" => Statistics {
-            distinct_count: Count::Single(UInt64Array::from([None])),
-            null_count: Count::Single(UInt64Array::from([Some(1)])),
-            min_value: new_list(Box::new(Int64Array::from([None]))),
-            max_value: new_list(Box::new(Int64Array::from([None]))),
+            distinct_count: Count::List(new_list(UInt64Array::from([None]).boxed())),
+            null_count: Count::List(new_list(UInt64Array::from([Some(1)]).boxed())),
+            min_value: new_list(Box::new(Int64Array::from([None]))).boxed(),
+            max_value: new_list(Box::new(Int64Array::from([None]))).boxed(),
         },
         _ => unreachable!(),
     }
