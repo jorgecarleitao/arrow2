@@ -97,7 +97,7 @@ fn write_dictionary() -> Result<()> {
 fn dictionary_validities() -> Result<()> {
     let keys = PrimitiveArray::<i32>::from([Some(1), None, Some(0)]);
     let values = PrimitiveArray::<i32>::from([None, Some(10)]);
-    let array = DictionaryArray::<i32>::from_data(keys, Box::new(values));
+    let array = DictionaryArray::try_from_keys(keys, Box::new(values)).unwrap();
 
     let columns = Chunk::new(vec![&array as &dyn Array]);
 

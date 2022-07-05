@@ -141,8 +141,9 @@ where
     let comparator = build_compare(left.values().as_ref(), right.values().as_ref())?;
 
     Ok(Box::new(move |i: usize, j: usize| {
-        let key_left = left_keys[i].to_usize().unwrap();
-        let key_right = right_keys[j].to_usize().unwrap();
+        // safety: all dictionaries keys are guaranteed to be castable to usize
+        let key_left = unsafe { left_keys[i].as_usize() };
+        let key_right = unsafe { right_keys[j].as_usize() };
         (comparator)(key_left, key_right)
     }))
 }

@@ -20,26 +20,25 @@ use crate::datatypes::DataType;
 use crate::error::{Error, Result};
 use crate::io::parquet::write::utils;
 use crate::{
-    array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
+    array::{Array, DictionaryArray, DictionaryKey},
     io::parquet::read::schema::is_nullable,
 };
 
 fn encode_keys<K: DictionaryKey>(
-    array: &PrimitiveArray<K>,
-    validity: Option<&Bitmap>,
+    array: &DictionaryArray<K>,
     type_: PrimitiveType,
     statistics: ParquetStatistics,
     options: WriteOptions,
 ) -> Result<EncodedPage> {
+    let validity = array.values().validity();
     let is_optional = is_nullable(&type_.field_info);
 
     let mut buffer = vec![];
 
     let null_count = if let Some(validity) = validity {
-        let projected_validity = array.iter().map(|x| {
-            x.map(|x| validity.get_bit(x.to_usize().unwrap()))
-                .unwrap_or(false)
-        });
+        let projected_validity = array
+            .keys_iter()
+            .map(|x| x.map(|x| validity.get_bit(x)).unwrap_or(false));
         let projected_val = Bitmap::from_trusted_len_iter(projected_validity);
 
         let null_count = projected_val.unset_bits();
@@ -68,8 +67,7 @@ fn encode_keys<K: DictionaryKey>(
     // encode indices
     // compute the required number of bits
     if let Some(validity) = validity {
-        let keys = array.iter().flatten().filter_map(|x| {
-            let index = x.to_usize().unwrap();
+        let keys = array.keys_iter().flatten().filter_map(|index| {
             // discard indices whose values are null, since they are part of the def levels.
             if validity.get_bit(index) {
                 Some(index as u32)
@@ -87,7 +85,7 @@ fn encode_keys<K: DictionaryKey>(
         // followed by the encoded indices.
         encode_u32(&mut buffer, keys, num_bits)?;
     } else {
-        let keys = array.iter().flatten().map(|x| x.to_usize().unwrap() as u32);
+        let keys = array.keys_iter().flatten().map(|x| x as u32);
         let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64) as u8;
 
         let keys = utils::ExactSizedIter::new(keys, array.len() - array.null_count());
@@ -202,13 +200,7 @@ pub fn array_to_pages<K: DictionaryKey>(
             let dict_page = EncodedPage::Dict(dict_page);
 
             // write DataPage pointing to DictPage
-            let data_page = encode_keys(
-                array.keys(),
-                array.values().validity(),
-                type_,
-                statistics,
-                options,
-            )?;
+            let data_page = encode_keys(array, type_, statistics, options)?;
 
             let iter = std::iter::once(Ok(dict_page)).chain(std::iter::once(Ok(data_page)));
             Ok(DynIter::new(Box::new(iter)))

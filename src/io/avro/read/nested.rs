@@ -157,17 +157,25 @@ impl MutableArray for FixedItemsUtf8Dictionary {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(DictionaryArray::from_data(
-            std::mem::take(&mut self.keys).into(),
-            Box::new(self.values.clone()),
-        ))
+        Box::new(
+            DictionaryArray::try_new(
+                self.data_type.clone(),
+                std::mem::take(&mut self.keys).into(),
+                Box::new(self.values.clone()),
+            )
+            .unwrap(),
+        )
     }
 
     fn as_arc(&mut self) -> std::sync::Arc<dyn Array> {
-        std::sync::Arc::new(DictionaryArray::from_data(
-            std::mem::take(&mut self.keys).into(),
-            Box::new(self.values.clone()),
-        ))
+        std::sync::Arc::new(
+            DictionaryArray::try_new(
+                self.data_type.clone(),
+                std::mem::take(&mut self.keys).into(),
+                Box::new(self.values.clone()),
+            )
+            .unwrap(),
+        )
     }
 
     fn data_type(&self) -> &DataType {

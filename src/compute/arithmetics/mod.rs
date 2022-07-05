@@ -434,9 +434,12 @@ pub fn neg(array: &dyn Array) -> Box<dyn Array> {
         Dictionary(key) => match_integer_type!(key, |$T| {
             let array = array.as_any().downcast_ref::<DictionaryArray<$T>>().unwrap();
 
-            let values = neg(array.values().as_ref()).into();
+            let values = neg(array.values().as_ref());
 
-            Box::new(DictionaryArray::<$T>::from_data(array.keys().clone(), values)) as Box<dyn Array>
+            // safety - this operation only applies to values and thus preserves the dictionary's invariant
+            unsafe{
+                DictionaryArray::<$T>::try_new_unchecked(array.data_type().clone(), array.keys().clone(), values).unwrap().boxed()
+            }
         }),
         _ => todo!(),
     }

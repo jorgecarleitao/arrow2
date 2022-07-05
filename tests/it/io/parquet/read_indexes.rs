@@ -208,12 +208,12 @@ fn indexed_optional_boolean() -> Result<()> {
 #[test]
 fn indexed_dict() -> Result<()> {
     let indices = PrimitiveArray::from_values((0..6u64).map(|x| x % 2));
-    let values = PrimitiveArray::from_slice([4i32, 6i32]);
-    let array = DictionaryArray::from_data(indices, Box::new(values));
+    let values = PrimitiveArray::from_slice([4i32, 6i32]).boxed();
+    let array = DictionaryArray::try_from_keys(indices, values).unwrap();
 
     let indices = PrimitiveArray::from_slice(&[0u64]);
-    let values = PrimitiveArray::from_slice([4i32, 6i32]);
-    let expected = DictionaryArray::from_data(indices, Box::new(values));
+    let values = PrimitiveArray::from_slice([4i32, 6i32]).boxed();
+    let expected = DictionaryArray::try_from_keys(indices, values).unwrap();
 
     let expected = expected.boxed();
 

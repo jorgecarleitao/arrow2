@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
     bitmap::MutableBitmap,
+    datatypes::DataType,
 };
 
 use super::{
@@ -16,6 +17,7 @@ use super::{
 /// This growable does not perform collision checks and instead concatenates
 /// the values of each [`DictionaryArray`] one after the other.
 pub struct GrowableDictionary<'a, K: DictionaryKey> {
+    data_type: DataType,
     keys_values: Vec<&'a [K]>,
     key_values: Vec<K>,
     key_validity: MutableBitmap,
@@ -44,6 +46,8 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
     /// # Panics
     /// If `arrays` is empty.
     pub fn new(arrays: &[&'a DictionaryArray<T>], mut use_validity: bool, capacity: usize) -> Self {
+        let data_type = arrays[0].data_type().clone();
+
         // if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         if arrays.iter().any(|array| array.null_count() > 0) {
@@ -69,6 +73,7 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
         let (values, offsets) = concatenate_values(&arrays_keys, &arrays_values, capacity);
 
         Self {
+            data_type,
             offsets,
             values,
             keys_values,
@@ -83,10 +88,11 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
         let validity = std::mem::take(&mut self.key_validity);
         let key_values = std::mem::take(&mut self.key_values);
 
-        let data_type = T::PRIMITIVE.into();
-        let keys = PrimitiveArray::<T>::from_data(data_type, key_values.into(), validity.into());
+        let keys =
+            PrimitiveArray::<T>::try_new(T::PRIMITIVE.into(), key_values.into(), validity.into())
+                .unwrap();
 
-        DictionaryArray::<T>::from_data(keys, self.values.clone())
+        DictionaryArray::<T>::try_new(self.data_type.clone(), keys, self.values.clone()).unwrap()
     }
 }
 
@@ -101,7 +107,17 @@ impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
             values
                 .iter()
                 // `.unwrap_or(0)` because this operation does not check for null values, which may contain any key.
-                .map(|x| T::from_usize(offset + x.to_usize().unwrap_or(0)).unwrap()),
+                .map(|x| {
+                    let x: usize = offset + (*x).try_into().unwrap_or(0);
+                    let x: T = match x.try_into() {
+                        Ok(key) => key,
+                        // todo: convert this to an error.
+                        Err(_) => {
+                            panic!("The maximum key is too small")
+                        }
+                    };
+                    x
+                }),
         );
     }
 
@@ -127,12 +143,10 @@ impl<'a, T: DictionaryKey> From<GrowableDictionary<'a, T>> for DictionaryArray<T
     #[inline]
     fn from(val: GrowableDictionary<'a, T>) -> Self {
         let data_type = T::PRIMITIVE.into();
-        let keys = PrimitiveArray::<T>::from_data(
-            data_type,
-            val.key_values.into(),
-            val.key_validity.into(),
-        );
+        let keys =
+            PrimitiveArray::<T>::try_new(data_type, val.key_values.into(), val.key_validity.into())
+                .unwrap();
 
-        DictionaryArray::<T>::from_data(keys, val.values)
+        DictionaryArray::<T>::try_new(val.data_type.clone(), keys, val.values).unwrap()
     }
 }

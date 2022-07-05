@@ -28,10 +28,13 @@ pub(super) fn indices_sorted_unstable_by_dictionary<I: Index, K: DictionaryKey, 
         .downcast_ref::<Utf8Array<O>>()
         .unwrap();
 
-    let get = |idx| unsafe {
-        let index = keys.value_unchecked(idx as usize);
-        // Note: there is no check that the keys are within bounds of the dictionary.
-        dict.value(index.to_usize().unwrap())
+    let get = |index| unsafe {
+        // safety: indices_sorted_unstable_by is guaranteed to get items in bounds
+        let index = keys.value_unchecked(index);
+        // safety: dictionaries are guaranteed to have valid usize keys
+        let index = index.as_usize();
+        // safety: dictionaries are guaranteed to have keys in bounds
+        dict.value_unchecked(index)
     };
 
     let cmp = |lhs: &&str, rhs: &&str| lhs.cmp(rhs);

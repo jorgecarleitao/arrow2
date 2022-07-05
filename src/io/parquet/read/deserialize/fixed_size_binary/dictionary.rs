@@ -22,6 +22,7 @@ where
 {
     iter: I,
     data_type: DataType,
+    values_data_type: DataType,
     values: Dict,
     items: VecDeque<(Vec<K>, MutableBitmap)>,
     chunk_size: Option<usize>,
@@ -33,13 +34,14 @@ where
     I: DataPages,
 {
     pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>) -> Self {
-        let data_type = match data_type {
+        let values_data_type = match &data_type {
             DataType::Dictionary(_, values, _) => values.as_ref().clone(),
             _ => unreachable!(),
         };
         Self {
             iter,
             data_type,
+            values_data_type,
             values: Dict::Empty,
             items: VecDeque::new(),
             chunk_size,
@@ -73,8 +75,9 @@ where
             &mut self.iter,
             &mut self.items,
             &mut self.values,
+            self.data_type.clone(),
             self.chunk_size,
-            |dict| read_dict(self.data_type.clone(), dict),
+            |dict| read_dict(self.values_data_type.clone(), dict),
         );
         match maybe_state {
             MaybeNext::Some(Ok(dict)) => Some(Ok(dict)),

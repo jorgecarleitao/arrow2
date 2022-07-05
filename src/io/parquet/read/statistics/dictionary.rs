@@ -41,7 +41,7 @@ impl MutableArray for DynMutableDictionary {
         match self.data_type.to_physical_type() {
             PhysicalType::Dictionary(key) => match_integer_type!(key, |$T| {
                 let keys = PrimitiveArray::<$T>::from_iter((0..inner.len() as $T).map(Some));
-                Box::new(DictionaryArray::<$T>::from_data(keys, inner))
+                Box::new(DictionaryArray::<$T>::try_new(self.data_type.clone(), keys, inner).unwrap())
             }),
             _ => todo!(),
         }

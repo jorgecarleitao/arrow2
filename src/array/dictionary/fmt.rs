@@ -15,7 +15,7 @@ pub fn write_value<K: DictionaryKey, W: Write>(
     let values = array.values();
 
     if keys.is_valid(index) {
-        let key = keys.value(index).to_usize().unwrap();
+        let key = array.key_value(index);
         get_display(values.as_ref(), null)(f, key)
     } else {
         write!(f, "{}", null)

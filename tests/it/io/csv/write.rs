@@ -16,7 +16,7 @@ fn data() -> Chunk<Box<dyn Array>> {
     let c6 = PrimitiveArray::<i32>::from_vec(vec![1234, 24680, 85563])
         .to(DataType::Time32(TimeUnit::Second));
     let keys = UInt32Array::from_slice(&[2, 0, 1]);
-    let c7 = DictionaryArray::from_data(keys, Box::new(c1.clone()));
+    let c7 = DictionaryArray::try_from_keys(keys, Box::new(c1.clone())).unwrap();
 
     Chunk::new(vec![
         Box::new(c1) as Box<dyn Array>,
@@ -256,13 +256,13 @@ fn data_array(column: &str) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
         "dictionary[u32]" => {
             let keys = UInt32Array::from_slice(&[2, 1, 0]);
             let values = Utf8Array::<i64>::from_slice(["a b", "c", "d"]).boxed();
-            let array = DictionaryArray::from_data(keys, values);
+            let array = DictionaryArray::try_from_keys(keys, values).unwrap();
             (array.boxed(), vec!["d", "c", "a b"])
         }
         "dictionary[u64]" => {
             let keys = UInt64Array::from_slice(&[2, 1, 0]);
             let values = Utf8Array::<i64>::from_slice(["a b", "c", "d"]).boxed();
-            let array = DictionaryArray::from_data(keys, values);
+            let array = DictionaryArray::try_from_keys(keys, values).unwrap();
             (array.boxed(), vec!["d", "c", "a b"])
         }
         _ => todo!(),

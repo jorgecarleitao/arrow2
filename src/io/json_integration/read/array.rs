@@ -230,7 +230,7 @@ fn to_map(
     Ok(Box::new(MapArray::new(data_type, offsets, field, validity)))
 }
 
-fn to_dictionary<K: DictionaryKey>(
+fn to_dictionary<K: DictionaryKey + NumCast>(
     data_type: DataType,
     field: &IpcField,
     json_col: &ArrowJsonColumn,
@@ -244,7 +244,7 @@ fn to_dictionary<K: DictionaryKey>(
 
     let keys = to_primitive(json_col, K::PRIMITIVE.into());
 
-    let inner_data_type = DictionaryArray::<K>::get_child(&data_type);
+    let inner_data_type = DictionaryArray::<K>::try_get_child(&data_type)?;
     let values = to_array(
         inner_data_type.clone(),
         field,
@@ -252,7 +252,7 @@ fn to_dictionary<K: DictionaryKey>(
         dictionaries,
     )?;
 
-    Ok(Box::new(DictionaryArray::<K>::from_data(keys, values)))
+    DictionaryArray::<K>::try_new(data_type, keys, values).map(|a| a.boxed())
 }
 
 /// Construct an [`Array`] from the JSON integration format

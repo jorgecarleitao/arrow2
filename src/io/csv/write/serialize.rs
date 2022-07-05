@@ -471,17 +471,15 @@ fn serialize_utf8_dict<'a, K: DictionaryKey, O: Offset>(
     array: &'a dyn Any,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a> {
     let array = array.downcast_ref::<DictionaryArray<K>>().unwrap();
-    let keys = array.keys();
     let values = array
         .values()
         .as_any()
         .downcast_ref::<Utf8Array<O>>()
         .unwrap();
     Box::new(BufStreamingIterator::new(
-        keys.iter(),
+        array.keys_iter(),
         move |x, buf| {
-            if let Some(x) = x {
-                let i = x.to_usize().unwrap();
+            if let Some(i) = x {
                 if !values.is_null(i) {
                     let val = values.value(i);
                     buf.extend_from_slice(val.as_bytes());
