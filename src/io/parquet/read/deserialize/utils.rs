@@ -343,7 +343,8 @@ pub(super) trait PageState<'a>: std::fmt::Debug {
 }
 
 /// The state of a partially deserialized page
-pub(super) trait DecodedState<'a> {
+pub(super) trait DecodedState<'a>: std::fmt::Debug {
+    // the number of values that this decoder already consumed
     fn len(&self) -> usize;
 }
 

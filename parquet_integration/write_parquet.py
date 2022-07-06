@@ -223,6 +223,10 @@ def case_struct() -> Tuple[dict, pa.Schema, str]:
                     ]
                 ),
             ),
+            pa.field(
+                "struct_nullable",
+                pa.struct(struct_fields),
+            ),
         ]
     )
 
@@ -230,6 +234,12 @@ def case_struct() -> Tuple[dict, pa.Schema, str]:
         [pa.array(string), pa.array(boolean)],
         fields=struct_fields,
     )
+    struct_nullable = pa.StructArray.from_arrays(
+        [pa.array(string), pa.array(boolean)],
+        fields=struct_fields,
+        mask=pa.array([False, False, True, False, False, False, False, False, False, False]),
+    )
+
     return (
         {
             "struct": struct,
@@ -237,6 +247,7 @@ def case_struct() -> Tuple[dict, pa.Schema, str]:
                 [struct, pa.array(boolean)],
                 names=["f1", "f2"],
             ),
+            "struct_nullable": struct_nullable,
         },
         schema,
         f"struct_nullable_10.parquet",
@@ -307,16 +318,16 @@ def write_pyarrow(
         base_path = f"{base_path}/{compression}"
 
     if multiple_pages:
-        data_page_size = 2 ** 10  # i.e. a small number to ensure multiple pages
+        data_page_size = 2**10  # i.e. a small number to ensure multiple pages
     else:
-        data_page_size = 2 ** 40  # i.e. a large number to ensure a single page
+        data_page_size = 2**40  # i.e. a large number to ensure a single page
 
     t = pa.table(data, schema=schema)
     os.makedirs(base_path, exist_ok=True)
     pa.parquet.write_table(
         t,
         f"{base_path}/{path}",
-        row_group_size=2 ** 40,
+        row_group_size=2**40,
         use_dictionary=use_dictionary,
         compression=compression,
         write_statistics=True,
@@ -325,7 +336,14 @@ def write_pyarrow(
     )
 
 
-for case in [case_basic_nullable, case_basic_required, case_nested, case_struct, case_nested_edge, case_map]:
+for case in [
+    case_basic_nullable,
+    case_basic_required,
+    case_nested,
+    case_struct,
+    case_nested_edge,
+    case_map,
+]:
     for version in [1, 2]:
         for use_dict in [True, False]:
             for compression in ["lz4", None, "snappy"]:
@@ -351,14 +369,14 @@ def case_benches_required(size):
 # for read benchmarks
 for i in range(10, 22, 2):
     # two pages (dict)
-    write_pyarrow(case_benches(2 ** i), 1, True, False, None)
+    write_pyarrow(case_benches(2**i), 1, True, False, None)
     # single page
-    write_pyarrow(case_benches(2 ** i), 1, False, False, None)
+    write_pyarrow(case_benches(2**i), 1, False, False, None)
     # single page required
-    write_pyarrow(case_benches_required(2 ** i), 1, False, False, None)
+    write_pyarrow(case_benches_required(2**i), 1, False, False, None)
     # multiple pages
-    write_pyarrow(case_benches(2 ** i), 1, False, True, None)
+    write_pyarrow(case_benches(2**i), 1, False, True, None)
     # multiple compressed pages
-    write_pyarrow(case_benches(2 ** i), 1, False, True, "snappy")
+    write_pyarrow(case_benches(2**i), 1, False, True, "snappy")
     # single compressed page
-    write_pyarrow(case_benches(2 ** i), 1, False, False, "snappy")
+    write_pyarrow(case_benches(2**i), 1, False, False, "snappy")

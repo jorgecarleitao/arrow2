@@ -15,42 +15,22 @@ use crate::{
 
 use super::super::nested_utils::*;
 use super::super::utils;
-use super::super::utils::{Decoder, MaybeNext};
+use super::super::utils::MaybeNext;
 use super::super::DataPages;
-
-// The state of a required DataPage with a boolean physical type
-#[derive(Debug)]
-struct Required<'a> {
-    values: &'a [u8],
-    // invariant: offset <= length;
-    offset: usize,
-    length: usize,
-}
-
-impl<'a> Required<'a> {
-    pub fn try_new(page: &'a DataPage) -> Result<Self> {
-        let (_, _, values) = split_buffer(page)?;
-        Ok(Self {
-            values,
-            offset: 0,
-            length: page.num_values(),
-        })
-    }
-}
 
 // The state of a `DataPage` of `Boolean` parquet boolean type
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum State<'a> {
-    Optional(Optional<'a>, BitmapIter<'a>),
-    Required(Required<'a>),
+    Optional(BitmapIter<'a>),
+    Required(BitmapIter<'a>),
 }
 
 impl<'a> State<'a> {
     pub fn len(&self) -> usize {
         match self {
-            State::Optional(optional, _) => optional.len(),
-            State::Required(page) => page.length - page.offset,
+            State::Optional(iter) => iter.size_hint().0,
+            State::Required(iter) => iter.size_hint().0,
         }
     }
 }
@@ -64,7 +44,7 @@ impl<'a> utils::PageState<'a> for State<'a> {
 #[derive(Default)]
 struct BooleanDecoder {}
 
-impl<'a> Decoder<'a> for BooleanDecoder {
+impl<'a> NestedDecoder<'a> for BooleanDecoder {
     type State = State<'a>;
     type DecodedState = (MutableBitmap, MutableBitmap);
 
@@ -78,9 +58,14 @@ impl<'a> Decoder<'a> for BooleanDecoder {
                 let (_, _, values) = split_buffer(page)?;
                 let values = BitmapIter::new(values, 0, values.len() * 8);
 
-                Ok(State::Optional(Optional::try_new(page)?, values))
+                Ok(State::Optional(values))
             }
-            (Encoding::Plain, false, false) => Ok(State::Required(Required::try_new(page)?)),
+            (Encoding::Plain, false, false) => {
+                let (_, _, values) = split_buffer(page)?;
+                let values = BitmapIter::new(values, 0, values.len() * 8);
+
+                Ok(State::Required(values))
+            }
             _ => Err(utils::not_implemented(page)),
         }
     }
@@ -92,25 +77,25 @@ impl<'a> Decoder<'a> for BooleanDecoder {
         )
     }
 
-    fn extend_from_state(
-        &self,
-        state: &mut State,
-        decoded: &mut Self::DecodedState,
-        additional: usize,
-    ) {
+    fn push_valid(&self, state: &mut State, decoded: &mut Self::DecodedState) {
         let (values, validity) = decoded;
         match state {
-            State::Optional(page_validity, page_values) => {
-                let items = page_validity.by_ref().take(additional);
-                let items = Zip::new(items, page_values.by_ref());
-
-                read_optional_values(items, values, validity)
+            State::Optional(page_values) => {
+                let value = page_values.next().unwrap_or_default();
+                values.push(value);
+                validity.push(true);
             }
-            State::Required(page) => {
-                values.extend_from_slice(page.values, page.offset, additional);
-                page.offset += additional;
+            State::Required(page_values) => {
+                let value = page_values.next().unwrap_or_default();
+                values.push(value);
             }
         }
+    }
+
+    fn push_null(&self, decoded: &mut Self::DecodedState) {
+        let (values, validity) = decoded;
+        values.push(false);
+        validity.push(false);
     }
 }
 
@@ -119,9 +104,7 @@ impl<'a> Decoder<'a> for BooleanDecoder {
 pub struct ArrayIterator<I: DataPages> {
     iter: I,
     init: Vec<InitNested>,
-    // invariant: items.len() == nested.len()
-    items: VecDeque<(MutableBitmap, MutableBitmap)>,
-    nested: VecDeque<NestedState>,
+    items: VecDeque<(NestedState, (MutableBitmap, MutableBitmap))>,
     chunk_size: Option<usize>,
 }
 
@@ -131,7 +114,6 @@ impl<I: DataPages> ArrayIterator<I> {
             iter,
             init,
             items: VecDeque::new(),
-            nested: VecDeque::new(),
             chunk_size,
         }
     }
@@ -148,7 +130,6 @@ impl<I: DataPages> Iterator for ArrayIterator<I> {
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
-            &mut self.nested,
             &self.init,
             self.chunk_size,
             &BooleanDecoder::default(),
