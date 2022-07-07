@@ -7,7 +7,7 @@ use crate::{
 };
 
 macro_rules! key_cast {
-    ($keys:expr, $values:expr, $array:expr, $to_keys_type:expr, $to_type:ty) => {{
+    ($keys:expr, $values:expr, $array:expr, $to_keys_type:expr, $to_type:ty, $to_datatype:expr) => {{
         let cast_keys = primitive_to_primitive::<_, $to_type>($keys, $to_keys_type);
 
         // Failure to cast keys (because they don't fit in the
@@ -15,7 +15,8 @@ macro_rules! key_cast {
         if cast_keys.null_count() > $keys.null_count() {
             return Err(Error::Overflow);
         }
-        DictionaryArray::try_new($array.data_type().clone(), $keys.clone(), $values.clone())
+        DictionaryArray::try_new_unchecked($to_datatype, cast_keys, $values.clone())
+            .map(|x| x.boxed())
     }};
 }
 
@@ -88,8 +89,9 @@ where
             Box::new(values.data_type().clone()),
             is_ordered,
         );
-        // some of the values may not fit in `usize` and thus this needs to be checked
-        DictionaryArray::try_new(data_type, casted_keys, values.clone())
+        // Safety
+        // we errored if any cast overflowed
+        unsafe { DictionaryArray::try_new_unchecked(data_type, casted_keys, values.clone()) }
     }
 }
 
@@ -134,11 +136,15 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey + num_traits::NumCast>(
             let values = cast(values.as_ref(), to_values_type, options)?;
 
             // create the appropriate array type
-            let data_type = (*to_keys_type).into();
-            match_integer_type!(to_keys_type, |$T| {
-                key_cast!(keys, values, array, &data_type, $T)
-            })
-            .map(|x| x.boxed())
+            let to_key_type = (*to_keys_type).into();
+
+            // Safety:
+            // we return an error on overflow so the integers remain within bounds
+            unsafe {
+                match_integer_type!(to_keys_type, |$T| {
+                    key_cast!(keys, values, array, &to_key_type, $T, to_type.clone())
+                })
+            }
         }
         _ => unpack_dictionary::<K>(keys, values.as_ref(), to_type, options),
     }
