@@ -9,7 +9,7 @@ use crate::error::Result;
 /// Implementing this trait incorrect will lead to UB
 pub(crate) unsafe trait ToFfi {
     /// The pointers to the buffers.
-    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>>;
+    fn buffers(&self) -> Vec<Option<*const u8>>;
 
     /// The children
     fn children(&self) -> Vec<Box<dyn Array>> {
@@ -47,7 +47,7 @@ macro_rules! ffi_dyn {
 
 type BuffersChildren = (
     usize,
-    Vec<Option<std::ptr::NonNull<u8>>>,
+    Vec<Option<*const u8>>,
     Vec<Box<dyn Array>>,
     Option<Box<dyn Array>>,
 );

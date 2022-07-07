@@ -8,7 +8,7 @@ use crate::{
 use super::FixedSizeBinaryArray;
 
 unsafe impl ToFfi for FixedSizeBinaryArray {
-    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+    fn buffers(&self) -> Vec<Option<*const u8>> {
         vec![
             self.validity.as_ref().map(|x| x.as_ptr()),
             Some(self.values.as_ptr().cast::<u8>()),

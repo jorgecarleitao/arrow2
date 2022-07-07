@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::{
     array::*,
     bitmap::{utils::bytes_for, Bitmap},
-    buffer::{bytes::Bytes, Buffer},
+    buffer::{Buffer, Bytes},
     datatypes::{DataType, PhysicalType},
     error::{Error, Result},
     ffi::schema::get_child,
@@ -101,7 +101,7 @@ impl ArrowArray {
         let buffers_ptr = buffers
             .iter()
             .map(|maybe_buffer| match maybe_buffer {
-                Some(b) => b.as_ptr() as *const std::os::raw::c_void,
+                Some(b) => *b as *const std::os::raw::c_void,
                 None => std::ptr::null(),
             })
             .collect::<Box<[_]>>();
@@ -195,7 +195,7 @@ unsafe fn create_buffer<T: NativeType>(
     let len = buffer_len(array, data_type, index)?;
     let offset = buffer_offset(array, data_type, index);
     let bytes = ptr
-        .map(|ptr| Bytes::from_owned(ptr, len, owner))
+        .map(|ptr| Bytes::from_foreign(ptr.as_ptr(), len, owner))
         .ok_or_else(|| Error::OutOfSpec(format!("The buffer at position {} is null", index)))?;
 
     Ok(Buffer::from_bytes(bytes).slice(offset, len - offset))
@@ -226,7 +226,7 @@ unsafe fn create_bitmap(
     let bytes_len = bytes_for(offset + len);
     let ptr = NonNull::new(ptr as *mut u8);
     let bytes = ptr
-        .map(|ptr| Bytes::from_owned(ptr, bytes_len, owner))
+        .map(|ptr| Bytes::from_foreign(ptr.as_ptr(), bytes_len, owner))
         .ok_or_else(|| {
             Error::OutOfSpec(format!(
                 "The buffer {} is a null pointer and cannot be interpreted as a bitmap",

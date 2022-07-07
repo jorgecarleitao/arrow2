@@ -4,7 +4,7 @@ use super::super::{ffi::ToFfi, Array};
 use super::UnionArray;
 
 unsafe impl ToFfi for UnionArray {
-    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+    fn buffers(&self) -> Vec<Option<*const u8>> {
         if let Some(offsets) = &self.offsets {
             vec![
                 Some(self.types.as_ptr().cast::<u8>()),

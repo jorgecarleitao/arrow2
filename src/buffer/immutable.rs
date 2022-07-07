@@ -1,8 +1,8 @@
-use std::{iter::FromIterator, sync::Arc, usize};
+use std::{iter::FromIterator, ops::Deref, sync::Arc, usize};
 
 use crate::types::NativeType;
 
-use super::bytes::Bytes;
+use super::Bytes;
 
 /// [`Buffer`] is a contiguous memory region of plain old data types
 /// that can be shared across thread boundaries.
@@ -33,7 +33,7 @@ use super::bytes::Bytes;
 /// // but cloning forbids getting mut since `slice` and `buffer` now share data
 /// assert_eq!(buffer.get_mut(), None);
 /// ```
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub struct Buffer<T: NativeType> {
     /// the internal byte buffer.
     data: Arc<Bytes<T>>,
@@ -44,6 +44,13 @@ pub struct Buffer<T: NativeType> {
     // the length of the buffer. Given a region `data` of N bytes, [offset..offset+length] is visible
     // to this buffer.
     length: usize,
+}
+
+impl<T: NativeType> PartialEq for Buffer<T> {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.deref() == other.deref()
+    }
 }
 
 impl<T: NativeType> std::fmt::Debug for Buffer<T> {
@@ -127,8 +134,8 @@ impl<T: NativeType> Buffer<T> {
 
     /// Returns a pointer to the start of this buffer.
     #[inline]
-    pub(crate) fn as_ptr(&self) -> std::ptr::NonNull<T> {
-        self.data.ptr()
+    pub(crate) fn as_ptr(&self) -> *const T {
+        self.data.deref().as_ptr()
     }
 
     /// Returns the offset of this buffer.

@@ -2,6 +2,8 @@
 
 mod immutable;
 
-pub(crate) mod bytes;
+use crate::ffi::InternalArrowArray;
+
+pub(crate) type Bytes<T> = foreign_vec::ForeignVec<Box<InternalArrowArray>, T>;
 
 pub use immutable::Buffer;

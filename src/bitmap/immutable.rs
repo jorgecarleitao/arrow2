@@ -1,8 +1,8 @@
-use either::Either;
-use std::iter::FromIterator;
-use std::sync::Arc;
+use std::{iter::FromIterator, ops::Deref, sync::Arc};
 
-use crate::{buffer::bytes::Bytes, error::Error, trusted_len::TrustedLen};
+use either::Either;
+
+use crate::{buffer::Bytes, error::Error, trusted_len::TrustedLen};
 
 use super::{
     chunk_iter_to_vec,
@@ -216,8 +216,8 @@ impl Bitmap {
 
     /// Returns a pointer to the start of this [`Bitmap`] (ignores `offsets`)
     /// This pointer is allocated iff `self.len() > 0`.
-    pub(crate) fn as_ptr(&self) -> std::ptr::NonNull<u8> {
-        self.bytes.ptr()
+    pub(crate) fn as_ptr(&self) -> *const u8 {
+        self.bytes.deref().as_ptr()
     }
 
     /// Returns a pointer to the start of this [`Bitmap`] (ignores `offsets`)
