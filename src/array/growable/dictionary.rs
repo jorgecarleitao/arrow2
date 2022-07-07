@@ -88,11 +88,22 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
         let validity = std::mem::take(&mut self.key_validity);
         let key_values = std::mem::take(&mut self.key_values);
 
+        #[cfg(debug_assertions)]
+        {
+            crate::array::specification::check_indexes(&key_values, self.values.len()).unwrap();
+        }
         let keys =
-            PrimitiveArray::<T>::try_new(T::PRIMITIVE.into(), key_values.into(), validity.into())
-                .unwrap();
+            PrimitiveArray::<T>::new(T::PRIMITIVE.into(), key_values.into(), validity.into());
 
-        DictionaryArray::<T>::try_new(self.data_type.clone(), keys, self.values.clone()).unwrap()
+        // Safety - the invariant of this struct ensures that this is up-held
+        unsafe {
+            DictionaryArray::<T>::try_new_unchecked(
+                self.data_type.clone(),
+                keys,
+                self.values.clone(),
+            )
+            .unwrap()
+        }
     }
 }
 
@@ -141,12 +152,7 @@ impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
 
 impl<'a, T: DictionaryKey> From<GrowableDictionary<'a, T>> for DictionaryArray<T> {
     #[inline]
-    fn from(val: GrowableDictionary<'a, T>) -> Self {
-        let data_type = T::PRIMITIVE.into();
-        let keys =
-            PrimitiveArray::<T>::try_new(data_type, val.key_values.into(), val.key_validity.into())
-                .unwrap();
-
-        DictionaryArray::<T>::try_new(val.data_type.clone(), keys, val.values).unwrap()
+    fn from(mut val: GrowableDictionary<'a, T>) -> Self {
+        val.to()
     }
 }

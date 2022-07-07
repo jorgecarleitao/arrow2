@@ -104,12 +104,20 @@ impl<'a, O: Offset> GrowableList<'a, O> {
         let offsets = std::mem::take(&mut self.offsets);
         let values = self.values.as_box();
 
-        ListArray::<O>::new(
-            self.arrays[0].data_type().clone(),
-            offsets.into(),
-            values,
-            validity.into(),
-        )
+        #[cfg(debug_assertions)]
+        {
+            crate::array::specification::try_check_offsets(&offsets, values.len()).unwrap();
+        }
+
+        // Safety - the invariant of this struct ensures that this is up-held
+        unsafe {
+            ListArray::<O>::new_unchecked(
+                self.arrays[0].data_type().clone(),
+                offsets.into(),
+                values,
+                validity.into(),
+            )
+        }
     }
 }
 
@@ -135,15 +143,7 @@ impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
 }
 
 impl<'a, O: Offset> From<GrowableList<'a, O>> for ListArray<O> {
-    fn from(val: GrowableList<'a, O>) -> Self {
-        let mut values = val.values;
-        let values = values.as_box();
-
-        ListArray::<O>::new(
-            val.arrays[0].data_type().clone(),
-            val.offsets.into(),
-            values,
-            val.validity.into(),
-        )
+    fn from(mut val: GrowableList<'a, O>) -> Self {
+        val.to()
     }
 }
