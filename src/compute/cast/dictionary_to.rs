@@ -143,11 +143,9 @@ pub(super) fn dictionary_cast_dyn<K: DictionaryKey + num_traits::NumCast>(
 
             // Safety:
             // we return an error on overflow so the integers remain within bounds
-            unsafe {
-                match_integer_type!(to_keys_type, |$T| {
-                    key_cast!(keys, values, array, &to_key_type, $T, to_type.clone())
-                })
-            }
+            match_integer_type!(to_keys_type, |$T| {
+                key_cast!(keys, values, array, &to_key_type, $T, to_type.clone())
+            })
         }
         _ => unpack_dictionary::<K>(keys, values.as_ref(), to_type, options),
     }
