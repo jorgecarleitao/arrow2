@@ -1,6 +1,5 @@
-use std::collections::HashSet;
-
 use crate::datatypes::{DataType, Field, TimeUnit};
+use ahash::AHashSet;
 
 pub(super) const RFC3339: &str = "%Y-%m-%dT%H:%M:%S%.f%:z";
 
@@ -78,7 +77,7 @@ pub fn infer(bytes: &[u8]) -> DataType {
     }
 }
 
-fn merge_fields(field_name: &str, possibilities: &mut HashSet<DataType>) -> Field {
+fn merge_fields(field_name: &str, possibilities: &mut AHashSet<DataType>) -> Field {
     // determine data type based on possible types
     // if there are incompatible types, use DataType::Utf8
     let data_type = match possibilities.len() {
@@ -101,7 +100,7 @@ fn merge_fields(field_name: &str, possibilities: &mut HashSet<DataType>) -> Fiel
 
 pub(crate) fn merge_schema(
     headers: &[String],
-    column_types: &mut [HashSet<DataType>],
+    column_types: &mut [AHashSet<DataType>],
 ) -> Vec<Field> {
     headers
         .iter()

@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use ahash::AHashMap;
 use arrow2::{
     array::{Float32Array, Int32Array},
     chunk::Chunk,
@@ -46,7 +45,7 @@ async fn test_parquet_async_roundtrip() {
 
     buffer.set_position(0);
     let metadata = read_metadata_async(&mut buffer).await.unwrap();
-    let kv = HashMap::<String, Option<String>>::from_iter(
+    let kv = AHashMap::<String, Option<String>>::from_iter(
         metadata
             .key_value_metadata()
             .to_owned()

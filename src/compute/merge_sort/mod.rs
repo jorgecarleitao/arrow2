@@ -56,8 +56,9 @@
 //! To serialize slices, e.g. for checkpointing or transfer via Arrow's IPC, you can store
 //! them as 3 non-null primitive arrays (e.g. `PrimitiveArray<i64>`).
 
+use ahash::AHashMap;
+use std::cmp::Ordering;
 use std::iter::once;
-use std::{cmp::Ordering, collections::HashMap};
 
 use itertools::Itertools;
 
@@ -498,7 +499,7 @@ pub fn build_comparator_impl<'a>(
                 .collect::<Result<Vec<_>>>()?;
             Ok(((lhs_index, rhs_index), multi_column_comparator))
         })
-        .collect::<Result<HashMap<(usize, usize), Vec<(IsValid, IsValid, DynComparator)>>>>()?;
+        .collect::<Result<AHashMap<(usize, usize), Vec<(IsValid, IsValid, DynComparator)>>>>()?;
 
     // prepare a comparison function taking into account _nulls_ and sort options
     let cmp = move |left_index, left_row, right_index, right_row| {

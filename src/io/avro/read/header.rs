@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use ahash::AHashMap;
 use avro_schema::Schema;
 use serde_json;
 
@@ -9,7 +8,7 @@ use super::Compression;
 
 /// Deserializes the Avro header into an Avro [`Schema`] and optional [`Compression`].
 pub(crate) fn deserialize_header(
-    header: HashMap<String, Vec<u8>>,
+    header: AHashMap<String, Vec<u8>>,
 ) -> Result<(Schema, Option<Compression>)> {
     let schema = header
         .get("avro.schema")

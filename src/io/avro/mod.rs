@@ -48,7 +48,7 @@ macro_rules! avro_decode {
 
 macro_rules! read_header {
     ($reader:ident $($_await:tt)*) => {{
-        let mut items = HashMap::new();
+        let mut items = ahash::AHashMap::new();
 
         loop {
             let len = zigzag_i64($reader)$($_await)*? as usize;

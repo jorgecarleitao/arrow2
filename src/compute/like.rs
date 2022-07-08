@@ -1,6 +1,6 @@
 //! Contains "like" operators such as [`like_utf8`] and [`like_utf8_scalar`].
-use std::collections::HashMap;
 
+use ahash::AHashMap;
 use regex::bytes::Regex as BytesRegex;
 use regex::Regex;
 
@@ -35,7 +35,7 @@ fn a_like_utf8<O: Offset, F: Fn(bool) -> bool>(
 
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
-    let mut map = HashMap::new();
+    let mut map = AHashMap::new();
 
     let values =
         Bitmap::try_from_trusted_len_iter(lhs.iter().zip(rhs.iter()).map(|(lhs, rhs)| {
@@ -179,7 +179,7 @@ fn a_like_binary<O: Offset, F: Fn(bool) -> bool>(
 
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
-    let mut map = HashMap::new();
+    let mut map = AHashMap::new();
 
     let values =
         Bitmap::try_from_trusted_len_iter(lhs.iter().zip(rhs.iter()).map(|(lhs, rhs)| {

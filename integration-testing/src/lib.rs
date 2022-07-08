@@ -22,11 +22,11 @@ use arrow2::io::ipc::IpcField;
 use serde_json::Value;
 
 use arrow2::chunk::Chunk;
+use arrow2::AHashMap;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::json_integration::{read, ArrowJsonBatch, ArrowJsonDictionaryBatch};
 
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 
@@ -43,7 +43,7 @@ pub struct ArrowFile {
     pub fields: Vec<IpcField>,
     // we can evolve this into a concrete Arrow type
     // this is temporarily not being read from
-    pub _dictionaries: HashMap<i64, ArrowJsonDictionaryBatch>,
+    pub _dictionaries: AHashMap<i64, ArrowJsonDictionaryBatch>,
     pub chunks: Vec<Chunk<Box<dyn Array>>>,
 }
 
@@ -54,7 +54,7 @@ pub fn read_json_file(json_name: &str) -> Result<ArrowFile> {
 
     let (schema, fields) = read::deserialize_schema(&arrow_json["schema"])?;
     // read dictionaries
-    let mut dictionaries = HashMap::new();
+    let mut dictionaries = AHashMap::new();
     if let Some(dicts) = arrow_json.get("dictionaries") {
         for d in dicts
             .as_array()

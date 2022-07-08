@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use ahash::AHashMap;
 use std::convert::TryInto;
 use std::io::{Read, Seek, SeekFrom};
 
@@ -119,7 +119,7 @@ pub fn read_file_dictionaries<R: Read + Seek>(
     let blocks = if let Some(blocks) = metadata.dictionaries.as_deref() {
         blocks
     } else {
-        return Ok(HashMap::new());
+        return Ok(AHashMap::new());
     };
     // use a temporary smaller scratch for the messages
     let mut message_scratch = Default::default();
@@ -326,7 +326,7 @@ pub struct FileReader<R: Read + Seek> {
     // the dictionaries are going to be read
     dictionaries: Option<Dictionaries>,
     current_block: usize,
-    projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
+    projection: Option<(Vec<usize>, AHashMap<usize, usize>, Schema)>,
     remaining: usize,
     data_scratch: Vec<u8>,
     message_scratch: Vec<u8>,

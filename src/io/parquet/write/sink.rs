@@ -1,4 +1,5 @@
-use std::{collections::HashMap, pin::Pin, task::Poll};
+use ahash::AHashMap;
+use std::{pin::Pin, task::Poll};
 
 use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink, TryFutureExt};
 use parquet2::metadata::KeyValue;
@@ -62,7 +63,7 @@ pub struct FileSink<'a, W: AsyncWrite + Send + Unpin> {
     schema: Schema,
     parquet_schema: SchemaDescriptor,
     /// Key-value metadata that will be written to the file on close.
-    pub metadata: HashMap<String, Option<String>>,
+    pub metadata: AHashMap<String, Option<String>>,
 }
 
 impl<'a, W> FileSink<'a, W>
@@ -105,7 +106,7 @@ where
             schema,
             encodings,
             parquet_schema,
-            metadata: HashMap::default(),
+            metadata: AHashMap::default(),
         })
     }
 

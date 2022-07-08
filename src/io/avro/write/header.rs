@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use ahash::AHashMap;
 use avro_schema::Schema;
 use serde_json;
 
@@ -11,10 +10,10 @@ use super::Compression;
 pub(crate) fn serialize_header(
     schema: &Schema,
     compression: Option<Compression>,
-) -> Result<HashMap<String, Vec<u8>>> {
+) -> Result<AHashMap<String, Vec<u8>>> {
     let schema = serde_json::to_string(schema).map_err(|e| Error::ExternalFormat(e.to_string()))?;
 
-    let mut header = HashMap::<String, Vec<u8>>::default();
+    let mut header = AHashMap::<String, Vec<u8>>::default();
 
     header.insert("avro.schema".to_string(), schema.into_bytes());
     if let Some(compression) = compression {

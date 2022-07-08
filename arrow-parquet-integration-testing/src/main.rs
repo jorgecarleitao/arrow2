@@ -1,9 +1,10 @@
 use std::fs::File;
-use std::{collections::HashMap, io::Read};
+use std::{io::Read};
 
 use arrow2::array::Array;
 use arrow2::io::ipc::IpcField;
 use arrow2::{
+    AHashMap,
     chunk::Chunk,
     datatypes::{DataType, Schema},
     error::Result,
@@ -40,7 +41,7 @@ pub fn read_gzip_json(
     let (schema, ipc_fields) = read::deserialize_schema(&schema)?;
 
     // read dictionaries
-    let mut dictionaries = HashMap::new();
+    let mut dictionaries = AHashMap::new();
     if let Some(dicts) = arrow_json.dictionaries {
         for json_dict in dicts {
             // TODO: convert to a concrete Arrow type

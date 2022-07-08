@@ -1,4 +1,5 @@
-use std::collections::{HashMap, VecDeque};
+use ahash::AHashMap;
+use std::collections::VecDeque;
 use std::io::{Read, Seek};
 
 use arrow_format;
@@ -322,14 +323,14 @@ mod tests {
 pub fn prepare_projection(
     fields: &[Field],
     mut projection: Vec<usize>,
-) -> (Vec<usize>, HashMap<usize, usize>, Vec<Field>) {
+) -> (Vec<usize>, AHashMap<usize, usize>, Vec<Field>) {
     let fields = projection.iter().map(|x| fields[*x].clone()).collect();
 
     // todo: find way to do this more efficiently
     let mut indices = (0..projection.len()).collect::<Vec<_>>();
     indices.sort_unstable_by_key(|&i| &projection[i]);
     let map = indices.iter().copied().enumerate().fold(
-        HashMap::default(),
+        AHashMap::default(),
         |mut acc, (index, new_index)| {
             acc.insert(index, new_index);
             acc
@@ -355,7 +356,7 @@ pub fn prepare_projection(
 
 pub fn apply_projection(
     chunk: Chunk<Box<dyn Array>>,
-    map: &HashMap<usize, usize>,
+    map: &AHashMap<usize, usize>,
 ) -> Chunk<Box<dyn Array>> {
     // re-order according to projection
     let arrays = chunk.into_arrays();

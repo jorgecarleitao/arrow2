@@ -1,6 +1,5 @@
 //! Async Avro
-use std::collections::HashMap;
-
+use ahash::AHashMap;
 use avro_schema::{Record, Schema as AvroSchema};
 use futures::AsyncRead;
 use futures::AsyncReadExt;
@@ -56,6 +55,6 @@ async fn _read_binary<R: AsyncRead + Unpin + Send>(reader: &mut R) -> Result<Vec
 
 async fn read_header<R: AsyncRead + Unpin + Send>(
     reader: &mut R,
-) -> Result<HashMap<String, Vec<u8>>> {
+) -> Result<AHashMap<String, Vec<u8>>> {
     read_header!(reader.await)
 }

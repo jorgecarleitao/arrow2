@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use ahash::AHashMap;
 use std::io::Read;
 
 use avro_schema::Schema;
@@ -29,7 +29,7 @@ fn _read_binary<R: Read>(reader: &mut R) -> Result<Vec<u8>> {
     Ok(buf)
 }
 
-fn read_header<R: Read>(reader: &mut R) -> Result<HashMap<String, Vec<u8>>> {
+fn read_header<R: Read>(reader: &mut R) -> Result<AHashMap<String, Vec<u8>>> {
     read_header!(reader)
 }
 
