@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Seek};
 
 use arrow_format;
@@ -323,12 +323,6 @@ pub fn prepare_projection(
     fields: &[Field],
     mut projection: Vec<usize>,
 ) -> (Vec<usize>, HashMap<usize, usize>, Vec<Field>) {
-    assert_eq!(
-        projection.iter().collect::<HashSet<_>>().len(),
-        projection.len(),
-        "The projection on IPC must not contain duplicates"
-    );
-
     let fields = projection.iter().map(|x| fields[*x].clone()).collect();
 
     // todo: find way to do this more efficiently
@@ -337,13 +331,24 @@ pub fn prepare_projection(
     let map = indices.iter().copied().enumerate().fold(
         HashMap::default(),
         |mut acc, (index, new_index)| {
-            if !acc.contains_key(&new_index) {
-                acc.insert(index, new_index);
-            };
+            acc.insert(index, new_index);
             acc
         },
     );
     projection.sort_unstable();
+
+    // check unique
+    if !projection.is_empty() {
+        let mut previous = projection[0];
+
+        for &i in &projection[1..] {
+            assert!(
+                previous < i,
+                "The projection on IPC must not contain duplicates"
+            );
+            previous = i;
+        }
+    }
 
     (projection, map, fields)
 }
@@ -353,9 +358,11 @@ pub fn apply_projection(
     map: &HashMap<usize, usize>,
 ) -> Chunk<Box<dyn Array>> {
     // re-order according to projection
-    let mut arrays = chunk.into_arrays();
-    map.iter().for_each(|(old, new)| {
-        arrays.swap(*old, *new);
-    });
-    Chunk::new(arrays)
+    let arrays = chunk.into_arrays();
+    let mut new_arrays = arrays.clone();
+
+    map.iter()
+        .for_each(|(old, new)| new_arrays[*new] = arrays[*old].clone());
+
+    Chunk::new(new_arrays)
 }
