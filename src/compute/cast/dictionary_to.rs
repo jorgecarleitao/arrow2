@@ -15,7 +15,10 @@ macro_rules! key_cast {
         if cast_keys.null_count() > $keys.null_count() {
             return Err(Error::Overflow);
         }
-        DictionaryArray::try_new_unchecked($to_datatype, cast_keys, $values.clone())
+        // Safety: this is safe because given a type `T` that fits in a `usize`, casting it to type `P` either overflows or also fits in a `usize`
+        unsafe {
+             DictionaryArray::try_new_unchecked($to_datatype, cast_keys, $values.clone())
+        }
             .map(|x| x.boxed())
     }};
 }
