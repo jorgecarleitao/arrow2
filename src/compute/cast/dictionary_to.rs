@@ -92,8 +92,7 @@ where
             Box::new(values.data_type().clone()),
             is_ordered,
         );
-        // Safety
-        // we errored if any cast overflowed
+        // Safety: this is safe because given a type `T` that fits in a `usize`, casting it to type `P` either overflows or also fits in a `usize`
         unsafe { DictionaryArray::try_new_unchecked(data_type, casted_keys, values.clone()) }
     }
 }
