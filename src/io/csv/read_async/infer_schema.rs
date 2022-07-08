@@ -1,6 +1,5 @@
-use std::collections::HashSet;
-
 use super::{AsyncReader, ByteRecord};
+use ahash::AHashSet;
 
 use crate::datatypes::{DataType, Field};
 use crate::error::Result;
@@ -41,7 +40,7 @@ where
 
     let header_length = headers.len();
     // keep track of inferred field types
-    let mut column_types: Vec<HashSet<DataType>> = vec![HashSet::new(); header_length];
+    let mut column_types: Vec<AHashSet<DataType>> = vec![AHashSet::new(); header_length];
 
     let mut records_count = 0;
 

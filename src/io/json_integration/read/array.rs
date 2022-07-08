@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use ahash::AHashMap;
 use num_traits::NumCast;
 use serde_json::Value;
 
@@ -192,7 +191,7 @@ fn to_list<O: Offset>(
     json_col: &ArrowJsonColumn,
     data_type: DataType,
     field: &IpcField,
-    dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
+    dictionaries: &AHashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Box<dyn Array>> {
     let validity = to_validity(&json_col.validity);
 
@@ -214,7 +213,7 @@ fn to_map(
     json_col: &ArrowJsonColumn,
     data_type: DataType,
     field: &IpcField,
-    dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
+    dictionaries: &AHashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Box<dyn Array>> {
     let validity = to_validity(&json_col.validity);
 
@@ -234,7 +233,7 @@ fn to_dictionary<K: DictionaryKey + NumCast>(
     data_type: DataType,
     field: &IpcField,
     json_col: &ArrowJsonColumn,
-    dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
+    dictionaries: &AHashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Box<dyn Array>> {
     // find dictionary
     let dict_id = field.dictionary_id.unwrap();
@@ -260,7 +259,7 @@ pub fn to_array(
     data_type: DataType,
     field: &IpcField,
     json_col: &ArrowJsonColumn,
-    dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
+    dictionaries: &AHashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Box<dyn Array>> {
     use PhysicalType::*;
     match data_type.to_physical_type() {
@@ -409,7 +408,7 @@ pub fn deserialize_chunk(
     schema: &Schema,
     ipc_fields: &[IpcField],
     json_batch: &ArrowJsonBatch,
-    json_dictionaries: &HashMap<i64, ArrowJsonDictionaryBatch>,
+    json_dictionaries: &AHashMap<i64, ArrowJsonDictionaryBatch>,
 ) -> Result<Chunk<Box<dyn Array>>> {
     let arrays = schema
         .fields

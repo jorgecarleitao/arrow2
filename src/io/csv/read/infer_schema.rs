@@ -1,7 +1,5 @@
-use std::{
-    collections::HashSet,
-    io::{Read, Seek},
-};
+use ahash::AHashSet;
+use std::io::{Read, Seek};
 
 use crate::datatypes::{DataType, Field};
 use crate::error::Result;
@@ -34,7 +32,7 @@ pub fn infer_schema<R: Read + Seek, F: Fn(&[u8]) -> DataType>(
 
     let header_length = headers.len();
     // keep track of inferred field types
-    let mut column_types: Vec<HashSet<DataType>> = vec![HashSet::new(); header_length];
+    let mut column_types: Vec<AHashSet<DataType>> = vec![AHashSet::new(); header_length];
 
     let mut records_count = 0;
 

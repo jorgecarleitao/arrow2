@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use ahash::AHashMap;
 use std::io::Read;
 
 use arrow_format;
@@ -96,7 +96,7 @@ fn read_next<R: Read>(
     dictionaries: &mut Dictionaries,
     message_buffer: &mut Vec<u8>,
     data_buffer: &mut Vec<u8>,
-    projection: &Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
+    projection: &Option<(Vec<usize>, AHashMap<usize, usize>, Schema)>,
     scratch: &mut Vec<u8>,
 ) -> Result<Option<StreamState>> {
     // determine metadata length
@@ -241,7 +241,7 @@ pub struct StreamReader<R: Read> {
     finished: bool,
     data_buffer: Vec<u8>,
     message_buffer: Vec<u8>,
-    projection: Option<(Vec<usize>, HashMap<usize, usize>, Schema)>,
+    projection: Option<(Vec<usize>, AHashMap<usize, usize>, Schema)>,
     scratch: Vec<u8>,
 }
 

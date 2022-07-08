@@ -1,7 +1,6 @@
 //! Contains regex matching operators [`regex_match`] and [`regex_match_scalar`].
 
-use std::collections::HashMap;
-
+use ahash::AHashMap;
 use regex::Regex;
 
 use super::utils::combine_validities;
@@ -18,7 +17,7 @@ pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Re
         ));
     }
 
-    let mut map = HashMap::new();
+    let mut map = AHashMap::new();
     let validity = combine_validities(values.validity(), regex.validity());
 
     let iterator = values.iter().zip(regex.iter()).map(|(haystack, regex)| {

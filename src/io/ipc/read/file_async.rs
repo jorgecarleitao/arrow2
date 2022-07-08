@@ -1,5 +1,5 @@
 //! Async reader for Arrow IPC files
-use std::collections::HashMap;
+use ahash::AHashMap;
 use std::io::SeekFrom;
 
 use arrow_format::ipc::{planus::ReadAsRoot, Block, MessageHeaderRef};
@@ -73,7 +73,7 @@ impl<'a> FileStream<'a> {
         mut reader: R,
         mut dictionaries: Option<Dictionaries>,
         metadata: FileMetadata,
-        projection: Option<(Vec<usize>, HashMap<usize, usize>)>,
+        projection: Option<(Vec<usize>, AHashMap<usize, usize>)>,
         limit: Option<usize>,
     ) -> BoxStream<'a, Result<Chunk<Box<dyn Array>>>>
     where

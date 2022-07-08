@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use ahash::AHashMap;
 
 use crate::{
     bitmap::Bitmap,
@@ -31,7 +31,7 @@ type UnionComponents<'a> = (&'a [Field], Option<&'a [i32]>, UnionMode);
 pub struct UnionArray {
     types: Buffer<i8>,
     // None represents when there is no typeid
-    fields_hash: Option<HashMap<i8, FieldEntry>>,
+    fields_hash: Option<AHashMap<i8, FieldEntry>>,
     fields: Vec<Box<dyn Array>>,
     offsets: Option<Buffer<i32>>,
     data_type: DataType,
