@@ -1,7 +1,7 @@
 use parquet2::schema::types::{ParquetType, PrimitiveType as ParquetPrimitiveType};
 use parquet2::{page::EncodedPage, write::DynIter};
 
-use crate::array::{ListArray, Offset, StructArray};
+use crate::array::{FixedSizeListArray, ListArray, Offset, StructArray};
 use crate::bitmap::Bitmap;
 use crate::datatypes::PhysicalType;
 use crate::io::parquet::read::schema::is_nullable;
@@ -168,6 +168,10 @@ fn to_leafs_recursive<'a>(array: &'a dyn Array, leafs: &mut Vec<&'a dyn Array>) 
         }
         LargeList => {
             let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
+            to_leafs_recursive(array.values().as_ref(), leafs);
+        }
+        FixedSizeList => {
+            let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
             to_leafs_recursive(array.values().as_ref(), leafs);
         }
         Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
