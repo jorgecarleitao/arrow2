@@ -805,3 +805,27 @@ fn utf8_to_date64() {
 
     assert_eq!(&expected, c);
 }
+
+#[test]
+fn dict_keys() {
+    let mut array = MutableDictionaryArray::<u8, MutableUtf8Array<i32>>::new();
+    array
+        .try_extend([Some("one"), None, Some("three"), Some("one")])
+        .unwrap();
+    let array: DictionaryArray<u8> = array.into();
+
+    let result = cast(
+        &array,
+        &DataType::Dictionary(IntegerType::Int64, Box::new(DataType::Utf8), false),
+        CastOptions::default(),
+    )
+    .expect("cast failed");
+
+    let mut expected = MutableDictionaryArray::<i64, MutableUtf8Array<i32>>::new();
+    expected
+        .try_extend([Some("one"), None, Some("three"), Some("one")])
+        .unwrap();
+    let expected: DictionaryArray<i64> = expected.into();
+
+    assert_eq!(expected, result.as_ref());
+}
