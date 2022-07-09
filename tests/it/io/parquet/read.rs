@@ -463,6 +463,11 @@ fn v1_struct_optional_optional() -> Result<()> {
 }
 
 #[test]
+fn v1_struct_struct_optional() -> Result<()> {
+    test_pyarrow_integration("struct_struct_nullable", 1, "struct", false, false, None)
+}
+
+#[test]
 fn v1_nested_edge_1() -> Result<()> {
     test_pyarrow_integration("simple", 1, "nested_edge", false, false, None)
 }
@@ -470,6 +475,11 @@ fn v1_nested_edge_1() -> Result<()> {
 #[test]
 fn v1_nested_edge_2() -> Result<()> {
     test_pyarrow_integration("null", 1, "nested_edge", false, false, None)
+}
+
+#[test]
+fn v1_nested_edge_3() -> Result<()> {
+    test_pyarrow_integration("struct_list_nullable", 1, "nested_edge", false, false, None)
 }
 
 #[test]

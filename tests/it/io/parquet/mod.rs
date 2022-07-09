@@ -70,6 +70,21 @@ pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
             let array: ListArray<i32> = a.into();
             Box::new(array)
         }
+        "struct_list_nullable" => {
+            // [["a", "b", None, "c"]]
+            let a = ListArray::<i32>::new(
+                DataType::List(Box::new(Field::new("item", DataType::Utf8, true))),
+                vec![0, 4].into(),
+                Utf8Array::<i32>::from([Some("a"), Some("b"), None, Some("c")]).boxed(),
+                None,
+            );
+            StructArray::new(
+                DataType::Struct(vec![Field::new("f1", a.data_type().clone(), true)]),
+                vec![a.boxed()],
+                None,
+            )
+            .boxed()
+        }
         _ => todo!(),
     }
 }
@@ -675,6 +690,17 @@ pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
         )
     };
 
+    let new_struct = |arrays: Vec<Box<dyn Array>>, names: Vec<String>| {
+        let fields = names
+            .into_iter()
+            .zip(arrays.iter())
+            .map(|(n, a)| Field::new(n, a.data_type().clone(), true))
+            .collect();
+        StructArray::new(DataType::Struct(fields), arrays, None)
+    };
+
+    let names = vec!["f1".to_string()];
+
     match column {
         "simple" => Statistics {
             distinct_count: Count::List(new_list(UInt64Array::from([None]).boxed())),
@@ -687,6 +713,24 @@ pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
             null_count: Count::List(new_list(UInt64Array::from([Some(1)]).boxed())),
             min_value: new_list(Box::new(Int64Array::from([None]))).boxed(),
             max_value: new_list(Box::new(Int64Array::from([None]))).boxed(),
+        },
+        "struct_list_nullable" => Statistics {
+            distinct_count: Count::Struct(new_struct(
+                vec![new_list(Box::new(UInt64Array::from([None]))).boxed()],
+                names.clone(),
+            )),
+            null_count: Count::Struct(new_struct(
+                vec![new_list(Box::new(UInt64Array::from([Some(1)]))).boxed()],
+                names.clone(),
+            )),
+            min_value: Box::new(new_struct(
+                vec![new_list(Box::new(Utf8Array::<i32>::from_slice(["a"]))).boxed()],
+                names.clone(),
+            )),
+            max_value: Box::new(new_struct(
+                vec![new_list(Box::new(Utf8Array::<i32>::from_slice(["c"]))).boxed()],
+                names,
+            )),
         },
         _ => unreachable!(),
     }
@@ -721,6 +765,8 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
     ];
     let string = Utf8Array::<i32>::from(string).boxed();
 
+    let mask = [true, true, false, true, true, true, true, true, true, true];
+
     let fields = vec![
         Field::new("f1", DataType::Utf8, true),
         Field::new("f2", DataType::Boolean, true),
@@ -729,12 +775,7 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
         "struct" => StructArray::new(DataType::Struct(fields), vec![string, boolean], None).boxed(),
         "struct_nullable" => {
             let values = vec![string, boolean];
-            StructArray::new(
-                DataType::Struct(fields),
-                values,
-                Some([true, true, false, true, true, true, true, true, true, true].into()),
-            )
-            .boxed()
+            StructArray::new(DataType::Struct(fields), values, Some(mask.into())).boxed()
         }
         "struct_struct" => {
             let struct_ = pyarrow_struct("struct");
@@ -745,6 +786,17 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
                 ]),
                 vec![struct_, boolean],
                 None,
+            ))
+        }
+        "struct_struct_nullable" => {
+            let struct_ = pyarrow_struct("struct");
+            Box::new(StructArray::new(
+                DataType::Struct(vec![
+                    Field::new("f1", DataType::Struct(fields), true),
+                    Field::new("f2", DataType::Boolean, true),
+                ]),
+                vec![struct_, boolean],
+                Some(mask.into()),
             ))
         }
         _ => todo!(),
@@ -820,6 +872,66 @@ pub fn pyarrow_struct_statistics(column: &str) -> Statistics {
                     )
                     .boxed(),
                     UInt64Array::from([Some(4)]).boxed(),
+                ],
+                names.clone(),
+            )),
+            min_value: new_struct(
+                vec![
+                    new_struct(
+                        vec![
+                            Utf8Array::<i32>::from_slice([""]).boxed(),
+                            BooleanArray::from_slice([false]).boxed(),
+                        ],
+                        names.clone(),
+                    )
+                    .boxed(),
+                    BooleanArray::from_slice([false]).boxed(),
+                ],
+                names.clone(),
+            )
+            .boxed(),
+            max_value: new_struct(
+                vec![
+                    new_struct(
+                        vec![
+                            Utf8Array::<i32>::from_slice(["def"]).boxed(),
+                            BooleanArray::from_slice([true]).boxed(),
+                        ],
+                        names.clone(),
+                    )
+                    .boxed(),
+                    BooleanArray::from_slice([true]).boxed(),
+                ],
+                names,
+            )
+            .boxed(),
+        },
+        "struct_struct_nullable" => Statistics {
+            distinct_count: Count::Struct(new_struct(
+                vec![
+                    new_struct(
+                        vec![
+                            Box::new(UInt64Array::from([None])),
+                            Box::new(UInt64Array::from([None])),
+                        ],
+                        names.clone(),
+                    )
+                    .boxed(),
+                    UInt64Array::from([None]).boxed(),
+                ],
+                names.clone(),
+            )),
+            null_count: Count::Struct(new_struct(
+                vec![
+                    new_struct(
+                        vec![
+                            Box::new(UInt64Array::from([Some(5)])),
+                            Box::new(UInt64Array::from([Some(5)])),
+                        ],
+                        names.clone(),
+                    )
+                    .boxed(),
+                    UInt64Array::from([Some(5)]).boxed(),
                 ],
                 names.clone(),
             )),
