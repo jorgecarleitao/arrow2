@@ -411,9 +411,10 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
         cum_sum[i + 1] = cum_sum[i] + delta;
     }
 
-    let mut is_required = vec![false; nested.len()];
-    for (depth, nest) in nested.iter().enumerate().take(nested.len() - 1) {
-        is_required[depth + 1] = nest.is_required() && nest.is_nullable()
+    let mut cum_rep = vec![0u32; nested.len() + 1];
+    for (i, nest) in nested.iter().enumerate() {
+        let delta = nest.is_repeated() as u32;
+        cum_rep[i + 1] = cum_rep[i] + delta;
     }
 
     let max_depth = nested.len() - 1;
@@ -424,14 +425,20 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
             rows += 1;
         }
 
-        for (depth, (nest, &is_required)) in nested.iter_mut().zip(is_required.iter()).enumerate() {
-            let right_level = depth as u32 >= rep && def >= cum_sum[depth];
+        let mut is_required = false;
+        for (depth, nest) in nested.iter_mut().enumerate() {
+            let right_level = rep <= cum_rep[depth] && def >= cum_sum[depth];
             if is_required || right_level {
-                let is_valid = nest.is_nullable() && def != cum_sum[depth];
+                let is_valid = nest.is_nullable() && def > cum_sum[depth];
                 let length = values_count[depth];
                 nest.push(length, is_valid);
                 if depth > 0 {
                     values_count[depth - 1] = nest.len() as i64;
+                };
+                if nest.is_required() && !is_valid {
+                    is_required = true;
+                } else {
+                    is_required = false
                 };
 
                 if depth == max_depth {

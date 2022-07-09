@@ -82,7 +82,7 @@ impl StructArray {
                 if a_len != len {
                     Err(Error::oos(format!(
                         "The children DataTypes of a StructArray must equal the children data types.
-                         However, the values {index} has a length of {a_len}, which is different from values 0, {len}."
+                         However, the values at index {index} have a length of {a_len}, which is different from values at index 0, {len}."
                     )))
                 } else {
                     Ok(())
