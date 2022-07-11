@@ -15,6 +15,7 @@ name = "arrow2"
 bench = false
 
 [dependencies]
+foreign_vec = "0.1.0"
 either = "1.6"
 num-traits = "0.2"
 dyn-clone = "1"

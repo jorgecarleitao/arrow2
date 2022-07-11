@@ -7,7 +7,7 @@ use crate::{
 use super::{DictionaryArray, DictionaryKey};
 
 unsafe impl<K: DictionaryKey> ToFfi for DictionaryArray<K> {
-    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+    fn buffers(&self) -> Vec<Option<*const u8>> {
         self.keys.buffers()
     }
 

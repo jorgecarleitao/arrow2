@@ -4,7 +4,7 @@ use super::super::{ffi::ToFfi, Array};
 use super::MapArray;
 
 unsafe impl ToFfi for MapArray {
-    fn buffers(&self) -> Vec<Option<std::ptr::NonNull<u8>>> {
+    fn buffers(&self) -> Vec<Option<*const u8>> {
         vec![
             self.validity.as_ref().map(|x| x.as_ptr()),
             Some(self.offsets.as_ptr().cast::<u8>()),
