@@ -179,7 +179,7 @@ impl ArrowArray {
 unsafe fn create_buffer<T: NativeType>(
     array: &ArrowArray,
     data_type: &DataType,
-    owner: Box<InternalArrowArray>,
+    owner: InternalArrowArray,
     index: usize,
 ) -> Result<Buffer<T>> {
     if array.buffers.is_null() {
@@ -210,7 +210,7 @@ unsafe fn create_buffer<T: NativeType>(
 /// This function assumes that `ceil(self.length * bits, 8)` is the size of the buffer
 unsafe fn create_bitmap(
     array: &ArrowArray,
-    owner: Box<InternalArrowArray>,
+    owner: InternalArrowArray,
     index: usize,
 ) -> Result<Bitmap> {
     if array.buffers.is_null() {
@@ -311,7 +311,7 @@ fn buffer_len(array: &ArrowArray, data_type: &DataType, i: usize) -> Result<usiz
 fn create_child(
     array: &ArrowArray,
     field: &DataType,
-    parent: Box<InternalArrowArray>,
+    parent: InternalArrowArray,
     index: usize,
 ) -> Result<ArrowArrayChild<'static>> {
     let data_type = get_child(field, index)?;
@@ -322,27 +322,27 @@ fn create_child(
         assert!(!arr_ptr.is_null());
         let arr_ptr = &*arr_ptr;
 
-        Ok(ArrowArrayChild::from_raw(arr_ptr, data_type, parent))
+        Ok(ArrowArrayChild::new(arr_ptr, data_type, parent))
     }
 }
 
 fn create_dictionary(
     array: &ArrowArray,
     data_type: &DataType,
-    parent: Box<InternalArrowArray>,
+    parent: InternalArrowArray,
 ) -> Result<Option<ArrowArrayChild<'static>>> {
     if let DataType::Dictionary(_, values, _) = data_type {
         let data_type = values.as_ref().clone();
         assert!(!array.dictionary.is_null());
         let array = unsafe { &*array.dictionary };
-        Ok(Some(ArrowArrayChild::from_raw(array, data_type, parent)))
+        Ok(Some(ArrowArrayChild::new(array, data_type, parent)))
     } else {
         Ok(None)
     }
 }
 
 pub trait ArrowArrayRef: std::fmt::Debug {
-    fn owner(&self) -> Box<InternalArrowArray> {
+    fn owner(&self) -> InternalArrowArray {
         (*self.parent()).clone()
     }
 
@@ -386,7 +386,7 @@ pub trait ArrowArrayRef: std::fmt::Debug {
 
     fn n_buffers(&self) -> usize;
 
-    fn parent(&self) -> &Box<InternalArrowArray>;
+    fn parent(&self) -> &InternalArrowArray;
     fn array(&self) -> &ArrowArray;
     fn data_type(&self) -> &DataType;
 }
@@ -433,7 +433,7 @@ impl ArrowArrayRef for Box<InternalArrowArray> {
         &self.data_type
     }
 
-    fn parent(&self) -> &Box<InternalArrowArray> {
+    fn parent(&self) -> &InternalArrowArray {
         self
     }
 
@@ -450,7 +450,7 @@ impl ArrowArrayRef for Box<InternalArrowArray> {
 pub struct ArrowArrayChild<'a> {
     array: &'a ArrowArray,
     data_type: DataType,
-    parent: Box<InternalArrowArray>,
+    parent: InternalArrowArray,
 }
 
 impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
@@ -459,7 +459,7 @@ impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
         &self.data_type
     }
 
-    fn parent(&self) -> &Box<InternalArrowArray> {
+    fn parent(&self) -> &InternalArrowArray {
         &self.parent
     }
 
@@ -473,11 +473,7 @@ impl<'a> ArrowArrayRef for ArrowArrayChild<'a> {
 }
 
 impl<'a> ArrowArrayChild<'a> {
-    fn from_raw(
-        array: &'a ArrowArray,
-        data_type: DataType,
-        parent: Box<InternalArrowArray>,
-    ) -> Self {
+    fn new(array: &'a ArrowArray, data_type: DataType, parent: InternalArrowArray) -> Self {
         Self {
             array,
             data_type,
