@@ -24,11 +24,11 @@ pub use crate::io::ipc::write::common::WriteOptions;
 /// # Errors
 /// This function errors iff `fields` is not consistent with `columns`
 pub fn serialize_batch(
-    columns: &Chunk<Box<dyn Array>>,
+    chunk: &Chunk<Box<dyn Array>>,
     fields: &[IpcField],
     options: &WriteOptions,
 ) -> Result<(Vec<FlightData>, FlightData)> {
-    if fields.len() != columns.arrays().len() {
+    if fields.len() != chunk.arrays().len() {
         return Err(Error::InvalidArgumentError("The argument `fields` must be consistent with the columns' schema. Use e.g. &arrow2::io::flight::default_ipc_fields(&schema.fields)".to_string()));
     }
 
@@ -38,7 +38,7 @@ pub fn serialize_batch(
     };
 
     let (encoded_dictionaries, encoded_batch) =
-        encode_chunk(columns, fields, &mut dictionary_tracker, options)
+        encode_chunk(chunk, fields, &mut dictionary_tracker, options)
             .expect("DictionaryTracker configured above to not error on replacement");
 
     let flight_dictionaries = encoded_dictionaries.into_iter().map(Into::into).collect();
@@ -63,15 +63,14 @@ pub fn serialize_schema_to_result(
     ipc_fields: Option<&[IpcField]>,
 ) -> SchemaResult {
     SchemaResult {
-        schema: schema_as_flatbuffer(schema, ipc_fields),
+        schema: _serialize_schema(schema, ipc_fields),
     }
 }
 
 /// Serializes a [`Schema`] to [`FlightData`].
 pub fn serialize_schema(schema: &Schema, ipc_fields: Option<&[IpcField]>) -> FlightData {
-    let data_header = schema_as_flatbuffer(schema, ipc_fields);
     FlightData {
-        data_header,
+        data_header: _serialize_schema(schema, ipc_fields),
         ..Default::default()
     }
 }
@@ -93,7 +92,7 @@ pub fn serialize_schema_to_info(
     Ok(schema)
 }
 
-fn schema_as_flatbuffer(schema: &Schema, ipc_fields: Option<&[IpcField]>) -> Vec<u8> {
+fn _serialize_schema(schema: &Schema, ipc_fields: Option<&[IpcField]>) -> Vec<u8> {
     if let Some(ipc_fields) = ipc_fields {
         write::schema_to_bytes(schema, ipc_fields)
     } else {

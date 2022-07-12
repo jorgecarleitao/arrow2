@@ -226,8 +226,8 @@ fn first_dict_field<'a>(
     Err(Error::from(OutOfSpecKind::InvalidId { requested_id: id }))
 }
 
-/// Read the dictionary from the buffer and provided metadata,
-/// updating the `dictionaries` with the resulting dictionary
+/// Reads a dictionary from the reader,
+/// updating `dictionaries` with the resulting dictionary
 #[allow(clippy::too_many_arguments)]
 pub fn read_dictionary<R: Read + Seek>(
     batch: arrow_format::ipc::DictionaryBatchRef,
@@ -269,7 +269,7 @@ pub fn read_dictionary<R: Read + Seek>(
                 fields: vec![first_ipc_field.clone()],
                 is_little_endian: ipc_schema.is_little_endian,
             };
-            let columns = read_record_batch(
+            let chunk = read_record_batch(
                 batch,
                 &fields,
                 &ipc_schema,
@@ -282,8 +282,7 @@ pub fn read_dictionary<R: Read + Seek>(
                 file_size,
                 scratch,
             )?;
-            let mut arrays = columns.into_arrays();
-            arrays.pop().unwrap()
+            chunk.into_arrays().pop().unwrap()
         }
         _ => {
             return Err(Error::from(OutOfSpecKind::InvalidIdDataType {
