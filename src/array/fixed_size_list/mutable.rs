@@ -32,13 +32,7 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
     /// Creates a new [`MutableFixedSizeListArray`] from a [`MutableArray`] and size.
     pub fn new(values: M, size: usize) -> Self {
         let data_type = FixedSizeListArray::default_datatype(values.data_type().clone(), size);
-        assert_eq!(values.len(), 0);
-        Self {
-            size,
-            data_type,
-            values,
-            validity: None,
-        }
+        Self::new_from(values, data_type, size)
     }
 
     /// Creates a new [`MutableFixedSizeListArray`] from a [`MutableArray`] and size.
@@ -47,6 +41,11 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
             Box::new(Field::new(name, values.data_type().clone(), nullable)),
             size,
         );
+        Self::new_from(values, data_type, size)
+    }
+
+    /// Creates a new [`MutableFixedSizeListArray`] from a [`MutableArray`], [`DataType`] and size.
+    pub fn new_from(values: M, data_type: DataType, size: usize) -> Self {
         assert_eq!(values.len(), 0);
         Self {
             size,
