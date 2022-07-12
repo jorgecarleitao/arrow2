@@ -1,7 +1,5 @@
 use std::{iter::FromIterator, ops::Deref, sync::Arc, usize};
 
-use crate::types::NativeType;
-
 use super::Bytes;
 
 /// [`Buffer`] is a contiguous memory region of plain old data types
@@ -34,7 +32,7 @@ use super::Bytes;
 /// assert_eq!(buffer.get_mut(), None);
 /// ```
 #[derive(Clone)]
-pub struct Buffer<T: NativeType> {
+pub struct Buffer<T> {
     /// the internal byte buffer.
     data: Arc<Bytes<T>>,
 
@@ -46,27 +44,27 @@ pub struct Buffer<T: NativeType> {
     length: usize,
 }
 
-impl<T: NativeType> PartialEq for Buffer<T> {
+impl<T: PartialEq> PartialEq for Buffer<T> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.deref() == other.deref()
     }
 }
 
-impl<T: NativeType> std::fmt::Debug for Buffer<T> {
+impl<T: std::fmt::Debug> std::fmt::Debug for Buffer<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Debug::fmt(&**self, f)
     }
 }
 
-impl<T: NativeType> Default for Buffer<T> {
+impl<T> Default for Buffer<T> {
     #[inline]
     fn default() -> Self {
         Vec::new().into()
     }
 }
 
-impl<T: NativeType> Buffer<T> {
+impl<T> Buffer<T> {
     /// Creates an empty [`Buffer`].
     #[inline]
     pub fn new() -> Self {
@@ -169,7 +167,7 @@ impl<T: NativeType> Buffer<T> {
     }
 }
 
-impl<T: NativeType> From<Vec<T>> for Buffer<T> {
+impl<T> From<Vec<T>> for Buffer<T> {
     #[inline]
     fn from(p: Vec<T>) -> Self {
         let bytes: Bytes<T> = p.into();
@@ -181,7 +179,7 @@ impl<T: NativeType> From<Vec<T>> for Buffer<T> {
     }
 }
 
-impl<T: NativeType> std::ops::Deref for Buffer<T> {
+impl<T> std::ops::Deref for Buffer<T> {
     type Target = [T];
 
     #[inline]
@@ -190,7 +188,7 @@ impl<T: NativeType> std::ops::Deref for Buffer<T> {
     }
 }
 
-impl<T: NativeType> FromIterator<T> for Buffer<T> {
+impl<T> FromIterator<T> for Buffer<T> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         Vec::from_iter(iter).into()
