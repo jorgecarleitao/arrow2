@@ -203,7 +203,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     }
 }
 
-impl<O: Offset, M: MutableArray + Default + 'static> MutableArray for MutableListArray<O, M> {
+impl<O: Offset, M: MutableArray + 'static> MutableArray for MutableListArray<O, M> {
     fn len(&self) -> usize {
         self.offsets.len() - 1
     }
