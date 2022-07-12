@@ -1394,3 +1394,38 @@ fn large_list_large_binary() -> Result<()> {
     array.try_extend(data).unwrap();
     list_array_generic(false, array.into())
 }
+
+#[test]
+fn list_utf8_nullable() -> Result<()> {
+    let data = vec![
+        Some(vec![Some("a".to_string())]),
+        None,
+        Some(vec![None, Some("b".to_string())]),
+        Some(vec![]),
+        Some(vec![Some("c".to_string())]),
+        None,
+    ];
+    let mut array =
+        MutableListArray::<i32, _>::new_with_field(MutableUtf8Array::<i32>::new(), "item", true);
+    array.try_extend(data).unwrap();
+    list_array_generic(true, array.into())
+}
+
+#[test]
+fn list_int_nullable() -> Result<()> {
+    let data = vec![
+        Some(vec![Some(1)]),
+        None,
+        Some(vec![None, Some(2)]),
+        Some(vec![]),
+        Some(vec![Some(3)]),
+        None,
+    ];
+    let mut array = MutableListArray::<i32, _>::new_with_field(
+        MutablePrimitiveArray::<i32>::new(),
+        "item",
+        true,
+    );
+    array.try_extend(data).unwrap();
+    list_array_generic(true, array.into())
+}
