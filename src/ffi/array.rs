@@ -1,5 +1,4 @@
 //! Contains functionality to load an ArrayData from the C Data Interface
-use std::ptr::NonNull;
 use std::sync::Arc;
 
 use crate::{
@@ -172,67 +171,94 @@ impl ArrowArray {
     }
 }
 
-/// interprets the buffer `index` as a [`Buffer`].
 /// # Safety
-/// The caller must guarantee that the buffer `index` corresponds to a buffer of type `T`.
-/// This function assumes that the buffer created from FFI is valid; this is impossible to prove.
+/// The caller must ensure that the buffer at index `i` is not mutably shared.
+unsafe fn get_buffer_ptr<T: NativeType>(
+    array: &ArrowArray,
+    data_type: &DataType,
+    index: usize,
+) -> Result<*mut T> {
+    if array.buffers.is_null() {
+        return Err(Error::oos(format!(
+            "An ArrowArray of type {data_type:?} must have non-null buffers"
+        )));
+    }
+
+    if array
+        .buffers
+        .align_offset(std::mem::align_of::<*mut *const u8>())
+        != 0
+    {
+        return Err(Error::oos(format!(
+            "An ArrowArray of type {data_type:?}
+            must have buffer {index} aligned to type {}",
+            std::any::type_name::<*mut *const u8>()
+        )));
+    }
+    let buffers = array.buffers as *mut *const u8;
+
+    if index >= array.n_buffers as usize {
+        return Err(Error::oos(format!(
+            "An ArrowArray of type {data_type:?} 
+             must have buffer {index}."
+        )));
+    }
+
+    let ptr = *buffers.add(index);
+    if ptr.is_null() {
+        return Err(Error::oos(format!(
+            "An array of type {data_type:?}
+            must have a non-null buffer {index}"
+        )));
+    }
+    if ptr.align_offset(std::mem::align_of::<T>()) != 0 {
+        return Err(Error::oos(format!(
+            "An ArrowArray of type {data_type:?}
+            must have buffer {index} aligned to type {}",
+            std::any::type_name::<T>()
+        )));
+    }
+    // note: we can't prove that this pointer is not mutably shared - part of the safety invariant
+    Ok(ptr as *mut T)
+}
+
+/// returns the buffer `i` of `array` interpreted as a [`Buffer`].
+/// # Safety
+/// This function is safe iff:
+/// * the buffers up to position `index` are valid for the declared length
+/// * the buffers' pointers are not mutably shared for the lifetime of `owner`
 unsafe fn create_buffer<T: NativeType>(
     array: &ArrowArray,
     data_type: &DataType,
     owner: InternalArrowArray,
     index: usize,
 ) -> Result<Buffer<T>> {
-    if array.buffers.is_null() {
-        return Err(Error::OutOfSpec("The array buffers are null".to_string()));
-    }
-
-    let buffers = array.buffers as *mut *const u8;
-
-    assert!(index < array.n_buffers as usize);
-    let ptr = *buffers.add(index);
-    let ptr = NonNull::new(ptr as *mut T);
+    let ptr = get_buffer_ptr(array, data_type, index)?;
 
     let len = buffer_len(array, data_type, index)?;
     let offset = buffer_offset(array, data_type, index);
-    let bytes = ptr
-        .map(|ptr| Bytes::from_foreign(ptr.as_ptr(), len, owner))
-        .ok_or_else(|| Error::OutOfSpec(format!("The buffer at position {} is null", index)))?;
+    let bytes = Bytes::from_foreign(ptr, len, owner);
 
     Ok(Buffer::from_bytes(bytes).slice(offset, len - offset))
 }
 
-/// returns a new buffer corresponding to the index `i` of the FFI array. It may not exist (null pointer).
-/// `bits` is the number of bits that the native type of this buffer has.
-/// The size of the buffer will be `ceil(self.length * bits, 8)`.
-/// # Panic
-/// This function panics if `i` is larger or equal to `n_buffers`.
+/// returns the buffer `i` of `array` interpreted as a [`Bitmap`].
 /// # Safety
-/// This function assumes that `ceil(self.length * bits, 8)` is the size of the buffer
+/// This function is safe iff:
+/// * the buffer at position `index` is valid for the declared length
+/// * the buffers' pointer is not mutable for the lifetime of `owner`
 unsafe fn create_bitmap(
     array: &ArrowArray,
+    data_type: &DataType,
     owner: InternalArrowArray,
     index: usize,
 ) -> Result<Bitmap> {
-    if array.buffers.is_null() {
-        return Err(Error::OutOfSpec("The array buffers are null".to_string()));
-    }
-    let len = array.length as usize;
-    let offset = array.offset as usize;
-    let buffers = array.buffers as *mut *const u8;
+    let ptr = get_buffer_ptr(array, data_type, index)?;
 
-    assert!(index < array.n_buffers as usize);
-    let ptr = *buffers.add(index);
-
+    let len: usize = array.length.try_into().expect("length to fit in `usize`");
+    let offset: usize = array.offset.try_into().expect("Offset to fit in `usize`");
     let bytes_len = bytes_for(offset + len);
-    let ptr = NonNull::new(ptr as *mut u8);
-    let bytes = ptr
-        .map(|ptr| Bytes::from_foreign(ptr.as_ptr(), bytes_len, owner))
-        .ok_or_else(|| {
-            Error::OutOfSpec(format!(
-                "The buffer {} is a null pointer and cannot be interpreted as a bitmap",
-                index
-            ))
-        })?;
+    let bytes = Bytes::from_foreign(ptr, bytes_len, owner);
 
     Ok(Bitmap::from_bytes(bytes, offset + len).slice(offset, len))
 }
@@ -243,20 +269,18 @@ fn buffer_offset(array: &ArrowArray, data_type: &DataType, i: usize) -> usize {
         (LargeUtf8, 2) | (LargeBinary, 2) | (Utf8, 2) | (Binary, 2) => 0,
         (FixedSizeBinary, 1) => {
             if let DataType::FixedSizeBinary(size) = data_type.to_logical_type() {
-                (array.offset as usize) * *size
+                let offset: usize = array.offset.try_into().expect("Offset to fit in `usize`");
+                offset * *size
             } else {
                 unreachable!()
             }
         }
-        _ => array.offset as usize,
+        _ => array.offset.try_into().expect("Offset to fit in `usize`"),
     }
 }
 
 /// Returns the length, in slots, of the buffer `i` (indexed according to the C data interface)
-// Rust implementation uses fixed-sized buffers, which require knowledge of their `len`.
-// for variable-sized buffers, such as the second buffer of a stringArray, we need
-// to fetch offset buffer's len to build the second buffer.
-fn buffer_len(array: &ArrowArray, data_type: &DataType, i: usize) -> Result<usize> {
+unsafe fn buffer_len(array: &ArrowArray, data_type: &DataType, i: usize) -> Result<usize> {
     Ok(match (data_type.to_physical_type(), i) {
         (PhysicalType::FixedSizeBinary, 1) => {
             if let DataType::FixedSizeBinary(size) = data_type.to_logical_type() {
@@ -308,32 +332,70 @@ fn buffer_len(array: &ArrowArray, data_type: &DataType, i: usize) -> Result<usiz
     })
 }
 
-fn create_child(
+/// Safety
+/// This function is safe iff:
+/// * `array.children` at `index` is valid
+/// * `array.children` is not mutably shared for the lifetime of `parent`
+/// * the pointer of `array.children` at `index` is valid
+/// * the pointer of `array.children` at `index` is not mutably shared for the lifetime of `parent`
+unsafe fn create_child(
     array: &ArrowArray,
-    field: &DataType,
+    data_type: &DataType,
     parent: InternalArrowArray,
     index: usize,
 ) -> Result<ArrowArrayChild<'static>> {
-    let data_type = get_child(field, index)?;
-    assert!(index < array.n_children as usize);
-    assert!(!array.children.is_null());
-    unsafe {
-        let arr_ptr = *array.children.add(index);
-        assert!(!arr_ptr.is_null());
-        let arr_ptr = &*arr_ptr;
+    let data_type = get_child(data_type, index)?;
 
-        Ok(ArrowArrayChild::new(arr_ptr, data_type, parent))
+    // catch what we can
+    if array.children.is_null() {
+        return Err(Error::oos(format!(
+            "An ArrowArray of type {data_type:?} must have non-null children"
+        )));
     }
+
+    if index >= array.n_children as usize {
+        return Err(Error::oos(format!(
+            "An ArrowArray of type {data_type:?} 
+             must have child {index}."
+        )));
+    }
+
+    // Safety - part of the invariant
+    let arr_ptr = unsafe { *array.children.add(index) };
+
+    // catch what we can
+    if arr_ptr.is_null() {
+        return Err(Error::oos(format!(
+            "An array of type {data_type:?}
+            must have a non-null child {index}"
+        )));
+    }
+
+    // Safety - invariant of this function
+    let arr_ptr = unsafe { &*arr_ptr };
+    Ok(ArrowArrayChild::new(arr_ptr, data_type, parent))
 }
 
-fn create_dictionary(
+/// Safety
+/// This function is safe iff:
+/// * `array.dictionary` is valid
+/// * `array.dictionary` is not mutably shared for the lifetime of `parent`
+unsafe fn create_dictionary(
     array: &ArrowArray,
     data_type: &DataType,
     parent: InternalArrowArray,
 ) -> Result<Option<ArrowArrayChild<'static>>> {
     if let DataType::Dictionary(_, values, _) = data_type {
         let data_type = values.as_ref().clone();
-        assert!(!array.dictionary.is_null());
+        // catch what we can
+        if array.dictionary.is_null() {
+            return Err(Error::oos(format!(
+                "An array of type {data_type:?}
+                must have a non-null dictionary"
+            )));
+        }
+
+        // safety: part of the invariant
         let array = unsafe { &*array.dictionary };
         Ok(Some(ArrowArrayChild::new(array, data_type, parent)))
     } else {
@@ -356,31 +418,35 @@ pub trait ArrowArrayRef: std::fmt::Debug {
         if self.array().null_count() == 0 {
             Ok(None)
         } else {
-            create_bitmap(self.array(), self.owner(), 0).map(Some)
+            create_bitmap(self.array(), self.data_type(), self.owner(), 0).map(Some)
         }
     }
 
     /// # Safety
-    /// The caller must guarantee that the buffer `index` corresponds to a bitmap.
-    /// This function assumes that the bitmap created from FFI is valid; this is impossible to prove.
+    /// The caller must guarantee that the buffer `index` corresponds to a buffer.
+    /// This function assumes that the buffer created from FFI is valid; this is impossible to prove.
     unsafe fn buffer<T: NativeType>(&self, index: usize) -> Result<Buffer<T>> {
         create_buffer::<T>(self.array(), self.data_type(), self.owner(), index)
     }
 
     /// # Safety
-    /// The caller must guarantee that the buffer `index` corresponds to a bitmap.
-    /// This function assumes that the bitmap created from FFI is valid; this is impossible to prove.
+    /// This function is safe iff:
+    /// * the buffer at position `index` is valid for the declared length
+    /// * the buffers' pointer is not mutable for the lifetime of `owner`
     unsafe fn bitmap(&self, index: usize) -> Result<Bitmap> {
-        create_bitmap(self.array(), self.owner(), index)
+        create_bitmap(self.array(), self.data_type(), self.owner(), index)
     }
 
     /// # Safety
-    /// The caller must guarantee that the child `index` is valid per c data interface.
+    /// * `array.children` at `index` is valid
+    /// * `array.children` is not mutably shared for the lifetime of `parent`
+    /// * the pointer of `array.children` at `index` is valid
+    /// * the pointer of `array.children` at `index` is not mutably shared for the lifetime of `parent`
     unsafe fn child(&self, index: usize) -> Result<ArrowArrayChild> {
         create_child(self.array(), self.data_type(), self.parent().clone(), index)
     }
 
-    fn dictionary(&self) -> Result<Option<ArrowArrayChild>> {
+    unsafe fn dictionary(&self) -> Result<Option<ArrowArrayChild>> {
         create_dictionary(self.array(), self.data_type(), self.parent().clone())
     }
 
