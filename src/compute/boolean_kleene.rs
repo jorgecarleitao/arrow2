@@ -1,35 +1,31 @@
 //! Boolean operators of [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics).
 use crate::datatypes::DataType;
-use crate::error::{Error, Result};
 use crate::scalar::BooleanScalar;
 use crate::{
-    array::BooleanArray,
+    array::{Array, BooleanArray},
     bitmap::{binary, quaternary, ternary, unary, Bitmap, MutableBitmap},
 };
 
 /// Logical 'or' operation on two arrays with [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)
-/// # Errors
-/// This function errors if the operands have different lengths.
+/// # Panics
+/// This function panics iff the arrays have a different length
 /// # Example
 ///
 /// ```rust
-/// # use arrow2::error::Result;
 /// use arrow2::array::BooleanArray;
 /// use arrow2::compute::boolean_kleene::or;
-/// # fn main() -> Result<()> {
+///
 /// let a = BooleanArray::from(&[Some(true), Some(false), None]);
 /// let b = BooleanArray::from(&[None, None, None]);
-/// let or_ab = or(&a, &b)?;
+/// let or_ab = or(&a, &b);
 /// assert_eq!(or_ab, BooleanArray::from(&[Some(true), None, None]));
-/// # Ok(())
-/// # }
 /// ```
-pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
-    if lhs.len() != rhs.len() {
-        return Err(Error::InvalidArgumentError(
-            "Cannot perform bitwise operation on arrays of different length".to_string(),
-        ));
-    }
+pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
+    assert_eq!(
+        lhs.len(),
+        rhs.len(),
+        "lhs and rhs must have the same length"
+    );
 
     let lhs_values = lhs.values();
     let rhs_values = rhs.values();
@@ -90,36 +86,29 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         }
         (None, None) => None,
     };
-    Ok(BooleanArray::new(
-        DataType::Boolean,
-        lhs_values | rhs_values,
-        validity,
-    ))
+    BooleanArray::new(DataType::Boolean, lhs_values | rhs_values, validity)
 }
 
 /// Logical 'and' operation on two arrays with [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)
-/// # Errors
-/// This function errors if the operands have different lengths.
+/// # Panics
+/// This function panics iff the arrays have a different length
 /// # Example
 ///
 /// ```rust
-/// # use arrow2::error::Result;
 /// use arrow2::array::BooleanArray;
 /// use arrow2::compute::boolean_kleene::and;
-/// # fn main() -> Result<()> {
+///
 /// let a = BooleanArray::from(&[Some(true), Some(false), None]);
 /// let b = BooleanArray::from(&[None, None, None]);
-/// let and_ab = and(&a, &b)?;
+/// let and_ab = and(&a, &b);
 /// assert_eq!(and_ab, BooleanArray::from(&[None, Some(false), None]));
-/// # Ok(())
-/// # }
 /// ```
-pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
-    if lhs.len() != rhs.len() {
-        return Err(Error::InvalidArgumentError(
-            "Cannot perform bitwise operation on arrays of different length".to_string(),
-        ));
-    }
+pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
+    assert_eq!(
+        lhs.len(),
+        rhs.len(),
+        "lhs and rhs must have the same length"
+    );
 
     let lhs_values = lhs.values();
     let rhs_values = rhs.values();
@@ -179,11 +168,7 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
         }
         (None, None) => None,
     };
-    Ok(BooleanArray::new(
-        DataType::Boolean,
-        lhs_values & rhs_values,
-        validity,
-    ))
+    BooleanArray::new(DataType::Boolean, lhs_values & rhs_values, validity)
 }
 
 /// Logical 'or' operation on an array and a scalar value with [Kleene logic](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)
@@ -193,12 +178,11 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// use arrow2::array::BooleanArray;
 /// use arrow2::scalar::BooleanScalar;
 /// use arrow2::compute::boolean_kleene::or_scalar;
-/// # fn main() {
+///
 /// let array = BooleanArray::from(&[Some(true), Some(false), None]);
 /// let scalar = BooleanScalar::new(Some(false));
 /// let result = or_scalar(&array, &scalar);
 /// assert_eq!(result, BooleanArray::from(&[Some(true), Some(false), None]));
-/// # }
 /// ```
 pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
     match scalar.value() {
@@ -226,12 +210,11 @@ pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
 /// use arrow2::array::BooleanArray;
 /// use arrow2::scalar::BooleanScalar;
 /// use arrow2::compute::boolean_kleene::and_scalar;
-/// # fn main() {
+///
 /// let array = BooleanArray::from(&[Some(true), Some(false), None]);
 /// let scalar = BooleanScalar::new(None);
 /// let result = and_scalar(&array, &scalar);
 /// assert_eq!(result, BooleanArray::from(&[None, Some(false), None]));
-/// # }
 /// ```
 pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
     match scalar.value() {
@@ -248,5 +231,27 @@ pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray 
             };
             BooleanArray::new(DataType::Boolean, array.values().clone(), Some(validity))
         }
+    }
+}
+
+/// Returns whether any of the values in the array is `true`
+pub fn any(array: &BooleanArray) -> bool {
+    if array.is_empty() {
+        false
+    } else if array.validity().is_some() {
+        array.into_iter().any(|v| v == Some(true))
+    } else {
+        let vals = array.values();
+        vals.unset_bits() != vals.len()
+    }
+}
+
+/// Returns whether all values in the array are `true`
+pub fn all(array: &BooleanArray) -> bool {
+    if array.is_empty() || array.null_count() > 0 {
+        false
+    } else {
+        let vals = array.values();
+        vals.unset_bits() == 0
     }
 }

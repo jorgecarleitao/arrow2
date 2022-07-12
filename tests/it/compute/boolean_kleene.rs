@@ -26,7 +26,7 @@ fn and_generic() {
         Some(false),
         Some(true),
     ]);
-    let c = and(&lhs, &rhs).unwrap();
+    let c = and(&lhs, &rhs);
 
     let expected = BooleanArray::from(&[
         None,
@@ -67,7 +67,7 @@ fn or_generic() {
         Some(false),
         Some(true),
     ]);
-    let c = or(&a, &b).unwrap();
+    let c = or(&a, &b);
 
     let expected = BooleanArray::from(&[
         None,
@@ -90,7 +90,7 @@ fn or_right_nulls() {
 
     let b = BooleanArray::from(&[Some(true), Some(false), None, Some(true), Some(false), None]);
 
-    let c = or(&a, &b).unwrap();
+    let c = or(&a, &b);
 
     let expected = BooleanArray::from(&[
         Some(true),
@@ -117,7 +117,7 @@ fn or_left_nulls() {
 
     let b = BooleanArray::from_slice(&[false, false, false, true, true, true]);
 
-    let c = or(&a, &b).unwrap();
+    let c = or(&a, &b);
 
     let expected = BooleanArray::from(vec![
         Some(true),
