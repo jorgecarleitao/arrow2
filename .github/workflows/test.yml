@@ -76,7 +76,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2022-03-16
+          toolchain: nightly-2022-07-12
           override: true
       - uses: Swatinem/rust-cache@v1
         with:
@@ -99,7 +99,7 @@ jobs:
           submodules: true # needed to test IPC, which are located in a submodule
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2022-03-16
+          toolchain: nightly-2022-07-12
           override: true
       - uses: Swatinem/rust-cache@v1
         with:
