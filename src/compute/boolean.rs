@@ -2,21 +2,20 @@
 use crate::array::{Array, BooleanArray};
 use crate::bitmap::{Bitmap, MutableBitmap};
 use crate::datatypes::DataType;
-use crate::error::{Error, Result};
 use crate::scalar::BooleanScalar;
 
 use super::utils::combine_validities;
 
 /// Helper function to implement binary kernels
-fn binary_boolean_kernel<F>(lhs: &BooleanArray, rhs: &BooleanArray, op: F) -> Result<BooleanArray>
+fn binary_boolean_kernel<F>(lhs: &BooleanArray, rhs: &BooleanArray, op: F) -> BooleanArray
 where
     F: Fn(&Bitmap, &Bitmap) -> Bitmap,
 {
-    if lhs.len() != rhs.len() {
-        return Err(Error::InvalidArgumentError(
-            "Cannot perform bitwise operation on arrays of different length".to_string(),
-        ));
-    }
+    assert_eq!(
+        lhs.len(),
+        rhs.len(),
+        "lhs and rhs must have the same length"
+    );
 
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
@@ -25,48 +24,40 @@ where
 
     let values = op(left_buffer, right_buffer);
 
-    Ok(BooleanArray::new(DataType::Boolean, values, validity))
+    BooleanArray::new(DataType::Boolean, values, validity)
 }
 
-/// Performs `AND` operation on two arrays. If either left or right value is null then the
-/// result is also null.
-/// # Error
-/// This function errors when the arrays have different lengths.
-/// # Example
+/// Performs `&&` operation on two [`BooleanArray`], combining the validities.
+/// # Panics
+/// This function panics iff the arrays have different lengths.
+/// # Examples
 /// ```rust
 /// use arrow2::array::BooleanArray;
-/// use arrow2::error::Result;
 /// use arrow2::compute::boolean::and;
-/// # fn main() -> Result<()> {
+///
 /// let a = BooleanArray::from(&[Some(false), Some(true), None]);
 /// let b = BooleanArray::from(&[Some(true), Some(true), Some(false)]);
-/// let and_ab = and(&a, &b)?;
+/// let and_ab = and(&a, &b);
 /// assert_eq!(and_ab, BooleanArray::from(&[Some(false), Some(true), None]));
-/// # Ok(())
-/// # }
 /// ```
-pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
+pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     binary_boolean_kernel(lhs, rhs, |lhs, rhs| lhs & rhs)
 }
 
-/// Performs `OR` operation on two arrays. If either left or right value is null then the
-/// result is also null.
-/// # Error
-/// This function errors when the arrays have different lengths.
-/// # Example
+/// Performs `||` operation on two [`BooleanArray`], combining the validities.
+/// # Panics
+/// This function panics iff the arrays have different lengths.
+/// # Examples
 /// ```rust
 /// use arrow2::array::BooleanArray;
-/// use arrow2::error::Result;
 /// use arrow2::compute::boolean::or;
-/// # fn main() -> Result<()> {
+///
 /// let a = BooleanArray::from(vec![Some(false), Some(true), None]);
 /// let b = BooleanArray::from(vec![Some(true), Some(true), Some(false)]);
-/// let or_ab = or(&a, &b)?;
+/// let or_ab = or(&a, &b);
 /// assert_eq!(or_ab, BooleanArray::from(vec![Some(true), Some(true), None]));
-/// # Ok(())
-/// # }
 /// ```
-pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
+pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
     binary_boolean_kernel(lhs, rhs, |lhs, rhs| lhs | rhs)
 }
 
@@ -76,11 +67,10 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> Result<BooleanArray> {
 /// ```rust
 /// use arrow2::array::BooleanArray;
 /// use arrow2::compute::boolean::not;
-/// # fn main() {
+///
 /// let a = BooleanArray::from(vec![Some(false), Some(true), None]);
 /// let not_a = not(&a);
 /// assert_eq!(not_a, BooleanArray::from(vec![Some(true), Some(false), None]));
-/// # }
 /// ```
 pub fn not(array: &BooleanArray) -> BooleanArray {
     let values = !array.values();
@@ -88,9 +78,7 @@ pub fn not(array: &BooleanArray) -> BooleanArray {
     BooleanArray::new(DataType::Boolean, values, validity)
 }
 
-/// Returns a non-null [BooleanArray] with whether each value of the array is null.
-/// # Error
-/// This function never errors.
+/// Returns a non-null [`BooleanArray`] with whether each value of the array is null.
 /// # Example
 /// ```rust
 /// use arrow2::array::BooleanArray;
@@ -112,16 +100,15 @@ pub fn is_null(input: &dyn Array) -> BooleanArray {
     BooleanArray::new(DataType::Boolean, values, None)
 }
 
-/// Returns a non-null [BooleanArray] with whether each value of the array is not null.
+/// Returns a non-null [`BooleanArray`] with whether each value of the array is not null.
 /// # Example
 /// ```rust
 /// use arrow2::array::BooleanArray;
 /// use arrow2::compute::boolean::is_not_null;
-/// # fn main() {
+///
 /// let a = BooleanArray::from(&vec![Some(false), Some(true), None]);
 /// let a_is_not_null = is_not_null(&a);
 /// assert_eq!(a_is_not_null, BooleanArray::from_slice(&vec![true, true, false]));
-/// # }
 /// ```
 pub fn is_not_null(input: &dyn Array) -> BooleanArray {
     let values = match input.validity() {
@@ -142,12 +129,12 @@ pub fn is_not_null(input: &dyn Array) -> BooleanArray {
 /// use arrow2::array::BooleanArray;
 /// use arrow2::compute::boolean::and_scalar;
 /// use arrow2::scalar::BooleanScalar;
-/// # fn main() {
+///
 /// let array = BooleanArray::from_slice(&[false, false, true, true]);
 /// let scalar = BooleanScalar::new(Some(true));
 /// let result = and_scalar(&array, &scalar);
 /// assert_eq!(result, BooleanArray::from_slice(&[false, false, true, true]));
-/// # }
+///
 /// ```
 pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
     match scalar.value() {
@@ -186,7 +173,7 @@ pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
     }
 }
 
-/// Check if any of the values in the array is `true`
+/// Returns whether any of the values in the array is `true`
 pub fn any(array: &BooleanArray) -> bool {
     if array.is_empty() {
         false

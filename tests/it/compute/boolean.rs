@@ -7,7 +7,7 @@ use std::iter::FromIterator;
 fn array_and() {
     let a = BooleanArray::from_slice(vec![false, false, true, true]);
     let b = BooleanArray::from_slice(vec![false, true, false, true]);
-    let c = and(&a, &b).unwrap();
+    let c = and(&a, &b);
 
     let expected = BooleanArray::from_slice(vec![false, false, false, true]);
 
@@ -18,7 +18,7 @@ fn array_and() {
 fn array_or() {
     let a = BooleanArray::from_slice(vec![false, false, true, true]);
     let b = BooleanArray::from_slice(vec![false, true, false, true]);
-    let c = or(&a, &b).unwrap();
+    let c = or(&a, &b);
 
     let expected = BooleanArray::from_slice(vec![false, true, true, true]);
 
@@ -49,7 +49,7 @@ fn array_or_validity() {
         Some(false),
         Some(true),
     ]);
-    let c = or(&a, &b).unwrap();
+    let c = or(&a, &b);
 
     let expected = BooleanArray::from(vec![
         None,
@@ -100,7 +100,7 @@ fn array_and_validity() {
         Some(false),
         Some(true),
     ]);
-    let c = and(&a, &b).unwrap();
+    let c = and(&a, &b);
 
     let expected = BooleanArray::from(vec![
         None,
@@ -128,7 +128,7 @@ fn array_and_sliced_same_offset() {
 
     let a = a.slice(8, 4);
     let b = b.slice(8, 4);
-    let c = and(&a, &b).unwrap();
+    let c = and(&a, &b);
 
     let expected = BooleanArray::from_slice(vec![false, false, false, true]);
 
@@ -147,7 +147,7 @@ fn array_and_sliced_same_offset_mod8() {
     let a = a.slice(0, 4);
     let b = b.slice(8, 4);
 
-    let c = and(&a, &b).unwrap();
+    let c = and(&a, &b);
 
     let expected = BooleanArray::from_slice(vec![false, false, false, true]);
 
@@ -163,7 +163,7 @@ fn array_and_sliced_offset1() {
 
     let a = a.slice(8, 4);
 
-    let c = and(&a, &b).unwrap();
+    let c = and(&a, &b);
 
     let expected = BooleanArray::from_slice(vec![false, false, false, true]);
 
@@ -179,7 +179,7 @@ fn array_and_sliced_offset2() {
 
     let b = b.slice(8, 4);
 
-    let c = and(&a, &b).unwrap();
+    let c = and(&a, &b);
 
     let expected = BooleanArray::from_slice(vec![false, false, false, true]);
 
@@ -204,7 +204,7 @@ fn array_and_validity_offset() {
     let b = b.slice(2, 4);
     let b = b.as_any().downcast_ref::<BooleanArray>().unwrap();
 
-    let c = and(a, b).unwrap();
+    let c = and(a, b);
 
     let expected = BooleanArray::from(vec![Some(false), Some(false), None, Some(true)]);
 
