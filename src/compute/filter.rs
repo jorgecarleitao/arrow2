@@ -267,7 +267,7 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
     let false_count = filter.values().unset_bits();
     if false_count == filter.len() {
         assert_eq!(array.len(), filter.len());
-        return Ok(array.slice(0, 0));
+        return Ok(new_empty_array(array.data_type().clone()));
     }
     if false_count == 0 {
         assert_eq!(array.len(), filter.len());
