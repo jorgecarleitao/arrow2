@@ -4,7 +4,7 @@ use arrow2::{
     io::avro,
 };
 
-fn read_schema_id<R: std::io::Read>(reader: &mut R) -> Result<i32, Error> {
+fn read_schema_id<R: std::io::Read>(reader: &mut R) -> Result<u32, Error> {
     let mut header = [0; 5];
     reader.read_exact(&mut header)?;
 
@@ -13,7 +13,7 @@ fn read_schema_id<R: std::io::Read>(reader: &mut R) -> Result<i32, Error> {
             "Avro requires the first byte to be a zero".to_string(),
         ));
     }
-    Ok(i32::from_be_bytes(header[1..].try_into().unwrap()))
+    Ok(u32::from_be_bytes(header[1..].try_into().unwrap()))
 }
 
 fn read_block<R: std::io::Read>(reader: &mut R, block: &mut avro::Block) -> Result<(), Error> {
