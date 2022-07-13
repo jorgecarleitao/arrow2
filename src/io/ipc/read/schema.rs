@@ -328,17 +328,16 @@ fn get_data_type(
 }
 
 /// Deserialize an flatbuffers-encoded Schema message into [`Schema`] and [`IpcSchema`].
-pub fn deserialize_schema(bytes: &[u8]) -> Result<(Schema, IpcSchema)> {
-    let message = arrow_format::ipc::MessageRef::read_as_root(bytes)
+pub fn deserialize_schema(message: &[u8]) -> Result<(Schema, IpcSchema)> {
+    let message = arrow_format::ipc::MessageRef::read_as_root(message)
         .map_err(|err| Error::oos(format!("Unable deserialize message: {:?}", err)))?;
 
-    let schema = match message.header()?.ok_or_else(|| {
-        Error::oos("Unable to convert flight data header to a record batch".to_string())
-    })? {
+    let schema = match message
+        .header()?
+        .ok_or_else(|| Error::oos("Unable to convert header to a schema".to_string()))?
+    {
         arrow_format::ipc::MessageHeaderRef::Schema(schema) => Ok(schema),
-        _ => Err(Error::nyi(
-            "flight currently only supports reading RecordBatch messages",
-        )),
+        _ => Err(Error::nyi("The message is expected to be a Schema message")),
     }?;
 
     fb_to_schema(schema)
