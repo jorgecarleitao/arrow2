@@ -2,14 +2,13 @@ use std::{iter::FromIterator, ops::Deref, sync::Arc, usize};
 
 use super::Bytes;
 
-/// [`Buffer`] is a contiguous memory region of plain old data types
-/// that can be shared across thread boundaries.
+/// [`Buffer`] is a contiguous memory region that can be shared across
+/// thread boundaries.
 ///
 /// The easiest way to think about [`Buffer<T>`] is being equivalent to
 /// a `Arc<Vec<T>>`, with the following differences:
-/// * `T` must be [`NativeType`]
 /// * slicing and cloning is `O(1)`.
-/// * it supports external allocated memory (via FFI)
+/// * it supports external allocated memory
 ///
 /// The easiest way to create one is to use its implementation of `From<Vec<T>>`.
 ///
