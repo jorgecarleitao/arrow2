@@ -47,6 +47,10 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
     /// Creates a new [`MutableFixedSizeListArray`] from a [`MutableArray`], [`DataType`] and size.
     pub fn new_from(values: M, data_type: DataType, size: usize) -> Self {
         assert_eq!(values.len(), 0);
+        match data_type {
+            DataType::FixedSizeList(..) => {},
+            _ => panic!("data type must be FixedSizeList (got {:?})", data_type),
+        };
         Self {
             size,
             data_type,
