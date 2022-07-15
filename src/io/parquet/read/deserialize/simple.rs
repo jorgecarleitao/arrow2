@@ -303,7 +303,7 @@ fn unifiy_timestmap_unit(
             (ParquetTimeUnit::Milliseconds, TimeUnit::Microsecond)
             | (ParquetTimeUnit::Microseconds, TimeUnit::Nanosecond) => (1_000, true),
 
-            (ParquetTimeUnit::Milliseconds, TimeUnit::Nanosecond) => (1000_000, true),
+            (ParquetTimeUnit::Milliseconds, TimeUnit::Nanosecond) => (1_000_000, true),
         }
     } else {
         (1, true)
