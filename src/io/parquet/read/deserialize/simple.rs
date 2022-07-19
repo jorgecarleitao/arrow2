@@ -320,8 +320,11 @@ fn timestamp<'a, I: 'a + DataPages>(
 ) -> Result<ArrayIter<'a>> {
     if physical_type == &PhysicalType::Int96 {
         let iter = primitive::Iter::new(pages, data_type, chunk_size, int96_to_i64_ns);
-
-        let (factor, is_multiplier) = unifiy_timestmap_unit(logical_type, time_unit);
+        let logical_type = PrimitiveLogicalType::Timestamp {
+            unit: ParquetTimeUnit::Nanoseconds,
+            is_adjusted_to_utc: false,
+        };
+        let (factor, is_multiplier) = unifiy_timestmap_unit(&Some(logical_type), time_unit);
         return match (factor, is_multiplier) {
             (1, _) => Ok(dyn_iter(iden(iter))),
             (a, true) => Ok(dyn_iter(op(iter, move |x| x * a))),
@@ -353,7 +356,11 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
     time_unit: TimeUnit,
 ) -> Result<ArrayIter<'a>> {
     if physical_type == &PhysicalType::Int96 {
-        let (factor, is_multiplier) = unifiy_timestmap_unit(logical_type, time_unit);
+        let logical_type = PrimitiveLogicalType::Timestamp {
+            unit: ParquetTimeUnit::Nanoseconds,
+            is_adjusted_to_utc: false,
+        };
+        let (factor, is_multiplier) = unifiy_timestmap_unit(&Some(logical_type), time_unit);
         return match (factor, is_multiplier) {
             (a, true) => Ok(dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
                 pages,
