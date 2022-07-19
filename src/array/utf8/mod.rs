@@ -590,3 +590,14 @@ unsafe impl<O: Offset> GenericBinaryArray<O> for Utf8Array<O> {
         self.offsets()
     }
 }
+
+impl<O: Offset> Default for Utf8Array<O> {
+    fn default() -> Self {
+        let data_type = if O::IS_LARGE {
+            DataType::LargeUtf8
+        } else {
+            DataType::Utf8
+        };
+        Utf8Array::new(data_type, Default::default(), Default::default(), None)
+    }
+}
