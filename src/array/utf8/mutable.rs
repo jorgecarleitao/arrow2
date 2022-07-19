@@ -241,6 +241,11 @@ impl<O: Offset> MutableUtf8Array<O> {
             validity.shrink_to_fit()
         }
     }
+
+    /// Extract the low-end APIs from the [`MutableUtf8Array`].
+    pub fn into_data(self) -> (DataType, Vec<O>, Vec<u8>, Option<MutableBitmap>) {
+        (self.data_type, self.offsets, self.values, self.validity)
+    }
 }
 
 impl<O: Offset> MutableUtf8Array<O> {
