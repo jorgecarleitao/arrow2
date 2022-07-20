@@ -598,6 +598,11 @@ impl<O: Offset> Default for Utf8Array<O> {
         } else {
             DataType::Utf8
         };
-        Utf8Array::new(data_type, vec![0].into(), Default::default(), None)
+        Utf8Array::new(
+            data_type,
+            vec![O::from_usize(0).unwrap()].into(),
+            Default::default(),
+            None,
+        )
     }
 }
