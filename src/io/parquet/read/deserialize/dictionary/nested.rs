@@ -6,6 +6,8 @@ use parquet2::{
     schema::Repetition,
 };
 
+use crate::io::parquet::read::deserialize::dictionary::Optional;
+use crate::io::parquet::read::deserialize::utils::extend_from_new_page;
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey},
     bitmap::MutableBitmap,
@@ -179,7 +181,10 @@ pub fn next_dict<'a, K: DictionaryKey, I: DataPages, F: Fn(&dyn DictPage) -> Box
             };
 
             // there is a new page => consume the page from the start
-            let mut nested_page = NestedPage::try_new(page)?;
+            let mut nested_page = match NestedPage::try_new(page) {
+                Ok(nested_page) => nested_page,
+                Err(e) => return MaybeNext::Some(Err(e)),
+            };
 
             extend_offsets1(&mut nested_page, init, nested_items, chunk_size);
 
@@ -191,7 +196,7 @@ pub fn next_dict<'a, K: DictionaryKey, I: DataPages, F: Fn(&dyn DictPage) -> Box
                 Err(e) => return MaybeNext::Some(Err(e)),
             };
 
-            extend_from_new_page(page, items, nested_items, &decoder);
+            extend_from_new_page(page, chunk_size, nested_items, &decoder);
 
             if items.front().unwrap().len() < chunk_size.unwrap_or(usize::MAX) {
                 MaybeNext::More

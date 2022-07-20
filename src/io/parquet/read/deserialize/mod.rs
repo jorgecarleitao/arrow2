@@ -289,71 +289,75 @@ where
                 chunk_size,
             )
         }
-        DataType::List(inner) | DataType::LargeList(inner) | DataType::FixedSizeList(inner, _) => {
-            init.push(InitNested::List(field.is_nullable));
-            let iter = columns_to_iter_recursive(
-                columns,
-                types,
-                inner.as_ref().clone(),
-                init,
-                chunk_size,
-            )?;
-            let iter = iter.map(move |x| {
-                let (mut nested, array) = x?;
-                let array = create_list(field.data_type().clone(), &mut nested, array);
-                Ok((nested, array))
-            });
-            Box::new(iter) as _
-        }
-        DataType::Struct(fields) => {
-            let columns = fields
-                .iter()
-                .rev()
-                .map(|f| {
-                    let mut init = init.clone();
-                    init.push(InitNested::Struct(field.is_nullable));
-                    let n = n_columns(&f.data_type);
-                    let columns = columns.drain(columns.len() - n..).collect();
-                    let types = types.drain(types.len() - n..).collect();
-                    columns_to_iter_recursive(columns, types, f.clone(), init, chunk_size)
-                })
-                .collect::<Result<Vec<_>>>()?;
-            let columns = columns.into_iter().rev().collect();
-            Box::new(struct_::StructIterator::new(columns, fields.clone()))
-        }
-        DataType::Map(inner, _) => {
-            init.push(InitNested::List(field.is_nullable));
-            let iter = columns_to_iter_recursive(
-                columns,
-                types,
-                inner.as_ref().clone(),
-                init,
-                chunk_size,
-            )?;
-            Box::new(iter.map(move |x| {
-                let (nested, inner) = x?;
-                let array = MapArray::new(
-                    field.data_type().clone(),
-                    vec![0, inner.len() as i32].into(),
-                    inner,
-                    None,
-                );
-                Ok((nested, array.boxed()))
-            }))
-        }
-        Dictionary(key_type) => {
-            let type_ = types.pop().unwrap();
-            let iter = columns.pop().unwrap();
-            let data_type = field.data_type().clone();
-            match_integer_type!(key_type, |$K| {
-                dict_read::<$K, _>(iter, init, type_, data_type, chunk_size)
-            })?
-        }
-        other => {
-            return Err(Error::nyi(format!(
-                "Deserializing type {other:?} from parquet"
-            )))
-        }
+        _ => match field.data_type().to_logical_type() {
+            DataType::List(inner)
+            | DataType::LargeList(inner)
+            | DataType::FixedSizeList(inner, _) => {
+                init.push(InitNested::List(field.is_nullable));
+                let iter = columns_to_iter_recursive(
+                    columns,
+                    types,
+                    inner.as_ref().clone(),
+                    init,
+                    chunk_size,
+                )?;
+                let iter = iter.map(move |x| {
+                    let (mut nested, array) = x?;
+                    let array = create_list(field.data_type().clone(), &mut nested, array);
+                    Ok((nested, array))
+                });
+                Box::new(iter) as _
+            }
+            DataType::Struct(fields) => {
+                let columns = fields
+                    .iter()
+                    .rev()
+                    .map(|f| {
+                        let mut init = init.clone();
+                        init.push(InitNested::Struct(field.is_nullable));
+                        let n = n_columns(&f.data_type);
+                        let columns = columns.drain(columns.len() - n..).collect();
+                        let types = types.drain(types.len() - n..).collect();
+                        columns_to_iter_recursive(columns, types, f.clone(), init, chunk_size)
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let columns = columns.into_iter().rev().collect();
+                Box::new(struct_::StructIterator::new(columns, fields.clone()))
+            }
+            DataType::Map(inner, _) => {
+                init.push(InitNested::List(field.is_nullable));
+                let iter = columns_to_iter_recursive(
+                    columns,
+                    types,
+                    inner.as_ref().clone(),
+                    init,
+                    chunk_size,
+                )?;
+                Box::new(iter.map(move |x| {
+                    let (nested, inner) = x?;
+                    let array = MapArray::new(
+                        field.data_type().clone(),
+                        vec![0, inner.len() as i32].into(),
+                        inner,
+                        None,
+                    );
+                    Ok((nested, array.boxed()))
+                }))
+            }
+            DataType::Dictionary(key_type, _, _) => {
+                let type_ = types.pop().unwrap();
+                let iter = columns.pop().unwrap();
+                let data_type = field.data_type().clone();
+                match_integer_type!(key_type, |$K| {
+                    dict_read::<$K, _>(iter, init, type_, data_type, chunk_size)
+                })?
+            }
+            other => {
+                return Err(Error::nyi(format!(
+                    "Deserializing type {other:?} from parquet"
+                )))
+            }
+        },
     })
 }
 

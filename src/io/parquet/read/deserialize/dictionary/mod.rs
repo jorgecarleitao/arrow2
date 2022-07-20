@@ -76,6 +76,10 @@ impl<'a> Optional<'a> {
             validity: OptionalPageValidity::try_new(page)?,
         })
     }
+
+    fn len(&self) -> usize {
+        self.values.len()
+    }
 }
 
 impl<'a> utils::PageState<'a> for State<'a> {

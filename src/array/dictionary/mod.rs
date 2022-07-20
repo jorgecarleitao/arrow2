@@ -1,3 +1,4 @@
+use num_traits::FromPrimitive;
 use std::hint::unreachable_unchecked;
 
 use crate::{
@@ -23,7 +24,7 @@ use super::{new_empty_array, primitive::PrimitiveArray, Array};
 use super::{new_null_array, specification::check_indexes};
 
 /// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
-pub trait DictionaryKey: NativeType + TryInto<usize> + TryFrom<usize> {
+pub trait DictionaryKey: NativeType + TryInto<usize> + TryFrom<usize> + FromPrimitive {
     /// The corresponding [`IntegerType`] of this key
     const KEY_TYPE: IntegerType;
 
