@@ -25,6 +25,10 @@ where
     P: ParquetNativeType,
     F: Copy + Fn(P) -> T,
 {
+    let data_type = match data_type {
+        DataType::Dictionary(_, values, _) => *values,
+        _ => data_type,
+    };
     let dict = dict
         .as_any()
         .downcast_ref::<PrimitivePageDict<P>>()
@@ -46,7 +50,6 @@ where
 {
     iter: I,
     data_type: DataType,
-    values_data_type: DataType,
     values: Dict,
     items: VecDeque<(Vec<K>, MutableBitmap)>,
     chunk_size: Option<usize>,
@@ -64,14 +67,9 @@ where
     F: Copy + Fn(P) -> T,
 {
     pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>, op: F) -> Self {
-        let values_data_type = match &data_type {
-            DataType::Dictionary(_, values, _) => *(values.clone()),
-            _ => unreachable!(),
-        };
         Self {
             iter,
             data_type,
-            values_data_type,
             values: Dict::Empty,
             items: VecDeque::new(),
             chunk_size,
@@ -98,7 +96,7 @@ where
             &mut self.values,
             self.data_type.clone(),
             self.chunk_size,
-            |dict| read_dict::<P, T, _>(self.values_data_type.clone(), self.op, dict),
+            |dict| read_dict::<P, T, _>(self.data_type.clone(), self.op, dict),
         );
         match maybe_state {
             MaybeNext::Some(Ok(dict)) => Some(Ok(dict)),
@@ -144,10 +142,6 @@ where
         chunk_size: Option<usize>,
         op: F,
     ) -> Self {
-        let data_type = match data_type {
-            DataType::Dictionary(_, values, _) => *values,
-            _ => data_type,
-        };
         Self {
             iter,
             init,

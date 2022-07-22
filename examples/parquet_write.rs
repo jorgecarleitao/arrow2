@@ -11,19 +11,19 @@ use arrow2::{
     },
 };
 
-fn write_batch(path: &str, schema: Schema, columns: Chunk<Box<dyn Array>>) -> Result<()> {
+fn write_chunk(path: &str, schema: Schema, chunk: Chunk<Box<dyn Array>>) -> Result<()> {
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
         version: Version::V2,
     };
 
-    let iter = vec![Ok(columns)];
+    let iter = vec![Ok(chunk)];
 
     let encodings = schema
         .fields
         .iter()
-        .map(|f| transverse(&f.data_type, |_| Encoding::Plain))
+        .map(|f| transverse(&f.data_type, |_| Encoding::RleDictionary))
         .collect();
 
     let row_groups = RowGroupIterator::try_new(iter.into_iter(), &schema, options, encodings)?;
@@ -52,7 +52,7 @@ fn main() -> Result<()> {
     ]);
     let field = Field::new("c1", array.data_type().clone(), true);
     let schema = Schema::from(vec![field]);
-    let columns = Chunk::new(vec![array.boxed()]);
+    let chunk = Chunk::new(vec![array.boxed()]);
 
-    write_batch("test.parquet", schema, columns)
+    write_chunk("test.parquet", schema, chunk)
 }

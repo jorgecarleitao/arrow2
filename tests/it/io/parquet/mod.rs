@@ -1441,9 +1441,37 @@ fn nested_dict() -> Result<()> {
         DataType::List(Box::new(Field::new(
             "item",
             floats.data_type().clone(),
-            true,
+            false,
         ))),
-        vec![0i32, 0, 2, 3, 3].into(),
+        vec![0i32, 0, 0, 2, 3].into(),
+        floats.boxed(),
+        Some([true, false, true, true].into()),
+    )?;
+
+    let schema = Schema::from(vec![Field::new("floats", floats.data_type().clone(), true)]);
+    let batch = Chunk::try_new(vec![floats.boxed()])?;
+
+    let r = integration_write(&schema, &[batch.clone()])?;
+
+    let (new_schema, new_batches) = integration_read(&r)?;
+
+    assert_eq!(new_schema, schema);
+    assert_eq!(new_batches, vec![batch]);
+    Ok(())
+}
+
+#[test]
+fn nested_dict_utf8() -> Result<()> {
+    let indices = PrimitiveArray::from_values((0..3u64).map(|x| x % 2));
+    let values = Utf8Array::<i32>::from_slice(["a", "b"]);
+    let floats = DictionaryArray::try_from_keys(indices, values.boxed()).unwrap();
+    let floats = ListArray::try_new(
+        DataType::List(Box::new(Field::new(
+            "item",
+            floats.data_type().clone(),
+            false,
+        ))),
+        vec![0i32, 0, 0, 2, 3].into(),
         floats.boxed(),
         Some([true, false, true, true].into()),
     )?;

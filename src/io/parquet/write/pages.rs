@@ -215,7 +215,7 @@ pub fn array_to_columns<A: AsRef<dyn Array> + Send + Sync>(
         .zip(types.into_iter())
         .zip(encoding.iter())
         .map(|(((values, nested), type_), encoding)| {
-            array_to_pages(*values, type_, nested, options, *encoding)
+            array_to_pages(*values, type_, &nested, options, *encoding)
         })
         .collect()
 }

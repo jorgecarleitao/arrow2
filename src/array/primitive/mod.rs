@@ -69,7 +69,7 @@ fn check<T: NativeType>(
 
     if data_type.to_physical_type() != PhysicalType::Primitive(T::PRIMITIVE) {
         return Err(Error::oos(
-            "BooleanArray can only be initialized with a DataType whose physical type is Primitive",
+            "PrimitiveArray can only be initialized with a DataType whose physical type is Primitive",
         ));
     }
     Ok(())

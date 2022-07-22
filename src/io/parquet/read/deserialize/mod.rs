@@ -17,7 +17,7 @@ use crate::{
     array::{
         Array, BinaryArray, DictionaryKey, FixedSizeListArray, ListArray, MapArray, Utf8Array,
     },
-    datatypes::{DataType, Field},
+    datatypes::{DataType, Field, IntervalUnit},
     error::{Error, Result},
 };
 
@@ -289,9 +289,9 @@ where
                 chunk_size,
             )
         }
-
         _ => match field.data_type().to_logical_type() {
             DataType::Dictionary(key_type, _, _) => {
+                init.push(InitNested::Primitive(field.is_nullable));
                 let type_ = types.pop().unwrap();
                 let iter = columns.pop().unwrap();
                 let data_type = field.data_type().clone();
@@ -434,6 +434,52 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             chunk_size,
             |x: i32| x as u8,
         ),
+        UInt16 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+            iter,
+            init,
+            data_type,
+            chunk_size,
+            |x: i32| x as u16,
+        ),
+        UInt32 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+            iter,
+            init,
+            data_type,
+            chunk_size,
+            |x: i32| x as u32,
+        ),
+        Int8 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+            iter,
+            init,
+            data_type,
+            chunk_size,
+            |x: i32| x as i8,
+        ),
+        Int16 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+            iter,
+            init,
+            data_type,
+            chunk_size,
+            |x: i32| x as i16,
+        ),
+        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
+            primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+                iter,
+                init,
+                data_type,
+                chunk_size,
+                |x: i32| x,
+            )
+        }
+        Int64 | Date64 | Time64(_) | Duration(_) => {
+            primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+                iter,
+                init,
+                data_type,
+                chunk_size,
+                |x: i64| x as i32,
+            )
+        }
         Float32 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
             iter,
             init,
@@ -448,36 +494,16 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             chunk_size,
             |x: f64| x,
         ),
+        Utf8 | Binary => {
+            binary::iter_to_dict_arrays_nested::<K, i32, _>(iter, init, data_type, chunk_size)
+        }
+        LargeUtf8 | LargeBinary => {
+            binary::iter_to_dict_arrays_nested::<K, i64, _>(iter, init, data_type, chunk_size)
+        }
+        FixedSizeBinary(_) => {
+            fixed_size_binary::iter_to_dict_arrays_nested::<K, _>(iter, init, data_type, chunk_size)
+        }
         /*
-        UInt16 => dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
-            iter,
-            data_type,
-            chunk_size,
-            |x: i32| x as u16,
-        )),
-        UInt32 => dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
-            iter,
-            data_type,
-            chunk_size,
-            |x: i32| x as u32,
-        )),
-        Int8 => dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
-            iter,
-            data_type,
-            chunk_size,
-            |x: i32| x as i8,
-        )),
-        Int16 => dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
-            iter,
-            data_type,
-            chunk_size,
-            |x: i32| x as i16,
-        )),
-        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => dyn_iter(
-            primitive::DictIter::<K, _, _, _, _>::new(iter, data_type, chunk_size, |x: i32| {
-                x as i32
-            }),
-        ),
 
         Timestamp(time_unit, _) => {
             let time_unit = *time_unit;
@@ -490,32 +516,6 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
                 time_unit,
             );
         }
-
-        Int64 | Date64 | Time64(_) | Duration(_) => dyn_iter(
-            primitive::DictIter::<K, _, _, _, _>::new(iter, data_type, chunk_size, |x: i64| x),
-        ),
-        Float32 => dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
-            iter,
-            data_type,
-            chunk_size,
-            |x: f32| x,
-        )),
-        Float64 => dyn_iter(primitive::DictIter::<K, _, _, _, _>::new(
-            iter,
-            data_type,
-            chunk_size,
-            |x: f64| x,
-        )),
-
-        Utf8 | Binary => dyn_iter(binary::DictIter::<K, i32, _>::new(
-            iter, data_type, chunk_size,
-        )),
-        LargeUtf8 | LargeBinary => dyn_iter(binary::DictIter::<K, i64, _>::new(
-            iter, data_type, chunk_size,
-        )),
-        FixedSizeBinary(_) => dyn_iter(fixed_size_binary::DictIter::<K, _>::new(
-            iter, data_type, chunk_size,
-        )),
          */
         other => {
             return Err(Error::nyi(format!(

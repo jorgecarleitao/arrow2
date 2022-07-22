@@ -14,13 +14,13 @@ pub fn array_to_page(
     array: &BooleanArray,
     options: WriteOptions,
     type_: PrimitiveType,
-    nested: Vec<Nested>,
+    nested: &[Nested],
 ) -> Result<DataPage> {
     let is_optional = is_nullable(&type_.field_info);
 
     let mut buffer = vec![];
     let (repetition_levels_byte_length, definition_levels_byte_length) =
-        nested::write_rep_and_def(options.version, &nested, &mut buffer)?;
+        nested::write_rep_and_def(options.version, nested, &mut buffer)?;
 
     encode_plain(array, is_optional, &mut buffer)?;
 
@@ -32,7 +32,7 @@ pub fn array_to_page(
 
     utils::build_plain_page(
         buffer,
-        nested::num_values(&nested),
+        nested::num_values(nested),
         nested[0].len(),
         array.null_count(),
         repetition_levels_byte_length,
