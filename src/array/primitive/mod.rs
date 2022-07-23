@@ -286,7 +286,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// This is an API to leverage clone-on-write
     /// # Panics
     /// This function panics if the function `f` modifies the length of the [`Bitmap`].
-    pub fn apply_validity<F: Fn(Bitmap) -> Bitmap>(&mut self, f: F) {
+    pub fn apply_validity<F: FnOnce(Bitmap) -> Bitmap>(&mut self, f: F) {
         if let Some(validity) = std::mem::take(&mut self.validity) {
             self.set_validity(Some(f(validity)))
         }
