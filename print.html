@@ -1272,19 +1272,19 @@ use arrow2::{
     },
 };
 
-fn write_batch(path: &amp;str, schema: Schema, columns: Chunk&lt;Box&lt;dyn Array&gt;&gt;) -&gt; Result&lt;()&gt; {
+fn write_chunk(path: &amp;str, schema: Schema, chunk: Chunk&lt;Box&lt;dyn Array&gt;&gt;) -&gt; Result&lt;()&gt; {
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
         version: Version::V2,
     };
 
-    let iter = vec![Ok(columns)];
+    let iter = vec![Ok(chunk)];
 
     let encodings = schema
         .fields
         .iter()
-        .map(|f| transverse(&amp;f.data_type, |_| Encoding::Plain))
+        .map(|f| transverse(&amp;f.data_type, |_| Encoding::RleDictionary))
         .collect();
 
     let row_groups = RowGroupIterator::try_new(iter.into_iter(), &amp;schema, options, encodings)?;
@@ -1313,9 +1313,9 @@ fn main() -&gt; Result&lt;()&gt; {
     ]);
     let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
     let schema = Schema::from(vec![field]);
-    let columns = Chunk::new(vec![array.boxed()]);
+    let chunk = Chunk::new(vec![array.boxed()]);
 
-    write_batch(&quot;test.parquet&quot;, schema, columns)
+    write_chunk(&quot;test.parquet&quot;, schema, chunk)
 }
 </code></pre></pre>
 <h2 id="multi-threaded-writing"><a class="header" href="#multi-threaded-writing">Multi-threaded writing</a></h2>
