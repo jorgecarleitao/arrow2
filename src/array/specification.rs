@@ -99,14 +99,14 @@ pub fn try_check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> Result<
 
 pub fn check_indexes<K>(keys: &[K], len: usize) -> Result<()>
 where
-    K: Copy + TryInto<usize>,
+    K: std::fmt::Debug + Copy + TryInto<usize>,
 {
     keys.iter().try_for_each(|key| {
         let key: usize = (*key)
             .try_into()
-            .map_err(|_| Error::oos("The dictionary key must fit in a `usize`"))?;
+            .map_err(|_| Error::oos(format!("The dictionary key must fit in a `usize`, but {:?} does not", key)))?;
         if key >= len {
-            Err(Error::oos("The dictionary key must be smaller"))
+            Err(Error::oos(format!("One of the dictionary keys is {} but it must be < than the length of the dictionary values, which is {}", key, len)))
         } else {
             Ok(())
         }
