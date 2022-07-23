@@ -7,6 +7,7 @@ use crate::{
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::Result,
+    io::parquet::read::deserialize::nested_utils::{InitNested, NestedArrayIter, NestedState},
 };
 
 use super::super::dictionary::*;
@@ -22,7 +23,6 @@ where
 {
     iter: I,
     data_type: DataType,
-    values_data_type: DataType,
     values: Dict,
     items: VecDeque<(Vec<K>, MutableBitmap)>,
     chunk_size: Option<usize>,
@@ -34,14 +34,9 @@ where
     I: DataPages,
 {
     pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>) -> Self {
-        let values_data_type = match &data_type {
-            DataType::Dictionary(_, values, _) => values.as_ref().clone(),
-            _ => unreachable!(),
-        };
         Self {
             iter,
             data_type,
-            values_data_type,
             values: Dict::Empty,
             items: VecDeque::new(),
             chunk_size,
@@ -50,6 +45,10 @@ where
 }
 
 fn read_dict(data_type: DataType, dict: &dyn DictPage) -> Box<dyn Array> {
+    let data_type = match data_type {
+        DataType::Dictionary(_, values, _) => *values,
+        _ => data_type,
+    };
     let dict = dict
         .as_any()
         .downcast_ref::<FixedLenByteArrayPageDict>()
@@ -77,7 +76,7 @@ where
             &mut self.values,
             self.data_type.clone(),
             self.chunk_size,
-            |dict| read_dict(self.values_data_type.clone(), dict),
+            |dict| read_dict(self.data_type.clone(), dict),
         );
         match maybe_state {
             MaybeNext::Some(Ok(dict)) => Some(Ok(dict)),
@@ -86,4 +85,86 @@ where
             MaybeNext::More => self.next(),
         }
     }
+}
+
+#[derive(Debug)]
+pub struct NestedDictIter<K, I>
+where
+    I: DataPages,
+    K: DictionaryKey,
+{
+    iter: I,
+    init: Vec<InitNested>,
+    data_type: DataType,
+    values: Dict,
+    items: VecDeque<(NestedState, (Vec<K>, MutableBitmap))>,
+    chunk_size: Option<usize>,
+}
+
+impl<K, I> NestedDictIter<K, I>
+where
+    I: DataPages,
+    K: DictionaryKey,
+{
+    pub fn new(
+        iter: I,
+        init: Vec<InitNested>,
+        data_type: DataType,
+        chunk_size: Option<usize>,
+    ) -> Self {
+        Self {
+            iter,
+            init,
+            data_type,
+            values: Dict::Empty,
+            items: VecDeque::new(),
+            chunk_size,
+        }
+    }
+}
+
+impl<K, I> Iterator for NestedDictIter<K, I>
+where
+    I: DataPages,
+    K: DictionaryKey,
+{
+    type Item = Result<(NestedState, DictionaryArray<K>)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let maybe_state = nested_next_dict(
+            &mut self.iter,
+            &mut self.items,
+            &self.init,
+            &mut self.values,
+            self.data_type.clone(),
+            self.chunk_size,
+            |dict| read_dict(self.data_type.clone(), dict),
+        );
+        match maybe_state {
+            MaybeNext::Some(Ok(dict)) => Some(Ok(dict)),
+            MaybeNext::Some(Err(e)) => Some(Err(e)),
+            MaybeNext::None => None,
+            MaybeNext::More => self.next(),
+        }
+    }
+}
+
+/// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
+pub fn iter_to_arrays_nested<'a, K, I>(
+    iter: I,
+    init: Vec<InitNested>,
+    data_type: DataType,
+    chunk_size: Option<usize>,
+) -> NestedArrayIter<'a>
+where
+    I: 'a + DataPages,
+    K: DictionaryKey,
+{
+    Box::new(
+        NestedDictIter::<K, I>::new(iter, init, data_type, chunk_size).map(|result| {
+            let (mut nested, array) = result?;
+            let _ = nested.nested.pop().unwrap(); // the primitive
+            Ok((nested, array.boxed()))
+        }),
+    )
 }

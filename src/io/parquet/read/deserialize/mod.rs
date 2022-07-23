@@ -14,8 +14,10 @@ use parquet2::read::get_page_iterator as _get_page_iterator;
 use parquet2::schema::types::PrimitiveType;
 
 use crate::{
-    array::{Array, BinaryArray, FixedSizeListArray, ListArray, MapArray, Utf8Array},
-    datatypes::{DataType, Field},
+    array::{
+        Array, BinaryArray, DictionaryKey, FixedSizeListArray, ListArray, MapArray, Utf8Array,
+    },
+    datatypes::{DataType, Field, IntervalUnit},
     error::{Error, Result},
 };
 
@@ -287,8 +289,16 @@ where
                 chunk_size,
             )
         }
-
         _ => match field.data_type().to_logical_type() {
+            DataType::Dictionary(key_type, _, _) => {
+                init.push(InitNested::Primitive(field.is_nullable));
+                let type_ = types.pop().unwrap();
+                let iter = columns.pop().unwrap();
+                let data_type = field.data_type().clone();
+                match_integer_type!(key_type, |$K| {
+                    dict_read::<$K, _>(iter, init, type_, data_type, chunk_size)
+                })?
+            }
             DataType::List(inner)
             | DataType::LargeList(inner)
             | DataType::FixedSizeList(inner, _) => {
@@ -400,4 +410,118 @@ where
         columns_to_iter_recursive(columns, types, field, vec![], chunk_size)?
             .map(|x| x.map(|x| x.1)),
     ))
+}
+
+fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
+    iter: I,
+    init: Vec<InitNested>,
+    _type_: &PrimitiveType,
+    data_type: DataType,
+    chunk_size: Option<usize>,
+) -> Result<NestedArrayIter<'a>> {
+    use DataType::*;
+    let values_data_type = if let Dictionary(_, v, _) = &data_type {
+        v.as_ref()
+    } else {
+        panic!()
+    };
+
+    Ok(match values_data_type.to_logical_type() {
+        UInt8 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+            iter,
+            init,
+            data_type,
+            chunk_size,
+            |x: i32| x as u8,
+        ),
+        UInt16 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+            iter,
+            init,
+            data_type,
+            chunk_size,
+            |x: i32| x as u16,
+        ),
+        UInt32 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+            iter,
+            init,
+            data_type,
+            chunk_size,
+            |x: i32| x as u32,
+        ),
+        Int8 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+            iter,
+            init,
+            data_type,
+            chunk_size,
+            |x: i32| x as i8,
+        ),
+        Int16 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+            iter,
+            init,
+            data_type,
+            chunk_size,
+            |x: i32| x as i16,
+        ),
+        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
+            primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+                iter,
+                init,
+                data_type,
+                chunk_size,
+                |x: i32| x,
+            )
+        }
+        Int64 | Date64 | Time64(_) | Duration(_) => {
+            primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+                iter,
+                init,
+                data_type,
+                chunk_size,
+                |x: i64| x as i32,
+            )
+        }
+        Float32 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+            iter,
+            init,
+            data_type,
+            chunk_size,
+            |x: f32| x,
+        ),
+        Float64 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
+            iter,
+            init,
+            data_type,
+            chunk_size,
+            |x: f64| x,
+        ),
+        Utf8 | Binary => {
+            binary::iter_to_dict_arrays_nested::<K, i32, _>(iter, init, data_type, chunk_size)
+        }
+        LargeUtf8 | LargeBinary => {
+            binary::iter_to_dict_arrays_nested::<K, i64, _>(iter, init, data_type, chunk_size)
+        }
+        FixedSizeBinary(_) => {
+            fixed_size_binary::iter_to_dict_arrays_nested::<K, _>(iter, init, data_type, chunk_size)
+        }
+        /*
+
+        Timestamp(time_unit, _) => {
+            let time_unit = *time_unit;
+            return timestamp_dict::<K, _>(
+                iter,
+                physical_type,
+                logical_type,
+                data_type,
+                chunk_size,
+                time_unit,
+            );
+        }
+         */
+        other => {
+            return Err(Error::nyi(format!(
+                "Reading nested dictionaries of type {:?}",
+                other
+            )))
+        }
+    })
 }

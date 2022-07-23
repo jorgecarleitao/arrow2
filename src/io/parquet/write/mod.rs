@@ -95,7 +95,7 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
 pub fn array_to_pages(
     array: &dyn Array,
     type_: ParquetPrimitiveType,
-    nested: Vec<Nested>,
+    nested: &[Nested],
     options: WriteOptions,
     encoding: Encoding,
 ) -> Result<DynIter<'static, Result<EncodedPage>>> {
@@ -110,7 +110,7 @@ pub fn array_to_pages(
         let right = array.slice(split_at, array.len() - split_at);
 
         Ok(DynIter::new(
-            array_to_pages(&*left, type_.clone(), nested.clone(), options, encoding)?
+            array_to_pages(&*left, type_.clone(), nested, options, encoding)?
                 .chain(array_to_pages(&*right, type_, nested, options, encoding)?),
         ))
     } else {
@@ -120,6 +120,7 @@ pub fn array_to_pages(
                     dictionary::array_to_pages::<$T>(
                         array.as_any().downcast_ref().unwrap(),
                         type_,
+                        nested,
                         options,
                         encoding,
                     )
@@ -135,7 +136,7 @@ pub fn array_to_pages(
 pub fn array_to_page(
     array: &dyn Array,
     type_: ParquetPrimitiveType,
-    nested: Vec<Nested>,
+    nested: &[Nested],
     options: WriteOptions,
     encoding: Encoding,
 ) -> Result<EncodedPage> {
@@ -373,7 +374,7 @@ pub fn array_to_page_simple(
 fn array_to_page_nested(
     array: &dyn Array,
     type_: ParquetPrimitiveType,
-    nested: Vec<Nested>,
+    nested: &[Nested],
     options: WriteOptions,
     _encoding: Encoding,
 ) -> Result<EncodedPage> {

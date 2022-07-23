@@ -336,7 +336,7 @@ impl NestedState {
 
 /// Extends `items` by consuming `page`, first trying to complete the last `item`
 /// and extending it if more are needed
-fn extend<'a, D: NestedDecoder<'a>>(
+pub(super) fn extend<'a, D: NestedDecoder<'a>>(
     page: &'a DataPage,
     init: &[InitNested],
     items: &mut VecDeque<(NestedState, D::DecodedState)>,
