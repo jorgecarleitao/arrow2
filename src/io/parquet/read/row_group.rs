@@ -65,14 +65,7 @@ impl Iterator for RowGroupDeserializer {
         let chunk = self
             .column_chunks
             .iter_mut()
-            .map(|iter| {
-                let array = iter.next().unwrap()?;
-                Ok(if array.len() > self.remaining_rows {
-                    array.slice(0, array.len() - self.remaining_rows)
-                } else {
-                    array
-                })
-            })
+            .map(|iter| iter.next().unwrap())
             .collect::<Result<Vec<_>>>()
             .and_then(Chunk::try_new);
         self.remaining_rows = self.remaining_rows.saturating_sub(
@@ -218,7 +211,11 @@ pub fn read_columns_many<'a, R: Read + Seek>(
     row_group: &RowGroupMetaData,
     fields: Vec<Field>,
     chunk_size: Option<usize>,
+    limit: Option<usize>,
 ) -> Result<Vec<ArrayIter<'a>>> {
+    let num_rows = row_group.num_rows();
+    let num_rows = limit.map(|limit| limit.min(num_rows)).unwrap_or(num_rows);
+
     // reads all the necessary columns for all fields from the row group
     // This operation is IO-bounded `O(C)` where C is the number of columns in the row group
     let field_columns = fields
@@ -229,9 +226,7 @@ pub fn read_columns_many<'a, R: Read + Seek>(
     field_columns
         .into_iter()
         .zip(fields.into_iter())
-        .map(|(columns, field)| {
-            to_deserializer(columns, field, row_group.num_rows() as usize, chunk_size)
-        })
+        .map(|(columns, field)| to_deserializer(columns, field, num_rows, chunk_size))
         .collect()
 }
 
