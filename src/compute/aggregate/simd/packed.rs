@@ -1,3 +1,5 @@
+use std::simd::{SimdFloat as _, SimdInt as _, SimdOrd as _, SimdUint as _};
+
 use crate::types::simd::*;
 
 use super::super::min_max::SimdOrd;
@@ -43,12 +45,12 @@ macro_rules! simd_ord_int {
 
             #[inline]
             fn max_lane(self, x: Self) -> Self {
-                self.max(x)
+                self.simd_max(x)
             }
 
             #[inline]
             fn min_lane(self, x: Self) -> Self {
-                self.min(x)
+                self.simd_min(x)
             }
 
             #[inline]
@@ -82,12 +84,12 @@ macro_rules! simd_ord_float {
 
             #[inline]
             fn max_lane(self, x: Self) -> Self {
-                self.max(x)
+                self.simd_max(x)
             }
 
             #[inline]
             fn min_lane(self, x: Self) -> Self {
-                self.min(x)
+                self.simd_min(x)
             }
 
             #[inline]
