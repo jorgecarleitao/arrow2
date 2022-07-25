@@ -192,15 +192,17 @@ pub struct Iter<I: DataPages> {
     data_type: DataType,
     items: VecDeque<(MutableBitmap, MutableBitmap)>,
     chunk_size: Option<usize>,
+    remaining: usize,
 }
 
 impl<I: DataPages> Iter<I> {
-    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>) -> Self {
+    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>, num_rows: usize) -> Self {
         Self {
             iter,
             data_type,
             items: VecDeque::new(),
             chunk_size,
+            remaining: num_rows,
         }
     }
 }
@@ -212,6 +214,7 @@ impl<I: DataPages> Iterator for Iter<I> {
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
+            &mut self.remaining,
             self.chunk_size,
             &BooleanDecoder::default(),
         );

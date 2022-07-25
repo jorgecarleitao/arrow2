@@ -124,7 +124,8 @@ fn read_with_indexes(
         vec![pages],
         vec![&c1.descriptor().descriptor.primitive_type],
         schema.fields[1].clone(),
-        Some(row_group.num_rows() as usize),
+        None,
+        row_group.num_rows() as usize,
     )?;
 
     let arrays = arrays.collect::<Result<Vec<_>>>()?;

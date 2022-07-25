@@ -257,6 +257,7 @@ pub(super) fn next_dict<
     items: &mut VecDeque<(Vec<K>, MutableBitmap)>,
     dict: &mut Dict,
     data_type: DataType,
+    remaining: &mut usize,
     chunk_size: Option<usize>,
     read_dict: F,
 ) -> MaybeNext<Result<DictionaryArray<K>>> {
@@ -288,7 +289,13 @@ pub(super) fn next_dict<
                 Err(e) => return MaybeNext::Some(Err(e)),
             };
 
-            utils::extend_from_new_page(page, chunk_size, items, &PrimitiveDecoder::<K>::default());
+            utils::extend_from_new_page(
+                page,
+                chunk_size,
+                items,
+                remaining,
+                &PrimitiveDecoder::<K>::default(),
+            );
 
             if items.front().unwrap().len() < chunk_size.unwrap_or(usize::MAX) {
                 MaybeNext::More

@@ -26,6 +26,7 @@ where
     data_type: DataType,
     values: Dict,
     items: VecDeque<(Vec<K>, MutableBitmap)>,
+    remaining: usize,
     chunk_size: Option<usize>,
     phantom: std::marker::PhantomData<O>,
 }
@@ -36,12 +37,13 @@ where
     O: Offset,
     I: DataPages,
 {
-    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>) -> Self {
+    pub fn new(iter: I, data_type: DataType, num_rows: usize, chunk_size: Option<usize>) -> Self {
         Self {
             iter,
             data_type,
             values: Dict::Empty,
             items: VecDeque::new(),
+            remaining: num_rows,
             chunk_size,
             phantom: std::marker::PhantomData,
         }
@@ -93,6 +95,7 @@ where
             &mut self.items,
             &mut self.values,
             self.data_type.clone(),
+            &mut self.remaining,
             self.chunk_size,
             |dict| read_dict::<O>(self.data_type.clone(), dict),
         );
@@ -117,6 +120,7 @@ where
     data_type: DataType,
     values: Dict,
     items: VecDeque<(NestedState, (Vec<K>, MutableBitmap))>,
+    remaining: usize,
     chunk_size: Option<usize>,
     phantom: std::marker::PhantomData<O>,
 }
@@ -131,6 +135,7 @@ where
         iter: I,
         init: Vec<InitNested>,
         data_type: DataType,
+        num_rows: usize,
         chunk_size: Option<usize>,
     ) -> Self {
         Self {
@@ -139,6 +144,7 @@ where
             data_type,
             values: Dict::Empty,
             items: VecDeque::new(),
+            remaining: num_rows,
             chunk_size,
             phantom: Default::default(),
         }
@@ -157,6 +163,7 @@ where
         let maybe_state = nested_next_dict(
             &mut self.iter,
             &mut self.items,
+            &mut self.remaining,
             &self.init,
             &mut self.values,
             self.data_type.clone(),
@@ -177,6 +184,7 @@ pub fn iter_to_arrays_nested<'a, K, O, I>(
     iter: I,
     init: Vec<InitNested>,
     data_type: DataType,
+    num_rows: usize,
     chunk_size: Option<usize>,
 ) -> NestedArrayIter<'a>
 where
@@ -185,7 +193,7 @@ where
     K: DictionaryKey,
 {
     Box::new(
-        NestedDictIter::<K, O, I>::new(iter, init, data_type, chunk_size).map(|result| {
+        NestedDictIter::<K, O, I>::new(iter, init, data_type, num_rows, chunk_size).map(|result| {
             let (mut nested, array) = result?;
             let _ = nested.nested.pop().unwrap(); // the primitive
             Ok((nested, array.boxed()))

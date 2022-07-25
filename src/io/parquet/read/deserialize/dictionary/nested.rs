@@ -136,9 +136,11 @@ impl<'a, K: DictionaryKey> NestedDecoder<'a> for DictionaryDecoder<K> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn next_dict<'a, K: DictionaryKey, I: DataPages, F: Fn(&dyn DictPage) -> Box<dyn Array>>(
     iter: &'a mut I,
     items: &mut VecDeque<(NestedState, (Vec<K>, MutableBitmap))>,
+    remaining: &mut usize,
     init: &[InitNested],
     dict: &mut Dict,
     data_type: DataType,
@@ -171,6 +173,7 @@ pub fn next_dict<'a, K: DictionaryKey, I: DataPages, F: Fn(&dyn DictPage) -> Box
                 page,
                 init,
                 items,
+                remaining,
                 &DictionaryDecoder::<K>::default(),
                 chunk_size,
             );

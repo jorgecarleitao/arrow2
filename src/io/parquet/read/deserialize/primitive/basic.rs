@@ -284,7 +284,7 @@ pub(super) fn finish<T: NativeType>(
     MutablePrimitiveArray::from_data(data_type.clone(), values, validity)
 }
 
-/// An iterator adapter over [`DataPages`] assumed to be encoded as primitive arrays
+/// An [`Iterator`] adapter over [`DataPages`] assumed to be encoded as primitive arrays
 #[derive(Debug)]
 pub struct Iter<T, I, P, F>
 where
@@ -296,6 +296,7 @@ where
     iter: I,
     data_type: DataType,
     items: VecDeque<(Vec<T>, MutableBitmap)>,
+    remaining: usize,
     chunk_size: Option<usize>,
     op: F,
     phantom: std::marker::PhantomData<P>,
@@ -309,11 +310,18 @@ where
     P: ParquetNativeType,
     F: Copy + Fn(P) -> T,
 {
-    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>, op: F) -> Self {
+    pub fn new(
+        iter: I,
+        data_type: DataType,
+        num_rows: usize,
+        chunk_size: Option<usize>,
+        op: F,
+    ) -> Self {
         Self {
             iter,
             data_type,
             items: VecDeque::new(),
+            remaining: num_rows,
             chunk_size,
             op,
             phantom: Default::default(),
@@ -334,6 +342,7 @@ where
         let maybe_state = utils::next(
             &mut self.iter,
             &mut self.items,
+            &mut self.remaining,
             self.chunk_size,
             &PrimitiveDecoder::new(self.op),
         );

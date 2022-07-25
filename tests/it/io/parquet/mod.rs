@@ -1149,9 +1149,9 @@ fn integration_write(schema: &Schema, chunks: &[Chunk<Box<dyn Array>>]) -> Resul
 
 type IntegrationRead = (Schema, Vec<Chunk<Box<dyn Array>>>);
 
-fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
+fn integration_read(data: &[u8], limit: Option<usize>) -> Result<IntegrationRead> {
     let reader = Cursor::new(data);
-    let reader = FileReader::try_new(reader, None, None, None, None)?;
+    let reader = FileReader::try_new(reader, None, None, limit, None)?;
     let schema = reader.schema().clone();
 
     for field in &schema.fields {
@@ -1163,10 +1163,7 @@ fn integration_read(data: &[u8]) -> Result<IntegrationRead> {
     Ok((schema, batches))
 }
 
-/// Tests that when arrow-specific types (Duration and LargeUtf8) are written to parquet, we can rountrip its
-/// logical types.
-#[test]
-fn arrow_type() -> Result<()> {
+fn generic_data() -> Result<(Schema, Chunk<Box<dyn Array>>)> {
     let array1 = PrimitiveArray::<i64>::from([Some(1), None, Some(2)])
         .to(DataType::Duration(TimeUnit::Second));
     let array2 = Utf8Array::<i64>::from([Some("a"), None, Some("bb")]);
@@ -1254,13 +1251,40 @@ fn arrow_type() -> Result<()> {
         array14.boxed(),
     ])?;
 
+    Ok((schema, chunk))
+}
+
+fn assert_roundtrip(
+    schema: Schema,
+    chunk: Chunk<Box<dyn Array>>,
+    limit: Option<usize>,
+) -> Result<()> {
     let r = integration_write(&schema, &[chunk.clone()])?;
 
-    let (new_schema, new_chunks) = integration_read(&r)?;
+    let (new_schema, new_chunks) = integration_read(&r, limit)?;
+
+    let expected = if let Some(limit) = limit {
+        let expected = chunk
+            .into_arrays()
+            .into_iter()
+            .map(|x| x.slice(0, limit))
+            .collect::<Vec<_>>();
+        Chunk::new(expected)
+    } else {
+        chunk
+    };
 
     assert_eq!(new_schema, schema);
-    assert_eq!(new_chunks, vec![chunk]);
+    assert_eq!(new_chunks, vec![expected]);
     Ok(())
+}
+
+/// Tests that when arrow-specific types (Duration and LargeUtf8) are written to parquet, we can rountrip its
+/// logical types.
+#[test]
+fn arrow_type() -> Result<()> {
+    let (schema, chunk) = generic_data()?;
+    assert_roundtrip(schema, chunk, None)
 }
 
 fn data<T: NativeType, I: Iterator<Item = T>>(
@@ -1299,7 +1323,11 @@ fn data<T: NativeType, I: Iterator<Item = T>>(
     array.into()
 }
 
-fn list_array_generic<O: Offset>(is_nullable: bool, array: ListArray<O>) -> Result<()> {
+fn list_array_generic<O: Offset>(
+    is_nullable: bool,
+    array: ListArray<O>,
+    limit: Option<usize>,
+) -> Result<()> {
     let schema = Schema::from(vec![Field::new(
         "a1",
         array.data_type().clone(),
@@ -1307,42 +1335,44 @@ fn list_array_generic<O: Offset>(is_nullable: bool, array: ListArray<O>) -> Resu
     )]);
     let chunk = Chunk::try_new(vec![array.boxed()])?;
 
-    let r = integration_write(&schema, &[chunk.clone()])?;
+    assert_roundtrip(schema, chunk, limit)
+}
 
-    let (new_schema, new_chunks) = integration_read(&r)?;
-
-    assert_eq!(new_schema, schema);
-    assert_eq!(new_chunks, vec![chunk]);
-    Ok(())
+fn test_list_array_required_required(limit: Option<usize>) -> Result<()> {
+    list_array_generic(false, data(0..12i8, false), limit)?;
+    list_array_generic(false, data(0..12i16, false), limit)?;
+    list_array_generic(false, data(0..12i32, false), limit)?;
+    list_array_generic(false, data(0..12i64, false), limit)?;
+    list_array_generic(false, data(0..12u8, false), limit)?;
+    list_array_generic(false, data(0..12u16, false), limit)?;
+    list_array_generic(false, data(0..12u32, false), limit)?;
+    list_array_generic(false, data(0..12u64, false), limit)?;
+    list_array_generic(false, data((0..12).map(|x| (x as f32) * 1.0), false), limit)?;
+    list_array_generic(
+        false,
+        data((0..12).map(|x| (x as f64) * 1.0f64), false),
+        limit,
+    )
 }
 
 #[test]
 fn list_array_required_required() -> Result<()> {
-    list_array_generic(false, data(0..12i8, false))?;
-    list_array_generic(false, data(0..12i16, false))?;
-    list_array_generic(false, data(0..12i32, false))?;
-    list_array_generic(false, data(0..12i64, false))?;
-    list_array_generic(false, data(0..12u8, false))?;
-    list_array_generic(false, data(0..12u16, false))?;
-    list_array_generic(false, data(0..12u32, false))?;
-    list_array_generic(false, data(0..12u64, false))?;
-    list_array_generic(false, data((0..12).map(|x| (x as f32) * 1.0), false))?;
-    list_array_generic(false, data((0..12).map(|x| (x as f64) * 1.0f64), false))
+    test_list_array_required_required(None)
 }
 
 #[test]
 fn list_array_optional_optional() -> Result<()> {
-    list_array_generic(true, data(0..12, true))
+    list_array_generic(true, data(0..12, true), None)
 }
 
 #[test]
 fn list_array_required_optional() -> Result<()> {
-    list_array_generic(true, data(0..12, false))
+    list_array_generic(true, data(0..12, false), None)
 }
 
 #[test]
 fn list_array_optional_required() -> Result<()> {
-    list_array_generic(false, data(0..12, true))
+    list_array_generic(false, data(0..12, true), None)
 }
 
 #[test]
@@ -1355,7 +1385,7 @@ fn list_utf8() -> Result<()> {
     let mut array =
         MutableListArray::<i32, _>::new_with_field(MutableUtf8Array::<i32>::new(), "item", true);
     array.try_extend(data).unwrap();
-    list_array_generic(false, array.into())
+    list_array_generic(false, array.into(), None)
 }
 
 #[test]
@@ -1368,7 +1398,7 @@ fn list_large_utf8() -> Result<()> {
     let mut array =
         MutableListArray::<i32, _>::new_with_field(MutableUtf8Array::<i64>::new(), "item", true);
     array.try_extend(data).unwrap();
-    list_array_generic(false, array.into())
+    list_array_generic(false, array.into(), None)
 }
 
 #[test]
@@ -1381,7 +1411,7 @@ fn list_binary() -> Result<()> {
     let mut array =
         MutableListArray::<i32, _>::new_with_field(MutableBinaryArray::<i32>::new(), "item", true);
     array.try_extend(data).unwrap();
-    list_array_generic(false, array.into())
+    list_array_generic(false, array.into(), None)
 }
 
 #[test]
@@ -1394,7 +1424,7 @@ fn large_list_large_binary() -> Result<()> {
     let mut array =
         MutableListArray::<i64, _>::new_with_field(MutableBinaryArray::<i64>::new(), "item", true);
     array.try_extend(data).unwrap();
-    list_array_generic(false, array.into())
+    list_array_generic(false, array.into(), None)
 }
 
 #[test]
@@ -1410,7 +1440,7 @@ fn list_utf8_nullable() -> Result<()> {
     let mut array =
         MutableListArray::<i32, _>::new_with_field(MutableUtf8Array::<i32>::new(), "item", true);
     array.try_extend(data).unwrap();
-    list_array_generic(true, array.into())
+    list_array_generic(true, array.into(), None)
 }
 
 #[test]
@@ -1429,61 +1459,63 @@ fn list_int_nullable() -> Result<()> {
         true,
     );
     array.try_extend(data).unwrap();
-    list_array_generic(true, array.into())
+    list_array_generic(true, array.into(), None)
+}
+
+#[test]
+fn limit() -> Result<()> {
+    let (schema, chunk) = generic_data()?;
+    assert_roundtrip(schema, chunk, Some(2))
+}
+
+#[test]
+fn limit_list() -> Result<()> {
+    test_list_array_required_required(Some(2))
+}
+
+fn nested_dict_data(data_type: DataType) -> Result<(Schema, Chunk<Box<dyn Array>>)> {
+    let values = match data_type {
+        DataType::Float32 => PrimitiveArray::from_slice([1.0f32, 3.0]).boxed(),
+        DataType::Utf8 => Utf8Array::<i32>::from_slice(["a", "b"]).boxed(),
+        _ => unreachable!(),
+    };
+
+    let indices = PrimitiveArray::from_values((0..3u64).map(|x| x % 2));
+    let values = DictionaryArray::try_from_keys(indices, values).unwrap();
+    let values = ListArray::try_new(
+        DataType::List(Box::new(Field::new(
+            "item",
+            values.data_type().clone(),
+            false,
+        ))),
+        vec![0i32, 0, 0, 2, 3].into(),
+        values.boxed(),
+        Some([true, false, true, true].into()),
+    )?;
+
+    let schema = Schema::from(vec![Field::new("c1", values.data_type().clone(), true)]);
+    let chunk = Chunk::try_new(vec![values.boxed()])?;
+
+    Ok((schema, chunk))
 }
 
 #[test]
 fn nested_dict() -> Result<()> {
-    let indices = PrimitiveArray::from_values((0..3u64).map(|x| x % 2));
-    let values = PrimitiveArray::from_slice([1.0f32, 3.0]);
-    let floats = DictionaryArray::try_from_keys(indices, values.boxed()).unwrap();
-    let floats = ListArray::try_new(
-        DataType::List(Box::new(Field::new(
-            "item",
-            floats.data_type().clone(),
-            false,
-        ))),
-        vec![0i32, 0, 0, 2, 3].into(),
-        floats.boxed(),
-        Some([true, false, true, true].into()),
-    )?;
+    let (schema, chunk) = nested_dict_data(DataType::Float32)?;
 
-    let schema = Schema::from(vec![Field::new("floats", floats.data_type().clone(), true)]);
-    let batch = Chunk::try_new(vec![floats.boxed()])?;
-
-    let r = integration_write(&schema, &[batch.clone()])?;
-
-    let (new_schema, new_batches) = integration_read(&r)?;
-
-    assert_eq!(new_schema, schema);
-    assert_eq!(new_batches, vec![batch]);
-    Ok(())
+    assert_roundtrip(schema, chunk, None)
 }
 
 #[test]
 fn nested_dict_utf8() -> Result<()> {
-    let indices = PrimitiveArray::from_values((0..3u64).map(|x| x % 2));
-    let values = Utf8Array::<i32>::from_slice(["a", "b"]);
-    let floats = DictionaryArray::try_from_keys(indices, values.boxed()).unwrap();
-    let floats = ListArray::try_new(
-        DataType::List(Box::new(Field::new(
-            "item",
-            floats.data_type().clone(),
-            false,
-        ))),
-        vec![0i32, 0, 0, 2, 3].into(),
-        floats.boxed(),
-        Some([true, false, true, true].into()),
-    )?;
+    let (schema, chunk) = nested_dict_data(DataType::Utf8)?;
 
-    let schema = Schema::from(vec![Field::new("floats", floats.data_type().clone(), true)]);
-    let batch = Chunk::try_new(vec![floats.boxed()])?;
+    assert_roundtrip(schema, chunk, None)
+}
 
-    let r = integration_write(&schema, &[batch.clone()])?;
+#[test]
+fn nested_dict_limit() -> Result<()> {
+    let (schema, chunk) = nested_dict_data(DataType::Float32)?;
 
-    let (new_schema, new_batches) = integration_read(&r)?;
-
-    assert_eq!(new_schema, schema);
-    assert_eq!(new_batches, vec![batch]);
-    Ok(())
+    assert_roundtrip(schema, chunk, Some(2))
 }

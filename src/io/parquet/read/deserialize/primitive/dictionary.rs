@@ -52,6 +52,7 @@ where
     data_type: DataType,
     values: Dict,
     items: VecDeque<(Vec<K>, MutableBitmap)>,
+    remaining: usize,
     chunk_size: Option<usize>,
     op: F,
     phantom: std::marker::PhantomData<P>,
@@ -66,13 +67,20 @@ where
     P: ParquetNativeType,
     F: Copy + Fn(P) -> T,
 {
-    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>, op: F) -> Self {
+    pub fn new(
+        iter: I,
+        data_type: DataType,
+        num_rows: usize,
+        chunk_size: Option<usize>,
+        op: F,
+    ) -> Self {
         Self {
             iter,
             data_type,
             values: Dict::Empty,
             items: VecDeque::new(),
             chunk_size,
+            remaining: num_rows,
             op,
             phantom: Default::default(),
         }
@@ -95,6 +103,7 @@ where
             &mut self.items,
             &mut self.values,
             self.data_type.clone(),
+            &mut self.remaining,
             self.chunk_size,
             |dict| read_dict::<P, T, _>(self.data_type.clone(), self.op, dict),
         );
@@ -121,6 +130,7 @@ where
     data_type: DataType,
     values: Dict,
     items: VecDeque<(NestedState, (Vec<K>, MutableBitmap))>,
+    remaining: usize,
     chunk_size: Option<usize>,
     op: F,
     phantom: std::marker::PhantomData<P>,
@@ -139,6 +149,7 @@ where
         iter: I,
         init: Vec<InitNested>,
         data_type: DataType,
+        num_rows: usize,
         chunk_size: Option<usize>,
         op: F,
     ) -> Self {
@@ -148,6 +159,7 @@ where
             data_type,
             values: Dict::Empty,
             items: VecDeque::new(),
+            remaining: num_rows,
             chunk_size,
             op,
             phantom: Default::default(),
@@ -169,6 +181,7 @@ where
         let maybe_state = nested_next_dict(
             &mut self.iter,
             &mut self.items,
+            &mut self.remaining,
             &self.init,
             &mut self.values,
             self.data_type.clone(),
@@ -189,6 +202,7 @@ pub fn iter_to_arrays_nested<'a, K, I, T, P, F>(
     iter: I,
     init: Vec<InitNested>,
     data_type: DataType,
+    num_rows: usize,
     chunk_size: Option<usize>,
     op: F,
 ) -> NestedArrayIter<'a>
@@ -200,10 +214,12 @@ where
     F: 'a + Copy + Send + Sync + Fn(P) -> T,
 {
     Box::new(
-        NestedDictIter::<K, _, _, _, _>::new(iter, init, data_type, chunk_size, op).map(|result| {
-            let (mut nested, array) = result?;
-            let _ = nested.nested.pop().unwrap(); // the primitive
-            Ok((nested, array.boxed()))
-        }),
+        NestedDictIter::<K, _, _, _, _>::new(iter, init, data_type, num_rows, chunk_size, op).map(
+            |result| {
+                let (mut nested, array) = result?;
+                let _ = nested.nested.pop().unwrap(); // the primitive
+                Ok((nested, array.boxed()))
+            },
+        ),
     )
 }

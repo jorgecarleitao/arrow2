@@ -372,33 +372,37 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
     mut page: T::State,
     chunk_size: Option<usize>,
     items: &mut VecDeque<T::DecodedState>,
+    remaining: &mut usize,
     decoder: &T,
 ) {
     let capacity = chunk_size.unwrap_or(0);
-    let chunk_size = chunk_size.unwrap_or(usize::MAX);
+    let chunk_size = chunk_size.map(|x| x.min(*remaining)).unwrap_or(*remaining);
 
     let mut decoded = if let Some(decoded) = items.pop_back() {
-        // there is a already a state => it must be incomplete...
-        debug_assert!(
-            decoded.len() <= chunk_size,
-            "the temp state is expected to be incomplete"
-        );
+        *remaining += decoded.len();
         decoded
     } else {
         // there is no state => initialize it
         decoder.with_capacity(capacity)
     };
 
-    let remaining = chunk_size - decoded.len();
+    // e.g. chunk = 10, remaining = 100, decoded = 2 => 8.min(100) = 8
+    // e.g. chunk = 100, remaining = 100, decoded = 0 => 100.min(100) = 100
+    // e.g. chunk = 10, remaining = 2, decoded = 2 => 8.min(2) = 2
+    let additional = (chunk_size - decoded.len()).min(*remaining);
 
     // extend the current state
-    decoder.extend_from_state(&mut page, &mut decoded, remaining);
+    decoder.extend_from_state(&mut page, &mut decoded, additional);
 
+    *remaining -= decoded.len();
     items.push_back(decoded);
 
-    while page.len() > 0 {
-        let mut decoded = decoder.with_capacity(capacity);
-        decoder.extend_from_state(&mut page, &mut decoded, chunk_size);
+    while page.len() > 0 && *remaining > 0 {
+        let additional = chunk_size.min(*remaining);
+
+        let mut decoded = decoder.with_capacity(additional);
+        decoder.extend_from_state(&mut page, &mut decoded, additional);
+        *remaining -= decoded.len();
         items.push_back(decoded)
     }
 }
@@ -414,6 +418,7 @@ pub enum MaybeNext<P> {
 pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
     iter: &'a mut I,
     items: &mut VecDeque<D::DecodedState>,
+    remaining: &mut usize,
     chunk_size: Option<usize>,
     decoder: &D,
 ) -> MaybeNext<Result<D::DecodedState, Error>> {
@@ -421,6 +426,12 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
     if items.len() > 1 {
         let item = items.pop_front().unwrap();
         return MaybeNext::Some(Ok(item));
+    }
+    if *remaining == 0 {
+        return match items.pop_front() {
+            Some(decoded) => MaybeNext::Some(Ok(decoded)),
+            None => MaybeNext::None,
+        };
     }
     match iter.next() {
         Err(e) => MaybeNext::Some(Err(e.into())),
@@ -432,7 +443,7 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
                 Err(e) => return MaybeNext::Some(Err(e)),
             };
 
-            extend_from_new_page(page, chunk_size, items, decoder);
+            extend_from_new_page(page, chunk_size, items, remaining, decoder);
 
             if (items.len() == 1) && items.front().unwrap().len() < chunk_size.unwrap_or(0) {
                 MaybeNext::More
