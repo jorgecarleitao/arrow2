@@ -240,6 +240,7 @@ impl<R: Read + Seek> RowGroupReader<R> {
             row_group,
             self.schema.fields.clone(),
             self.chunk_size,
+            Some(self.remaining_rows),
         )?;
 
         let result = RowGroupDeserializer::new(

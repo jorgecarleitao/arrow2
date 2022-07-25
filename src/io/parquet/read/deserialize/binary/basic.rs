@@ -426,16 +426,18 @@ pub struct Iter<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
     data_type: DataType,
     items: VecDeque<(Binary<O>, MutableBitmap)>,
     chunk_size: Option<usize>,
+    remaining: usize,
     phantom_a: std::marker::PhantomData<A>,
 }
 
 impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iter<O, A, I> {
-    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>) -> Self {
+    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>, num_rows: usize) -> Self {
         Self {
             iter,
             data_type,
             items: VecDeque::new(),
             chunk_size,
+            remaining: num_rows,
             phantom_a: Default::default(),
         }
     }
@@ -448,6 +450,7 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for Iter<O, A, I>
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
+            &mut self.remaining,
             self.chunk_size,
             &BinaryDecoder::<O>::default(),
         );

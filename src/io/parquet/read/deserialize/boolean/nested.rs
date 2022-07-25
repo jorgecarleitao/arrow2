@@ -105,15 +105,17 @@ pub struct NestedIter<I: DataPages> {
     iter: I,
     init: Vec<InitNested>,
     items: VecDeque<(NestedState, (MutableBitmap, MutableBitmap))>,
+    remaining: usize,
     chunk_size: Option<usize>,
 }
 
 impl<I: DataPages> NestedIter<I> {
-    pub fn new(iter: I, init: Vec<InitNested>, chunk_size: Option<usize>) -> Self {
+    pub fn new(iter: I, init: Vec<InitNested>, num_rows: usize, chunk_size: Option<usize>) -> Self {
         Self {
             iter,
             init,
             items: VecDeque::new(),
+            remaining: num_rows,
             chunk_size,
         }
     }
@@ -130,6 +132,7 @@ impl<I: DataPages> Iterator for NestedIter<I> {
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
+            &mut self.remaining,
             &self.init,
             self.chunk_size,
             &BooleanDecoder::default(),
@@ -149,14 +152,17 @@ impl<I: DataPages> Iterator for NestedIter<I> {
 pub fn iter_to_arrays_nested<'a, I: 'a>(
     iter: I,
     init: Vec<InitNested>,
+    num_rows: usize,
     chunk_size: Option<usize>,
 ) -> NestedArrayIter<'a>
 where
     I: DataPages,
 {
-    Box::new(NestedIter::new(iter, init, chunk_size).map(|result| {
-        let (mut nested, array) = result?;
-        let _ = nested.nested.pop().unwrap(); // the primitive
-        Ok((nested, array.boxed()))
+    Box::new(NestedIter::new(iter, init, num_rows, chunk_size).map(|x| {
+        x.map(|(mut nested, array)| {
+            let _ = nested.nested.pop().unwrap(); // the primitive
+            let values = array.boxed();
+            (nested, values)
+        })
     }))
 }

@@ -286,10 +286,11 @@ pub struct Iter<I: DataPages> {
     size: usize,
     items: VecDeque<(FixedSizeBinary, MutableBitmap)>,
     chunk_size: Option<usize>,
+    remaining: usize,
 }
 
 impl<I: DataPages> Iter<I> {
-    pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>) -> Self {
+    pub fn new(iter: I, data_type: DataType, num_rows: usize, chunk_size: Option<usize>) -> Self {
         let size = FixedSizeBinaryArray::get_size(&data_type);
         Self {
             iter,
@@ -297,6 +298,7 @@ impl<I: DataPages> Iter<I> {
             size,
             items: VecDeque::new(),
             chunk_size,
+            remaining: num_rows,
         }
     }
 }
@@ -308,6 +310,7 @@ impl<I: DataPages> Iterator for Iter<I> {
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
+            &mut self.remaining,
             self.chunk_size,
             &BinaryDecoder { size: self.size },
         );

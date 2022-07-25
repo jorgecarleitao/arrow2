@@ -340,6 +340,7 @@ pub(super) fn extend<'a, D: NestedDecoder<'a>>(
     page: &'a DataPage,
     init: &[InitNested],
     items: &mut VecDeque<(NestedState, D::DecodedState)>,
+    remaining: &mut usize,
     decoder: &D,
     chunk_size: Option<usize>,
 ) -> Result<()> {
@@ -347,21 +348,20 @@ pub(super) fn extend<'a, D: NestedDecoder<'a>>(
     let mut page = NestedPage::try_new(page)?;
 
     let capacity = chunk_size.unwrap_or(0);
-    let chunk_size = chunk_size.unwrap_or(usize::MAX);
+    let chunk_size = chunk_size.map(|x| x.min(*remaining)).unwrap_or(*remaining);
 
     let (mut nested, mut decoded) = if let Some((nested, decoded)) = items.pop_back() {
-        // there is a already a state => it must be incomplete...
-        debug_assert!(
-            nested.len() < chunk_size,
-            "the temp array is expected to be incomplete"
-        );
+        *remaining += nested.len();
         (nested, decoded)
     } else {
         // there is no state => initialize it
         (init_nested(init, capacity), decoder.with_capacity(0))
     };
 
-    let remaining = chunk_size - nested.len();
+    // e.g. chunk = 10, remaining = 100, decoded = 2 => 8.min(100) = 8
+    // e.g. chunk = 100, remaining = 100, decoded = 0 => 100.min(100) = 100
+    // e.g. chunk = 10, remaining = 2, decoded = 2 => 8.min(2) = 2
+    let additional = (chunk_size - nested.len()).min(*remaining);
 
     // extend the current state
     extend_offsets2(
@@ -370,12 +370,15 @@ pub(super) fn extend<'a, D: NestedDecoder<'a>>(
         &mut nested.nested,
         &mut decoded,
         decoder,
-        remaining,
+        additional,
     );
+    *remaining -= nested.len();
     items.push_back((nested, decoded));
 
-    while page.len() > 0 {
-        let mut nested = init_nested(init, capacity);
+    while page.len() > 0 && *remaining > 0 {
+        let additional = chunk_size.min(*remaining);
+
+        let mut nested = init_nested(init, additional);
         let mut decoded = decoder.with_capacity(0);
         extend_offsets2(
             &mut page,
@@ -383,8 +386,9 @@ pub(super) fn extend<'a, D: NestedDecoder<'a>>(
             &mut nested.nested,
             &mut decoded,
             decoder,
-            chunk_size,
+            additional,
         );
+        *remaining -= nested.len();
         items.push_back((nested, decoded));
     }
     Ok(())
@@ -465,6 +469,7 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
 pub(super) fn next<'a, I, D>(
     iter: &'a mut I,
     items: &mut VecDeque<(NestedState, D::DecodedState)>,
+    remaining: &mut usize,
     init: &[InitNested],
     chunk_size: Option<usize>,
     decoder: &D,
@@ -478,18 +483,24 @@ where
         let (nested, decoded) = items.pop_front().unwrap();
         return MaybeNext::Some(Ok((nested, decoded)));
     }
+    if *remaining == 0 {
+        return match items.pop_front() {
+            Some(decoded) => MaybeNext::Some(Ok(decoded)),
+            None => MaybeNext::None,
+        };
+    }
     match iter.next() {
         Err(e) => MaybeNext::Some(Err(e.into())),
         Ok(None) => {
-            if let Some((nested, decoded)) = items.pop_front() {
-                MaybeNext::Some(Ok((nested, decoded)))
+            if let Some(decoded) = items.pop_front() {
+                MaybeNext::Some(Ok(decoded))
             } else {
                 MaybeNext::None
             }
         }
         Ok(Some(page)) => {
             // there is a new page => consume the page from the start
-            let error = extend(page, init, items, decoder, chunk_size);
+            let error = extend(page, init, items, remaining, decoder, chunk_size);
             match error {
                 Ok(_) => {}
                 Err(e) => return MaybeNext::Some(Err(e)),
@@ -498,8 +509,7 @@ where
             if items.front().unwrap().0.len() < chunk_size.unwrap_or(0) {
                 MaybeNext::More
             } else {
-                let (nested, decoded) = items.pop_front().unwrap();
-                MaybeNext::Some(Ok((nested, decoded)))
+                MaybeNext::Some(Ok(items.pop_front().unwrap()))
             }
         }
     }

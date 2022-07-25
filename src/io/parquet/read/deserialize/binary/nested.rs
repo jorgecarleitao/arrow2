@@ -148,6 +148,7 @@ pub struct NestedIter<O: Offset, A: TraitBinaryArray<O>, I: DataPages> {
     init: Vec<InitNested>,
     items: VecDeque<(NestedState, (Binary<O>, MutableBitmap))>,
     chunk_size: Option<usize>,
+    remaining: usize,
     phantom_a: std::marker::PhantomData<A>,
 }
 
@@ -156,6 +157,7 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> NestedIter<O, A, I> {
         iter: I,
         init: Vec<InitNested>,
         data_type: DataType,
+        num_rows: usize,
         chunk_size: Option<usize>,
     ) -> Self {
         Self {
@@ -164,6 +166,7 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> NestedIter<O, A, I> {
             init,
             items: VecDeque::new(),
             chunk_size,
+            remaining: num_rows,
             phantom_a: Default::default(),
         }
     }
@@ -176,6 +179,7 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for NestedIter<O,
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
+            &mut self.remaining,
             &self.init,
             self.chunk_size,
             &BinaryDecoder::<O>::default(),
@@ -196,6 +200,7 @@ pub fn iter_to_arrays_nested<'a, O, A, I>(
     iter: I,
     init: Vec<InitNested>,
     data_type: DataType,
+    num_rows: usize,
     chunk_size: Option<usize>,
 ) -> NestedArrayIter<'a>
 where
@@ -204,11 +209,12 @@ where
     O: Offset,
 {
     Box::new(
-        NestedIter::<O, A, I>::new(iter, init, data_type, chunk_size).map(|result| {
-            let (mut nested, array) = result?;
-            let _ = nested.nested.pop().unwrap(); // the primitive
-            let array = Box::new(array) as Box<dyn Array>;
-            Ok((nested, array))
+        NestedIter::<O, A, I>::new(iter, init, data_type, num_rows, chunk_size).map(|x| {
+            x.map(|(mut nested, array)| {
+                let _ = nested.nested.pop().unwrap(); // the primitive
+                let values = Box::new(array) as Box<dyn Array>;
+                (nested, values)
+            })
         }),
     )
 }

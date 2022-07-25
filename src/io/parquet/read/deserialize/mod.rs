@@ -98,6 +98,7 @@ fn columns_to_iter_recursive<'a, I: 'a>(
     mut types: Vec<&PrimitiveType>,
     field: Field,
     mut init: Vec<InitNested>,
+    num_rows: usize,
     chunk_size: Option<usize>,
 ) -> Result<NestedArrayIter<'a>>
 where
@@ -113,6 +114,7 @@ where
                 types.pop().unwrap(),
                 field.data_type,
                 chunk_size,
+                num_rows,
             )?
             .map(|x| Ok((NestedState::new(vec![]), x?))),
         ));
@@ -122,7 +124,7 @@ where
         Boolean => {
             init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
-            boolean::iter_to_arrays_nested(columns.pop().unwrap(), init, chunk_size)
+            boolean::iter_to_arrays_nested(columns.pop().unwrap(), init, num_rows, chunk_size)
         }
         Primitive(Int8) => {
             init.push(InitNested::Primitive(field.is_nullable));
@@ -131,6 +133,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
                 |x: i32| x as i8,
             )
@@ -142,6 +145,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
                 |x: i32| x as i16,
             )
@@ -153,6 +157,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
                 |x: i32| x,
             )
@@ -164,6 +169,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
                 |x: i64| x,
             )
@@ -175,6 +181,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
                 |x: i32| x as u8,
             )
@@ -186,6 +193,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
                 |x: i32| x as u16,
             )
@@ -198,6 +206,7 @@ where
                     columns.pop().unwrap(),
                     init,
                     field.data_type().clone(),
+                    num_rows,
                     chunk_size,
                     |x: i32| x as u32,
                 ),
@@ -206,6 +215,7 @@ where
                     columns.pop().unwrap(),
                     init,
                     field.data_type().clone(),
+                    num_rows,
                     chunk_size,
                     |x: i64| x as u32,
                 ),
@@ -223,6 +233,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
                 |x: i64| x as u64,
             )
@@ -234,6 +245,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
                 |x: f32| x,
             )
@@ -245,6 +257,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
                 |x: f64| x,
             )
@@ -256,6 +269,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
             )
         }
@@ -266,6 +280,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
             )
         }
@@ -276,6 +291,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
             )
         }
@@ -286,6 +302,7 @@ where
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
+                num_rows,
                 chunk_size,
             )
         }
@@ -296,7 +313,7 @@ where
                 let iter = columns.pop().unwrap();
                 let data_type = field.data_type().clone();
                 match_integer_type!(key_type, |$K| {
-                    dict_read::<$K, _>(iter, init, type_, data_type, chunk_size)
+                    dict_read::<$K, _>(iter, init, type_, data_type, num_rows, chunk_size)
                 })?
             }
             DataType::List(inner)
@@ -308,6 +325,7 @@ where
                     types,
                     inner.as_ref().clone(),
                     init,
+                    num_rows,
                     chunk_size,
                 )?;
                 let iter = iter.map(move |x| {
@@ -327,7 +345,14 @@ where
                         let n = n_columns(&f.data_type);
                         let columns = columns.drain(columns.len() - n..).collect();
                         let types = types.drain(types.len() - n..).collect();
-                        columns_to_iter_recursive(columns, types, f.clone(), init, chunk_size)
+                        columns_to_iter_recursive(
+                            columns,
+                            types,
+                            f.clone(),
+                            init,
+                            num_rows,
+                            chunk_size,
+                        )
                     })
                     .collect::<Result<Vec<_>>>()?;
                 let columns = columns.into_iter().rev().collect();
@@ -340,6 +365,7 @@ where
                     types,
                     inner.as_ref().clone(),
                     init,
+                    num_rows,
                     chunk_size,
                 )?;
                 Box::new(iter.map(move |x| {
@@ -402,12 +428,13 @@ pub fn column_iter_to_arrays<'a, I: 'a>(
     types: Vec<&PrimitiveType>,
     field: Field,
     chunk_size: Option<usize>,
+    num_rows: usize,
 ) -> Result<ArrayIter<'a>>
 where
     I: DataPages,
 {
     Ok(Box::new(
-        columns_to_iter_recursive(columns, types, field, vec![], chunk_size)?
+        columns_to_iter_recursive(columns, types, field, vec![], num_rows, chunk_size)?
             .map(|x| x.map(|x| x.1)),
     ))
 }
@@ -417,6 +444,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
     init: Vec<InitNested>,
     _type_: &PrimitiveType,
     data_type: DataType,
+    num_rows: usize,
     chunk_size: Option<usize>,
 ) -> Result<NestedArrayIter<'a>> {
     use DataType::*;
@@ -431,6 +459,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             iter,
             init,
             data_type,
+            num_rows,
             chunk_size,
             |x: i32| x as u8,
         ),
@@ -438,6 +467,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             iter,
             init,
             data_type,
+            num_rows,
             chunk_size,
             |x: i32| x as u16,
         ),
@@ -445,6 +475,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             iter,
             init,
             data_type,
+            num_rows,
             chunk_size,
             |x: i32| x as u32,
         ),
@@ -452,6 +483,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             iter,
             init,
             data_type,
+            num_rows,
             chunk_size,
             |x: i32| x as i8,
         ),
@@ -459,6 +491,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             iter,
             init,
             data_type,
+            num_rows,
             chunk_size,
             |x: i32| x as i16,
         ),
@@ -467,6 +500,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
                 iter,
                 init,
                 data_type,
+                num_rows,
                 chunk_size,
                 |x: i32| x,
             )
@@ -476,6 +510,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
                 iter,
                 init,
                 data_type,
+                num_rows,
                 chunk_size,
                 |x: i64| x as i32,
             )
@@ -484,6 +519,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             iter,
             init,
             data_type,
+            num_rows,
             chunk_size,
             |x: f32| x,
         ),
@@ -491,18 +527,19 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
             iter,
             init,
             data_type,
+            num_rows,
             chunk_size,
             |x: f64| x,
         ),
-        Utf8 | Binary => {
-            binary::iter_to_dict_arrays_nested::<K, i32, _>(iter, init, data_type, chunk_size)
-        }
-        LargeUtf8 | LargeBinary => {
-            binary::iter_to_dict_arrays_nested::<K, i64, _>(iter, init, data_type, chunk_size)
-        }
-        FixedSizeBinary(_) => {
-            fixed_size_binary::iter_to_dict_arrays_nested::<K, _>(iter, init, data_type, chunk_size)
-        }
+        Utf8 | Binary => binary::iter_to_dict_arrays_nested::<K, i32, _>(
+            iter, init, data_type, num_rows, chunk_size,
+        ),
+        LargeUtf8 | LargeBinary => binary::iter_to_dict_arrays_nested::<K, i64, _>(
+            iter, init, data_type, num_rows, chunk_size,
+        ),
+        FixedSizeBinary(_) => fixed_size_binary::iter_to_dict_arrays_nested::<K, _>(
+            iter, init, data_type, num_rows, chunk_size,
+        ),
         /*
 
         Timestamp(time_unit, _) => {

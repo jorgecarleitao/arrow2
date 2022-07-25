@@ -171,6 +171,7 @@ where
     init: Vec<InitNested>,
     data_type: DataType,
     items: VecDeque<(NestedState, (Vec<T>, MutableBitmap))>,
+    remaining: usize,
     chunk_size: Option<usize>,
     decoder: PrimitiveDecoder<T, P, F>,
 }
@@ -187,6 +188,7 @@ where
         iter: I,
         init: Vec<InitNested>,
         data_type: DataType,
+        num_rows: usize,
         chunk_size: Option<usize>,
         op: F,
     ) -> Self {
@@ -196,6 +198,7 @@ where
             data_type,
             items: VecDeque::new(),
             chunk_size,
+            remaining: num_rows,
             decoder: PrimitiveDecoder::new(op),
         }
     }
@@ -215,6 +218,7 @@ where
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
+            &mut self.remaining,
             &self.init,
             self.chunk_size,
             &self.decoder,
@@ -235,6 +239,7 @@ pub fn iter_to_arrays_nested<'a, I, T, P, F>(
     iter: I,
     init: Vec<InitNested>,
     data_type: DataType,
+    num_rows: usize,
     chunk_size: Option<usize>,
     op: F,
 ) -> NestedArrayIter<'a>
@@ -245,10 +250,13 @@ where
     F: 'a + Copy + Send + Sync + Fn(P) -> T,
 {
     Box::new(
-        ArrayIterator::<T, I, P, F>::new(iter, init, data_type, chunk_size, op).map(|result| {
-            let (mut nested, array) = result?;
-            let _ = nested.nested.pop().unwrap(); // the primitive
-            Ok((nested, array.boxed()))
-        }),
+        ArrayIterator::<T, I, P, F>::new(iter, init, data_type, num_rows, chunk_size, op).map(
+            |x| {
+                x.map(|(mut nested, array)| {
+                    let _ = nested.nested.pop().unwrap(); // the primitive
+                    (nested, array.boxed())
+                })
+            },
+        ),
     )
 }

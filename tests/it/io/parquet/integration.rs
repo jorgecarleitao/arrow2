@@ -14,7 +14,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
 
     let data = integration_write(&schema, &batches)?;
 
-    let (read_schema, read_batches) = integration_read(&data)?;
+    let (read_schema, read_batches) = integration_read(&data, None)?;
 
     assert_eq!(schema, read_schema);
     assert_eq!(batches, read_batches);
