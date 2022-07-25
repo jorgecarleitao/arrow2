@@ -159,7 +159,7 @@ fn finish<T: NativeType>(
 
 /// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
 #[derive(Debug)]
-pub struct ArrayIterator<T, I, P, F>
+pub struct NestedIter<T, I, P, F>
 where
     I: DataPages,
     T: NativeType,
@@ -176,7 +176,7 @@ where
     decoder: PrimitiveDecoder<T, P, F>,
 }
 
-impl<T, I, P, F> ArrayIterator<T, I, P, F>
+impl<T, I, P, F> NestedIter<T, I, P, F>
 where
     I: DataPages,
     T: NativeType,
@@ -204,7 +204,7 @@ where
     }
 }
 
-impl<T, I, P, F> Iterator for ArrayIterator<T, I, P, F>
+impl<T, I, P, F> Iterator for NestedIter<T, I, P, F>
 where
     I: DataPages,
     T: NativeType,
@@ -232,31 +232,4 @@ where
             utils::MaybeNext::More => self.next(),
         }
     }
-}
-
-/// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
-pub fn iter_to_arrays_nested<'a, I, T, P, F>(
-    iter: I,
-    init: Vec<InitNested>,
-    data_type: DataType,
-    num_rows: usize,
-    chunk_size: Option<usize>,
-    op: F,
-) -> NestedArrayIter<'a>
-where
-    I: 'a + DataPages,
-    T: crate::types::NativeType,
-    P: parquet2::types::NativeType,
-    F: 'a + Copy + Send + Sync + Fn(P) -> T,
-{
-    Box::new(
-        ArrayIterator::<T, I, P, F>::new(iter, init, data_type, num_rows, chunk_size, op).map(
-            |x| {
-                x.map(|(mut nested, array)| {
-                    let _ = nested.nested.pop().unwrap(); // the primitive
-                    (nested, array.boxed())
-                })
-            },
-        ),
-    )
 }

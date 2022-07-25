@@ -147,22 +147,3 @@ impl<I: DataPages> Iterator for NestedIter<I> {
         }
     }
 }
-
-/// Converts [`DataPages`] to an [`Iterator`] of [`BooleanArray`]
-pub fn iter_to_arrays_nested<'a, I: 'a>(
-    iter: I,
-    init: Vec<InitNested>,
-    num_rows: usize,
-    chunk_size: Option<usize>,
-) -> NestedArrayIter<'a>
-where
-    I: DataPages,
-{
-    Box::new(NestedIter::new(iter, init, num_rows, chunk_size).map(|x| {
-        x.map(|(mut nested, array)| {
-            let _ = nested.nested.pop().unwrap(); // the primitive
-            let values = array.boxed();
-            (nested, values)
-        })
-    }))
-}
