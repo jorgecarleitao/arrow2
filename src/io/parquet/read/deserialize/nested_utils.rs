@@ -455,7 +455,7 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
 
         let next_rep = page.iter.peek().map(|x| x.0).unwrap_or(0);
 
-        if next_rep == 0 && rows == additional.saturating_add(1) {
+        if next_rep == 0 && rows == additional {
             break;
         }
     }
