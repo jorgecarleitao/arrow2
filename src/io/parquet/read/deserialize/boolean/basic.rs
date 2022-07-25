@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use parquet2::{
     deserialize::SliceFilteredIter,
     encoding::Encoding,
-    page::{split_buffer, DataPage},
+    page::{split_buffer, DataPage, DictPage},
     schema::Repetition,
 };
 
@@ -19,7 +19,7 @@ use super::super::utils::{
     extend_from_decoder, get_selected_rows, next, DecodedState, Decoder,
     FilteredOptionalPageValidity, MaybeNext, OptionalPageValidity,
 };
-use super::super::DataPages;
+use super::super::Pages;
 
 #[derive(Debug)]
 struct Values<'a>(BitmapIter<'a>);
@@ -111,9 +111,10 @@ struct BooleanDecoder {}
 
 impl<'a> Decoder<'a> for BooleanDecoder {
     type State = State<'a>;
+    type Dict = ();
     type DecodedState = (MutableBitmap, MutableBitmap);
 
-    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+    fn build_state(&self, page: &'a DataPage, _: Option<&'a Self::Dict>) -> Result<Self::State> {
         let is_optional =
             page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
         let is_filtered = page.selected_rows().is_some();
@@ -179,15 +180,17 @@ impl<'a> Decoder<'a> for BooleanDecoder {
             }
         }
     }
+
+    fn deserialize_dict(&self, _: &DictPage) -> Self::Dict {}
 }
 
 fn finish(data_type: &DataType, values: MutableBitmap, validity: MutableBitmap) -> BooleanArray {
     BooleanArray::new(data_type.clone(), values.into(), validity.into())
 }
 
-/// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
+/// An iterator adapter over [`Pages`] assumed to be encoded as boolean arrays
 #[derive(Debug)]
-pub struct Iter<I: DataPages> {
+pub struct Iter<I: Pages> {
     iter: I,
     data_type: DataType,
     items: VecDeque<(MutableBitmap, MutableBitmap)>,
@@ -195,7 +198,7 @@ pub struct Iter<I: DataPages> {
     remaining: usize,
 }
 
-impl<I: DataPages> Iter<I> {
+impl<I: Pages> Iter<I> {
     pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>, num_rows: usize) -> Self {
         Self {
             iter,
@@ -207,13 +210,14 @@ impl<I: DataPages> Iter<I> {
     }
 }
 
-impl<I: DataPages> Iterator for Iter<I> {
+impl<I: Pages> Iterator for Iter<I> {
     type Item = Result<BooleanArray>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
+            &mut None,
             &mut self.remaining,
             self.chunk_size,
             &BooleanDecoder::default(),

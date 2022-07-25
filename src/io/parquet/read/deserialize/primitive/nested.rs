@@ -1,7 +1,10 @@
 use std::collections::VecDeque;
 
 use parquet2::{
-    encoding::Encoding, page::DataPage, schema::Repetition, types::decode,
+    encoding::Encoding,
+    page::{DataPage, DictPage},
+    schema::Repetition,
+    types::decode,
     types::NativeType as ParquetNativeType,
 };
 
@@ -10,27 +13,27 @@ use crate::{
     types::NativeType,
 };
 
-use super::super::nested_utils::*;
 use super::super::utils;
-use super::super::DataPages;
+use super::super::Pages;
 use super::basic::{Values, ValuesDictionary};
+use super::{super::nested_utils::*, basic::deserialize_plain};
 
 // The state of a `DataPage` of `Primitive` parquet primitive type
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
-enum State<'a, P>
+enum State<'a, T>
 where
-    P: ParquetNativeType,
+    T: NativeType,
 {
     Optional(Values<'a>),
     Required(Values<'a>),
-    RequiredDictionary(ValuesDictionary<'a, P>),
-    OptionalDictionary(ValuesDictionary<'a, P>),
+    RequiredDictionary(ValuesDictionary<'a, T>),
+    OptionalDictionary(ValuesDictionary<'a, T>),
 }
 
-impl<'a, P> utils::PageState<'a> for State<'a, P>
+impl<'a, T> utils::PageState<'a> for State<'a, T>
 where
-    P: ParquetNativeType,
+    T: NativeType,
 {
     fn len(&self) -> usize {
         match self {
@@ -76,26 +79,24 @@ where
     P: ParquetNativeType,
     F: Copy + Fn(P) -> T,
 {
-    type State = State<'a, P>;
+    type State = State<'a, T>;
+    type Dictionary = Vec<T>;
     type DecodedState = (Vec<T>, MutableBitmap);
 
-    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+    fn build_state(
+        &self,
+        page: &'a DataPage,
+        dict: Option<&'a Self::Dictionary>,
+    ) -> Result<Self::State> {
         let is_optional =
             page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
         let is_filtered = page.selected_rows().is_some();
 
-        match (
-            page.encoding(),
-            page.dictionary_page(),
-            is_optional,
-            is_filtered,
-        ) {
+        match (page.encoding(), dict, is_optional, is_filtered) {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
-                let dict = dict.as_any().downcast_ref().unwrap();
                 ValuesDictionary::try_new(page, dict).map(State::RequiredDictionary)
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
-                let dict = dict.as_any().downcast_ref().unwrap();
                 ValuesDictionary::try_new(page, dict).map(State::OptionalDictionary)
             }
             (Encoding::Plain, _, true, false) => Values::try_new::<P>(page).map(State::Optional),
@@ -128,13 +129,13 @@ where
             }
             State::RequiredDictionary(page) => {
                 let op1 = |index: u32| page.dict[index as usize];
-                let value = page.values.next().map(op1).map(self.op);
+                let value = page.values.next().map(op1);
 
                 values.push(value.unwrap_or_default());
             }
             State::OptionalDictionary(page) => {
                 let op1 = |index: u32| page.dict[index as usize];
-                let value = page.values.next().map(op1).map(self.op);
+                let value = page.values.next().map(op1);
 
                 values.push(value.unwrap_or_default());
                 validity.push(true);
@@ -147,6 +148,10 @@ where
         values.push(T::default());
         validity.push(false)
     }
+
+    fn deserialize_dict(&self, page: &DictPage) -> Self::Dictionary {
+        deserialize_plain(&page.buffer, self.op)
+    }
 }
 
 fn finish<T: NativeType>(
@@ -157,11 +162,11 @@ fn finish<T: NativeType>(
     PrimitiveArray::from_data(data_type.clone(), values.into(), validity.into())
 }
 
-/// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
+/// An iterator adapter over [`Pages`] assumed to be encoded as boolean arrays
 #[derive(Debug)]
 pub struct NestedIter<T, I, P, F>
 where
-    I: DataPages,
+    I: Pages,
     T: NativeType,
 
     P: ParquetNativeType,
@@ -171,6 +176,7 @@ where
     init: Vec<InitNested>,
     data_type: DataType,
     items: VecDeque<(NestedState, (Vec<T>, MutableBitmap))>,
+    dict: Option<Vec<T>>,
     remaining: usize,
     chunk_size: Option<usize>,
     decoder: PrimitiveDecoder<T, P, F>,
@@ -178,7 +184,7 @@ where
 
 impl<T, I, P, F> NestedIter<T, I, P, F>
 where
-    I: DataPages,
+    I: Pages,
     T: NativeType,
 
     P: ParquetNativeType,
@@ -197,6 +203,7 @@ where
             init,
             data_type,
             items: VecDeque::new(),
+            dict: None,
             chunk_size,
             remaining: num_rows,
             decoder: PrimitiveDecoder::new(op),
@@ -206,7 +213,7 @@ where
 
 impl<T, I, P, F> Iterator for NestedIter<T, I, P, F>
 where
-    I: DataPages,
+    I: Pages,
     T: NativeType,
 
     P: ParquetNativeType,
@@ -218,6 +225,7 @@ where
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
+            &mut self.dict,
             &mut self.remaining,
             &self.init,
             self.chunk_size,

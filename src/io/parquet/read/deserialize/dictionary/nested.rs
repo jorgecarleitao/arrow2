@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use parquet2::{
     encoding::{hybrid_rle::HybridRleDecoder, Encoding},
-    page::{DataPage, DictPage},
+    page::{DataPage, DictPage, Page},
     schema::Repetition,
 };
 
@@ -14,10 +14,10 @@ use crate::{
 };
 
 use super::{
-    super::super::DataPages,
+    super::super::Pages,
     super::nested_utils::*,
     super::utils::{dict_indices_decoder, not_implemented, MaybeNext, PageState},
-    finish_key, Dict,
+    finish_key,
 };
 
 // The state of a required DataPage with a boolean physical type
@@ -80,9 +80,14 @@ where
 
 impl<'a, K: DictionaryKey> NestedDecoder<'a> for DictionaryDecoder<K> {
     type State = State<'a>;
+    type Dictionary = ();
     type DecodedState = (Vec<K>, MutableBitmap);
 
-    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+    fn build_state(
+        &self,
+        page: &'a DataPage,
+        _: Option<&'a Self::Dictionary>,
+    ) -> Result<Self::State> {
         let is_optional =
             page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
         let is_filtered = page.selected_rows().is_some();
@@ -134,15 +139,17 @@ impl<'a, K: DictionaryKey> NestedDecoder<'a> for DictionaryDecoder<K> {
         values.push(K::default());
         validity.push(false)
     }
+
+    fn deserialize_dict(&self, _: &DictPage) -> Self::Dictionary {}
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn next_dict<'a, K: DictionaryKey, I: DataPages, F: Fn(&dyn DictPage) -> Box<dyn Array>>(
+pub fn next_dict<'a, K: DictionaryKey, I: Pages, F: Fn(&DictPage) -> Box<dyn Array>>(
     iter: &'a mut I,
     items: &mut VecDeque<(NestedState, (Vec<K>, MutableBitmap))>,
     remaining: &mut usize,
     init: &[InitNested],
-    dict: &mut Dict,
+    dict: &mut Option<Box<dyn Array>>,
     data_type: DataType,
     chunk_size: Option<usize>,
     read_dict: F,
@@ -150,29 +157,32 @@ pub fn next_dict<'a, K: DictionaryKey, I: DataPages, F: Fn(&dyn DictPage) -> Box
     if items.len() > 1 {
         let (nested, (values, validity)) = items.pop_front().unwrap();
         let keys = finish_key(values, validity);
-        let dict = DictionaryArray::try_new(data_type, keys, dict.unwrap());
+        let dict = DictionaryArray::try_new(data_type, keys, dict.clone().unwrap());
         return MaybeNext::Some(dict.map(|dict| (nested, dict)));
     }
     match iter.next() {
         Err(e) => MaybeNext::Some(Err(e.into())),
         Ok(Some(page)) => {
-            // consume the dictionary page
-            match (&dict, page.dictionary_page()) {
-                (Dict::Empty, None) => {
+            let (page, dict) = match (&dict, page) {
+                (None, Page::Data(_)) => {
                     return MaybeNext::Some(Err(Error::nyi(
                         "dictionary arrays from non-dict-encoded pages",
                     )));
                 }
-                (Dict::Empty, Some(dict_page)) => {
-                    *dict = Dict::Complete(read_dict(dict_page.as_ref()))
+                (_, Page::Dict(dict_page)) => {
+                    *dict = Some(read_dict(dict_page));
+                    return next_dict(
+                        iter, items, remaining, init, dict, data_type, chunk_size, read_dict,
+                    );
                 }
-                (Dict::Complete(_), _) => {}
+                (Some(dict), Page::Data(page)) => (page, dict),
             };
 
             let error = extend(
                 page,
                 init,
                 items,
+                None,
                 remaining,
                 &DictionaryDecoder::<K>::default(),
                 chunk_size,
@@ -187,7 +197,7 @@ pub fn next_dict<'a, K: DictionaryKey, I: DataPages, F: Fn(&dyn DictPage) -> Box
             } else {
                 let (nested, (values, validity)) = items.pop_front().unwrap();
                 let keys = finish_key(values, validity);
-                let dict = DictionaryArray::try_new(data_type, keys, dict.unwrap());
+                let dict = DictionaryArray::try_new(data_type, keys, dict.clone());
                 MaybeNext::Some(dict.map(|dict| (nested, dict)))
             }
         }
@@ -198,7 +208,7 @@ pub fn next_dict<'a, K: DictionaryKey, I: DataPages, F: Fn(&dyn DictPage) -> Box
                 debug_assert!(values.len() <= chunk_size.unwrap_or(usize::MAX));
 
                 let keys = finish_key(values, validity);
-                let dict = DictionaryArray::try_new(data_type, keys, dict.unwrap());
+                let dict = DictionaryArray::try_new(data_type, keys, dict.clone().unwrap());
                 MaybeNext::Some(dict.map(|dict| (nested, dict)))
             } else {
                 MaybeNext::None

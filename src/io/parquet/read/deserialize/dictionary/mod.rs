@@ -5,7 +5,7 @@ use std::collections::VecDeque;
 use parquet2::{
     deserialize::SliceFilteredIter,
     encoding::{hybrid_rle::HybridRleDecoder, Encoding},
-    page::{DataPage, DictPage},
+    page::{DataPage, DictPage, Page},
     schema::Repetition,
 };
 
@@ -21,7 +21,7 @@ use super::{
         self, dict_indices_decoder, extend_from_decoder, get_selected_rows, DecodedState, Decoder,
         FilteredOptionalPageValidity, MaybeNext, OptionalPageValidity,
     },
-    DataPages,
+    Pages,
 };
 
 // The state of a `DataPage` of `Primitive` parquet primitive type
@@ -114,9 +114,10 @@ where
     K: DictionaryKey,
 {
     type State = State<'a>;
+    type Dict = ();
     type DecodedState = (Vec<K>, MutableBitmap);
 
-    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+    fn build_state(&self, page: &'a DataPage, _: Option<&'a Self::Dict>) -> Result<Self::State> {
         let is_optional =
             page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
         let is_filtered = page.selected_rows().is_some();
@@ -225,21 +226,8 @@ where
             }
         }
     }
-}
 
-#[derive(Debug)]
-pub enum Dict {
-    Empty,
-    Complete(Box<dyn Array>),
-}
-
-impl Dict {
-    pub fn unwrap(&self) -> Box<dyn Array> {
-        match self {
-            Self::Empty => panic!(),
-            Self::Complete(array) => array.clone(),
-        }
-    }
+    fn deserialize_dict(&self, _: &DictPage) -> Self::Dict {}
 }
 
 fn finish_key<K: DictionaryKey>(values: Vec<K>, validity: MutableBitmap) -> PrimitiveArray<K> {
@@ -247,15 +235,10 @@ fn finish_key<K: DictionaryKey>(values: Vec<K>, validity: MutableBitmap) -> Prim
 }
 
 #[inline]
-pub(super) fn next_dict<
-    'a,
-    K: DictionaryKey,
-    I: DataPages,
-    F: Fn(&dyn DictPage) -> Box<dyn Array>,
->(
+pub(super) fn next_dict<'a, K: DictionaryKey, I: Pages, F: Fn(&DictPage) -> Box<dyn Array>>(
     iter: &'a mut I,
     items: &mut VecDeque<(Vec<K>, MutableBitmap)>,
-    dict: &mut Dict,
+    dict: &mut Option<Box<dyn Array>>,
     data_type: DataType,
     remaining: &mut usize,
     chunk_size: Option<usize>,
@@ -264,26 +247,32 @@ pub(super) fn next_dict<
     if items.len() > 1 {
         let (values, validity) = items.pop_front().unwrap();
         let keys = finish_key(values, validity);
-        return MaybeNext::Some(DictionaryArray::try_new(data_type, keys, dict.unwrap()));
+        return MaybeNext::Some(DictionaryArray::try_new(
+            data_type,
+            keys,
+            dict.clone().unwrap(),
+        ));
     }
     match iter.next() {
         Err(e) => MaybeNext::Some(Err(e.into())),
         Ok(Some(page)) => {
-            // consume the dictionary page
-            match (&dict, page.dictionary_page()) {
-                (Dict::Empty, None) => {
+            let (page, dict) = match (&dict, page) {
+                (None, Page::Data(_)) => {
                     return MaybeNext::Some(Err(Error::nyi(
                         "dictionary arrays from non-dict-encoded pages",
                     )));
                 }
-                (Dict::Empty, Some(dict_page)) => {
-                    *dict = Dict::Complete(read_dict(dict_page.as_ref()))
+                (_, Page::Dict(dict_page)) => {
+                    *dict = Some(read_dict(dict_page));
+                    return next_dict(
+                        iter, items, dict, data_type, remaining, chunk_size, read_dict,
+                    );
                 }
-                (Dict::Complete(_), _) => {}
+                (Some(dict), Page::Data(page)) => (page, dict),
             };
 
             // there is a new page => consume the page from the start
-            let maybe_page = PrimitiveDecoder::<K>::default().build_state(page);
+            let maybe_page = PrimitiveDecoder::<K>::default().build_state(page, None);
             let page = match maybe_page {
                 Ok(page) => page,
                 Err(e) => return MaybeNext::Some(Err(e)),
@@ -302,7 +291,7 @@ pub(super) fn next_dict<
             } else {
                 let (values, validity) = items.pop_front().unwrap();
                 let keys = finish_key(values, validity);
-                MaybeNext::Some(DictionaryArray::try_new(data_type, keys, dict.unwrap()))
+                MaybeNext::Some(DictionaryArray::try_new(data_type, keys, dict.clone()))
             }
         }
         Ok(None) => {
@@ -312,7 +301,11 @@ pub(super) fn next_dict<
                 debug_assert!(values.len() <= chunk_size.unwrap_or(usize::MAX));
 
                 let keys = finish_key(values, validity);
-                MaybeNext::Some(DictionaryArray::try_new(data_type, keys, dict.unwrap()))
+                MaybeNext::Some(DictionaryArray::try_new(
+                    data_type,
+                    keys,
+                    dict.clone().unwrap(),
+                ))
             } else {
                 MaybeNext::None
             }

@@ -5,30 +5,24 @@ use parquet2::deserialize::{
 };
 use parquet2::encoding::hybrid_rle;
 use parquet2::indexes::Interval;
-use parquet2::page::{split_buffer, DataPage};
+use parquet2::page::{split_buffer, DataPage, DictPage, Page};
 use parquet2::schema::Repetition;
 
 use crate::bitmap::utils::BitmapIter;
 use crate::bitmap::MutableBitmap;
 use crate::error::Error;
 
-use super::super::DataPages;
+use super::super::Pages;
 
 pub fn not_implemented(page: &DataPage) -> Error {
     let is_optional = page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
     let is_filtered = page.selected_rows().is_some();
     let required = if is_optional { "optional" } else { "required" };
     let is_filtered = if is_filtered { ", index-filtered" } else { "" };
-    let dict = if page.dictionary_page().is_some() {
-        ", dictionary-encoded"
-    } else {
-        ""
-    };
     Error::NotYetImplemented(format!(
-        "Decoding {:?} \"{:?}\"-encoded{} {} {} parquet pages",
+        "Decoding {:?} \"{:?}\"-encoded {} {} parquet pages",
         page.descriptor.primitive_type.physical_type,
         page.encoding(),
-        dict,
         required,
         is_filtered,
     ))
@@ -351,9 +345,14 @@ pub(super) trait DecodedState<'a>: std::fmt::Debug {
 /// A decoder that knows how to map `State` -> Array
 pub(super) trait Decoder<'a> {
     type State: PageState<'a>;
+    type Dict;
     type DecodedState: DecodedState<'a>;
 
-    fn build_state(&self, page: &'a DataPage) -> Result<Self::State, Error>;
+    fn build_state(
+        &self,
+        page: &'a DataPage,
+        dict: Option<&'a Self::Dict>,
+    ) -> Result<Self::State, Error>;
 
     /// Initializes a new state
     fn with_capacity(&self, capacity: usize) -> Self::DecodedState;
@@ -366,6 +365,9 @@ pub(super) trait Decoder<'a> {
         decoded: &mut Self::DecodedState,
         additional: usize,
     );
+
+    /// Deserializes a [`DictPage`] into a representation suited for decoding using it.
+    fn deserialize_dict(&self, page: &DictPage) -> Self::Dict;
 }
 
 pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
@@ -410,12 +412,13 @@ pub enum MaybeNext<P> {
 }
 
 #[inline]
-pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
+pub(super) fn next<'a, I: Pages, D: Decoder<'a>>(
     iter: &'a mut I,
-    items: &mut VecDeque<D::DecodedState>,
-    remaining: &mut usize,
+    items: &'a mut VecDeque<D::DecodedState>,
+    dict: &'a mut Option<D::Dict>,
+    remaining: &'a mut usize,
     chunk_size: Option<usize>,
-    decoder: &D,
+    decoder: &'a D,
 ) -> MaybeNext<Result<D::DecodedState, Error>> {
     // front[a1, a2, a3, ...]back
     if items.len() > 1 {
@@ -430,11 +433,20 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
             None => MaybeNext::None,
         };
     }
+
     match iter.next() {
         Err(e) => MaybeNext::Some(Err(e.into())),
         Ok(Some(page)) => {
+            let page = match page {
+                Page::Data(page) => page,
+                Page::Dict(dict_page) => {
+                    *dict = Some(decoder.deserialize_dict(dict_page));
+                    return MaybeNext::More;
+                }
+            };
+
             // there is a new page => consume the page from the start
-            let maybe_page = decoder.build_state(page);
+            let maybe_page = decoder.build_state(page, dict.as_ref());
             let page = match maybe_page {
                 Ok(page) => page,
                 Err(e) => return MaybeNext::Some(Err(e)),

@@ -101,7 +101,7 @@ fn columns_to_iter_recursive<'a, I: 'a>(
     chunk_size: Option<usize>,
 ) -> Result<NestedArrayIter<'a>>
 where
-    I: DataPages,
+    I: Pages,
 {
     if init.is_empty() && is_primitive(&field.data_type) {
         return Ok(Box::new(
@@ -148,7 +148,7 @@ fn n_columns(data_type: &DataType) -> usize {
     }
 }
 
-/// An iterator adapter that maps multiple iterators of [`DataPages`] into an iterator of [`Array`]s.
+/// An iterator adapter that maps multiple iterators of [`Pages`] into an iterator of [`Array`]s.
 ///
 /// For a non-nested datatypes such as [`DataType::Int32`], this function requires a single element in `columns` and `types`.
 /// For nested types, `columns` must be composed by all parquet columns with associated types `types`.
@@ -162,7 +162,7 @@ pub fn column_iter_to_arrays<'a, I: 'a>(
     num_rows: usize,
 ) -> Result<ArrayIter<'a>>
 where
-    I: DataPages,
+    I: Pages,
 {
     Ok(Box::new(
         columns_to_iter_recursive(columns, types, field, vec![], num_rows, chunk_size)?

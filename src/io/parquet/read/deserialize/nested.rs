@@ -33,7 +33,7 @@ pub fn columns_to_iter_recursive<'a, I: 'a>(
     chunk_size: Option<usize>,
 ) -> Result<NestedArrayIter<'a>>
 where
-    I: DataPages,
+    I: Pages,
 {
     use crate::datatypes::PhysicalType::*;
     use crate::datatypes::PrimitiveType::*;
@@ -311,7 +311,7 @@ where
     })
 }
 
-fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
+fn dict_read<'a, K: DictionaryKey, I: 'a + Pages>(
     iter: I,
     init: Vec<InitNested>,
     _type_: &PrimitiveType,

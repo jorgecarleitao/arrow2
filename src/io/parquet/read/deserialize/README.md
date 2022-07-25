@@ -7,7 +7,7 @@ module for non-nested arrays is `simple::page_iter_to_arrays`.
 
 This function expects
 
-* a (fallible) streaming iterator of decompressed and encoded pages, `DataPages`
+* a (fallible) streaming iterator of decompressed and encoded pages, `Pages`
 * the source (parquet) column type, including its logical information
 * the target (arrow) `DataType`
 * the chunk size
@@ -18,7 +18,7 @@ This design is shared among _all_ `(parquet, arrow)` implemented tuples. Their m
 difference is how they are deserialized, which depends on the source and target types.
 
 When the array iterator is pulled the first time, the following happens:
-* a page from `DataPages` is pulled
+* a page from `Pages` is pulled
 * a `PageState<'a>` is built from the page
 * the `PageState` is consumed into a mutable array:
     * if `chunk_size` is larger than the number of rows in the page, the mutable array state is preserved and a new page is pulled and the process repeated until we fill a chunk.

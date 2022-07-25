@@ -1,8 +1,10 @@
+use parquet2::page::Page;
+
 use crate::{array::NullArray, datatypes::DataType};
 
-use super::super::{ArrayIter, DataPages};
+use super::super::{ArrayIter, Pages};
 
-/// Converts [`DataPages`] to an [`ArrayIter`]
+/// Converts [`Pages`] to an [`ArrayIter`]
 pub fn iter_to_arrays<'a, I>(
     mut iter: I,
     data_type: DataType,
@@ -10,15 +12,20 @@ pub fn iter_to_arrays<'a, I>(
     num_rows: usize,
 ) -> ArrayIter<'a>
 where
-    I: 'a + DataPages,
+    I: 'a + Pages,
 {
     let mut len = 0usize;
 
-    while let Ok(Some(x)) = iter.next() {
-        let rows = x.num_values();
-        len = (len + rows).min(num_rows);
-        if len == num_rows {
-            break;
+    while let Ok(Some(page)) = iter.next() {
+        match page {
+            Page::Dict(_) => continue,
+            Page::Data(page) => {
+                let rows = page.num_values();
+                len = (len + rows).min(num_rows);
+                if len == num_rows {
+                    break;
+                }
+            }
         }
     }
 
@@ -48,7 +55,7 @@ mod tests {
         encoding::Encoding,
         error::Error as ParquetError,
         metadata::Descriptor,
-        page::{DataPage, DataPageHeader, DataPageHeaderV1},
+        page::{DataPage, DataPageHeader, DataPageHeaderV1, Page},
         schema::types::{PhysicalType, PrimitiveType},
     };
 
@@ -59,7 +66,7 @@ mod tests {
     #[test]
     fn limit() {
         let new_page = |values: i32| {
-            DataPage::new(
+            Page::Data(DataPage::new(
                 DataPageHeader::V1(DataPageHeaderV1 {
                     num_values: values,
                     encoding: Encoding::Plain.into(),
@@ -68,7 +75,6 @@ mod tests {
                     statistics: None,
                 }),
                 vec![],
-                None,
                 Descriptor {
                     primitive_type: PrimitiveType::from_physical(
                         "a".to_string(),
@@ -78,7 +84,7 @@ mod tests {
                     max_rep_level: 0,
                 },
                 None,
-            )
+            ))
         };
 
         let p1 = new_page(100);

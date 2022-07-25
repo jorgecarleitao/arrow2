@@ -1,6 +1,6 @@
 use parquet2::{
     encoding::{hybrid_rle::encode_u32, Encoding},
-    page::{EncodedDictPage, EncodedPage},
+    page::{DictPage, EncodedPage},
     schema::types::PrimitiveType,
     statistics::{serialize_statistics, ParquetStatistics},
     write::DynIter,
@@ -153,7 +153,7 @@ macro_rules! dyn_prim {
         primitive_encode_plain::<$from, $to>(values, false, &mut buffer);
         let stats = primitive_build_statistics::<$from, $to>(values, $type_.clone());
         let stats = serialize_statistics(&stats);
-        (EncodedDictPage::new(buffer, values.len()), stats)
+        (DictPage::new(buffer, values.len(), false), stats)
     }};
 }
 
@@ -190,7 +190,7 @@ pub fn array_to_pages<K: DictionaryKey>(
                     let mut buffer = vec![];
                     utf8_encode_plain::<i32>(array, false, &mut buffer);
                     let stats = utf8_build_statistics(array, type_.clone());
-                    (EncodedDictPage::new(buffer, array.len()), stats)
+                    (DictPage::new(buffer, array.len(), false), stats)
                 }
                 DataType::LargeUtf8 => {
                     let array = array.values().as_any().downcast_ref().unwrap();
@@ -198,7 +198,7 @@ pub fn array_to_pages<K: DictionaryKey>(
                     let mut buffer = vec![];
                     utf8_encode_plain::<i64>(array, false, &mut buffer);
                     let stats = utf8_build_statistics(array, type_.clone());
-                    (EncodedDictPage::new(buffer, array.len()), stats)
+                    (DictPage::new(buffer, array.len(), false), stats)
                 }
                 DataType::Binary => {
                     let array = array.values().as_any().downcast_ref().unwrap();
@@ -206,7 +206,7 @@ pub fn array_to_pages<K: DictionaryKey>(
                     let mut buffer = vec![];
                     binary_encode_plain::<i32>(array, false, &mut buffer);
                     let stats = binary_build_statistics(array, type_.clone());
-                    (EncodedDictPage::new(buffer, array.len()), stats)
+                    (DictPage::new(buffer, array.len(), false), stats)
                 }
                 DataType::LargeBinary => {
                     let array = array.values().as_any().downcast_ref().unwrap();
@@ -214,7 +214,7 @@ pub fn array_to_pages<K: DictionaryKey>(
                     let mut buffer = vec![];
                     binary_encode_plain::<i64>(array, false, &mut buffer);
                     let stats = binary_build_statistics(array, type_.clone());
-                    (EncodedDictPage::new(buffer, array.len()), stats)
+                    (DictPage::new(buffer, array.len(), false), stats)
                 }
                 DataType::FixedSizeBinary(_) => {
                     let mut buffer = vec![];
@@ -222,7 +222,7 @@ pub fn array_to_pages<K: DictionaryKey>(
                     fixed_binary_encode_plain(array, false, &mut buffer);
                     let stats = fixed_binary_build_statistics(array, type_.clone());
                     let stats = serialize_statistics(&stats);
-                    (EncodedDictPage::new(buffer, array.len()), stats)
+                    (DictPage::new(buffer, array.len(), false), stats)
                 }
                 other => {
                     return Err(Error::NotYetImplemented(format!(

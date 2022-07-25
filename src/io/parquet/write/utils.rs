@@ -93,7 +93,6 @@ pub fn build_plain_page(
     Ok(DataPage::new(
         header,
         buffer,
-        None,
         Descriptor {
             primitive_type: type_,
             max_def_level: 0,
