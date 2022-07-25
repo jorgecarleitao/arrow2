@@ -6,7 +6,6 @@ use parquet2::{
     schema::Repetition,
 };
 
-use crate::array::Array;
 use crate::{
     array::Offset, bitmap::MutableBitmap, datatypes::DataType, error::Result,
     io::parquet::read::DataPages,
@@ -193,28 +192,4 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: DataPages> Iterator for NestedIter<O,
             MaybeNext::More => self.next(),
         }
     }
-}
-
-/// Converts [`DataPages`] to an [`Iterator`] of [`TraitBinaryArray`]
-pub fn iter_to_arrays_nested<'a, O, A, I>(
-    iter: I,
-    init: Vec<InitNested>,
-    data_type: DataType,
-    num_rows: usize,
-    chunk_size: Option<usize>,
-) -> NestedArrayIter<'a>
-where
-    I: 'a + DataPages,
-    A: TraitBinaryArray<O>,
-    O: Offset,
-{
-    Box::new(
-        NestedIter::<O, A, I>::new(iter, init, data_type, num_rows, chunk_size).map(|x| {
-            x.map(|(mut nested, array)| {
-                let _ = nested.nested.pop().unwrap(); // the primitive
-                let values = Box::new(array) as Box<dyn Array>;
-                (nested, values)
-            })
-        }),
-    )
 }

@@ -3,6 +3,7 @@ mod binary;
 mod boolean;
 mod dictionary;
 mod fixed_size_binary;
+mod nested;
 mod nested_utils;
 mod null;
 mod primitive;
@@ -14,11 +15,9 @@ use parquet2::read::get_page_iterator as _get_page_iterator;
 use parquet2::schema::types::PrimitiveType;
 
 use crate::{
-    array::{
-        Array, BinaryArray, DictionaryKey, FixedSizeListArray, ListArray, MapArray, Utf8Array,
-    },
+    array::{Array, DictionaryKey, FixedSizeListArray, ListArray},
     datatypes::{DataType, Field, IntervalUnit},
-    error::{Error, Result},
+    error::Result,
 };
 
 use self::nested_utils::{InitNested, NestedArrayIter, NestedState};
@@ -97,16 +96,13 @@ fn columns_to_iter_recursive<'a, I: 'a>(
     mut columns: Vec<I>,
     mut types: Vec<&PrimitiveType>,
     field: Field,
-    mut init: Vec<InitNested>,
+    init: Vec<InitNested>,
     num_rows: usize,
     chunk_size: Option<usize>,
 ) -> Result<NestedArrayIter<'a>>
 where
     I: DataPages,
 {
-    use crate::datatypes::PhysicalType::*;
-    use crate::datatypes::PrimitiveType::*;
-
     if init.is_empty() && is_primitive(&field.data_type) {
         return Ok(Box::new(
             page_iter_to_arrays(
@@ -120,272 +116,7 @@ where
         ));
     }
 
-    Ok(match field.data_type().to_physical_type() {
-        Boolean => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            boolean::iter_to_arrays_nested(columns.pop().unwrap(), init, num_rows, chunk_size)
-        }
-        Primitive(Int8) => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive::iter_to_arrays_nested(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-                |x: i32| x as i8,
-            )
-        }
-        Primitive(Int16) => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive::iter_to_arrays_nested(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-                |x: i32| x as i16,
-            )
-        }
-        Primitive(Int32) => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive::iter_to_arrays_nested(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-                |x: i32| x,
-            )
-        }
-        Primitive(Int64) => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive::iter_to_arrays_nested(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-                |x: i64| x,
-            )
-        }
-        Primitive(UInt8) => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive::iter_to_arrays_nested(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-                |x: i32| x as u8,
-            )
-        }
-        Primitive(UInt16) => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive::iter_to_arrays_nested(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-                |x: i32| x as u16,
-            )
-        }
-        Primitive(UInt32) => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            let type_ = types.pop().unwrap();
-            match type_.physical_type {
-                PhysicalType::Int32 => primitive::iter_to_arrays_nested(
-                    columns.pop().unwrap(),
-                    init,
-                    field.data_type().clone(),
-                    num_rows,
-                    chunk_size,
-                    |x: i32| x as u32,
-                ),
-                // some implementations of parquet write arrow's u32 into i64.
-                PhysicalType::Int64 => primitive::iter_to_arrays_nested(
-                    columns.pop().unwrap(),
-                    init,
-                    field.data_type().clone(),
-                    num_rows,
-                    chunk_size,
-                    |x: i64| x as u32,
-                ),
-                other => {
-                    return Err(Error::nyi(format!(
-                        "Deserializing UInt32 from {other:?}'s parquet"
-                    )))
-                }
-            }
-        }
-        Primitive(UInt64) => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive::iter_to_arrays_nested(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-                |x: i64| x as u64,
-            )
-        }
-        Primitive(Float32) => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive::iter_to_arrays_nested(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-                |x: f32| x,
-            )
-        }
-        Primitive(Float64) => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive::iter_to_arrays_nested(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-                |x: f64| x,
-            )
-        }
-        Utf8 => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            binary::iter_to_arrays_nested::<i32, Utf8Array<i32>, _>(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-            )
-        }
-        LargeUtf8 => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            binary::iter_to_arrays_nested::<i64, Utf8Array<i64>, _>(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-            )
-        }
-        Binary => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            binary::iter_to_arrays_nested::<i32, BinaryArray<i32>, _>(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-            )
-        }
-        LargeBinary => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            binary::iter_to_arrays_nested::<i64, BinaryArray<i64>, _>(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-            )
-        }
-        _ => match field.data_type().to_logical_type() {
-            DataType::Dictionary(key_type, _, _) => {
-                init.push(InitNested::Primitive(field.is_nullable));
-                let type_ = types.pop().unwrap();
-                let iter = columns.pop().unwrap();
-                let data_type = field.data_type().clone();
-                match_integer_type!(key_type, |$K| {
-                    dict_read::<$K, _>(iter, init, type_, data_type, num_rows, chunk_size)
-                })?
-            }
-            DataType::List(inner)
-            | DataType::LargeList(inner)
-            | DataType::FixedSizeList(inner, _) => {
-                init.push(InitNested::List(field.is_nullable));
-                let iter = columns_to_iter_recursive(
-                    columns,
-                    types,
-                    inner.as_ref().clone(),
-                    init,
-                    num_rows,
-                    chunk_size,
-                )?;
-                let iter = iter.map(move |x| {
-                    let (mut nested, array) = x?;
-                    let array = create_list(field.data_type().clone(), &mut nested, array);
-                    Ok((nested, array))
-                });
-                Box::new(iter) as _
-            }
-            DataType::Struct(fields) => {
-                let columns = fields
-                    .iter()
-                    .rev()
-                    .map(|f| {
-                        let mut init = init.clone();
-                        init.push(InitNested::Struct(field.is_nullable));
-                        let n = n_columns(&f.data_type);
-                        let columns = columns.drain(columns.len() - n..).collect();
-                        let types = types.drain(types.len() - n..).collect();
-                        columns_to_iter_recursive(
-                            columns,
-                            types,
-                            f.clone(),
-                            init,
-                            num_rows,
-                            chunk_size,
-                        )
-                    })
-                    .collect::<Result<Vec<_>>>()?;
-                let columns = columns.into_iter().rev().collect();
-                Box::new(struct_::StructIterator::new(columns, fields.clone()))
-            }
-            DataType::Map(inner, _) => {
-                init.push(InitNested::List(field.is_nullable));
-                let iter = columns_to_iter_recursive(
-                    columns,
-                    types,
-                    inner.as_ref().clone(),
-                    init,
-                    num_rows,
-                    chunk_size,
-                )?;
-                Box::new(iter.map(move |x| {
-                    let (nested, inner) = x?;
-                    let array = MapArray::new(
-                        field.data_type().clone(),
-                        vec![0, inner.len() as i32].into(),
-                        inner,
-                        None,
-                    );
-                    Ok((nested, array.boxed()))
-                }))
-            }
-            other => {
-                return Err(Error::nyi(format!(
-                    "Deserializing type {other:?} from parquet"
-                )))
-            }
-        },
-    })
+    nested::columns_to_iter_recursive(columns, types, field, init, num_rows, chunk_size)
 }
 
 /// Returns the number of (parquet) columns that a [`DataType`] contains.
@@ -437,128 +168,4 @@ where
         columns_to_iter_recursive(columns, types, field, vec![], num_rows, chunk_size)?
             .map(|x| x.map(|x| x.1)),
     ))
-}
-
-fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
-    iter: I,
-    init: Vec<InitNested>,
-    _type_: &PrimitiveType,
-    data_type: DataType,
-    num_rows: usize,
-    chunk_size: Option<usize>,
-) -> Result<NestedArrayIter<'a>> {
-    use DataType::*;
-    let values_data_type = if let Dictionary(_, v, _) = &data_type {
-        v.as_ref()
-    } else {
-        panic!()
-    };
-
-    Ok(match values_data_type.to_logical_type() {
-        UInt8 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
-            iter,
-            init,
-            data_type,
-            num_rows,
-            chunk_size,
-            |x: i32| x as u8,
-        ),
-        UInt16 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
-            iter,
-            init,
-            data_type,
-            num_rows,
-            chunk_size,
-            |x: i32| x as u16,
-        ),
-        UInt32 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
-            iter,
-            init,
-            data_type,
-            num_rows,
-            chunk_size,
-            |x: i32| x as u32,
-        ),
-        Int8 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
-            iter,
-            init,
-            data_type,
-            num_rows,
-            chunk_size,
-            |x: i32| x as i8,
-        ),
-        Int16 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
-            iter,
-            init,
-            data_type,
-            num_rows,
-            chunk_size,
-            |x: i32| x as i16,
-        ),
-        Int32 | Date32 | Time32(_) | Interval(IntervalUnit::YearMonth) => {
-            primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
-                iter,
-                init,
-                data_type,
-                num_rows,
-                chunk_size,
-                |x: i32| x,
-            )
-        }
-        Int64 | Date64 | Time64(_) | Duration(_) => {
-            primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
-                iter,
-                init,
-                data_type,
-                num_rows,
-                chunk_size,
-                |x: i64| x as i32,
-            )
-        }
-        Float32 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
-            iter,
-            init,
-            data_type,
-            num_rows,
-            chunk_size,
-            |x: f32| x,
-        ),
-        Float64 => primitive::iter_to_dict_arrays_nested::<K, _, _, _, _>(
-            iter,
-            init,
-            data_type,
-            num_rows,
-            chunk_size,
-            |x: f64| x,
-        ),
-        Utf8 | Binary => binary::iter_to_dict_arrays_nested::<K, i32, _>(
-            iter, init, data_type, num_rows, chunk_size,
-        ),
-        LargeUtf8 | LargeBinary => binary::iter_to_dict_arrays_nested::<K, i64, _>(
-            iter, init, data_type, num_rows, chunk_size,
-        ),
-        FixedSizeBinary(_) => fixed_size_binary::iter_to_dict_arrays_nested::<K, _>(
-            iter, init, data_type, num_rows, chunk_size,
-        ),
-        /*
-
-        Timestamp(time_unit, _) => {
-            let time_unit = *time_unit;
-            return timestamp_dict::<K, _>(
-                iter,
-                physical_type,
-                logical_type,
-                data_type,
-                chunk_size,
-                time_unit,
-            );
-        }
-         */
-        other => {
-            return Err(Error::nyi(format!(
-                "Reading nested dictionaries of type {:?}",
-                other
-            )))
-        }
-    })
 }

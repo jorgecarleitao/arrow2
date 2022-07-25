@@ -15,7 +15,7 @@ use crate::{
 
 use super::super::dictionary::nested_next_dict;
 use super::super::dictionary::*;
-use super::super::nested_utils::{InitNested, NestedArrayIter, NestedState};
+use super::super::nested_utils::{InitNested, NestedState};
 use super::super::utils::MaybeNext;
 use super::super::DataPages;
 
@@ -116,6 +116,7 @@ where
     }
 }
 
+/// An iterator adapter that converts [`DataPages`] into an [`Iterator`] of [`DictionaryArray`]
 #[derive(Debug)]
 pub struct NestedDictIter<K, T, I, P, F>
 where
@@ -195,31 +196,4 @@ where
             MaybeNext::More => self.next(),
         }
     }
-}
-
-/// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
-pub fn iter_to_arrays_nested<'a, K, I, T, P, F>(
-    iter: I,
-    init: Vec<InitNested>,
-    data_type: DataType,
-    num_rows: usize,
-    chunk_size: Option<usize>,
-    op: F,
-) -> NestedArrayIter<'a>
-where
-    I: 'a + DataPages,
-    K: DictionaryKey,
-    T: crate::types::NativeType,
-    P: parquet2::types::NativeType,
-    F: 'a + Copy + Send + Sync + Fn(P) -> T,
-{
-    Box::new(
-        NestedDictIter::<K, _, _, _, _>::new(iter, init, data_type, num_rows, chunk_size, op).map(
-            |result| {
-                let (mut nested, array) = result?;
-                let _ = nested.nested.pop().unwrap(); // the primitive
-                Ok((nested, array.boxed()))
-            },
-        ),
-    )
 }

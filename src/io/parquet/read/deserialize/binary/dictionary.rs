@@ -7,7 +7,7 @@ use crate::{
     bitmap::MutableBitmap,
     datatypes::{DataType, PhysicalType},
     error::Result,
-    io::parquet::read::deserialize::nested_utils::{InitNested, NestedArrayIter, NestedState},
+    io::parquet::read::deserialize::nested_utils::{InitNested, NestedState},
 };
 
 use super::super::dictionary::*;
@@ -108,6 +108,7 @@ where
     }
 }
 
+/// An iterator adapter that converts [`DataPages`] into an [`Iterator`] of [`DictionaryArray`]
 #[derive(Debug)]
 pub struct NestedDictIter<K, O, I>
 where
@@ -177,26 +178,4 @@ where
             MaybeNext::More => self.next(),
         }
     }
-}
-
-/// Converts [`DataPages`] to an [`Iterator`] of [`Array`]
-pub fn iter_to_arrays_nested<'a, K, O, I>(
-    iter: I,
-    init: Vec<InitNested>,
-    data_type: DataType,
-    num_rows: usize,
-    chunk_size: Option<usize>,
-) -> NestedArrayIter<'a>
-where
-    I: 'a + DataPages,
-    O: Offset,
-    K: DictionaryKey,
-{
-    Box::new(
-        NestedDictIter::<K, O, I>::new(iter, init, data_type, num_rows, chunk_size).map(|result| {
-            let (mut nested, array) = result?;
-            let _ = nested.nested.pop().unwrap(); // the primitive
-            Ok((nested, array.boxed()))
-        }),
-    )
 }
