@@ -161,7 +161,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2022-03-16
+          toolchain: nightly-2022-07-24
           override: true
       - uses: Swatinem/rust-cache@v1
       - name: Run
