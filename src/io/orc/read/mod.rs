@@ -1,7 +1,7 @@
 //! APIs to read from [ORC format](https://orc.apache.org).
 use std::io::{Read, Seek, SeekFrom};
 
-use crate::array::{BooleanArray, Float32Array, Int32Array, Int64Array};
+use crate::array::{Array, BooleanArray, Float32Array, Int32Array, Int64Array};
 use crate::bitmap::{Bitmap, MutableBitmap};
 use crate::datatypes::{DataType, Field, Schema};
 use crate::error::Error;
@@ -102,7 +102,7 @@ fn deserialize_validity(
 }
 
 /// Deserializes column `column` from `stripe`, assumed to represent a f32
-pub fn deserialize_f32(
+fn deserialize_f32(
     data_type: DataType,
     stripe: &Stripe,
     column: usize,
@@ -138,7 +138,7 @@ pub fn deserialize_f32(
 }
 
 /// Deserializes column `column` from `stripe`, assumed to represent a boolean array
-pub fn deserialize_bool(
+fn deserialize_bool(
     data_type: DataType,
     stripe: &Stripe,
     column: usize,
@@ -219,7 +219,7 @@ impl<'a> Iterator for IntIter<'a> {
 }
 
 /// Deserializes column `column` from `stripe`, assumed to represent a boolean array
-pub fn deserialize_i64(
+fn deserialize_i64(
     data_type: DataType,
     stripe: &Stripe,
     column: usize,
@@ -266,7 +266,7 @@ pub fn deserialize_i64(
 }
 
 /// Deserializes column `column` from `stripe`, assumed to represent a boolean array
-pub fn deserialize_i32(
+fn deserialize_i32(
     data_type: DataType,
     stripe: &Stripe,
     column: usize,
@@ -316,4 +316,20 @@ pub fn deserialize_i32(
     }
 
     Int32Array::try_new(data_type, values.into(), validity)
+}
+
+/// Deserializes column `column` from `stripe`, assumed
+/// to represent an array of `data_type`.
+pub fn deserialize(
+    data_type: DataType,
+    stripe: &Stripe,
+    column: usize,
+) -> Result<Box<dyn Array>, Error> {
+    match data_type {
+        DataType::Boolean => deserialize_bool(data_type, stripe, column).map(|x| x.boxed()),
+        DataType::Int32 => deserialize_i32(data_type, stripe, column).map(|x| x.boxed()),
+        DataType::Int64 => deserialize_i64(data_type, stripe, column).map(|x| x.boxed()),
+        DataType::Float32 => deserialize_f32(data_type, stripe, column).map(|x| x.boxed()),
+        dt => return Err(Error::nyi(format!("Reading {dt:?} from ORC"))),
+    }
 }
