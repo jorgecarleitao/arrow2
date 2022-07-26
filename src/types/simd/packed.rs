@@ -1,6 +1,7 @@
 pub use std::simd::{
     f32x16, f32x8, f64x8, i16x32, i16x8, i32x16, i32x8, i64x8, i8x64, i8x8, mask32x16 as m32x16,
     mask64x8 as m64x8, mask8x64 as m8x64, u16x32, u16x8, u32x16, u32x8, u64x8, u8x64, u8x8,
+    SimdPartialEq,
 };
 
 /// Vector of 32 16-bit masks
@@ -74,7 +75,7 @@ fn from_chunk_u8(chunk: u8) -> m64x8 {
     let idx = u64x8::from_array([1, 2, 4, 8, 16, 32, 64, 128]);
     let vecmask = u64x8::splat(chunk as u64);
 
-    (idx & vecmask).lanes_eq(idx)
+    (idx & vecmask).simd_eq(idx)
 }
 
 #[inline]
@@ -84,7 +85,7 @@ fn from_chunk_u16(chunk: u16) -> m32x16 {
     ]);
     let vecmask = u32x16::splat(chunk as u32);
 
-    (idx & vecmask).lanes_eq(idx)
+    (idx & vecmask).simd_eq(idx)
 }
 
 #[inline]
@@ -109,7 +110,7 @@ fn from_chunk_u32(chunk: u32) -> m16x32 {
     let vecmask1 = u16x32::splat(a1);
     let vecmask2 = u16x32::splat(a2);
 
-    (idx & left & vecmask1).lanes_eq(idx) | (idx & right & vecmask2).lanes_eq(idx)
+    (idx & left & vecmask1).simd_eq(idx) | (idx & right & vecmask2).simd_eq(idx)
 }
 
 #[inline]
@@ -166,7 +167,7 @@ fn from_chunk_u64(chunk: u64) -> m8x64 {
 
     let mut result = m8x64::default();
     for i in 0..8 {
-        result |= (idxs[i] & u8x64::splat(a[i])).lanes_eq(idx)
+        result |= (idxs[i] & u8x64::splat(a[i])).simd_eq(idx)
     }
 
     result

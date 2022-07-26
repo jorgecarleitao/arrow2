@@ -1,5 +1,5 @@
 use std::convert::TryInto;
-use std::simd::ToBitMask;
+use std::simd::{SimdPartialEq, SimdPartialOrd, ToBitMask};
 
 use crate::types::simd::*;
 use crate::types::{days_ms, f16, months_days_ns};
@@ -29,34 +29,34 @@ macro_rules! simd8 {
         impl Simd8PartialEq for $md {
             #[inline]
             fn eq(self, other: Self) -> u8 {
-                self.lanes_eq(other).to_bitmask()
+                self.simd_eq(other).to_bitmask()
             }
 
             #[inline]
             fn neq(self, other: Self) -> u8 {
-                self.lanes_ne(other).to_bitmask()
+                self.simd_ne(other).to_bitmask()
             }
         }
 
         impl Simd8PartialOrd for $md {
             #[inline]
             fn lt_eq(self, other: Self) -> u8 {
-                self.lanes_le(other).to_bitmask()
+                self.simd_le(other).to_bitmask()
             }
 
             #[inline]
             fn lt(self, other: Self) -> u8 {
-                self.lanes_lt(other).to_bitmask()
+                self.simd_lt(other).to_bitmask()
             }
 
             #[inline]
             fn gt_eq(self, other: Self) -> u8 {
-                self.lanes_ge(other).to_bitmask()
+                self.simd_ge(other).to_bitmask()
             }
 
             #[inline]
             fn gt(self, other: Self) -> u8 {
-                self.lanes_gt(other).to_bitmask()
+                self.simd_gt(other).to_bitmask()
             }
         }
     };
