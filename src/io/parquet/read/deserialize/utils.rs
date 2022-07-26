@@ -376,25 +376,20 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
     decoder: &T,
 ) {
     let capacity = chunk_size.unwrap_or(0);
-    let chunk_size = chunk_size.map(|x| x.min(*remaining)).unwrap_or(*remaining);
+    let chunk_size = chunk_size.unwrap_or(usize::MAX);
 
     let mut decoded = if let Some(decoded) = items.pop_back() {
-        *remaining += decoded.len();
         decoded
     } else {
         // there is no state => initialize it
         decoder.with_capacity(capacity)
     };
+    let existing = decoded.len();
 
-    // e.g. chunk = 10, remaining = 100, decoded = 2 => 8.min(100) = 8
-    // e.g. chunk = 100, remaining = 100, decoded = 0 => 100.min(100) = 100
-    // e.g. chunk = 10, remaining = 2, decoded = 2 => 8.min(2) = 2
-    let additional = (chunk_size - decoded.len()).min(*remaining);
+    let additional = (chunk_size - existing).min(*remaining);
 
-    // extend the current state
     decoder.extend_from_state(&mut page, &mut decoded, additional);
-
-    *remaining -= decoded.len();
+    *remaining -= decoded.len() - existing;
     items.push_back(decoded);
 
     while page.len() > 0 && *remaining > 0 {
@@ -424,8 +419,10 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
 ) -> MaybeNext<Result<D::DecodedState, Error>> {
     // front[a1, a2, a3, ...]back
     if items.len() > 1 {
-        let item = items.pop_front().unwrap();
-        return MaybeNext::Some(Ok(item));
+        return MaybeNext::Some(Ok(items.pop_front().unwrap()));
+    }
+    if (items.len() == 1) && items.front().unwrap().len() == chunk_size.unwrap_or(usize::MAX) {
+        return MaybeNext::Some(Ok(items.pop_front().unwrap()));
     }
     if *remaining == 0 {
         return match items.pop_front() {
@@ -445,7 +442,8 @@ pub(super) fn next<'a, I: DataPages, D: Decoder<'a>>(
 
             extend_from_new_page(page, chunk_size, items, remaining, decoder);
 
-            if (items.len() == 1) && items.front().unwrap().len() < chunk_size.unwrap_or(0) {
+            if (items.len() == 1) && items.front().unwrap().len() < chunk_size.unwrap_or(usize::MAX)
+            {
                 MaybeNext::More
             } else {
                 let decoded = items.pop_front().unwrap();

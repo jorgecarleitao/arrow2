@@ -348,20 +348,18 @@ pub(super) fn extend<'a, D: NestedDecoder<'a>>(
     let mut page = NestedPage::try_new(page)?;
 
     let capacity = chunk_size.unwrap_or(0);
-    let chunk_size = chunk_size.map(|x| x.min(*remaining)).unwrap_or(*remaining);
+    // chunk_size = None, remaining = 44 => chunk_size = 44
+    let chunk_size = chunk_size.unwrap_or(usize::MAX);
 
     let (mut nested, mut decoded) = if let Some((nested, decoded)) = items.pop_back() {
-        *remaining += nested.len();
         (nested, decoded)
     } else {
         // there is no state => initialize it
         (init_nested(init, capacity), decoder.with_capacity(0))
     };
+    let existing = nested.len();
 
-    // e.g. chunk = 10, remaining = 100, decoded = 2 => 8.min(100) = 8
-    // e.g. chunk = 100, remaining = 100, decoded = 0 => 100.min(100) = 100
-    // e.g. chunk = 10, remaining = 2, decoded = 2 => 8.min(2) = 2
-    let additional = (chunk_size - nested.len()).min(*remaining);
+    let additional = (chunk_size - existing).min(*remaining);
 
     // extend the current state
     extend_offsets2(
@@ -372,7 +370,7 @@ pub(super) fn extend<'a, D: NestedDecoder<'a>>(
         decoder,
         additional,
     );
-    *remaining -= nested.len();
+    *remaining -= nested.len() - existing;
     items.push_back((nested, decoded));
 
     while page.len() > 0 && *remaining > 0 {
@@ -480,8 +478,10 @@ where
 {
     // front[a1, a2, a3, ...]back
     if items.len() > 1 {
-        let (nested, decoded) = items.pop_front().unwrap();
-        return MaybeNext::Some(Ok((nested, decoded)));
+        return MaybeNext::Some(Ok(items.pop_front().unwrap()));
+    }
+    if (items.len() == 1) && items.front().unwrap().0.len() == chunk_size.unwrap_or(usize::MAX) {
+        return MaybeNext::Some(Ok(items.pop_front().unwrap()));
     }
     if *remaining == 0 {
         return match items.pop_front() {
@@ -506,7 +506,9 @@ where
                 Err(e) => return MaybeNext::Some(Err(e)),
             };
 
-            if items.front().unwrap().0.len() < chunk_size.unwrap_or(0) {
+            if (items.len() == 1)
+                && items.front().unwrap().0.len() < chunk_size.unwrap_or(usize::MAX)
+            {
                 MaybeNext::More
             } else {
                 MaybeNext::Some(Ok(items.pop_front().unwrap()))
