@@ -81,7 +81,7 @@ impl StructArray {
             .try_for_each(|(index, a_len)| {
                 if a_len != len {
                     Err(Error::oos(format!(
-                        "The children DataTypes of a StructArray must equal the children data types.
+                        "The children must have an equal number of values.
                          However, the values at index {index} have a length of {a_len}, which is different from values at index 0, {len}."
                     )))
                 } else {
