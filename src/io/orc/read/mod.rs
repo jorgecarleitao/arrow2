@@ -1,7 +1,7 @@
 //! APIs to read from [ORC format](https://orc.apache.org).
 use std::io::{Read, Seek, SeekFrom};
 
-use crate::array::{BooleanArray, Float32Array};
+use crate::array::{BooleanArray, Float32Array, Int32Array, Int64Array};
 use crate::bitmap::{Bitmap, MutableBitmap};
 use crate::datatypes::{DataType, Field, Schema};
 use crate::error::Error;
@@ -167,7 +167,7 @@ pub fn deserialize_bool(
         }
     } else {
         while let Some(chunk) = chunks.next()? {
-            let valid_iter = decode::BooleanIter::new(chunk, chunk.len() * 8);
+            let valid_iter = decode::BooleanIter::new(chunk, num_rows);
             for v in valid_iter {
                 values.push(v?)
             }
@@ -175,4 +175,145 @@ pub fn deserialize_bool(
     }
 
     BooleanArray::try_new(data_type, values.into(), validity)
+}
+
+struct IntIter<'a> {
+    current: Option<decode::SignedRleV2Run<'a>>,
+    runs: decode::SignedRleV2Iter<'a>,
+}
+
+impl<'a> IntIter<'a> {
+    fn new(data: &'a [u8]) -> Self {
+        Self {
+            runs: decode::SignedRleV2Iter::new(data),
+            current: None,
+        }
+    }
+}
+
+impl<'a> Iterator for IntIter<'a> {
+    type Item = Result<i64, Error>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = if let Some(run) = &mut self.current {
+            match run {
+                decode::SignedRleV2Run::Direct(values_iter) => values_iter.next(),
+                decode::SignedRleV2Run::Delta(values_iter) => values_iter.next(),
+                decode::SignedRleV2Run::ShortRepeat(values_iter) => values_iter.next(),
+            }
+        } else {
+            None
+        };
+
+        if next.is_none() {
+            match self.runs.next()? {
+                Ok(run) => self.current = Some(run),
+                Err(e) => return Some(Err(Error::ExternalFormat(format!("{:?}", e)))),
+            }
+            self.next()
+        } else {
+            next.map(Ok)
+        }
+    }
+}
+
+/// Deserializes column `column` from `stripe`, assumed to represent a boolean array
+pub fn deserialize_i64(
+    data_type: DataType,
+    stripe: &Stripe,
+    column: usize,
+) -> Result<Int64Array, Error> {
+    let num_rows = stripe.number_of_rows();
+    let mut scratch = vec![];
+
+    let validity = deserialize_validity(stripe, column, &mut scratch)?;
+
+    let mut chunks = stripe.get_bytes(column, Kind::Data, std::mem::take(&mut scratch))?;
+
+    let mut values = Vec::with_capacity(num_rows);
+    if let Some(validity) = &validity {
+        let validity_iter = validity.iter();
+
+        let mut iter = IntIter::new(chunks.next()?.unwrap());
+        for is_valid in validity_iter {
+            if is_valid {
+                let item = iter.next().transpose()?;
+                let item = if let Some(item) = item {
+                    item
+                } else {
+                    iter = IntIter::new(chunks.next()?.unwrap());
+                    iter.next().transpose()?.unwrap()
+                };
+                values.push(item);
+            } else {
+                values.push(0);
+            }
+        }
+    } else {
+        while let Some(chunk) = chunks.next()? {
+            decode::SignedRleV2Iter::new(chunk).try_for_each(|run| {
+                run.map(|run| match run {
+                    decode::SignedRleV2Run::Direct(values_iter) => values.extend(values_iter),
+                    decode::SignedRleV2Run::Delta(values_iter) => values.extend(values_iter),
+                    decode::SignedRleV2Run::ShortRepeat(values_iter) => values.extend(values_iter),
+                })
+            })?;
+        }
+    }
+
+    Int64Array::try_new(data_type, values.into(), validity)
+}
+
+/// Deserializes column `column` from `stripe`, assumed to represent a boolean array
+pub fn deserialize_i32(
+    data_type: DataType,
+    stripe: &Stripe,
+    column: usize,
+) -> Result<Int32Array, Error> {
+    let num_rows = stripe.number_of_rows();
+    let mut scratch = vec![];
+
+    let validity = deserialize_validity(stripe, column, &mut scratch)?;
+
+    let mut chunks = stripe.get_bytes(column, Kind::Data, std::mem::take(&mut scratch))?;
+
+    let mut values = Vec::with_capacity(num_rows);
+    if let Some(validity) = &validity {
+        let validity_iter = validity.iter();
+
+        let mut iter = IntIter::new(chunks.next()?.unwrap());
+        for is_valid in validity_iter {
+            if is_valid {
+                let item = iter.next().transpose()?;
+                let item = if let Some(item) = item {
+                    item
+                } else {
+                    iter = IntIter::new(chunks.next()?.unwrap());
+                    iter.next().transpose()?.unwrap()
+                };
+                values.push(item as i32);
+            } else {
+                values.push(0);
+            }
+        }
+    } else {
+        while let Some(chunk) = chunks.next()? {
+            decode::SignedRleV2Iter::new(chunk).try_for_each(|run| {
+                run.map(|run| match run {
+                    decode::SignedRleV2Run::Direct(values_iter) => {
+                        values.extend(values_iter.map(|x| x as i32))
+                    }
+                    decode::SignedRleV2Run::Delta(values_iter) => {
+                        values.extend(values_iter.map(|x| x as i32))
+                    }
+                    decode::SignedRleV2Run::ShortRepeat(values_iter) => {
+                        values.extend(values_iter.map(|x| x as i32))
+                    }
+                })
+            })?;
+        }
+    }
+
+    Int32Array::try_new(data_type, values.into(), validity)
 }
