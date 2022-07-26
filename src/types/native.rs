@@ -28,13 +28,17 @@ pub trait NativeType:
         + std::ops::Index<usize, Output = u8>
         + std::ops::IndexMut<usize, Output = u8>
         + for<'a> TryFrom<&'a [u8]>
-        + std::fmt::Debug;
+        + std::fmt::Debug
+        + Default;
 
     /// To bytes in little endian
     fn to_le_bytes(&self) -> Self::Bytes;
 
     /// To bytes in big endian
     fn to_be_bytes(&self) -> Self::Bytes;
+
+    /// From bytes in little endian
+    fn from_le_bytes(bytes: Self::Bytes) -> Self;
 
     /// From bytes in big endian
     fn from_be_bytes(bytes: Self::Bytes) -> Self;
@@ -54,6 +58,11 @@ macro_rules! native_type {
             #[inline]
             fn to_be_bytes(&self) -> Self::Bytes {
                 Self::to_be_bytes(*self)
+            }
+
+            #[inline]
+            fn from_le_bytes(bytes: Self::Bytes) -> Self {
+                Self::from_le_bytes(bytes)
             }
 
             #[inline]
@@ -135,6 +144,21 @@ impl NativeType for days_ms {
         result[6] = ms[2];
         result[7] = ms[3];
         result
+    }
+
+    #[inline]
+    fn from_le_bytes(bytes: Self::Bytes) -> Self {
+        let mut days = [0; 4];
+        days[0] = bytes[0];
+        days[1] = bytes[1];
+        days[2] = bytes[2];
+        days[3] = bytes[3];
+        let mut ms = [0; 4];
+        ms[0] = bytes[4];
+        ms[1] = bytes[5];
+        ms[2] = bytes[6];
+        ms[3] = bytes[7];
+        Self(i32::from_le_bytes(days), i32::from_le_bytes(ms))
     }
 
     #[inline]
@@ -226,6 +250,29 @@ impl NativeType for months_days_ns {
             result[8 + i] = ns[i];
         });
         result
+    }
+
+    #[inline]
+    fn from_le_bytes(bytes: Self::Bytes) -> Self {
+        let mut months = [0; 4];
+        months[0] = bytes[0];
+        months[1] = bytes[1];
+        months[2] = bytes[2];
+        months[3] = bytes[3];
+        let mut days = [0; 4];
+        days[0] = bytes[4];
+        days[1] = bytes[5];
+        days[2] = bytes[6];
+        days[3] = bytes[7];
+        let mut ns = [0; 8];
+        (0..8).for_each(|i| {
+            ns[i] = bytes[8 + i];
+        });
+        Self(
+            i32::from_le_bytes(months),
+            i32::from_le_bytes(days),
+            i64::from_le_bytes(ns),
+        )
     }
 
     #[inline]
@@ -445,6 +492,11 @@ impl NativeType for f16 {
     #[inline]
     fn from_be_bytes(bytes: Self::Bytes) -> Self {
         Self(u16::from_be_bytes(bytes))
+    }
+
+    #[inline]
+    fn from_le_bytes(bytes: Self::Bytes) -> Self {
+        Self(u16::from_le_bytes(bytes))
     }
 }
 

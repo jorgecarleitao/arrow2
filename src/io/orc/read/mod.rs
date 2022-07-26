@@ -1,10 +1,11 @@
 //! APIs to read from [ORC format](https://orc.apache.org).
 use std::io::{Read, Seek, SeekFrom};
 
-use crate::array::{Array, BooleanArray, Float32Array, Int32Array, Int64Array};
+use crate::array::{Array, BooleanArray, Int64Array, PrimitiveArray};
 use crate::bitmap::{Bitmap, MutableBitmap};
 use crate::datatypes::{DataType, Field, Schema};
 use crate::error::Error;
+use crate::types::NativeType;
 
 use orc_format::fallible_streaming_iterator::FallibleStreamingIterator;
 use orc_format::proto::stream::Kind;
@@ -102,11 +103,11 @@ fn deserialize_validity(
 }
 
 /// Deserializes column `column` from `stripe`, assumed to represent a f32
-fn deserialize_f32(
+fn deserialize_float<T: NativeType>(
     data_type: DataType,
     stripe: &Stripe,
     column: usize,
-) -> Result<Float32Array, Error> {
+) -> Result<PrimitiveArray<T>, Error> {
     let mut scratch = vec![];
     let num_rows = stripe.number_of_rows();
 
@@ -118,23 +119,29 @@ fn deserialize_f32(
     if let Some(validity) = &validity {
         let mut validity_iter = validity.iter();
         while let Some(chunk) = chunks.next()? {
-            let mut valid_iter = decode::deserialize_f32(chunk);
+            let mut valid_iter = chunk
+                .chunks_exact(std::mem::size_of::<T>())
+                .map(|chunk| T::from_le_bytes(chunk.try_into().unwrap_or_default()));
             let iter = validity_iter.by_ref().map(|is_valid| {
                 if is_valid {
                     valid_iter.next().unwrap()
                 } else {
-                    0.0f32
+                    T::default()
                 }
             });
             values.extend(iter);
         }
     } else {
         while let Some(chunk) = chunks.next()? {
-            values.extend(decode::deserialize_f32(chunk));
+            values.extend(
+                chunk
+                    .chunks_exact(std::mem::size_of::<T>())
+                    .map(|chunk| T::from_le_bytes(chunk.try_into().unwrap_or_default())),
+            );
         }
     }
 
-    Float32Array::try_new(data_type, values.into(), validity)
+    PrimitiveArray::try_new(data_type, values.into(), validity)
 }
 
 /// Deserializes column `column` from `stripe`, assumed to represent a boolean array
@@ -266,11 +273,14 @@ fn deserialize_i64(
 }
 
 /// Deserializes column `column` from `stripe`, assumed to represent a boolean array
-fn deserialize_i32(
+fn deserialize_int<T>(
     data_type: DataType,
     stripe: &Stripe,
     column: usize,
-) -> Result<Int32Array, Error> {
+) -> Result<PrimitiveArray<T>, Error>
+where
+    T: NativeType + TryFrom<i64>,
+{
     let num_rows = stripe.number_of_rows();
     let mut scratch = vec![];
 
@@ -278,7 +288,7 @@ fn deserialize_i32(
 
     let mut chunks = stripe.get_bytes(column, Kind::Data, std::mem::take(&mut scratch))?;
 
-    let mut values = Vec::with_capacity(num_rows);
+    let mut values = Vec::<T>::with_capacity(num_rows);
     if let Some(validity) = &validity {
         let validity_iter = validity.iter();
 
@@ -292,30 +302,51 @@ fn deserialize_i32(
                     iter = IntIter::new(chunks.next()?.unwrap());
                     iter.next().transpose()?.unwrap()
                 };
-                values.push(item as i32);
+                let item = item
+                    .try_into()
+                    .map_err(|_| Error::ExternalFormat("value uncastable".to_string()))?;
+                values.push(item);
             } else {
-                values.push(0);
+                values.push(T::default());
             }
         }
     } else {
         while let Some(chunk) = chunks.next()? {
             decode::SignedRleV2Iter::new(chunk).try_for_each(|run| {
-                run.map(|run| match run {
+                run.map_err(Error::from).and_then(|run| match run {
                     decode::SignedRleV2Run::Direct(values_iter) => {
-                        values.extend(values_iter.map(|x| x as i32))
+                        for item in values_iter {
+                            let item = item.try_into().map_err(|_| {
+                                Error::ExternalFormat("value uncastable".to_string())
+                            })?;
+                            values.push(item);
+                        }
+                        Ok(())
                     }
                     decode::SignedRleV2Run::Delta(values_iter) => {
-                        values.extend(values_iter.map(|x| x as i32))
+                        for item in values_iter {
+                            let item = item.try_into().map_err(|_| {
+                                Error::ExternalFormat("value uncastable".to_string())
+                            })?;
+                            values.push(item);
+                        }
+                        Ok(())
                     }
                     decode::SignedRleV2Run::ShortRepeat(values_iter) => {
-                        values.extend(values_iter.map(|x| x as i32))
+                        for item in values_iter {
+                            let item = item.try_into().map_err(|_| {
+                                Error::ExternalFormat("value uncastable".to_string())
+                            })?;
+                            values.push(item);
+                        }
+                        Ok(())
                     }
                 })
             })?;
         }
     }
 
-    Int32Array::try_new(data_type, values.into(), validity)
+    PrimitiveArray::try_new(data_type, values.into(), validity)
 }
 
 /// Deserializes column `column` from `stripe`, assumed
@@ -327,9 +358,12 @@ pub fn deserialize(
 ) -> Result<Box<dyn Array>, Error> {
     match data_type {
         DataType::Boolean => deserialize_bool(data_type, stripe, column).map(|x| x.boxed()),
-        DataType::Int32 => deserialize_i32(data_type, stripe, column).map(|x| x.boxed()),
+        DataType::Int8 => deserialize_int::<i8>(data_type, stripe, column).map(|x| x.boxed()),
+        DataType::Int16 => deserialize_int::<i16>(data_type, stripe, column).map(|x| x.boxed()),
+        DataType::Int32 => deserialize_int::<i32>(data_type, stripe, column).map(|x| x.boxed()),
         DataType::Int64 => deserialize_i64(data_type, stripe, column).map(|x| x.boxed()),
-        DataType::Float32 => deserialize_f32(data_type, stripe, column).map(|x| x.boxed()),
+        DataType::Float32 => deserialize_float::<f32>(data_type, stripe, column).map(|x| x.boxed()),
+        DataType::Float64 => deserialize_float::<f64>(data_type, stripe, column).map(|x| x.boxed()),
         dt => return Err(Error::nyi(format!("Reading {dt:?} from ORC"))),
     }
 }

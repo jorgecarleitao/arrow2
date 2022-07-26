@@ -10,6 +10,8 @@ data = {
     "bool_required": [True, False, True, True, False],
     "int_nulable": [5, -5, None, 5, 5],
     "int_required": [5, -5, 1, 5, 5],
+    "double_nulable": [1.0, 2.0, None, 4.0, 5.0],
+    "double_required": [1.0, 2.0, 3.0, 4.0, 5.0],
 }
 
 def infer_schema(data):
@@ -26,6 +28,8 @@ def infer_schema(data):
             dt = "string"
         else:
             raise NotImplementedError
+        if key.startswith("double"):
+            dt = "double"
         schema += key + ":" + dt + ","
 
     schema = schema[:-1] + ">"
