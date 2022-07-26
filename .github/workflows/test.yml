@@ -13,16 +13,17 @@ jobs:
           submodules: true # needed to test IPC, which are located in a submodule
       - name: Install Rust
         run: rustup update stable
-      - uses: Swatinem/rust-cache@v1
       - name: Setup parquet files
         run: |
           apt update && apt install python3-pip python3-venv -y -q
           python3 -m venv venv
           source venv/bin/activate
           pip install pip --upgrade
-          pip install pyarrow==6
+          pip install pyarrow==6 pyorc
           python parquet_integration/write_parquet.py
+          python tests/it/io/orc/write.py
           deactivate
+      - uses: Swatinem/rust-cache@v1
       - name: Run
         run: cargo test --features full
 

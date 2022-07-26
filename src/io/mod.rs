@@ -5,6 +5,9 @@
 #[cfg(feature = "io_odbc")]
 pub mod odbc;
 
+#[cfg(feature = "io_orc")]
+pub mod orc;
+
 #[cfg(any(
     feature = "io_csv_read",
     feature = "io_csv_read_async",
