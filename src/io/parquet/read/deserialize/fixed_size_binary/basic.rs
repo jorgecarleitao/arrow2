@@ -169,10 +169,10 @@ impl<'a> Decoder<'a> for BinaryDecoder {
             is_optional,
             is_filtered,
         ) {
-            (Encoding::Plain, None, true, false) => {
+            (Encoding::Plain, _, true, false) => {
                 Ok(State::Optional(Optional::try_new(page, self.size)?))
             }
-            (Encoding::Plain, None, false, false) => {
+            (Encoding::Plain, _, false, false) => {
                 Ok(State::Required(Required::new(page, self.size)))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
