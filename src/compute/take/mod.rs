@@ -127,7 +127,7 @@ pub fn can_take(data_type: &DataType) -> bool {
             | DataType::Float16
             | DataType::Float32
             | DataType::Float64
-            | DataType::Decimal(_, _)
+            | DataType::Decimal(_, _, _)
             | DataType::Utf8
             | DataType::LargeUtf8
             | DataType::Binary

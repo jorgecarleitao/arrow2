@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Formatter, Result, Write};
 
 use crate::array::Array;
-use crate::datatypes::{IntervalUnit, TimeUnit};
+use crate::datatypes::{DecimalType, IntervalUnit, TimeUnit};
 use crate::types::{days_ms, months_days_ns};
 
 use super::PrimitiveArray;
@@ -115,7 +115,27 @@ pub fn get_write_value<'a, T: NativeType, F: Write>(
         Duration(TimeUnit::Millisecond) => dyn_primitive!(array, i64, |x| format!("{}ms", x)),
         Duration(TimeUnit::Microsecond) => dyn_primitive!(array, i64, |x| format!("{}us", x)),
         Duration(TimeUnit::Nanosecond) => dyn_primitive!(array, i64, |x| format!("{}ns", x)),
-        Decimal(_, scale) => {
+        Decimal(DecimalType::Int32, _, scale) => {
+            // The number 999.99 has a precision of 5 and scale of 2
+            let scale = *scale as u32;
+            let display = move |x| {
+                let base = x / 10i32.pow(scale);
+                let decimals = x - base * 10i32.pow(scale);
+                format!("{}.{}", base, decimals)
+            };
+            dyn_primitive!(array, i32, display)
+        }
+        Decimal(DecimalType::Int64, _, scale) => {
+            // The number 999.99 has a precision of 5 and scale of 2
+            let scale = *scale as u32;
+            let display = move |x| {
+                let base = x / 10i64.pow(scale);
+                let decimals = x - base * 10i64.pow(scale);
+                format!("{}.{}", base, decimals)
+            };
+            dyn_primitive!(array, i64, display)
+        }
+        Decimal(DecimalType::Int128, _, scale) => {
             // The number 999.99 has a precision of 5 and scale of 2
             let scale = *scale as u32;
             let display = move |x| {
@@ -125,6 +145,7 @@ pub fn get_write_value<'a, T: NativeType, F: Write>(
             };
             dyn_primitive!(array, i128, display)
         }
+
         _ => unreachable!(),
     }
 }

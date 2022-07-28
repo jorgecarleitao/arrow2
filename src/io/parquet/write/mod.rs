@@ -310,8 +310,10 @@ pub fn array_to_page_simple(
 
             fixed_len_bytes::array_to_page(array, options, type_, statistics)
         }
-        DataType::Decimal(precision, _) => {
-            let type_ = type_;
+        DataType::Decimal(decimal_type_, precision, _) => {
+            if *decimal_type_ != DecimalType::Int128 {
+                return Err(Error::nyi("Only decimal 128 supported to write to parquet"));
+            }
             let precision = *precision;
             let array = array
                 .as_any()

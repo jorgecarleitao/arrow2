@@ -149,11 +149,11 @@ pub enum DataType {
     ///
     /// The `bool` value indicates the `Dictionary` is sorted if set to `true`.
     Dictionary(IntegerType, Box<DataType>, bool),
-    /// Decimal value with precision and scale
+    /// Decimal value with its physical presentation, precision and scale
     /// precision is the number of digits in the number and
     /// scale is the number of decimal places.
     /// The number 999.99 has a precision of 5 and scale of 2.
-    Decimal(usize, usize),
+    Decimal(DecimalType, usize, usize),
     /// Extension type.
     Extension(String, Box<DataType>, Option<String>),
 }
@@ -217,6 +217,28 @@ pub enum IntervalUnit {
     MonthDayNano,
 }
 
+/// The decimal representations supported by this crate
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde_types", derive(Serialize, Deserialize))]
+pub enum DecimalType {
+    /// 32 bit integer
+    Int32,
+    /// 64 bit integer
+    Int64,
+    /// 128 bit integer
+    Int128,
+}
+
+impl From<DecimalType> for PhysicalType {
+    fn from(width: DecimalType) -> Self {
+        match width {
+            DecimalType::Int32 => PhysicalType::Primitive(PrimitiveType::Int32),
+            DecimalType::Int64 => PhysicalType::Primitive(PrimitiveType::Int64),
+            DecimalType::Int128 => PhysicalType::Primitive(PrimitiveType::Int128),
+        }
+    }
+}
+
 impl DataType {
     /// the [`PhysicalType`] of this [`DataType`].
     pub fn to_physical_type(&self) -> PhysicalType {
@@ -232,7 +254,7 @@ impl DataType {
             Int64 | Date64 | Timestamp(_, _) | Time64(_) | Duration(_) => {
                 PhysicalType::Primitive(PrimitiveType::Int64)
             }
-            Decimal(_, _) => PhysicalType::Primitive(PrimitiveType::Int128),
+            Decimal(type_, _, _) => (*type_).into(),
             UInt8 => PhysicalType::Primitive(PrimitiveType::UInt8),
             UInt16 => PhysicalType::Primitive(PrimitiveType::UInt16),
             UInt32 => PhysicalType::Primitive(PrimitiveType::UInt32),
@@ -298,7 +320,7 @@ impl From<PrimitiveType> for DataType {
             PrimitiveType::UInt16 => DataType::UInt16,
             PrimitiveType::UInt32 => DataType::UInt32,
             PrimitiveType::UInt64 => DataType::UInt64,
-            PrimitiveType::Int128 => DataType::Decimal(32, 32),
+            PrimitiveType::Int128 => DataType::Decimal(DecimalType::Int128, 32, 32),
             PrimitiveType::Float16 => DataType::Float16,
             PrimitiveType::Float32 => DataType::Float32,
             PrimitiveType::Float64 => DataType::Float64,

@@ -85,3 +85,30 @@ mod private {
     impl Sealed for super::days_ms {}
     impl Sealed for super::months_days_ns {}
 }
+
+/// Trait describing the three [`NativeType`]s that can be used as decimal representations
+pub trait Decimal: NativeType + num_traits::Signed + num_traits::Pow<u32, Output = Self> {
+    /// The 10
+    fn ten() -> Self;
+}
+
+impl Decimal for i32 {
+    #[inline]
+    fn ten() -> Self {
+        10
+    }
+}
+
+impl Decimal for i64 {
+    #[inline]
+    fn ten() -> Self {
+        10
+    }
+}
+
+impl Decimal for i128 {
+    #[inline]
+    fn ten() -> Self {
+        10
+    }
+}

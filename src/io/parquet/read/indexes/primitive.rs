@@ -3,7 +3,7 @@ use parquet2::schema::types::{PrimitiveLogicalType, PrimitiveType, TimeUnit as P
 use parquet2::types::int96_to_i64_ns;
 
 use crate::array::{Array, MutablePrimitiveArray, PrimitiveArray};
-use crate::datatypes::{DataType, TimeUnit};
+use crate::datatypes::{DataType, DecimalType, TimeUnit};
 use crate::trusted_len::TrustedLen;
 use crate::types::NativeType;
 
@@ -28,7 +28,7 @@ fn deserialize_int32<I: TrustedLen<Item = Option<i32>>>(
             PrimitiveArray::<u32>::from_trusted_len_iter(iter.map(|x| x.map(|x| x as u32)))
                 .to(data_type),
         ),
-        Decimal(_, _) => Box::new(
+        Decimal(DecimalType::Int128, _, _) => Box::new(
             PrimitiveArray::<i128>::from_trusted_len_iter(iter.map(|x| x.map(|x| x as i128)))
                 .to(data_type),
         ),
@@ -106,7 +106,7 @@ fn deserialize_int64<I: TrustedLen<Item = Option<i64>>>(
             PrimitiveArray::<u64>::from_trusted_len_iter(iter.map(|x| x.map(|x| x as u64)))
                 .to(data_type),
         ) as _,
-        Decimal(_, _) => Box::new(
+        Decimal(DecimalType::Int128, _, _) => Box::new(
             PrimitiveArray::<i128>::from_trusted_len_iter(iter.map(|x| x.map(|x| x as i128)))
                 .to(data_type),
         ) as _,

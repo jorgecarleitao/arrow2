@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use arrow2::array::ord::build_compare;
 use arrow2::array::*;
-use arrow2::datatypes::DataType;
+use arrow2::datatypes::{DataType, DecimalType};
 use arrow2::error::Result;
 
 #[test]
@@ -70,7 +70,7 @@ fn f64_zeros() -> Result<()> {
 
 #[test]
 fn decimal() -> Result<()> {
-    let array = Int128Array::from_slice(&[1, 2]).to(DataType::Decimal(38, 0));
+    let array = Int128Array::from_slice(&[1, 2]).to(DataType::Decimal(DecimalType::Int128, 38, 0));
 
     let cmp = build_compare(&array, &array)?;
 

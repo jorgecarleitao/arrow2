@@ -2,6 +2,7 @@ use serde_derive::Deserialize;
 use serde_json::Value;
 
 use crate::{
+    datatypes::DecimalType,
     error::{Error, Result},
     io::ipc::IpcField,
 };
@@ -170,20 +171,30 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
         "largeutf8" => LargeUtf8,
         "decimal" => {
             // return a list with any type as its child isn't defined in the map
-            let precision = match item.get("precision") {
-                Some(p) => Ok(p.as_u64().unwrap() as usize),
-                None => Err(Error::OutOfSpec(
-                    "Expecting a precision for decimal".to_string(),
-                )),
-            };
-            let scale = match item.get("scale") {
-                Some(s) => Ok(s.as_u64().unwrap() as usize),
-                _ => Err(Error::OutOfSpec(
-                    "Expecting a scale for decimal".to_string(),
-                )),
+            let precision = item
+                .get("precision")
+                .map(|p| p.as_u64().unwrap() as usize)
+                .ok_or_else(|| Error::OutOfSpec("Expecting a precision for decimal".to_string()))?;
+            let scale = item
+                .get("scale")
+                .map(|p| p.as_u64().unwrap() as usize)
+                .ok_or_else(|| Error::OutOfSpec("Expecting a scale for decimal".to_string()))?;
+            let bitwidth = item
+                .get("bitWidth")
+                .map(|p| p.as_u64().unwrap() as usize)
+                .unwrap_or(128);
+            let type_ = match bitwidth {
+                32 => DecimalType::Int32,
+                64 => DecimalType::Int64,
+                128 => DecimalType::Int128,
+                _ => {
+                    return Err(Error::OutOfSpec(
+                        "Expecting a bitwidth for decimal".to_string(),
+                    ))
+                }
             };
 
-            DataType::Decimal(precision?, scale?)
+            DataType::Decimal(type_, precision, scale)
         }
         "floatingpoint" => match item.get("precision") {
             Some(p) if p == "HALF" => DataType::Float16,

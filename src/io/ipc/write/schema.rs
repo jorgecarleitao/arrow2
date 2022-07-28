@@ -1,7 +1,7 @@
 use arrow_format::ipc::planus::Builder;
 
 use crate::datatypes::{
-    DataType, Field, IntegerType, IntervalUnit, Metadata, Schema, TimeUnit, UnionMode,
+    DataType, DecimalType, Field, IntegerType, IntervalUnit, Metadata, Schema, TimeUnit, UnionMode,
 };
 use crate::io::ipc::endianess::is_native_little_endian;
 
@@ -192,11 +192,18 @@ fn serialize_type(data_type: &DataType) -> arrow_format::ipc::Type {
         Float64 => ipc::Type::FloatingPoint(Box::new(ipc::FloatingPoint {
             precision: ipc::Precision::Double,
         })),
-        Decimal(precision, scale) => ipc::Type::Decimal(Box::new(ipc::Decimal {
-            precision: *precision as i32,
-            scale: *scale as i32,
-            bit_width: 128,
-        })),
+        Decimal(type_, precision, scale) => {
+            let bit_width = match type_ {
+                DecimalType::Int32 => 32,
+                DecimalType::Int64 => 64,
+                DecimalType::Int128 => 128,
+            };
+            ipc::Type::Decimal(Box::new(ipc::Decimal {
+                precision: *precision as i32,
+                scale: *scale as i32,
+                bit_width,
+            }))
+        }
         Binary => ipc::Type::Binary(Box::new(ipc::Binary {})),
         LargeBinary => ipc::Type::LargeBinary(Box::new(ipc::LargeBinary {})),
         Utf8 => ipc::Type::Utf8(Box::new(ipc::Utf8 {})),
@@ -281,7 +288,7 @@ fn serialize_children(data_type: &DataType, ipc_field: &IpcField) -> Vec<arrow_f
         | LargeBinary
         | Utf8
         | LargeUtf8
-        | Decimal(_, _) => vec![],
+        | Decimal(_, _, _) => vec![],
         FixedSizeList(inner, _) | LargeList(inner) | List(inner) | Map(inner, _) => {
             vec![serialize_field(inner, &ipc_field.fields[0])]
         }

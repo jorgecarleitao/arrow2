@@ -1,6 +1,6 @@
 use arrow2::array::*;
 use arrow2::bitmap::Bitmap;
-use arrow2::datatypes::{DataType, Field, TimeUnit};
+use arrow2::datatypes::{DataType, DecimalType, Field, TimeUnit};
 use arrow2::{error::Result, ffi};
 use std::collections::BTreeMap;
 
@@ -84,8 +84,28 @@ fn decimal() -> Result<()> {
 }
 
 #[test]
-fn decimal_nullable() -> Result<()> {
-    let data = Int128Array::from(&[Some(1), None, Some(2), None]);
+fn decimal128() -> Result<()> {
+    let data = Int128Array::from(&[Some(2), None, Some(1), None]);
+    test_round_trip(data)
+}
+
+#[test]
+fn decimal64() -> Result<()> {
+    let data = Int64Array::from(&[Some(2), None, Some(1), None]).to(DataType::Decimal(
+        DecimalType::Int64,
+        2,
+        2,
+    ));
+    test_round_trip(data)
+}
+
+#[test]
+fn decimal32() -> Result<()> {
+    let data = Int32Array::from(&[Some(2), None, Some(1), None]).to(DataType::Decimal(
+        DecimalType::Int32,
+        2,
+        2,
+    ));
     test_round_trip(data)
 }
 

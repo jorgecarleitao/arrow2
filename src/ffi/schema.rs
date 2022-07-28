@@ -2,7 +2,8 @@ use std::{collections::BTreeMap, convert::TryInto, ffi::CStr, ffi::CString, ptr}
 
 use crate::{
     datatypes::{
-        DataType, Extension, Field, IntegerType, IntervalUnit, Metadata, TimeUnit, UnionMode,
+        DataType, DecimalType, Extension, Field, IntegerType, IntervalUnit, Metadata, TimeUnit,
+        UnionMode,
     },
     error::{Error, Result},
 };
@@ -318,10 +319,12 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                 }
                 ["d", raw] => {
                     // Decimal
-                    let (precision, scale) = match raw.split(',').collect::<Vec<_>>()[..] {
+                    let (decimal_type, precision, scale) = match raw.split(',').collect::<Vec<_>>()
+                        [..]
+                    {
                         [precision_raw, scale_raw] => {
                             // Example: "d:19,10" decimal128 [precision 19, scale 10]
-                            (precision_raw, scale_raw)
+                            (DecimalType::Int128, precision_raw, scale_raw)
                         }
                         [precision_raw, scale_raw, width_raw] => {
                             // Example: "d:19,10,NNN" decimal bitwidth = NNN [precision 19, scale 10]
@@ -331,12 +334,18 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                                     "Decimal bit width is not a valid integer".to_string(),
                                 )
                             })?;
-                            if bit_width != 128 {
-                                return Err(Error::OutOfSpec(
-                                    "Decimal256 is not supported".to_string(),
-                                ));
-                            }
-                            (precision_raw, scale_raw)
+                            let decimal_type = match bit_width {
+                                32 => DecimalType::Int32,
+                                64 => DecimalType::Int64,
+                                128 => DecimalType::Int128,
+                                _ => {
+                                    return Err(Error::OutOfSpec(
+                                        "Decimal256 is not supported".to_string(),
+                                    ))
+                                }
+                            };
+
+                            (decimal_type, precision_raw, scale_raw)
                         }
                         _ => {
                             return Err(Error::OutOfSpec(
@@ -346,6 +355,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                     };
 
                     DataType::Decimal(
+                        decimal_type,
                         precision.parse::<usize>().map_err(|_| {
                             Error::OutOfSpec("Decimal precision is not a valid integer".to_string())
                         })?,
@@ -437,7 +447,11 @@ fn to_format(data_type: &DataType) -> String {
                 tz.as_ref().map(|x| x.as_ref()).unwrap_or("")
             )
         }
-        DataType::Decimal(precision, scale) => format!("d:{},{}", precision, scale),
+        DataType::Decimal(type_, precision, scale) => match type_ {
+            DecimalType::Int32 => format!("d:{},{},{}", precision, scale, 32),
+            DecimalType::Int64 => format!("d:{},{},{}", precision, scale, 64),
+            DecimalType::Int128 => format!("d:{},{}", precision, scale),
+        },
         DataType::List(_) => "+l".to_string(),
         DataType::LargeList(_) => "+L".to_string(),
         DataType::Struct(_) => "+s".to_string(),
@@ -559,7 +573,7 @@ mod tests {
             DataType::Time32(TimeUnit::Millisecond),
             DataType::Time64(TimeUnit::Microsecond),
             DataType::Time64(TimeUnit::Nanosecond),
-            DataType::Decimal(5, 5),
+            DataType::Decimal(DecimalType::Int128, 5, 5),
             DataType::Utf8,
             DataType::LargeUtf8,
             DataType::Binary,

@@ -381,21 +381,33 @@ pub fn pyarrow_nullable(column: &str) -> Box<dyn Array> {
                 .iter()
                 .map(|x| x.map(|x| x as i128))
                 .collect::<Vec<_>>();
-            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(9, 0)))
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(
+                DecimalType::Int128,
+                9,
+                0,
+            )))
         }
         "decimal_18" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| x as i128))
                 .collect::<Vec<_>>();
-            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(18, 0)))
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(
+                DecimalType::Int128,
+                18,
+                0,
+            )))
         }
         "decimal_26" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| x as i128))
                 .collect::<Vec<_>>();
-            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(26, 0)))
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(
+                DecimalType::Int128,
+                26,
+                0,
+            )))
         }
         "timestamp_us" => Box::new(
             PrimitiveArray::<i64>::from(i64_values)
@@ -468,20 +480,44 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
         "decimal_9" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single(UInt64Array::from([Some(3)])),
-            min_value: Box::new(Int128Array::from_slice([-256]).to(DataType::Decimal(9, 0))),
-            max_value: Box::new(Int128Array::from_slice([9]).to(DataType::Decimal(9, 0))),
+            min_value: Box::new(Int128Array::from_slice([-256]).to(DataType::Decimal(
+                DecimalType::Int128,
+                9,
+                0,
+            ))),
+            max_value: Box::new(Int128Array::from_slice([9]).to(DataType::Decimal(
+                DecimalType::Int128,
+                9,
+                0,
+            ))),
         },
         "decimal_18" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single(UInt64Array::from([Some(3)])),
-            min_value: Box::new(Int128Array::from_slice([-256]).to(DataType::Decimal(18, 0))),
-            max_value: Box::new(Int128Array::from_slice([9]).to(DataType::Decimal(18, 0))),
+            min_value: Box::new(Int128Array::from_slice([-256]).to(DataType::Decimal(
+                DecimalType::Int128,
+                18,
+                0,
+            ))),
+            max_value: Box::new(Int128Array::from_slice([9]).to(DataType::Decimal(
+                DecimalType::Int128,
+                18,
+                0,
+            ))),
         },
         "decimal_26" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
             null_count: Count::Single(UInt64Array::from([Some(3)])),
-            min_value: Box::new(Int128Array::from_slice([-256]).to(DataType::Decimal(26, 0))),
-            max_value: Box::new(Int128Array::from_slice([9]).to(DataType::Decimal(26, 0))),
+            min_value: Box::new(Int128Array::from_slice([-256]).to(DataType::Decimal(
+                DecimalType::Int128,
+                26,
+                0,
+            ))),
+            max_value: Box::new(Int128Array::from_slice([9]).to(DataType::Decimal(
+                DecimalType::Int128,
+                26,
+                0,
+            ))),
         },
         "timestamp_us" => Statistics {
             distinct_count: Count::Single(UInt64Array::from([None])),
@@ -547,21 +583,33 @@ pub fn pyarrow_required(column: &str) -> Box<dyn Array> {
                 .iter()
                 .map(|x| x.map(|x| x as i128))
                 .collect::<Vec<_>>();
-            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(9, 0)))
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(
+                DecimalType::Int128,
+                9,
+                0,
+            )))
         }
         "decimal_18" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| x as i128))
                 .collect::<Vec<_>>();
-            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(18, 0)))
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(
+                DecimalType::Int128,
+                18,
+                0,
+            )))
         }
         "decimal_26" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| x as i128))
                 .collect::<Vec<_>>();
-            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(26, 0)))
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(
+                DecimalType::Int128,
+                26,
+                0,
+            )))
         }
         _ => unreachable!(),
     }

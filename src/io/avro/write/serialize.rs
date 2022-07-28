@@ -512,7 +512,7 @@ pub fn can_serialize(data_type: &DataType) -> bool {
             | Int64
             | Float32
             | Float64
-            | Decimal(_, _)
+            | Decimal(_, _, _)
             | Utf8
             | Binary
             | FixedSizeBinary(_)
