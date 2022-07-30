@@ -6,6 +6,7 @@
 pub mod odbc;
 
 #[cfg(feature = "io_orc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_orc")))]
 pub mod orc;
 
 #[cfg(any(

@@ -42,7 +42,9 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       - name: Run
         shell: bash
-        run: ARROW2_IGNORE_PARQUET= cargo test --features full
+        run: |
+          cargo check --features full
+          cargo test --tests
 
   clippy:
     name: Clippy

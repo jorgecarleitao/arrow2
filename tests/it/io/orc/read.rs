@@ -1,5 +1,4 @@
 use arrow2::array::*;
-use arrow2::datatypes::DataType;
 use arrow2::error::Error;
 use arrow2::io::orc::{format, read};
 
