@@ -80,7 +80,7 @@ crc = { version = "2", optional = true }
 async-stream = { version = "0.3.2", optional = true }
 
 # ORC support
-orc-format = { git = "https://github.com/DataEngineeringLabs/orc-format.git", optional = true }
+orc-format = { git = "https://github.com/DataEngineeringLabs/orc-format.git", branch = "iters", optional = true }
 
 # Arrow integration tests support
 serde = { version = "^1.0", features = ["rc"], optional = true }

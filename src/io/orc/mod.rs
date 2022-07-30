@@ -5,8 +5,8 @@ pub use orc_format as format;
 
 use crate::error::Error;
 
-impl From<format::Error> for Error {
-    fn from(error: format::Error) -> Self {
+impl From<format::error::Error> for Error {
+    fn from(error: format::error::Error) -> Self {
         Error::ExternalFormat(format!("{:?}", error))
     }
 }

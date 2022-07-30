@@ -12,6 +12,8 @@ data = {
     "int_required": [5, -5, 1, 5, 5],
     "double_nulable": [1.0, 2.0, None, 4.0, 5.0],
     "double_required": [1.0, 2.0, 3.0, 4.0, 5.0],
+    "bigint_nulable": [5, -5, None, 5, 5],
+    "bigint_required": [5, -5, 1, 5, 5],
 }
 
 def infer_schema(data):
@@ -30,6 +32,8 @@ def infer_schema(data):
             raise NotImplementedError
         if key.startswith("double"):
             dt = "double"
+        if key.startswith("bigint"):
+            dt = "bigint"
         schema += key + ":" + dt + ","
 
     schema = schema[:-1] + ">"
