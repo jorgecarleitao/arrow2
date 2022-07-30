@@ -8,14 +8,14 @@ data = {
     "float_required": [1.0, 2.0, 3.0, 4.0, 5.0],
     "bool_nullable": [True, False, None, True, False],
     "bool_required": [True, False, True, True, False],
-    "int_nulable": [5, -5, None, 5, 5],
+    "int_nullable": [5, -5, None, 5, 5],
     "int_required": [5, -5, 1, 5, 5],
-    "double_nulable": [1.0, 2.0, None, 4.0, 5.0],
+    "double_nullable": [1.0, 2.0, None, 4.0, 5.0],
     "double_required": [1.0, 2.0, 3.0, 4.0, 5.0],
-    "bigint_nulable": [5, -5, None, 5, 5],
+    "bigint_nullable": [5, -5, None, 5, 5],
     "bigint_required": [5, -5, 1, 5, 5],
-    "utf8_nulable": ["a", "bb", "ccc", "dddd", "eeeee"],
-    "utf8_required": ["a", "bb", None, "dddd", "eeeee"],
+    "utf8_required": ["a", "bb", "ccc", "dddd", "eeeee"],
+    "utf8_nullable": ["a", "bb", None, "dddd", "eeeee"],
 }
 
 def infer_schema(data):
