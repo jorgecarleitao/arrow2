@@ -23,7 +23,7 @@ fn write_chunk(path: &str, schema: Schema, chunk: Chunk<Box<dyn Array>>) -> Resu
     let encodings = schema
         .fields
         .iter()
-        .map(|f| transverse(&f.data_type, |_| Encoding::RleDictionary))
+        .map(|f| transverse(&f.data_type, |_| Encoding::Plain))
         .collect();
 
     let row_groups = RowGroupIterator::try_new(iter.into_iter(), &schema, options, encodings)?;
