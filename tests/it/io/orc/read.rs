@@ -9,7 +9,7 @@ fn infer() -> Result<(), Error> {
     let metadata = format::read::read_metadata(&mut reader)?;
     let schema = read::infer_schema(&metadata.footer)?;
 
-    assert_eq!(schema.fields.len(), 10);
+    assert_eq!(schema.fields.len(), 12);
     Ok(())
 }
 
@@ -19,8 +19,7 @@ fn float32() -> Result<(), Error> {
     let metadata = format::read::read_metadata(&mut reader)?;
     let footer = format::read::read_stripe_footer(&mut reader, &metadata, 0, &mut vec![])?;
 
-    let column =
-        format::read::read_stripe_column(&mut reader, &metadata, 0, footer.clone(), 1, vec![])?;
+    let column = format::read::read_stripe_column(&mut reader, &metadata, 0, footer, 1, vec![])?;
 
     assert_eq!(
         read::deserialize(DataType::Float32, &column)?,
@@ -53,7 +52,7 @@ fn float64() -> Result<(), Error> {
 
     let (footer, scratch) = column.into_inner();
 
-    let column = format::read::read_stripe_column(&mut reader, &metadata, 0, footer, 8, vec![])?;
+    let column = format::read::read_stripe_column(&mut reader, &metadata, 0, footer, 8, scratch)?;
 
     assert_eq!(
         read::deserialize(DataType::Float64, &column)?,
@@ -77,7 +76,7 @@ fn boolean() -> Result<(), Error> {
 
     let (footer, scratch) = column.into_inner();
 
-    let column = format::read::read_stripe_column(&mut reader, &metadata, 0, footer, 4, vec![])?;
+    let column = format::read::read_stripe_column(&mut reader, &metadata, 0, footer, 4, scratch)?;
 
     assert_eq!(
         read::deserialize(DataType::Boolean, &column)?,
@@ -125,11 +124,35 @@ fn bigint() -> Result<(), Error> {
 
     let (footer, scratch) = column.into_inner();
 
-    let column = format::read::read_stripe_column(&mut reader, &metadata, 0, footer, 9, vec![])?;
+    let column = format::read::read_stripe_column(&mut reader, &metadata, 0, footer, 9, scratch)?;
 
     assert_eq!(
         read::deserialize(DataType::Int64, &column)?,
         Int64Array::from([Some(5), Some(-5), None, Some(5), Some(5)]).boxed()
+    );
+    Ok(())
+}
+
+#[test]
+fn utf8() -> Result<(), Error> {
+    let mut reader = std::fs::File::open("fixtures/pyorc/test.orc").unwrap();
+    let metadata = format::read::read_metadata(&mut reader)?;
+    let footer = format::read::read_stripe_footer(&mut reader, &metadata, 0, &mut vec![])?;
+
+    let column = format::read::read_stripe_column(&mut reader, &metadata, 0, footer, 11, vec![])?;
+
+    assert_eq!(
+        read::deserialize(DataType::Utf8, &column)?,
+        Utf8Array::<i32>::from_slice(["a", "bb", "ccc", "dddd", "eeeee"]).boxed()
+    );
+
+    let (footer, _scratch) = column.into_inner();
+
+    let column = format::read::read_stripe_column(&mut reader, &metadata, 0, footer, 12, vec![])?;
+
+    assert_eq!(
+        read::deserialize(DataType::Utf8, &column)?,
+        Utf8Array::<i32>::from([Some("a"), Some("bb"), None, Some("dddd"), Some("eeeee")]).boxed()
     );
     Ok(())
 }
