@@ -89,6 +89,9 @@ fn serialize_data_type(data_type: &DataType) -> Value {
         DataType::Decimal(precision, scale) => {
             json!({"name": "decimal", "precision": precision, "scale": scale})
         }
+        DataType::Decimal256(precision, scale) => {
+            json!({"name": "decimal", "precision": precision, "scale": scale, "bit_width": 256})
+        }
         DataType::Extension(_, inner_data_type, _) => serialize_data_type(inner_data_type),
     }
 }

@@ -198,16 +198,25 @@ fn get_data_type(
             (DataType::Duration(time_unit), IpcField::default())
         }
         Decimal(decimal) => {
-            let data_type = DataType::Decimal(
-                decimal
-                    .precision()?
-                    .try_into()
-                    .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?,
-                decimal
-                    .scale()?
-                    .try_into()
-                    .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?,
-            );
+            let bit_width: usize = decimal
+                .bit_width()?
+                .try_into()
+                .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+            let precision: usize = decimal
+                .precision()?
+                .try_into()
+                .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+            let scale: usize = decimal
+                .scale()?
+                .try_into()
+                .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+            let data_type = match bit_width {
+                128 => DataType::Decimal(precision, scale),
+                256 => DataType::Decimal256(precision, scale),
+                _ => return Err(Error::from(OutOfSpecKind::NegativeFooterLength)),
+            };
+
             (data_type, IpcField::default())
         }
         List(_) => {

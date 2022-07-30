@@ -22,6 +22,9 @@ dyn-clone = "1"
 bytemuck = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", default_features = false, features = ["std"] }
 
+# for decimal i256
+ethnum = "1"
+
 # We need to Hash values before sending them to an hasher. This
 # crate provides HashMap that assumes pre-hashed values.
 hash_hasher = "^2.0.3"

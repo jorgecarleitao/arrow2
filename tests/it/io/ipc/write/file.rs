@@ -6,7 +6,7 @@ use arrow2::datatypes::{Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::read::{read_file_metadata, FileReader};
 use arrow2::io::ipc::{write::*, IpcField};
-use arrow2::types::months_days_ns;
+use arrow2::types::{i256, months_days_ns};
 
 use crate::io::ipc::common::read_gzip_json;
 
@@ -369,6 +369,20 @@ fn write_months_days_ns() -> Result<()> {
         None,
         Some(months_days_ns::new(1, 1, 2)),
     ])) as Box<dyn Array>;
+    let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
+    let columns = Chunk::try_new(vec![array])?;
+    round_trip(columns, schema, None, None)
+}
+
+#[test]
+fn write_decimal256() -> Result<()> {
+    let array = Int256Array::from([
+        Some(i256::from_words(1, 0)),
+        Some(i256::from_words(-2, 0)),
+        None,
+        Some(i256::from_words(0, 1)),
+    ])
+    .boxed();
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None, None)

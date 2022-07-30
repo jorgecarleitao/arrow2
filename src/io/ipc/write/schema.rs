@@ -197,6 +197,11 @@ fn serialize_type(data_type: &DataType) -> arrow_format::ipc::Type {
             scale: *scale as i32,
             bit_width: 128,
         })),
+        Decimal256(precision, scale) => ipc::Type::Decimal(Box::new(ipc::Decimal {
+            precision: *precision as i32,
+            scale: *scale as i32,
+            bit_width: 256,
+        })),
         Binary => ipc::Type::Binary(Box::new(ipc::Binary {})),
         LargeBinary => ipc::Type::LargeBinary(Box::new(ipc::LargeBinary {})),
         Utf8 => ipc::Type::Utf8(Box::new(ipc::Utf8 {})),
@@ -281,7 +286,8 @@ fn serialize_children(data_type: &DataType, ipc_field: &IpcField) -> Vec<arrow_f
         | LargeBinary
         | Utf8
         | LargeUtf8
-        | Decimal(_, _) => vec![],
+        | Decimal(_, _)
+        | Decimal256(_, _) => vec![],
         FixedSizeList(inner, _) | LargeList(inner) | List(inner) | Map(inner, _) => {
             vec![serialize_field(inner, &ipc_field.fields[0])]
         }

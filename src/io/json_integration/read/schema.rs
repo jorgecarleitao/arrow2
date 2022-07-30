@@ -170,20 +170,28 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
         "largeutf8" => LargeUtf8,
         "decimal" => {
             // return a list with any type as its child isn't defined in the map
-            let precision = match item.get("precision") {
-                Some(p) => Ok(p.as_u64().unwrap() as usize),
-                None => Err(Error::OutOfSpec(
-                    "Expecting a precision for decimal".to_string(),
-                )),
-            };
-            let scale = match item.get("scale") {
-                Some(s) => Ok(s.as_u64().unwrap() as usize),
-                _ => Err(Error::OutOfSpec(
-                    "Expecting a scale for decimal".to_string(),
-                )),
+            let precision = item
+                .get("precision")
+                .ok_or_else(|| Error::OutOfSpec("Expecting a precision for decimal".to_string()))?
+                .as_u64()
+                .unwrap() as usize;
+
+            let scale = item
+                .get("scale")
+                .ok_or_else(|| Error::OutOfSpec("Expecting a scale for decimal".to_string()))?
+                .as_u64()
+                .unwrap() as usize;
+
+            let bit_width = match item.get("bitWidth") {
+                Some(s) => s.as_u64().unwrap() as usize,
+                None => 128,
             };
 
-            DataType::Decimal(precision?, scale?)
+            match bit_width {
+                128 => DataType::Decimal(precision, scale),
+                256 => DataType::Decimal256(precision, scale),
+                _ => todo!(),
+            }
         }
         "floatingpoint" => match item.get("precision") {
             Some(p) if p == "HALF" => DataType::Float16,

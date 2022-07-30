@@ -10,7 +10,7 @@ use crate::{
     datatypes::{DataType, PhysicalType, PrimitiveType, Schema},
     error::{Error, Result},
     io::ipc::IpcField,
-    types::{days_ms, months_days_ns, NativeType},
+    types::{days_ms, i256, months_days_ns, NativeType},
 };
 
 use super::super::{ArrowJsonBatch, ArrowJsonColumn, ArrowJsonDictionaryBatch};
@@ -123,6 +123,24 @@ fn to_decimal(json_col: &ArrowJsonColumn, data_type: DataType) -> PrimitiveArray
         .collect();
 
     PrimitiveArray::<i128>::new(data_type, values, validity)
+}
+
+fn to_decimal256(json_col: &ArrowJsonColumn, data_type: DataType) -> PrimitiveArray<i256> {
+    let validity = to_validity(&json_col.validity);
+    let values = json_col
+        .data
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|value| match value {
+            Value::String(x) => i256(x.parse::<ethnum::I256>().unwrap()),
+            _ => {
+                panic!()
+            }
+        })
+        .collect();
+
+    PrimitiveArray::<i256>::new(data_type, values, validity)
 }
 
 fn to_primitive<T: NativeType + NumCast>(
@@ -280,6 +298,7 @@ pub fn to_array(
         Primitive(PrimitiveType::Int32) => Ok(Box::new(to_primitive::<i32>(json_col, data_type))),
         Primitive(PrimitiveType::Int64) => Ok(Box::new(to_primitive::<i64>(json_col, data_type))),
         Primitive(PrimitiveType::Int128) => Ok(Box::new(to_decimal(json_col, data_type))),
+        Primitive(PrimitiveType::Int256) => Ok(Box::new(to_decimal256(json_col, data_type))),
         Primitive(PrimitiveType::DaysMs) => Ok(Box::new(to_primitive_days_ms(json_col, data_type))),
         Primitive(PrimitiveType::MonthDayNano) => {
             Ok(Box::new(to_primitive_months_days_ns(json_col, data_type)))

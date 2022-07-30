@@ -1,7 +1,7 @@
 //! Contains traits and implementations of multi-data used in SIMD.
 //! The actual representation is driven by the feature flag `"simd"`, which, if set,
 //! uses [`std::simd`].
-use super::{days_ms, f16, months_days_ns};
+use super::{days_ms, f16, i256, months_days_ns};
 use super::{BitChunk, BitChunkIter, NativeType};
 
 /// Describes the ability to convert itself from a [`BitChunk`].
@@ -133,6 +133,7 @@ native_simd!(f16x32, f16, 32, u32);
 native_simd!(days_msx8, days_ms, 8, u8);
 native_simd!(months_days_nsx8, months_days_ns, 8, u8);
 native_simd!(i128x8, i128, 8, u8);
+native_simd!(i256x8, i256, 8, u8);
 
 // In the native implementation, a mask is 1 bit wide, as per AVX512.
 impl<T: BitChunk> FromMaskChunk<T> for T {
@@ -162,5 +163,6 @@ native!(f16, f16x32);
 native!(f32, f32x16);
 native!(f64, f64x8);
 native!(i128, i128x8);
+native!(i256, i256x8);
 native!(days_ms, days_msx8);
 native!(months_days_ns, months_days_nsx8);
