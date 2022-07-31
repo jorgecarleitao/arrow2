@@ -16,6 +16,9 @@ mod parquet;
 #[cfg(feature = "io_avro")]
 mod avro;
 
+#[cfg(feature = "io_orc")]
+mod orc;
+
 #[cfg(any(
     feature = "io_csv_read",
     feature = "io_csv_write",

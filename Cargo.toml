@@ -72,15 +72,20 @@ parquet2 = { version = "0.14.0", optional = true, default_features = false }
 
 # avro support
 avro-schema = { version = "0.2", optional = true }
-serde = { version = "^1.0", features = ["rc"], optional = true }
-serde_derive = { version = "^1.0", optional = true }
-serde_json = { version = "^1.0", features = ["preserve_order"], optional = true }
 # compression of avro
 libflate = { version = "1.1.1", optional = true }
 snap = { version = "1", optional = true }
 crc = { version = "2", optional = true }
 # async avro
 async-stream = { version = "0.3.2", optional = true }
+
+# ORC support
+orc-format = { version = "0.3.0", optional = true }
+
+# Arrow integration tests support
+serde = { version = "^1.0", features = ["rc"], optional = true }
+serde_derive = { version = "^1.0", optional = true }
+serde_json = { version = "^1.0", features = ["preserve_order"], optional = true }
 
 # for division/remainder optimization at runtime
 strength_reduce = { version = "0.2", optional = true }
@@ -126,6 +131,7 @@ full = [
     "io_parquet",
     "io_parquet_compression",
     "io_avro",
+    "io_orc",
     "io_avro_compression",
     "io_avro_async",
     "regex",
@@ -145,6 +151,7 @@ io_ipc_write_async = ["io_ipc", "futures"]
 io_ipc_read_async = ["io_ipc", "futures", "async-stream"]
 io_ipc_compression = ["lz4", "zstd"]
 io_flight = ["io_ipc", "arrow-format/flight-data"]
+
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
 io_parquet = ["parquet2", "io_ipc", "base64", "futures", "streaming-iterator", "fallible-streaming-iterator"]
 io_parquet_compression = [
@@ -154,6 +161,7 @@ io_parquet_compression = [
     "parquet2/lz4",
     "parquet2/brotli",
 ]
+
 io_avro = ["avro-schema", "streaming-iterator", "fallible-streaming-iterator", "serde_json"]
 io_avro_compression = [
     "libflate",
@@ -161,6 +169,9 @@ io_avro_compression = [
     "crc",
 ]
 io_avro_async = ["io_avro", "futures", "async-stream"]
+
+io_orc = [ "orc-format" ]
+
 # serde+serde_json: its dependencies + error handling
 # serde_derive: there is some derive around
 io_json_integration = ["hex", "serde", "serde_derive", "serde_json", "io_ipc"]
