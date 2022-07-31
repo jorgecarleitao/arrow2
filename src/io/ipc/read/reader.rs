@@ -230,7 +230,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     deserialize_footer(&serialized_footer, end - start)
 }
 
-pub(super) fn get_serialized_batch<'a>(
+pub(crate) fn get_serialized_batch<'a>(
     message: &'a arrow_format::ipc::MessageRef,
 ) -> Result<arrow_format::ipc::RecordBatchRef<'a>> {
     let header = message
@@ -268,6 +268,11 @@ pub fn read_batch<R: Read + Seek>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
+    let length: u64 = block
+        .meta_data_length
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
     // read length
     reader.seek(SeekFrom::Start(offset))?;
     let mut meta_buf = [0; 4];
@@ -291,16 +296,6 @@ pub fn read_batch<R: Read + Seek>(
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
     let batch = get_serialized_batch(&message)?;
-
-    let offset: u64 = block
-        .offset
-        .try_into()
-        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
-
-    let length: u64 = block
-        .meta_data_length
-        .try_into()
-        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
     read_record_batch(
         batch,

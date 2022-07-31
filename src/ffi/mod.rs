@@ -3,8 +3,15 @@
 mod array;
 mod bridge;
 mod generated;
+#[cfg(feature = "io_ipc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_ipc")))]
+mod mmap;
 mod schema;
 mod stream;
+
+#[cfg(feature = "io_ipc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_ipc")))]
+pub use mmap::mmap;
 
 pub(crate) use array::try_from;
 pub(crate) use array::{ArrowArrayRef, InternalArrowArray};
@@ -44,5 +51,5 @@ pub unsafe fn import_array_from_c(
     array: ArrowArray,
     data_type: DataType,
 ) -> Result<Box<dyn Array>> {
-    try_from(Box::new(InternalArrowArray::new(array, data_type)))
+    try_from(InternalArrowArray::new(array, data_type))
 }

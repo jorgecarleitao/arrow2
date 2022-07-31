@@ -77,6 +77,7 @@ mod compression;
 mod endianess;
 
 pub mod append;
+pub mod mmap;
 pub mod read;
 pub mod write;
 
