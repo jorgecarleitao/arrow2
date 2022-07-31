@@ -50,12 +50,8 @@ impl MutableStructArray {
         validity: Option<MutableBitmap>,
     ) -> Self {
         match data_type {
-            DataType::Struct(ref fields) => {
-                assert_eq!(
-                    fields.iter().map(|f| f.data_type()).collect::<Vec<_>>(),
-                    values.iter().map(|v| v.data_type()).collect::<Vec<_>>()
-                );
-            }
+            DataType::Struct(ref fields) =>
+                assert!(fields.iter().map(|f| f.data_type()).eq(values.iter().map(|f| f.data_type()))),
             _ => panic!("StructArray must be initialized with DataType::Struct"),
         };
         let self_ = Self {
@@ -68,14 +64,15 @@ impl MutableStructArray {
     }
 
     fn assert_lengths(&self) {
-        let lengths: Vec<_> = self.values.iter().map(|v| v.len()).collect();
-        if let Some(first_len) = lengths.first() {
-            if !lengths.iter().all(|l| l == first_len) {
+        let first_len = self.values.first().map(|v| v.len());
+        if let Some(len) = first_len {
+            if !self.values.iter().all(|x| x.len() == len) {
+                let lengths: Vec<_> = self.values.iter().map(|v| v.len()).collect();
                 panic!("StructArray child lengths differ: {:?}", lengths);
             }
         }
-        if let Some(ref validity) = self.validity {
-            assert_eq!(*lengths.first().unwrap_or(&0), validity.len());
+        if let Some(validity) = &self.validity {
+            assert_eq!(first_len.unwrap_or(0), validity.len());
         }
     }
 
