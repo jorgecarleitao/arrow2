@@ -9,6 +9,8 @@ use super::{new_empty_array, new_null_array, Array};
 mod ffi;
 pub(super) mod fmt;
 mod iterator;
+mod mutable;
+pub use mutable::*;
 
 /// A [`StructArray`] is a nested [`Array`] with an optional validity representing
 /// multiple [`Array`] with the same number of rows.
