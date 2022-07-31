@@ -49,7 +49,7 @@ impl MutableStructArray {
         values: Vec<Box<dyn MutableArray>>,
         validity: Option<MutableBitmap>,
     ) -> Self {
-        match data_type {
+        match data_type.to_logical_type() {
             DataType::Struct(ref fields) =>
                 assert!(fields.iter().map(|f| f.data_type()).eq(values.iter().map(|f| f.data_type()))),
             _ => panic!("StructArray must be initialized with DataType::Struct"),
