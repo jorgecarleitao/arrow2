@@ -587,6 +587,16 @@ impl NativeType for i256 {
         let b = i128::from_be_bytes(b);
         Self(ethnum::I256::from_words(a, b))
     }
+
+    #[inline]
+    fn from_le_bytes(bytes: Self::Bytes) -> Self {
+        let (b, a) = bytes.split_at(16);
+        let a: [u8; 16] = a.try_into().unwrap();
+        let b: [u8; 16] = b.try_into().unwrap();
+        let a = i128::from_le_bytes(a);
+        let b = i128::from_le_bytes(b);
+        Self(ethnum::I256::from_words(a, b))
+    }
 }
 
 #[cfg(test)]
