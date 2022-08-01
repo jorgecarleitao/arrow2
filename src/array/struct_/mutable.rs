@@ -107,6 +107,9 @@ impl MutableStructArray {
     }
 
     /// Call this after pushing into each child array.
+    /// # Panics
+    /// This function panics if any of the children does not have exactly one more
+    /// element than before the last call of `push`.
     pub fn push(&mut self, valid: bool) {
         match &mut self.validity {
             Some(validity) => validity.push(valid),
@@ -115,7 +118,6 @@ impl MutableStructArray {
                 false => self.init_validity(),
             },
         };
-        // TODO: investigate performance implications of this assertion
         self.assert_lengths();
     }
 
