@@ -318,6 +318,10 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
         self.push::<&str>(None)
     }
 
+    fn reserve(&mut self, additional: usize) {
+        self.reserve(additional, 0)
+    }
+
     fn shrink_to_fit(&mut self) {
         self.shrink_to_fit()
     }

@@ -112,6 +112,10 @@ impl<O: Offset> MutableArray for DynMutableListArray<O> {
         self.push_null()
     }
 
+    fn reserve(&mut self, _: usize) {
+        todo!();
+    }
+
     fn shrink_to_fit(&mut self) {
         todo!();
     }
@@ -193,6 +197,10 @@ impl MutableArray for FixedItemsUtf8Dictionary {
     #[inline]
     fn push_null(&mut self) {
         self.push_null()
+    }
+
+    fn reserve(&mut self, _: usize) {
+        todo!();
     }
 
     fn shrink_to_fit(&mut self) {
@@ -285,6 +293,10 @@ impl MutableArray for DynMutableStructArray {
     #[inline]
     fn push_null(&mut self) {
         self.push_null()
+    }
+
+    fn reserve(&mut self, _: usize) {
+        todo!();
     }
 
     fn shrink_to_fit(&mut self) {

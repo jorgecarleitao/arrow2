@@ -135,6 +135,11 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
         Box::new(a)
     }
 
+    /// Reserves `additional` slots.
+    pub fn reserve(&mut self, additional: usize) {
+        self.keys.reserve(additional);
+    }
+
     /// Shrinks the capacity of the [`MutableDictionaryArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
@@ -196,6 +201,11 @@ impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictio
     fn push_null(&mut self) {
         self.keys.push(None)
     }
+
+    fn reserve(&mut self, additional: usize) {
+        self.reserve(additional)
+    }
+
     fn shrink_to_fit(&mut self) {
         self.shrink_to_fit()
     }
