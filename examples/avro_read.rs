@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::BufReader;
 
 use arrow2::error::Result;
+use arrow2::io::avro::avro_schema;
 use arrow2::io::avro::read;
 
 fn main() -> Result<()> {
@@ -12,16 +13,13 @@ fn main() -> Result<()> {
 
     let file = &mut BufReader::new(File::open(path)?);
 
-    let (avro_schema, schema, codec, file_marker) = read::read_metadata(file)?;
+    let metadata = avro_schema::read::read_metadata(file)?;
 
-    println!("{:#?}", avro_schema);
+    let schema = read::infer_schema(&metadata.record)?;
 
-    let reader = read::Reader::new(
-        read::Decompressor::new(read::BlockStreamIterator::new(file, file_marker), codec),
-        avro_schema,
-        schema.fields,
-        None,
-    );
+    println!("{:#?}", metadata);
+
+    let reader = read::Reader::new(file, metadata, schema.fields, None);
 
     for maybe_chunk in reader {
         let columns = maybe_chunk?;

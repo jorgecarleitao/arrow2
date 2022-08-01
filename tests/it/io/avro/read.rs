@@ -6,6 +6,7 @@ use avro_rs::{Days, Decimal, Duration, Millis, Months, Schema as AvroSchema};
 use arrow2::array::*;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
+use arrow2::io::avro::avro_schema::read::read_metadata;
 use arrow2::io::avro::read;
 
 pub(super) fn schema() -> (AvroSchema, Schema) {
@@ -196,14 +197,10 @@ pub(super) fn read_avro(
 ) -> Result<(Chunk<Box<dyn Array>>, Schema)> {
     let file = &mut avro;
 
-    let (avro_schema, schema, codec, file_marker) = read::read_metadata(file)?;
+    let metadata = read_metadata(file)?;
+    let schema = read::infer_schema(&metadata.record)?;
 
-    let mut reader = read::Reader::new(
-        read::Decompressor::new(read::BlockStreamIterator::new(file, file_marker), codec),
-        avro_schema,
-        schema.fields.clone(),
-        projection.clone(),
-    );
+    let mut reader = read::Reader::new(file, metadata, schema.fields.clone(), projection.clone());
 
     let schema = if let Some(projection) = projection {
         let fields = schema

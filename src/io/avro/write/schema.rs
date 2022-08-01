@@ -1,4 +1,4 @@
-use avro_schema::{
+use avro_schema::schema::{
     BytesLogical, Field as AvroField, Fixed, FixedLogical, IntLogical, LongLogical, Record,
     Schema as AvroSchema,
 };
@@ -6,9 +6,20 @@ use avro_schema::{
 use crate::datatypes::*;
 use crate::error::{Error, Result};
 
-/// Converts a [`Schema`] to a vector of [`AvroField`] with it.
-pub fn to_avro_schema(schema: &Schema) -> Result<Vec<AvroField>> {
-    schema.fields.iter().map(field_to_field).collect()
+/// Converts a [`Schema`] to an Avro [`Record`].
+pub fn to_record(schema: &Schema) -> Result<Record> {
+    let fields = schema
+        .fields
+        .iter()
+        .map(field_to_field)
+        .collect::<Result<_>>()?;
+    Ok(Record {
+        name: "".to_string(),
+        namespace: None,
+        doc: None,
+        aliases: vec![],
+        fields,
+    })
 }
 
 fn field_to_field(field: &Field) -> Result<AvroField> {

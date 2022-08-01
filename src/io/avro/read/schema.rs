@@ -1,4 +1,4 @@
-use avro_schema::{Enum, Fixed, Record, Schema as AvroSchema};
+use avro_schema::schema::{Enum, Fixed, Record, Schema as AvroSchema};
 
 use crate::datatypes::*;
 use crate::error::{Error, Result};
@@ -19,26 +19,21 @@ fn external_props(schema: &AvroSchema) -> Metadata {
     props
 }
 
-/// Infers an [`Schema`] from the root [`AvroSchema`].
+/// Infers an [`Schema`] from the root [`Record`].
 /// This
-pub fn infer_schema(schema: &AvroSchema) -> Result<Schema> {
-    if let AvroSchema::Record(Record { fields, .. }) = schema {
-        Ok(fields
-            .iter()
-            .map(|field| {
-                schema_to_field(
-                    &field.schema,
-                    Some(&field.name),
-                    external_props(&field.schema),
-                )
-            })
-            .collect::<Result<Vec<_>>>()?
-            .into())
-    } else {
-        Err(Error::OutOfSpec(
-            "The root AvroSchema must be of type Record".to_string(),
-        ))
-    }
+pub fn infer_schema(record: &Record) -> Result<Schema> {
+    Ok(record
+        .fields
+        .iter()
+        .map(|field| {
+            schema_to_field(
+                &field.schema,
+                Some(&field.name),
+                external_props(&field.schema),
+            )
+        })
+        .collect::<Result<Vec<_>>>()?
+        .into())
 }
 
 fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> Result<Field> {
@@ -48,24 +43,24 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
         AvroSchema::Boolean => DataType::Boolean,
         AvroSchema::Int(logical) => match logical {
             Some(logical) => match logical {
-                avro_schema::IntLogical::Date => DataType::Date32,
-                avro_schema::IntLogical::Time => DataType::Time32(TimeUnit::Millisecond),
+                avro_schema::schema::IntLogical::Date => DataType::Date32,
+                avro_schema::schema::IntLogical::Time => DataType::Time32(TimeUnit::Millisecond),
             },
             None => DataType::Int32,
         },
         AvroSchema::Long(logical) => match logical {
             Some(logical) => match logical {
-                avro_schema::LongLogical::Time => DataType::Time64(TimeUnit::Microsecond),
-                avro_schema::LongLogical::TimestampMillis => {
+                avro_schema::schema::LongLogical::Time => DataType::Time64(TimeUnit::Microsecond),
+                avro_schema::schema::LongLogical::TimestampMillis => {
                     DataType::Timestamp(TimeUnit::Millisecond, Some("00:00".to_string()))
                 }
-                avro_schema::LongLogical::TimestampMicros => {
+                avro_schema::schema::LongLogical::TimestampMicros => {
                     DataType::Timestamp(TimeUnit::Microsecond, Some("00:00".to_string()))
                 }
-                avro_schema::LongLogical::LocalTimestampMillis => {
+                avro_schema::schema::LongLogical::LocalTimestampMillis => {
                     DataType::Timestamp(TimeUnit::Millisecond, None)
                 }
-                avro_schema::LongLogical::LocalTimestampMicros => {
+                avro_schema::schema::LongLogical::LocalTimestampMicros => {
                     DataType::Timestamp(TimeUnit::Microsecond, None)
                 }
             },
@@ -75,7 +70,7 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
         AvroSchema::Double => DataType::Float64,
         AvroSchema::Bytes(logical) => match logical {
             Some(logical) => match logical {
-                avro_schema::BytesLogical::Decimal(precision, scale) => {
+                avro_schema::schema::BytesLogical::Decimal(precision, scale) => {
                     DataType::Decimal(*precision, *scale)
                 }
             },
@@ -134,10 +129,10 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
         }
         AvroSchema::Fixed(Fixed { size, logical, .. }) => match logical {
             Some(logical) => match logical {
-                avro_schema::FixedLogical::Decimal(precision, scale) => {
+                avro_schema::schema::FixedLogical::Decimal(precision, scale) => {
                     DataType::Decimal(*precision, *scale)
                 }
-                avro_schema::FixedLogical::Duration => {
+                avro_schema::schema::FixedLogical::Duration => {
                     DataType::Interval(IntervalUnit::MonthDayNano)
                 }
             },

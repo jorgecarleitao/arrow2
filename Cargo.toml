@@ -21,14 +21,19 @@ num-traits = "0.2"
 dyn-clone = "1"
 bytemuck = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", default_features = false, features = ["std"] }
-chrono-tz = { version = "0.6", optional = true }
-# To efficiently cast numbers to strings
-lexical-core = { version = "0.8", optional = true }
+
 # We need to Hash values before sending them to an hasher. This
 # crate provides HashMap that assumes pre-hashed values.
 hash_hasher = "^2.0.3"
 # For SIMD utf8 validation
 simdutf8 = "0.1.3"
+# faster hashing
+ahash = { version = "0.7" }
+
+# for timezone support
+chrono-tz = { version = "0.6", optional = true }
+# To efficiently cast numbers to strings
+lexical-core = { version = "0.8", optional = true }
 
 # for csv io
 csv = { version = "^1.1", optional = true }
@@ -64,20 +69,14 @@ base64 = { version = "0.13.0", optional = true }
 # to write to parquet as a stream
 futures = { version = "0.3", optional = true }
 
-# for faster hashing
-ahash = { version = "0.7" }
+# to read IPC as a stream
+async-stream = { version = "0.3.2", optional = true }
 
 # parquet support
 parquet2 = { version = "0.14.0", optional = true, default_features = false }
 
 # avro support
-avro-schema = { version = "0.2", optional = true }
-# compression of avro
-libflate = { version = "1.1.1", optional = true }
-snap = { version = "1", optional = true }
-crc = { version = "2", optional = true }
-# async avro
-async-stream = { version = "0.3.2", optional = true }
+avro-schema = { version = "0.3", optional = true }
 
 # ORC support
 orc-format = { version = "0.3.0", optional = true }
@@ -161,14 +160,11 @@ io_parquet_compression = [
     "parquet2/lz4",
     "parquet2/brotli",
 ]
-
-io_avro = ["avro-schema", "streaming-iterator", "fallible-streaming-iterator", "serde_json"]
+io_avro = ["avro-schema", "streaming-iterator"]
 io_avro_compression = [
-    "libflate",
-    "snap",
-    "crc",
+    "avro-schema/compression",
 ]
-io_avro_async = ["io_avro", "futures", "async-stream"]
+io_avro_async = ["avro-schema/async"]
 
 io_orc = [ "orc-format" ]
 

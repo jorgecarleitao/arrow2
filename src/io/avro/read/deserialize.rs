@@ -1,7 +1,8 @@
 use std::convert::TryInto;
 
-use avro_schema::Record;
-use avro_schema::{Enum, Schema as AvroSchema};
+use avro_schema::file::Block;
+use avro_schema::schema::Record;
+use avro_schema::schema::{Enum, Field as AvroField, Schema as AvroSchema};
 
 use crate::array::*;
 use crate::chunk::Chunk;
@@ -10,13 +11,12 @@ use crate::error::Error;
 use crate::error::Result;
 use crate::types::months_days_ns;
 
-use super::super::Block;
 use super::nested::*;
 use super::util;
 
 fn make_mutable(
     data_type: &DataType,
-    avro_schema: Option<&AvroSchema>,
+    avro_field: Option<&AvroSchema>,
     capacity: usize,
 ) -> Result<Box<dyn MutableArray>> {
     Ok(match data_type.to_physical_type() {
@@ -34,7 +34,7 @@ fn make_mutable(
             Box::new(MutableUtf8Array::<i32>::with_capacity(capacity)) as Box<dyn MutableArray>
         }
         PhysicalType::Dictionary(_) => {
-            if let Some(AvroSchema::Enum(Enum { symbols, .. })) = avro_schema {
+            if let Some(AvroSchema::Enum(Enum { symbols, .. })) = avro_field {
                 let values = Utf8Array::<i32>::from_slice(symbols);
                 Box::new(FixedItemsUtf8Dictionary::with_capacity(values, capacity))
                     as Box<dyn MutableArray>
@@ -437,24 +437,30 @@ fn skip_item<'a>(field: &Field, avro_field: &AvroSchema, mut block: &'a [u8]) ->
     Ok(block)
 }
 
-/// Deserializes a [`Block`] into [`Chunk`], projected
+/// Deserializes a [`Block`] assumed to be encoded according to [`AvroField`] into [`Chunk`],
+/// using `projection` to ignore `avro_fields`.
+/// # Panics
+/// `fields`, `avro_fields` and `projection` must have the same length.
 pub fn deserialize(
     block: &Block,
     fields: &[Field],
-    avro_schemas: &[AvroSchema],
+    avro_fields: &[AvroField],
     projection: &[bool],
 ) -> Result<Chunk<Box<dyn Array>>> {
+    assert_eq!(fields.len(), avro_fields.len());
+    assert_eq!(fields.len(), projection.len());
+
     let rows = block.number_of_rows;
     let mut block = block.data.as_ref();
 
     // create mutables, one per field
     let mut arrays: Vec<Box<dyn MutableArray>> = fields
         .iter()
-        .zip(avro_schemas.iter())
+        .zip(avro_fields.iter())
         .zip(projection.iter())
-        .map(|((field, avro_schema), projection)| {
+        .map(|((field, avro_field), projection)| {
             if *projection {
-                make_mutable(&field.data_type, Some(avro_schema), rows)
+                make_mutable(&field.data_type, Some(&avro_field.schema), rows)
             } else {
                 // just something; we are not going to use it
                 make_mutable(&DataType::Int32, None, 0)
@@ -467,14 +473,14 @@ pub fn deserialize(
         let iter = arrays
             .iter_mut()
             .zip(fields.iter())
-            .zip(avro_schemas.iter())
+            .zip(avro_fields.iter())
             .zip(projection.iter());
 
         for (((array, field), avro_field), projection) in iter {
             block = if *projection {
-                deserialize_item(array.as_mut(), field.is_nullable, avro_field, block)
+                deserialize_item(array.as_mut(), field.is_nullable, &avro_field.schema, block)
             } else {
-                skip_item(field, avro_field, block)
+                skip_item(field, &avro_field.schema, block)
             }?
         }
     }
