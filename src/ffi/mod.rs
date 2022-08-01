@@ -5,13 +5,9 @@ mod bridge;
 mod generated;
 #[cfg(feature = "io_ipc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_ipc")))]
-mod mmap;
+pub(crate) mod mmap;
 mod schema;
 mod stream;
-
-#[cfg(feature = "io_ipc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "io_ipc")))]
-pub use mmap::mmap;
 
 pub(crate) use array::try_from;
 pub(crate) use array::{ArrowArrayRef, InternalArrowArray};

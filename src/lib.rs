@@ -17,13 +17,16 @@ pub mod bitmap;
 pub mod buffer;
 pub mod chunk;
 pub mod error;
+#[cfg(feature = "io_ipc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_ipc")))]
+pub mod mmap;
+
 pub mod scalar;
 pub mod trusted_len;
 pub mod types;
 
 pub mod compute;
 pub mod io;
-//pub mod record_batch;
 pub mod temporal_conversions;
 
 pub mod datatypes;

@@ -373,3 +373,17 @@ fn write_months_days_ns() -> Result<()> {
     let columns = Chunk::try_new(vec![array])?;
     round_trip(columns, schema, None, None)
 }
+
+#[test]
+fn bla() -> Result<()> {
+    let array = Utf8Array::<i32>::from_slice(["aa", "bb"])
+        .slice(1, 1)
+        .boxed();
+    let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
+    let columns = Chunk::try_new(vec![array.clone()])?;
+
+    let data = write(&[columns], &schema, None, None)?;
+    let new_array = unsafe { arrow2::mmap::map_chunk_unchecked(data, 0)? };
+    assert_eq!(new_array, array);
+    Ok(())
+}

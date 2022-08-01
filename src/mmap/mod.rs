@@ -5,15 +5,23 @@ use crate::array::Array;
 use crate::error::Error;
 use crate::ffi::mmap;
 
-use super::read::read_file_metadata;
-use super::read::reader::get_serialized_batch;
-use super::read::OutOfSpecKind;
-use super::CONTINUATION_MARKER;
+use crate::io::ipc::read::read_file_metadata;
+use crate::io::ipc::read::reader::get_serialized_batch;
+use crate::io::ipc::read::OutOfSpecKind;
+use crate::io::ipc::CONTINUATION_MARKER;
 
 use arrow_format::ipc::planus::ReadAsRoot;
 
 /// something
-pub fn map_chunk<T: Clone + AsRef<[u8]>>(data: T, index: usize) -> Result<Box<dyn Array>, Error> {
+/// # Safety
+/// This operation is innerently unsafe as it assumes that `T` contains valid Arrow data
+/// In particular:
+/// * Offsets in variable-sized containers are valid;
+/// * Utf8 is valid
+pub unsafe fn map_chunk_unchecked<T: Clone + AsRef<[u8]>>(
+    data: T,
+    index: usize,
+) -> Result<Box<dyn Array>, Error> {
     let mut bytes = data.as_ref();
     let metadata = read_file_metadata(&mut std::io::Cursor::new(bytes))?;
 
@@ -60,9 +68,11 @@ pub fn map_chunk<T: Clone + AsRef<[u8]>>(data: T, index: usize) -> Result<Box<dy
         .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageNodes))?;
     let mut field_nodes = field_nodes.iter().collect::<VecDeque<_>>();
 
+    println!("{:#?}", metadata.schema.fields);
     let data_type = metadata.schema.fields[0].data_type.clone();
+    println!("{:#?}", data_type);
 
-    mmap(
+    mmap::mmap(
         data.clone(),
         offset + meta_data_length,
         data_type,

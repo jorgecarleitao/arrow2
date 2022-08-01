@@ -1,5 +1,5 @@
 use arrow2::error::Result;
-use arrow2::io::ipc::mmap::map_chunk;
+use arrow2::mmap::map_chunk_unchecked;
 
 use super::super::common::read_gzip_json;
 
@@ -28,7 +28,7 @@ fn test_file(version: &str, file_name: &str) -> Result<()> {
     // read expected JSON output
     let (_schema, _, batches) = read_gzip_json(version, file_name)?;
 
-    let array = map_chunk(data, 0)?;
+    let array = unsafe { map_chunk_unchecked(data, 0)? };
 
     assert_eq!(batches[0].arrays()[0], array);
     Ok(())
