@@ -4,7 +4,7 @@ use futures::AsyncWriteExt;
 use crate::error::Result;
 
 use super::super::CONTINUATION_MARKER;
-use super::common::pad_to_8;
+use super::common::pad_to_64;
 use super::common::EncodedData;
 
 /// Write a message's IPC data and buffers, returning metadata and buffer data lengths written
@@ -14,10 +14,10 @@ pub async fn write_message<W: AsyncWrite + Unpin + Send>(
 ) -> Result<(usize, usize)> {
     let arrow_data_len = encoded.arrow_data.len();
 
-    let a = 8 - 1;
+    let a = 64 - 1;
     let buffer = encoded.ipc_message;
     let flatbuf_size = buffer.len();
-    let prefix_size = 8;
+    let prefix_size = 8; // the message length
     let aligned_size = (flatbuf_size + prefix_size + a) & !a;
     let padding_bytes = aligned_size - flatbuf_size - prefix_size;
 
@@ -57,7 +57,7 @@ async fn write_body_buffers<W: AsyncWrite + Unpin + Send>(
     data: &[u8],
 ) -> Result<usize> {
     let len = data.len();
-    let pad_len = pad_to_8(data.len());
+    let pad_len = pad_to_64(data.len());
     let total_len = len + pad_len;
 
     // write body buffer

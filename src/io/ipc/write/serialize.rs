@@ -7,7 +7,7 @@ use crate::{
 
 use super::super::compression;
 use super::super::endianess::is_native_little_endian;
-use super::common::{pad_to_8, Compression};
+use super::common::{pad_to_64, Compression};
 
 fn write_primitive<T: NativeType>(
     array: &PrimitiveArray<T>,
@@ -564,8 +564,8 @@ pub fn write(
 }
 
 #[inline]
-fn pad_buffer_to_8(buffer: &mut Vec<u8>, length: usize) {
-    let pad_len = pad_to_8(length);
+fn pad_buffer_to_64(buffer: &mut Vec<u8>, length: usize) {
+    let pad_len = pad_to_64(length);
     buffer.extend_from_slice(&vec![0u8; pad_len]);
 }
 
@@ -748,7 +748,7 @@ fn write_buffer_from_iter<T: NativeType, I: TrustedLen<Item = T>>(
 fn finish_buffer(arrow_data: &mut Vec<u8>, start: usize, offset: &mut i64) -> ipc::Buffer {
     let buffer_len = (arrow_data.len() - start) as i64;
 
-    pad_buffer_to_8(arrow_data, arrow_data.len() - start);
+    pad_buffer_to_64(arrow_data, arrow_data.len() - start);
     let total_len = (arrow_data.len() - start) as i64;
 
     let buffer = ipc::Buffer {
