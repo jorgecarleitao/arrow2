@@ -221,7 +221,7 @@ impl<O: Offset> TraitBinaryArray<O> for Utf8Array<O> {
     }
 }
 
-impl<'a, O: Offset> DecodedState<'a> for (Binary<O>, MutableBitmap) {
+impl<O: Offset> DecodedState for (Binary<O>, MutableBitmap) {
     fn len(&self) -> usize {
         self.0.len()
     }

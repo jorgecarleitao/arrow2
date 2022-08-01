@@ -107,10 +107,10 @@ impl<'a> Iterator for BinaryIter<'a> {
         if self.values.is_empty() {
             return None;
         }
-        let length = u32::from_le_bytes(self.values[0..4].try_into().unwrap()) as usize;
-        self.values = &self.values[4..];
-        let result = &self.values[..length];
-        self.values = &self.values[length..];
+        let (length, remaining) = self.values.split_at(4);
+        let length = u32::from_le_bytes(length.try_into().unwrap()) as usize;
+        let (result, remaining) = remaining.split_at(length);
+        self.values = remaining;
         Some(result)
     }
 }

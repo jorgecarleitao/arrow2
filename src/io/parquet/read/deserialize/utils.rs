@@ -337,28 +337,32 @@ pub(super) trait PageState<'a>: std::fmt::Debug {
 }
 
 /// The state of a partially deserialized page
-pub(super) trait DecodedState<'a>: std::fmt::Debug {
-    // the number of values that this decoder already consumed
+pub(super) trait DecodedState: std::fmt::Debug {
+    // the number of values that the state already has
     fn len(&self) -> usize;
 }
 
 /// A decoder that knows how to map `State` -> Array
 pub(super) trait Decoder<'a> {
+    /// The state that this decoder derives from a [`DataPage`]. This is bound to the page.
     type State: PageState<'a>;
+    /// The dictionary representation that the decoder uses
     type Dict;
-    type DecodedState: DecodedState<'a>;
+    /// The target state that this Decoder decodes into.
+    type DecodedState: DecodedState;
 
+    /// Creates a new `Self::State`
     fn build_state(
         &self,
         page: &'a DataPage,
         dict: Option<&'a Self::Dict>,
     ) -> Result<Self::State, Error>;
 
-    /// Initializes a new state
+    /// Initializes a new [`Self::DecodedState`].
     fn with_capacity(&self, capacity: usize) -> Self::DecodedState;
 
-    /// extends (values, validity) by deserializing items in `State`.
-    /// It guarantees that the length of `values` is at most `values.len() + remaining`.
+    /// extends [`Self::DecodedState`] by deserializing items in [`Self::State`].
+    /// It guarantees that the length of `decoded` is at most `decoded.len() + remaining`.
     fn extend_from_state(
         &self,
         page: &mut Self::State,
@@ -366,7 +370,7 @@ pub(super) trait Decoder<'a> {
         additional: usize,
     );
 
-    /// Deserializes a [`DictPage`] into a representation suited for decoding using it.
+    /// Deserializes a [`DictPage`] into [`Self::Dict`].
     fn deserialize_dict(&self, page: &DictPage) -> Self::Dict;
 }
 
@@ -404,10 +408,14 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
     }
 }
 
+/// Represents what happened when a new page was consumed
 #[derive(Debug)]
 pub enum MaybeNext<P> {
+    /// Whether the page was sufficient to fill `chunk_size`
     Some(P),
+    /// whether there are no more pages or intermediary decoded states
     None,
+    /// Whether the page was insufficient to fill `chunk_size` and a new page is required
     More,
 }
 

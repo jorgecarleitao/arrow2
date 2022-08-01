@@ -150,7 +150,7 @@ struct BinaryDecoder {
     size: usize,
 }
 
-impl<'a> DecodedState<'a> for (FixedSizeBinary, MutableBitmap) {
+impl DecodedState for (FixedSizeBinary, MutableBitmap) {
     fn len(&self) -> usize {
         self.0.len()
     }

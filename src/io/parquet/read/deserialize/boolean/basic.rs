@@ -100,7 +100,7 @@ impl<'a> utils::PageState<'a> for State<'a> {
     }
 }
 
-impl<'a> DecodedState<'a> for (MutableBitmap, MutableBitmap) {
+impl DecodedState for (MutableBitmap, MutableBitmap) {
     fn len(&self) -> usize {
         self.0.len()
     }

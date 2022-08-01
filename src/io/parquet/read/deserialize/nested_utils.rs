@@ -247,7 +247,7 @@ impl Nested for NestedStruct {
 pub(super) trait NestedDecoder<'a> {
     type State: PageState<'a>;
     type Dictionary;
-    type DecodedState: DecodedState<'a>;
+    type DecodedState: DecodedState;
 
     fn build_state(
         &self,

@@ -145,7 +145,7 @@ where
     }
 }
 
-impl<'a, T: std::fmt::Debug> utils::DecodedState<'a> for (Vec<T>, MutableBitmap) {
+impl<T: std::fmt::Debug> utils::DecodedState for (Vec<T>, MutableBitmap) {
     fn len(&self) -> usize {
         self.0.len()
     }
