@@ -144,8 +144,10 @@ impl MutableStructArray {
 
     /// Shrinks the capacity of the [`MutableStructArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
-        self.values.shrink_to_fit();
-        if let Some(validity) = &mut self.validity {
+        for v in &mut self.values {
+            v.shrink_to_fit();
+        }
+        if let Some(validity) = self.validity.as_mut() {
             validity.shrink_to_fit()
         }
     }
