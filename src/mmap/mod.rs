@@ -75,7 +75,7 @@ fn read_batch<'a>(
     Ok((buffers, field_nodes))
 }
 
-///
+/// Memory maps an record batch from an IPC file into a [`Chunk`].
 /// # Errors
 /// This function errors when:
 /// * The IPC file is not valid
@@ -83,11 +83,9 @@ fn read_batch<'a>(
 ///     * the file was written with 8-bit alignment
 ///     * the file contains type decimal 128 or 256
 /// # Safety
-/// The caller must ensure that `data` contains a valid Arrow IPC file.
-/// This operation is inerently unsafe as it assumes that `data` contains valid Arrow IPC file
-/// For example:
-/// * Offsets in variable-sized containers must be valid
-/// * Utf8 is valid
+/// The caller must ensure that `data` contains a valid buffers, for example:
+/// * Offsets in variable-sized containers must be in-bounds and increasing
+/// * Utf8 data is valid
 pub unsafe fn mmap_unchecked<T: Clone + AsRef<[u8]>>(
     metadata: &FileMetadata,
     data: T,
@@ -97,7 +95,7 @@ pub unsafe fn mmap_unchecked<T: Clone + AsRef<[u8]>>(
     let (message, offset) = read_message(data.as_ref(), block)?;
     let (mut buffers, mut field_nodes) = read_batch(&message)?;
 
-    let arrays = metadata
+    metadata
         .schema
         .fields
         .iter()
@@ -112,7 +110,6 @@ pub unsafe fn mmap_unchecked<T: Clone + AsRef<[u8]>>(
                 &mut buffers,
             )
         })
-        .collect::<Result<_, Error>>()?;
-
-    Chunk::try_new(arrays)
+        .collect::<Result<_, Error>>()
+        .and_then(Chunk::try_new)
 }

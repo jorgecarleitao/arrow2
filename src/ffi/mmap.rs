@@ -137,9 +137,9 @@ unsafe extern "C" fn release<T>(array: *mut ArrowArray) {
 
     // take ownership of `private_data`, therefore dropping it
     let private = Box::from_raw(array.private_data as *mut PrivateData<T>);
-    /*for child in private.children_ptr.iter() {
+    for child in private.children_ptr.iter() {
         let _ = Box::from_raw(*child);
-    }*/
+    }
 
     if let Some(ptr) = private.dictionary_ptr {
         let _ = Box::from_raw(ptr);
