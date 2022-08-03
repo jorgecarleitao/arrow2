@@ -38,6 +38,7 @@ csv-core = { version = "0.1", optional = true }
 csv-async = { version = "^1.1", optional = true }
 
 regex = { version = "^1.3", optional = true }
+regex-syntax = { version = "^0.6", optional = true }
 streaming-iterator = { version = "0.1", optional = true }
 fallible-streaming-iterator = { version = "0.1", optional = true }
 
@@ -135,6 +136,7 @@ full = [
     "io_avro_compression",
     "io_avro_async",
     "regex",
+    "regex-syntax",
     "compute",
     # parses timezones used in timestamp conversions
     "chrono-tz",
@@ -190,7 +192,7 @@ compute_filter = []
 compute_hash = ["multiversion"]
 compute_if_then_else = []
 compute_length = []
-compute_like = ["regex"]
+compute_like = ["regex", "regex-syntax"]
 compute_limit = []
 compute_merge_sort = ["itertools", "compute_sort"]
 compute_nullif = ["compute_comparison"]

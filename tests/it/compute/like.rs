@@ -40,6 +40,29 @@ fn test_like_binary_scalar() -> Result<()> {
 }
 
 #[test]
+fn test_like_utf8_scalar() -> Result<()> {
+    let array = Utf8Array::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "BA"]);
+
+    let result = like_utf8_scalar(&array, "A%").unwrap();
+    assert_eq!(result, BooleanArray::from_slice(&[true, true, true, false]));
+
+    let result = like_utf8_scalar(&array, "Arrow").unwrap();
+    assert_eq!(result, BooleanArray::from_slice(&[true, true, true, false]));
+
+    let array = Utf8Array::<i32>::from_slice(&["A%", "Arrow"]);
+
+    let result = like_utf8_scalar(&array, "A\\%").unwrap();
+    assert_eq!(result, BooleanArray::from_slice(&[true, false]));
+
+    let array = Utf8Array::<i32>::from_slice(&["A_row", "Arrow"]);
+    let result = like_utf8_scalar(&array, "A\\_row").unwrap();
+    assert_eq!(result, BooleanArray::from_slice(&[true, false]));
+
+
+    Ok(())
+}
+
+#[test]
 fn test_nlike_binary_scalar() -> Result<()> {
     let array = BinaryArray::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "BA"]);
 

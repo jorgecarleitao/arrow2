@@ -17,8 +17,42 @@ fn is_like_pattern(c: char) -> bool {
     c == '%' || c == '_'
 }
 
+/// Transforms a like `pattern` to a regex compatible pattern. To achieve that, it does:
+///
+/// 1. Replace like wildcards for regex expressions as the pattern will be evaluated using regex match: `%` => `.*` and `_` => `.`
+/// 2. Escape regex meta characters to match them and not be evaluated as regex special chars. For example: `.` => `\\.`
+/// 3. Replace escaped like wildcards removing the escape characters to be able to match it as a regex. For example: `\\%` => `%`
 fn replace_pattern(pattern: &str) -> String {
-    pattern.replace('%', ".*").replace('_', ".")
+    let mut result = String::new();
+    let text = String::from(pattern);
+    let mut chars_iter = text.chars().peekable();
+    while let Some(c) = chars_iter.next() {
+        if c == '\\' {
+            let next = chars_iter.peek();
+            match next {
+                Some(next) if is_like_pattern(*next) => {
+                    result.push(*next);
+                    // Skipping the next char as it is already appended
+                    chars_iter.next();
+                }
+                _ => {
+                    result.push('\\');
+                    result.push('\\');
+                }
+
+            }
+        } else if regex_syntax::is_meta_character(c) {
+            result.push('\\');
+            result.push(c);
+        } else if c == '%' {
+            result.push_str(".*");
+        } else if c == '_' {
+            result.push('.');
+        } else {
+            result.push(c);
+        }
+    }
+    result
 }
 
 #[inline]
@@ -108,7 +142,7 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
 
     let values = if !rhs.contains(is_like_pattern) {
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x == rhs)))
-    } else if rhs.ends_with('%') && !rhs[..rhs.len() - 1].contains(is_like_pattern) {
+    } else if rhs.ends_with('%') && !rhs.ends_with("\\%") && !rhs[..rhs.len() - 1].contains(is_like_pattern) {
         // fast path, can use starts_with
         let starts_with = &rhs[..rhs.len() - 1];
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.starts_with(starts_with))))
@@ -260,7 +294,7 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
 
     let values = if !pattern.contains(is_like_pattern) {
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x == rhs)))
-    } else if pattern.ends_with('%') && !pattern[..pattern.len() - 1].contains(is_like_pattern) {
+    } else if pattern.ends_with('%') && !pattern.ends_with("\\%") && !pattern[..pattern.len() - 1].contains(is_like_pattern) {
         // fast path, can use starts_with
         let starts_with = &rhs[..rhs.len() - 1];
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.starts_with(starts_with))))
