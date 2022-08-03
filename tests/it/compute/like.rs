@@ -58,7 +58,6 @@ fn test_like_utf8_scalar() -> Result<()> {
     let result = like_utf8_scalar(&array, "A\\_row").unwrap();
     assert_eq!(result, BooleanArray::from_slice(&[true, false]));
 
-
     Ok(())
 }
 

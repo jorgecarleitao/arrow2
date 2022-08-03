@@ -39,7 +39,6 @@ fn replace_pattern(pattern: &str) -> String {
                     result.push('\\');
                     result.push('\\');
                 }
-
             }
         } else if regex_syntax::is_meta_character(c) {
             result.push('\\');
@@ -142,7 +141,10 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
 
     let values = if !rhs.contains(is_like_pattern) {
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x == rhs)))
-    } else if rhs.ends_with('%') && !rhs.ends_with("\\%") && !rhs[..rhs.len() - 1].contains(is_like_pattern) {
+    } else if rhs.ends_with('%')
+        && !rhs.ends_with("\\%")
+        && !rhs[..rhs.len() - 1].contains(is_like_pattern)
+    {
         // fast path, can use starts_with
         let starts_with = &rhs[..rhs.len() - 1];
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.starts_with(starts_with))))
@@ -294,7 +296,10 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
 
     let values = if !pattern.contains(is_like_pattern) {
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x == rhs)))
-    } else if pattern.ends_with('%') && !pattern.ends_with("\\%") && !pattern[..pattern.len() - 1].contains(is_like_pattern) {
+    } else if pattern.ends_with('%')
+        && !pattern.ends_with("\\%")
+        && !pattern[..pattern.len() - 1].contains(is_like_pattern)
+    {
         // fast path, can use starts_with
         let starts_with = &rhs[..rhs.len() - 1];
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.starts_with(starts_with))))
