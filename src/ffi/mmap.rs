@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::array::{Array, ListArray, Offset};
+use crate::array::{Array, FixedSizeListArray, ListArray, Offset, StructArray};
 use crate::datatypes::DataType;
 use crate::error::Error;
 
@@ -212,6 +212,31 @@ fn mmap_fixed_size_binary<T: Clone + AsRef<[u8]>>(
     ))
 }
 
+fn mmap_null<T: Clone + AsRef<[u8]>>(
+    data: T,
+    node: &Node,
+    _block_offset: usize,
+    _buffers: &mut VecDeque<IpcBuffer>,
+) -> Result<ArrowArray, Error> {
+    let num_rows: usize = node
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    let null_count: usize = node
+        .null_count()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    Ok(create_array(
+        data,
+        num_rows,
+        null_count,
+        [].into_iter(),
+        [].into_iter(),
+    ))
+}
+
 fn mmap_boolean<T: Clone + AsRef<[u8]>>(
     data: T,
     node: &Node,
@@ -316,6 +341,82 @@ fn mmap_list<O: Offset, T: Clone + AsRef<[u8]>>(
     ))
 }
 
+fn mmap_fixed_size_list<T: Clone + AsRef<[u8]>>(
+    data: T,
+    node: &Node,
+    block_offset: usize,
+    data_type: &DataType,
+    field_nodes: &mut VecDeque<Node>,
+    buffers: &mut VecDeque<IpcBuffer>,
+) -> Result<ArrowArray, Error> {
+    let child = FixedSizeListArray::try_child_and_size(data_type)?
+        .0
+        .data_type();
+
+    let num_rows: usize = node
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    let null_count: usize = node
+        .null_count()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    let data_ref = data.as_ref();
+
+    let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
+
+    let values = get_array(data.clone(), block_offset, child, field_nodes, buffers)?;
+
+    Ok(create_array(
+        data,
+        num_rows,
+        null_count,
+        [validity].into_iter(),
+        [values].into_iter(),
+    ))
+}
+
+fn mmap_struct<T: Clone + AsRef<[u8]>>(
+    data: T,
+    node: &Node,
+    block_offset: usize,
+    data_type: &DataType,
+    field_nodes: &mut VecDeque<Node>,
+    buffers: &mut VecDeque<IpcBuffer>,
+) -> Result<ArrowArray, Error> {
+    let children = StructArray::try_get_fields(data_type)?;
+
+    let num_rows: usize = node
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    let null_count: usize = node
+        .null_count()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    let data_ref = data.as_ref();
+
+    let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
+
+    let values = children
+        .iter()
+        .map(|f| &f.data_type)
+        .map(|child| get_array(data.clone(), block_offset, child, field_nodes, buffers))
+        .collect::<Result<Vec<_>, Error>>()?;
+
+    Ok(create_array(
+        data,
+        num_rows,
+        null_count,
+        [validity].into_iter(),
+        values.into_iter(),
+    ))
+}
+
 fn get_array<T: Clone + AsRef<[u8]>>(
     data: T,
     block_offset: usize,
@@ -329,6 +430,7 @@ fn get_array<T: Clone + AsRef<[u8]>>(
         .ok_or_else(|| Error::from(OutOfSpecKind::ExpectedBuffer))?;
 
     match data_type.to_physical_type() {
+        Null => mmap_null(data, &node, block_offset, buffers),
         Boolean => mmap_boolean(data, &node, block_offset, buffers),
         Primitive(p) => with_match_primitive_type!(p, |$T| {
             mmap_primitive::<$T, _>(data, &node, block_offset, buffers)
@@ -340,6 +442,10 @@ fn get_array<T: Clone + AsRef<[u8]>>(
         LargeList => {
             mmap_list::<i64, _>(data, &node, block_offset, data_type, field_nodes, buffers)
         }
+        FixedSizeList => {
+            mmap_fixed_size_list(data, &node, block_offset, data_type, field_nodes, buffers)
+        }
+        Struct => mmap_struct(data, &node, block_offset, data_type, field_nodes, buffers),
 
         _ => todo!(),
     }
