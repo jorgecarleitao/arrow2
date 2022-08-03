@@ -256,7 +256,6 @@ fn try_extend<O: Offset + TryFrom<u64>, I: Iterator<Item = u64>>(
     iter: I,
 ) -> Result<(), orc_format::error::Error> {
     for item in iter {
-        println!("{item}");
         let item: O = item
             .try_into()
             .map_err(|_| orc_format::error::Error::OutOfSpec)?;
