@@ -99,6 +99,15 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
             None => self.init_validity(),
         }
     }
+
+    /// Reserves `additional` slots.
+    pub fn reserve(&mut self, additional: usize) {
+        self.values.reserve(additional);
+        if let Some(x) = self.validity.as_mut() {
+            x.reserve(additional)
+        }
+    }
+
     /// Shrinks the capacity of the [`MutableFixedSizeListArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
@@ -155,6 +164,10 @@ impl<M: MutableArray + 'static> MutableArray for MutableFixedSizeListArray<M> {
         } else {
             self.init_validity()
         }
+    }
+
+    fn reserve(&mut self, additional: usize) {
+        self.reserve(additional)
     }
 
     fn shrink_to_fit(&mut self) {

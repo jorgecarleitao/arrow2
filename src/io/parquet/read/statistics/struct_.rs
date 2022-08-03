@@ -55,6 +55,10 @@ impl MutableArray for DynMutableStructArray {
         todo!()
     }
 
+    fn reserve(&mut self, _: usize) {
+        todo!();
+    }
+
     fn shrink_to_fit(&mut self) {
         todo!()
     }

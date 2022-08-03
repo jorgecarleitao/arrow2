@@ -175,6 +175,14 @@ impl MutableFixedSizeBinaryArray {
         std::slice::from_raw_parts(self.values.as_ptr().add(i * self.size), self.size)
     }
 
+    /// Reserves `additional` slots.
+    pub fn reserve(&mut self, additional: usize) {
+        self.values.reserve(additional * self.size);
+        if let Some(x) = self.validity.as_mut() {
+            x.reserve(additional)
+        }
+    }
+
     /// Shrinks the capacity of the [`MutableFixedSizeBinaryArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
@@ -236,6 +244,10 @@ impl MutableArray for MutableFixedSizeBinaryArray {
 
     fn push_null(&mut self) {
         self.push::<&[u8]>(None);
+    }
+
+    fn reserve(&mut self, additional: usize) {
+        self.reserve(additional)
     }
 
     fn shrink_to_fit(&mut self) {

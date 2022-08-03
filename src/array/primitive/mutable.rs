@@ -419,6 +419,10 @@ impl<T: NativeType> MutableArray for MutablePrimitiveArray<T> {
         self.push(None)
     }
 
+    fn reserve(&mut self, additional: usize) {
+        self.reserve(additional)
+    }
+
     fn shrink_to_fit(&mut self) {
         self.shrink_to_fit()
     }

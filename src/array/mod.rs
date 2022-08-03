@@ -163,6 +163,9 @@ pub trait MutableArray: std::fmt::Debug + Send + Sync {
             .unwrap_or(true)
     }
 
+    /// Reserves additional slots to its capacity.
+    fn reserve(&mut self, additional: usize);
+
     /// Shrink the array to fit its length.
     fn shrink_to_fit(&mut self);
 }

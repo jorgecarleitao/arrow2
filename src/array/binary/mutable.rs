@@ -230,6 +230,10 @@ impl<O: Offset> MutableArray for MutableBinaryArray<O> {
         self.push::<&[u8]>(None)
     }
 
+    fn reserve(&mut self, additional: usize) {
+        self.reserve(additional)
+    }
+
     fn shrink_to_fit(&mut self) {
         self.shrink_to_fit()
     }

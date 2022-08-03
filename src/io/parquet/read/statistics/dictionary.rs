@@ -59,6 +59,10 @@ impl MutableArray for DynMutableDictionary {
         todo!()
     }
 
+    fn reserve(&mut self, _: usize) {
+        todo!();
+    }
+
     fn shrink_to_fit(&mut self) {
         todo!()
     }

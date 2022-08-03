@@ -193,6 +193,14 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         Box::new(a)
     }
 
+    /// Reserves `additional` slots.
+    pub fn reserve(&mut self, additional: usize) {
+        self.offsets.reserve(additional);
+        if let Some(x) = self.validity.as_mut() {
+            x.reserve(additional)
+        }
+    }
+
     /// Shrinks the capacity of the [`MutableListArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
@@ -254,6 +262,11 @@ impl<O: Offset, M: MutableArray + 'static> MutableArray for MutableListArray<O, 
     fn push_null(&mut self) {
         self.push_null()
     }
+
+    fn reserve(&mut self, additional: usize) {
+        self.reserve(additional)
+    }
+
     fn shrink_to_fit(&mut self) {
         self.shrink_to_fit();
     }
