@@ -3,7 +3,7 @@ use std::io::Write;
 use crate::error::Result;
 
 use super::super::CONTINUATION_MARKER;
-use super::common::pad_to_8;
+use super::common::pad_to_64;
 use super::common::EncodedData;
 
 /// Write a message's IPC data and buffers, returning metadata and buffer data lengths written
@@ -38,7 +38,7 @@ pub fn write_message<W: Write>(writer: &mut W, encoded: EncodedData) -> Result<(
 
 fn write_body_buffers<W: Write>(mut writer: W, data: &[u8]) -> Result<usize> {
     let len = data.len();
-    let pad_len = pad_to_8(data.len());
+    let pad_len = pad_to_64(data.len());
     let total_len = len + pad_len;
 
     // write body buffer

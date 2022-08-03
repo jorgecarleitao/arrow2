@@ -370,8 +370,8 @@ pub struct EncodedData {
 
 /// Calculate an 8-byte boundary and return the number of bytes needed to pad to 8 bytes
 #[inline]
-pub(crate) fn pad_to_8(len: usize) -> usize {
-    (((len + 7) & !7) - len) as usize
+pub(crate) fn pad_to_64(len: usize) -> usize {
+    (((len + 63) & !63) - len) as usize
 }
 
 /// An array [`Chunk`] with optional accompanying IPC fields.
