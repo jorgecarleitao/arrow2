@@ -2,37 +2,28 @@
 use std::collections::VecDeque;
 
 use crate::array::Array;
+use crate::chunk::Chunk;
 use crate::error::Error;
 use crate::ffi::mmap;
 
-use crate::io::ipc::read::read_file_metadata;
 use crate::io::ipc::read::reader::get_serialized_batch;
-use crate::io::ipc::read::OutOfSpecKind;
+use crate::io::ipc::read::FileMetadata;
+use crate::io::ipc::read::{IpcBuffer, Node, OutOfSpecKind};
 use crate::io::ipc::CONTINUATION_MARKER;
 
 use arrow_format::ipc::planus::ReadAsRoot;
+use arrow_format::ipc::MessageRef;
 
-/// something
-/// # Safety
-/// This operation is innerently unsafe as it assumes that `T` contains valid Arrow data
-/// In particular:
-/// * Offsets in variable-sized containers are valid;
-/// * Utf8 is valid
-pub unsafe fn map_chunk_unchecked<T: Clone + AsRef<[u8]>>(
-    data: T,
-    index: usize,
-) -> Result<Box<dyn Array>, Error> {
-    let mut bytes = data.as_ref();
-    let metadata = read_file_metadata(&mut std::io::Cursor::new(bytes))?;
-
-    let block = metadata.blocks[index];
-
+fn read_message(
+    mut bytes: &[u8],
+    block: arrow_format::ipc::Block,
+) -> Result<(MessageRef, usize), Error> {
     let offset: usize = block
         .offset
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let meta_data_length: usize = block
+    let block_length: usize = block
         .meta_data_length
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
@@ -54,29 +45,74 @@ pub unsafe fn map_chunk_unchecked<T: Clone + AsRef<[u8]>>(
     let message = arrow_format::ipc::MessageRef::read_as_root(&bytes[..message_length])
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
-    let batch = get_serialized_batch(&message)?;
+    Ok((message, offset + block_length))
+}
+
+fn read_batch<'a>(
+    message: &'a MessageRef,
+) -> Result<(VecDeque<IpcBuffer<'a>>, VecDeque<Node<'a>>), Error> {
+    let batch = get_serialized_batch(message)?;
+
+    let compression = batch.compression()?;
+    if compression.is_some() {
+        return Err(Error::nyi(
+            "mmap can only be done on uncompressed IPC files",
+        ));
+    }
 
     let buffers = batch
         .buffers()
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferBuffers(err)))?
         .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageBuffers))?;
-    let mut buffers = buffers.iter().collect::<VecDeque<_>>();
+    let buffers = buffers.iter().collect::<VecDeque<_>>();
 
     let field_nodes = batch
         .nodes()
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferNodes(err)))?
         .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageNodes))?;
-    let mut field_nodes = field_nodes.iter().collect::<VecDeque<_>>();
+    let field_nodes = field_nodes.iter().collect::<VecDeque<_>>();
 
-    println!("{:#?}", metadata.schema.fields);
-    let data_type = metadata.schema.fields[0].data_type.clone();
-    println!("{:#?}", data_type);
+    Ok((buffers, field_nodes))
+}
 
-    mmap::mmap(
-        data.clone(),
-        offset + meta_data_length,
-        data_type,
-        &mut field_nodes,
-        &mut buffers,
-    )
+///
+/// # Errors
+/// This function errors when:
+/// * The IPC file is not valid
+/// * the buffers on the file are un-aligned with their corresponding data. This can happen when:
+///     * the file was written with 8-bit alignment
+///     * the file contains type decimal 128 or 256
+/// # Safety
+/// The caller must ensure that `data` contains a valid Arrow IPC file.
+/// This operation is inerently unsafe as it assumes that `data` contains valid Arrow IPC file
+/// For example:
+/// * Offsets in variable-sized containers must be valid
+/// * Utf8 is valid
+pub unsafe fn mmap_unchecked<T: Clone + AsRef<[u8]>>(
+    metadata: &FileMetadata,
+    data: T,
+    chunk: usize,
+) -> Result<Chunk<Box<dyn Array>>, Error> {
+    let block = metadata.blocks[chunk];
+    let (message, offset) = read_message(data.as_ref(), block)?;
+    let (mut buffers, mut field_nodes) = read_batch(&message)?;
+
+    let arrays = metadata
+        .schema
+        .fields
+        .iter()
+        .map(|f| &f.data_type)
+        .cloned()
+        .map(|data_type| {
+            mmap::mmap(
+                data.clone(),
+                offset,
+                data_type,
+                &mut field_nodes,
+                &mut buffers,
+            )
+        })
+        .collect::<Result<_, Error>>()?;
+
+    Chunk::try_new(arrays)
 }
