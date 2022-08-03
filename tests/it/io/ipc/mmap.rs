@@ -28,6 +28,14 @@ fn utf8() -> Result<()> {
 }
 
 #[test]
+fn fixed_size_binary() -> Result<()> {
+    let array = FixedSizeBinaryArray::from([None, None, Some([1, 2])])
+        .slice(1, 2)
+        .boxed();
+    round_trip(array)
+}
+
+#[test]
 fn primitive() -> Result<()> {
     let array = PrimitiveArray::<i32>::from([None, None, Some(3)])
         .slice(1, 2)
