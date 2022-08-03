@@ -3,16 +3,17 @@ use std::collections::VecDeque;
 
 use crate::array::Array;
 use crate::chunk::Chunk;
+use crate::datatypes::{DataType, Field};
 use crate::error::Error;
 use crate::ffi::mmap;
 
-use crate::io::ipc::read::reader::get_serialized_batch;
-use crate::io::ipc::read::FileMetadata;
+use crate::io::ipc::read::reader::{get_dictionary_batch, get_record_batch};
+use crate::io::ipc::read::{first_dict_field, Dictionaries, FileMetadata};
 use crate::io::ipc::read::{IpcBuffer, Node, OutOfSpecKind};
-use crate::io::ipc::CONTINUATION_MARKER;
+use crate::io::ipc::{IpcField, CONTINUATION_MARKER};
 
 use arrow_format::ipc::planus::ReadAsRoot;
-use arrow_format::ipc::MessageRef;
+use arrow_format::ipc::{Block, MessageRef, RecordBatchRef};
 
 fn read_message(
     mut bytes: &[u8],
@@ -48,11 +49,9 @@ fn read_message(
     Ok((message, offset + block_length))
 }
 
-fn read_batch<'a>(
-    message: &'a MessageRef,
-) -> Result<(VecDeque<IpcBuffer<'a>>, VecDeque<Node<'a>>), Error> {
-    let batch = get_serialized_batch(message)?;
-
+fn get_buffers_nodes(
+    batch: RecordBatchRef,
+) -> Result<(VecDeque<IpcBuffer>, VecDeque<Node>), Error> {
     let compression = batch.compression()?;
     if compression.is_some() {
         return Err(Error::nyi(
@@ -75,6 +74,55 @@ fn read_batch<'a>(
     Ok((buffers, field_nodes))
 }
 
+unsafe fn _mmap_record<T: Clone + AsRef<[u8]>>(
+    fields: &[Field],
+    ipc_fields: &[IpcField],
+    data: T,
+    batch: RecordBatchRef,
+    offset: usize,
+    dictionaries: &Dictionaries,
+) -> Result<Chunk<Box<dyn Array>>, Error> {
+    let (mut buffers, mut field_nodes) = get_buffers_nodes(batch)?;
+
+    fields
+        .iter()
+        .map(|f| &f.data_type)
+        .cloned()
+        .zip(ipc_fields)
+        .map(|(data_type, ipc_field)| {
+            mmap::mmap(
+                data.clone(),
+                offset,
+                data_type,
+                ipc_field,
+                dictionaries,
+                &mut field_nodes,
+                &mut buffers,
+            )
+        })
+        .collect::<Result<_, Error>>()
+        .and_then(Chunk::try_new)
+}
+
+unsafe fn _mmap_unchecked<T: Clone + AsRef<[u8]>>(
+    fields: &[Field],
+    ipc_fields: &[IpcField],
+    data: T,
+    block: Block,
+    dictionaries: &Dictionaries,
+) -> Result<Chunk<Box<dyn Array>>, Error> {
+    let (message, offset) = read_message(data.as_ref(), block)?;
+    let batch = get_record_batch(message)?;
+    _mmap_record(
+        fields,
+        ipc_fields,
+        data.clone(),
+        batch,
+        offset,
+        dictionaries,
+    )
+}
+
 /// Memory maps an record batch from an IPC file into a [`Chunk`].
 /// # Errors
 /// This function errors when:
@@ -88,28 +136,90 @@ fn read_batch<'a>(
 /// * Utf8 data is valid
 pub unsafe fn mmap_unchecked<T: Clone + AsRef<[u8]>>(
     metadata: &FileMetadata,
+    dictionaries: &Dictionaries,
     data: T,
     chunk: usize,
 ) -> Result<Chunk<Box<dyn Array>>, Error> {
     let block = metadata.blocks[chunk];
-    let (message, offset) = read_message(data.as_ref(), block)?;
-    let (mut buffers, mut field_nodes) = read_batch(&message)?;
 
-    metadata
-        .schema
-        .fields
+    let (message, offset) = read_message(data.as_ref(), block)?;
+    let batch = get_record_batch(message)?;
+    _mmap_record(
+        &metadata.schema.fields,
+        &metadata.ipc_schema.fields,
+        data.clone(),
+        batch,
+        offset,
+        dictionaries,
+    )
+}
+
+unsafe fn mmap_dictionary<T: Clone + AsRef<[u8]>>(
+    metadata: &FileMetadata,
+    data: T,
+    block: Block,
+    dictionaries: &mut Dictionaries,
+) -> Result<(), Error> {
+    let (message, offset) = read_message(data.as_ref(), block)?;
+    let batch = get_dictionary_batch(&message)?;
+
+    let id = batch
+        .id()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferId(err)))?;
+    let (first_field, first_ipc_field) =
+        first_dict_field(id, &metadata.schema.fields, &metadata.ipc_schema.fields)?;
+
+    let batch = batch
+        .data()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferData(err)))?
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingData))?;
+
+    let value_type =
+        if let DataType::Dictionary(_, value_type, _) = first_field.data_type.to_logical_type() {
+            value_type.as_ref()
+        } else {
+            return Err(Error::from(OutOfSpecKind::InvalidIdDataType {
+                requested_id: id,
+            }));
+        };
+
+    // Make a fake schema for the dictionary batch.
+    let field = Field::new("", value_type.clone(), false);
+
+    let chunk = _mmap_record(
+        &[field],
+        &[first_ipc_field.clone()],
+        data.clone(),
+        batch,
+        offset,
+        dictionaries,
+    )?;
+
+    dictionaries.insert(id, chunk.into_arrays().pop().unwrap());
+
+    Ok(())
+}
+
+/// Memory maps dictionaries from an IPC file into
+/// # Safety
+/// The caller must ensure that `data` contains a valid buffers, for example:
+/// * Offsets in variable-sized containers must be in-bounds and increasing
+/// * Utf8 data is valid
+pub unsafe fn mmap_dictionaries_unchecked<T: Clone + AsRef<[u8]>>(
+    metadata: &FileMetadata,
+    data: T,
+) -> Result<Dictionaries, Error> {
+    let blocks = if let Some(blocks) = &metadata.dictionaries {
+        blocks
+    } else {
+        return Ok(Default::default());
+    };
+
+    let mut dictionaries = Default::default();
+
+    blocks
         .iter()
-        .map(|f| &f.data_type)
         .cloned()
-        .map(|data_type| {
-            mmap::mmap(
-                data.clone(),
-                offset,
-                data_type,
-                &mut field_nodes,
-                &mut buffers,
-            )
-        })
-        .collect::<Result<_, Error>>()
-        .and_then(Chunk::try_new)
+        .try_for_each(|block| mmap_dictionary(metadata, data.clone(), block, &mut dictionaries))?;
+    Ok(dictionaries)
 }

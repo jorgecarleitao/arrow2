@@ -1,14 +1,15 @@
 use std::collections::VecDeque;
 
-use crate::array::{Array, FixedSizeListArray, ListArray, Offset, StructArray};
+use crate::array::{Array, DictionaryKey, FixedSizeListArray, ListArray, Offset, StructArray};
 use crate::datatypes::DataType;
 use crate::error::Error;
 
-use crate::io::ipc::read::OutOfSpecKind;
+use crate::io::ipc::read::{Dictionaries, OutOfSpecKind};
 use crate::io::ipc::read::{IpcBuffer, Node};
+use crate::io::ipc::IpcField;
 use crate::types::NativeType;
 
-use super::{try_from, ArrowArray, InternalArrowArray};
+use super::{export_array_to_c, try_from, ArrowArray, InternalArrowArray};
 
 #[allow(dead_code)]
 struct PrivateData<T> {
@@ -93,6 +94,7 @@ fn create_array<
     null_count: usize,
     buffers: I,
     children: II,
+    dictionary: Option<ArrowArray>,
 ) -> ArrowArray {
     let buffers_ptr = buffers
         .map(|maybe_buffer| match maybe_buffer {
@@ -107,11 +109,13 @@ fn create_array<
         .collect::<Box<_>>();
     let n_children = children_ptr.len() as i64;
 
+    let dictionary_ptr = dictionary.map(|array| Box::into_raw(Box::new(array)));
+
     let mut private_data = Box::new(PrivateData::<T> {
         data,
         buffers_ptr,
         children_ptr,
-        dictionary_ptr: None,
+        dictionary_ptr,
     });
 
     ArrowArray {
@@ -178,6 +182,7 @@ fn mmap_binary<O: Offset, T: Clone + AsRef<[u8]>>(
         null_count,
         [validity, Some(offsets), Some(values)].into_iter(),
         [].into_iter(),
+        None,
     ))
 }
 
@@ -209,6 +214,7 @@ fn mmap_fixed_size_binary<T: Clone + AsRef<[u8]>>(
         null_count,
         [validity, Some(values)].into_iter(),
         [].into_iter(),
+        None,
     ))
 }
 
@@ -234,6 +240,7 @@ fn mmap_null<T: Clone + AsRef<[u8]>>(
         null_count,
         [].into_iter(),
         [].into_iter(),
+        None,
     ))
 }
 
@@ -269,6 +276,7 @@ fn mmap_boolean<T: Clone + AsRef<[u8]>>(
         null_count,
         [validity, Some(values)].into_iter(),
         [].into_iter(),
+        None,
     ))
 }
 
@@ -300,14 +308,18 @@ fn mmap_primitive<P: NativeType, T: Clone + AsRef<[u8]>>(
         null_count,
         [validity, Some(values)].into_iter(),
         [].into_iter(),
+        None,
     ))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn mmap_list<O: Offset, T: Clone + AsRef<[u8]>>(
     data: T,
     node: &Node,
     block_offset: usize,
     data_type: &DataType,
+    ipc_field: &IpcField,
+    dictionaries: &Dictionaries,
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<ArrowArray, Error> {
@@ -329,7 +341,15 @@ fn mmap_list<O: Offset, T: Clone + AsRef<[u8]>>(
 
     let offsets = get_buffer::<O>(data_ref, block_offset, buffers, num_rows + 1)?.as_ptr();
 
-    let values = get_array(data.clone(), block_offset, child, field_nodes, buffers)?;
+    let values = get_array(
+        data.clone(),
+        block_offset,
+        child,
+        &ipc_field.fields[0],
+        dictionaries,
+        field_nodes,
+        buffers,
+    )?;
 
     // NOTE: offsets and values invariants are _not_ validated
     Ok(create_array(
@@ -338,14 +358,18 @@ fn mmap_list<O: Offset, T: Clone + AsRef<[u8]>>(
         null_count,
         [validity, Some(offsets)].into_iter(),
         [values].into_iter(),
+        None,
     ))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn mmap_fixed_size_list<T: Clone + AsRef<[u8]>>(
     data: T,
     node: &Node,
     block_offset: usize,
     data_type: &DataType,
+    ipc_field: &IpcField,
+    dictionaries: &Dictionaries,
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<ArrowArray, Error> {
@@ -367,7 +391,15 @@ fn mmap_fixed_size_list<T: Clone + AsRef<[u8]>>(
 
     let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
 
-    let values = get_array(data.clone(), block_offset, child, field_nodes, buffers)?;
+    let values = get_array(
+        data.clone(),
+        block_offset,
+        child,
+        &ipc_field.fields[0],
+        dictionaries,
+        field_nodes,
+        buffers,
+    )?;
 
     Ok(create_array(
         data,
@@ -375,14 +407,18 @@ fn mmap_fixed_size_list<T: Clone + AsRef<[u8]>>(
         null_count,
         [validity].into_iter(),
         [values].into_iter(),
+        None,
     ))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn mmap_struct<T: Clone + AsRef<[u8]>>(
     data: T,
     node: &Node,
     block_offset: usize,
     data_type: &DataType,
+    ipc_field: &IpcField,
+    dictionaries: &Dictionaries,
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<ArrowArray, Error> {
@@ -405,7 +441,18 @@ fn mmap_struct<T: Clone + AsRef<[u8]>>(
     let values = children
         .iter()
         .map(|f| &f.data_type)
-        .map(|child| get_array(data.clone(), block_offset, child, field_nodes, buffers))
+        .zip(ipc_field.fields.iter())
+        .map(|(child, ipc)| {
+            get_array(
+                data.clone(),
+                block_offset,
+                child,
+                ipc,
+                dictionaries,
+                field_nodes,
+                buffers,
+            )
+        })
         .collect::<Result<Vec<_>, Error>>()?;
 
     Ok(create_array(
@@ -414,6 +461,49 @@ fn mmap_struct<T: Clone + AsRef<[u8]>>(
         null_count,
         [validity].into_iter(),
         values.into_iter(),
+        None,
+    ))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn mmap_dict<K: DictionaryKey, T: Clone + AsRef<[u8]>>(
+    data: T,
+    node: &Node,
+    block_offset: usize,
+    _: &DataType,
+    ipc_field: &IpcField,
+    dictionaries: &Dictionaries,
+    _: &mut VecDeque<Node>,
+    buffers: &mut VecDeque<IpcBuffer>,
+) -> Result<ArrowArray, Error> {
+    let num_rows: usize = node
+        .length()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    let null_count: usize = node
+        .null_count()
+        .try_into()
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+
+    let data_ref = data.as_ref();
+
+    let dictionary = dictionaries
+        .get(&ipc_field.dictionary_id.unwrap())
+        .ok_or_else(|| Error::oos("Missing dictionary"))?
+        .clone();
+
+    let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
+
+    let values = get_buffer::<K>(data_ref, block_offset, buffers, num_rows)?.as_ptr();
+
+    Ok(create_array(
+        data,
+        num_rows,
+        null_count,
+        [validity, Some(values)].into_iter(),
+        [].into_iter(),
+        Some(export_array_to_c(dictionary)),
     ))
 }
 
@@ -421,6 +511,8 @@ fn get_array<T: Clone + AsRef<[u8]>>(
     data: T,
     block_offset: usize,
     data_type: &DataType,
+    ipc_field: &IpcField,
+    dictionaries: &Dictionaries,
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<ArrowArray, Error> {
@@ -438,15 +530,58 @@ fn get_array<T: Clone + AsRef<[u8]>>(
         Utf8 | Binary => mmap_binary::<i32, _>(data, &node, block_offset, buffers),
         FixedSizeBinary => mmap_fixed_size_binary(data, &node, block_offset, buffers),
         LargeBinary | LargeUtf8 => mmap_binary::<i64, _>(data, &node, block_offset, buffers),
-        List => mmap_list::<i32, _>(data, &node, block_offset, data_type, field_nodes, buffers),
-        LargeList => {
-            mmap_list::<i64, _>(data, &node, block_offset, data_type, field_nodes, buffers)
-        }
-        FixedSizeList => {
-            mmap_fixed_size_list(data, &node, block_offset, data_type, field_nodes, buffers)
-        }
-        Struct => mmap_struct(data, &node, block_offset, data_type, field_nodes, buffers),
-
+        List => mmap_list::<i32, _>(
+            data,
+            &node,
+            block_offset,
+            data_type,
+            ipc_field,
+            dictionaries,
+            field_nodes,
+            buffers,
+        ),
+        LargeList => mmap_list::<i64, _>(
+            data,
+            &node,
+            block_offset,
+            data_type,
+            ipc_field,
+            dictionaries,
+            field_nodes,
+            buffers,
+        ),
+        FixedSizeList => mmap_fixed_size_list(
+            data,
+            &node,
+            block_offset,
+            data_type,
+            ipc_field,
+            dictionaries,
+            field_nodes,
+            buffers,
+        ),
+        Struct => mmap_struct(
+            data,
+            &node,
+            block_offset,
+            data_type,
+            ipc_field,
+            dictionaries,
+            field_nodes,
+            buffers,
+        ),
+        Dictionary(key_type) => match_integer_type!(key_type, |$T| {
+            mmap_dict::<$T, _>(
+                data,
+                &node,
+                block_offset,
+                data_type,
+                ipc_field,
+                dictionaries,
+                field_nodes,
+                buffers,
+            )
+        }),
         _ => todo!(),
     }
 }
@@ -456,10 +591,20 @@ pub(crate) unsafe fn mmap<T: Clone + AsRef<[u8]>>(
     data: T,
     block_offset: usize,
     data_type: DataType,
+    ipc_field: &IpcField,
+    dictionaries: &Dictionaries,
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<Box<dyn Array>, Error> {
-    let array = get_array(data, block_offset, &data_type, field_nodes, buffers)?;
+    let array = get_array(
+        data,
+        block_offset,
+        &data_type,
+        ipc_field,
+        dictionaries,
+        field_nodes,
+        buffers,
+    )?;
     // The unsafety comes from the fact that `array` is not necessarily valid -
     // the IPC file may be corrupted (e.g. invalid offsets or non-utf8 data)
     unsafe { try_from(InternalArrowArray::new(array, data_type)) }

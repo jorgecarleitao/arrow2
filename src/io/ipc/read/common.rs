@@ -212,7 +212,7 @@ fn find_first_dict_field<'a>(
     find_first_dict_field_d(id, &field.data_type, ipc_field)
 }
 
-fn first_dict_field<'a>(
+pub(crate) fn first_dict_field<'a>(
     id: i64,
     fields: &'a [Field],
     ipc_fields: &'a [IpcField],
@@ -253,45 +253,41 @@ pub fn read_dictionary<R: Read + Seek>(
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferId(err)))?;
     let (first_field, first_ipc_field) = first_dict_field(id, fields, &ipc_schema.fields)?;
 
-    // As the dictionary batch does not contain the type of the
-    // values array, we need to retrieve this from the schema.
-    // Get an array representing this dictionary's values.
-    let dictionary_values: Box<dyn Array> = match first_field.data_type.to_logical_type() {
-        DataType::Dictionary(_, ref value_type, _) => {
-            let batch = batch
-                .data()
-                .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferData(err)))?
-                .ok_or_else(|| Error::from(OutOfSpecKind::MissingData))?;
+    let batch = batch
+        .data()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferData(err)))?
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingData))?;
 
-            // Make a fake schema for the dictionary batch.
-            let fields = vec![Field::new("", value_type.as_ref().clone(), false)];
-            let ipc_schema = IpcSchema {
-                fields: vec![first_ipc_field.clone()],
-                is_little_endian: ipc_schema.is_little_endian,
-            };
-            let chunk = read_record_batch(
-                batch,
-                &fields,
-                &ipc_schema,
-                None,
-                None, // we must read the whole dictionary
-                dictionaries,
-                arrow_format::ipc::MetadataVersion::V5,
-                reader,
-                block_offset,
-                file_size,
-                scratch,
-            )?;
-            chunk.into_arrays().pop().unwrap()
-        }
-        _ => {
+    let value_type =
+        if let DataType::Dictionary(_, value_type, _) = first_field.data_type.to_logical_type() {
+            value_type.as_ref()
+        } else {
             return Err(Error::from(OutOfSpecKind::InvalidIdDataType {
                 requested_id: id,
-            }))
-        }
-    };
+            }));
+        };
 
-    dictionaries.insert(id, dictionary_values);
+    // Make a fake schema for the dictionary batch.
+    let fields = vec![Field::new("", value_type.clone(), false)];
+    let ipc_schema = IpcSchema {
+        fields: vec![first_ipc_field.clone()],
+        is_little_endian: ipc_schema.is_little_endian,
+    };
+    let chunk = read_record_batch(
+        batch,
+        &fields,
+        &ipc_schema,
+        None,
+        None, // we must read the whole dictionary
+        dictionaries,
+        arrow_format::ipc::MetadataVersion::V5,
+        reader,
+        block_offset,
+        file_size,
+        scratch,
+    )?;
+
+    dictionaries.insert(id, chunk.into_arrays().pop().unwrap());
 
     Ok(())
 }

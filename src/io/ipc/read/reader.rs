@@ -63,6 +63,19 @@ fn read_dictionary_message<R: Read + Seek>(
     Ok(())
 }
 
+pub(crate) fn get_dictionary_batch<'a>(
+    message: &'a arrow_format::ipc::MessageRef,
+) -> Result<arrow_format::ipc::DictionaryBatchRef<'a>> {
+    let header = message
+        .header()
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferHeader(err)))?
+        .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageHeader))?;
+    match header {
+        arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => Ok(batch),
+        _ => Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
+    }
+}
+
 fn read_dictionary_block<R: Read + Seek>(
     reader: &mut R,
     metadata: &FileMetadata,
@@ -84,27 +97,18 @@ fn read_dictionary_block<R: Read + Seek>(
     let message = arrow_format::ipc::MessageRef::read_as_root(message_scratch.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
-    let header = message
-        .header()
-        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferHeader(err)))?
-        .ok_or_else(|| Error::from(OutOfSpecKind::MissingMessageHeader))?;
+    let batch = get_dictionary_batch(&message)?;
 
-    match header {
-        arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
-            let block_offset = offset + length;
-            read_dictionary(
-                batch,
-                &metadata.schema.fields,
-                &metadata.ipc_schema,
-                dictionaries,
-                reader,
-                block_offset,
-                metadata.size,
-                dictionary_scratch,
-            )
-        }
-        _ => Err(Error::from(OutOfSpecKind::UnexpectedMessageType)),
-    }
+    read_dictionary(
+        batch,
+        &metadata.schema.fields,
+        &metadata.ipc_schema,
+        dictionaries,
+        reader,
+        offset + length,
+        metadata.size,
+        dictionary_scratch,
+    )
 }
 
 /// Reads all file's dictionaries, if any
@@ -116,7 +120,7 @@ pub fn read_file_dictionaries<R: Read + Seek>(
 ) -> Result<Dictionaries> {
     let mut dictionaries = Default::default();
 
-    let blocks = if let Some(blocks) = metadata.dictionaries.as_deref() {
+    let blocks = if let Some(blocks) = &metadata.dictionaries {
         blocks
     } else {
         return Ok(AHashMap::new());
@@ -230,9 +234,9 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     deserialize_footer(&serialized_footer, end - start)
 }
 
-pub(crate) fn get_serialized_batch<'a>(
-    message: &'a arrow_format::ipc::MessageRef,
-) -> Result<arrow_format::ipc::RecordBatchRef<'a>> {
+pub(crate) fn get_record_batch(
+    message: arrow_format::ipc::MessageRef,
+) -> Result<arrow_format::ipc::RecordBatchRef> {
     let header = message
         .header()
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferHeader(err)))?
@@ -295,7 +299,7 @@ pub fn read_batch<R: Read + Seek>(
     let message = arrow_format::ipc::MessageRef::read_as_root(message_scratch.as_ref())
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
-    let batch = get_serialized_batch(&message)?;
+    let batch = get_record_batch(message)?;
 
     read_record_batch(
         batch,

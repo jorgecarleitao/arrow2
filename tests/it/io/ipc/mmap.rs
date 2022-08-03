@@ -14,7 +14,10 @@ fn round_trip(array: Box<dyn Array>) -> Result<()> {
 
     let metadata = read_file_metadata(&mut std::io::Cursor::new(&data))?;
 
-    let new_array = unsafe { arrow2::mmap::mmap_unchecked(&metadata, data, 0)? };
+    let dictionaries =
+        unsafe { arrow2::mmap::mmap_dictionaries_unchecked(&metadata, data.clone())? };
+
+    let new_array = unsafe { arrow2::mmap::mmap_unchecked(&metadata, &dictionaries, data, 0)? };
     assert_eq!(new_array.into_arrays()[0], array);
     Ok(())
 }
@@ -97,6 +100,19 @@ fn struct_() -> Result<()> {
     )
     .slice(1, 4)
     .boxed();
+
+    round_trip(array)
+}
+
+#[test]
+fn dict() -> Result<()> {
+    let keys = PrimitiveArray::<i32>::from([None, None, None, Some(3), Some(4)]);
+
+    let values = PrimitiveArray::<i32>::from_slice([0, 1, 2, 3, 4, 5]).boxed();
+
+    let array = DictionaryArray::try_from_keys(keys, values)?
+        .slice(1, 4)
+        .boxed();
 
     round_trip(array)
 }

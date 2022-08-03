@@ -3,10 +3,10 @@ use std::sync::Arc;
 
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
-use arrow2::mmap::mmap_unchecked;
+use arrow2::mmap::{mmap_dictionaries_unchecked, mmap_unchecked};
 
 // Arrow2 requires a struct that implements `Clone + AsRef<[u8]>`, which
-// usually `Arc<Mmap>` supports. This is how it could look like
+// usually `Arc<Mmap>` supports. Here we mock it
 #[derive(Clone)]
 struct Mmap(Arc<Vec<u8>>);
 
@@ -21,10 +21,14 @@ fn main() -> Result<()> {
     // given a mmap
     let mmap = Mmap(Arc::new(vec![]));
 
-    // we read the metadata
+    // read the metadata
     let metadata = read::read_file_metadata(&mut std::io::Cursor::new(mmap.as_ref()))?;
 
-    let chunk = unsafe { mmap_unchecked(&metadata, mmap, 0) }?;
+    // mmap the dictionaries
+    let dictionaries = unsafe { mmap_dictionaries_unchecked(&metadata, mmap.clone())? };
+
+    // and finally mmap a chunk (0 in this case).
+    let chunk = unsafe { mmap_unchecked(&metadata, &dictionaries, mmap, 0) }?;
 
     println!("{chunk:?}");
     Ok(())
