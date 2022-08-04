@@ -4,6 +4,7 @@ use avro_rs::types::Record;
 use criterion::*;
 
 use arrow2::error::Result;
+use arrow2::io::avro::avro_schema::read::read_metadata;
 use arrow2::io::avro::read;
 use avro_rs::*;
 use avro_rs::{Codec, Schema as AvroSchema};
@@ -42,17 +43,10 @@ fn write(size: usize, has_codec: bool) -> Result<Vec<u8>> {
 fn read_batch(buffer: &[u8], size: usize) -> Result<()> {
     let mut file = Cursor::new(buffer);
 
-    let (avro_schema, schema, codec, file_marker) = read::read_metadata(&mut file)?;
+    let metadata = read_metadata(&mut file)?;
+    let schema = read::infer_schema(&metadata.record)?;
 
-    let reader = read::Reader::new(
-        read::Decompressor::new(
-            read::BlockStreamIterator::new(&mut file, file_marker),
-            codec,
-        ),
-        avro_schema,
-        schema.fields,
-        None,
-    );
+    let reader = read::Reader::new(file, metadata, schema.fields, None);
 
     let mut rows = 0;
     for maybe_batch in reader {

@@ -1,51 +1,28 @@
 //! APIs to read from Avro format to arrow.
 use std::io::Read;
 
-use avro_schema::{Record, Schema as AvroSchema};
-use fallible_streaming_iterator::FallibleStreamingIterator;
+use avro_schema::file::FileMetadata;
+use avro_schema::read::fallible_streaming_iterator::FallibleStreamingIterator;
+use avro_schema::read::{block_iterator, BlockStreamingIterator};
+use avro_schema::schema::Field as AvroField;
 
-mod block;
-mod decompress;
-pub use block::BlockStreamIterator;
-pub use decompress::{decompress_block, Decompressor};
 mod deserialize;
 pub use deserialize::deserialize;
-mod header;
 mod nested;
 mod schema;
 mod util;
 
-pub(super) use header::deserialize_header;
-pub(super) use schema::infer_schema;
+pub use schema::infer_schema;
 
 use crate::array::Array;
 use crate::chunk::Chunk;
-use crate::datatypes::{Field, Schema};
+use crate::datatypes::Field;
 use crate::error::Result;
-
-use super::Compression;
-
-/// Reads the avro metadata from `reader` into a [`Schema`], [`Compression`] and magic marker.
-#[allow(clippy::type_complexity)]
-pub fn read_metadata<R: std::io::Read>(
-    reader: &mut R,
-) -> Result<(Vec<AvroSchema>, Schema, Option<Compression>, [u8; 16])> {
-    let (avro_schema, codec, marker) = util::read_schema(reader)?;
-    let schema = infer_schema(&avro_schema)?;
-
-    let avro_schema = if let AvroSchema::Record(Record { fields, .. }) = avro_schema {
-        fields.into_iter().map(|x| x.schema).collect()
-    } else {
-        panic!()
-    };
-
-    Ok((avro_schema, schema, codec, marker))
-}
 
 /// Single threaded, blocking reader of Avro; [`Iterator`] of [`Chunk`].
 pub struct Reader<R: Read> {
-    iter: Decompressor<R>,
-    avro_schemas: Vec<AvroSchema>,
+    iter: BlockStreamingIterator<R>,
+    avro_fields: Vec<AvroField>,
     fields: Vec<Field>,
     projection: Vec<bool>,
 }
@@ -53,15 +30,16 @@ pub struct Reader<R: Read> {
 impl<R: Read> Reader<R> {
     /// Creates a new [`Reader`].
     pub fn new(
-        iter: Decompressor<R>,
-        avro_schemas: Vec<AvroSchema>,
+        reader: R,
+        metadata: FileMetadata,
         fields: Vec<Field>,
         projection: Option<Vec<bool>>,
     ) -> Self {
         let projection = projection.unwrap_or_else(|| fields.iter().map(|_| true).collect());
+
         Self {
-            iter,
-            avro_schemas,
+            iter: block_iterator(reader, metadata.compression, metadata.marker),
+            avro_fields: metadata.record.fields,
             fields,
             projection,
         }
@@ -78,12 +56,12 @@ impl<R: Read> Iterator for Reader<R> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let fields = &self.fields[..];
-        let avro_schemas = &self.avro_schemas;
+        let avro_fields = &self.avro_fields;
         let projection = &self.projection;
 
         self.iter
             .next()
             .transpose()
-            .map(|maybe_block| deserialize(maybe_block?, fields, avro_schemas, projection))
+            .map(|maybe_block| deserialize(maybe_block?, fields, avro_fields, projection))
     }
 }

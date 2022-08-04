@@ -2,7 +2,9 @@ use arrow2::array::*;
 use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
-use arrow2::io::avro::{write, CompressedBlock};
+use arrow2::io::avro::avro_schema::file::{Block, CompressedBlock, Compression};
+use arrow2::io::avro::avro_schema::write::{compress, write_block, write_metadata};
+use arrow2::io::avro::write;
 use arrow2::types::months_days_ns;
 
 use super::read::read_avro;
@@ -107,24 +109,24 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
 pub(super) fn serialize_to_block<R: AsRef<dyn Array>>(
     columns: &Chunk<R>,
     schema: &Schema,
-    compression: Option<write::Compression>,
+    compression: Option<Compression>,
 ) -> Result<CompressedBlock> {
-    let avro_fields = write::to_avro_schema(schema)?;
+    let record = write::to_record(schema)?;
 
     let mut serializers = columns
         .arrays()
         .iter()
         .map(|x| x.as_ref())
-        .zip(avro_fields.iter())
+        .zip(record.fields.iter())
         .map(|(array, field)| write::new_serializer(array, &field.schema))
         .collect::<Vec<_>>();
-    let mut block = write::Block::new(columns.len(), vec![]);
+    let mut block = Block::new(columns.len(), vec![]);
 
     write::serialize(&mut serializers, &mut block);
 
-    let mut compressed_block = write::CompressedBlock::default();
+    let mut compressed_block = CompressedBlock::default();
 
-    write::compress(&mut block, &mut compressed_block, compression)?;
+    compress(&mut block, &mut compressed_block, compression)?;
 
     Ok(compressed_block)
 }
@@ -132,21 +134,21 @@ pub(super) fn serialize_to_block<R: AsRef<dyn Array>>(
 fn write_avro<R: AsRef<dyn Array>>(
     columns: &Chunk<R>,
     schema: &Schema,
-    compression: Option<write::Compression>,
+    compression: Option<Compression>,
 ) -> Result<Vec<u8>> {
     let compressed_block = serialize_to_block(columns, schema, compression)?;
 
-    let avro_fields = write::to_avro_schema(schema)?;
+    let avro_fields = write::to_record(schema)?;
     let mut file = vec![];
 
-    write::write_metadata(&mut file, avro_fields, compression)?;
+    write_metadata(&mut file, avro_fields, compression)?;
 
-    write::write_block(&mut file, &compressed_block)?;
+    write_block(&mut file, &compressed_block)?;
 
     Ok(file)
 }
 
-fn roundtrip(compression: Option<write::Compression>) -> Result<()> {
+fn roundtrip(compression: Option<Compression>) -> Result<()> {
     let expected = data();
     let expected_schema = schema();
 
@@ -169,13 +171,13 @@ fn no_compression() -> Result<()> {
 #[cfg(feature = "io_avro_compression")]
 #[test]
 fn snappy() -> Result<()> {
-    roundtrip(Some(write::Compression::Snappy))
+    roundtrip(Some(Compression::Snappy))
 }
 
 #[cfg(feature = "io_avro_compression")]
 #[test]
 fn deflate() -> Result<()> {
-    roundtrip(Some(write::Compression::Deflate))
+    roundtrip(Some(Compression::Deflate))
 }
 
 fn large_format_schema() -> Schema {
