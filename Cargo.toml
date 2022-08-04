@@ -155,13 +155,23 @@ io_flight = ["io_ipc", "arrow-format/flight-data"]
 
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
 io_parquet = ["parquet2", "io_ipc", "base64", "futures", "streaming-iterator", "fallible-streaming-iterator"]
+
 io_parquet_compression = [
-    "parquet2/zstd",
-    "parquet2/snappy",
-    "parquet2/gzip",
-    "parquet2/lz4",
-    "parquet2/brotli",
+    "io_parquet_zstd",
+    "io_parquet_gzip",
+    "io_parquet_snappy",
+    "io_parquet_lz4",
+    "io_parquet_brotli"
 ]
+
+# compression backends
+io_parquet_zstd = ["parquet2/zstd"]
+io_parquet_snappy = ["parquet2/snappy"]
+io_parquet_gzip = ["parquet2/gzip"]
+io_parquet_lz4_flex = ["parquet2/lz4_flex"]
+io_parquet_lz4 = ["parquet2/lz4"]
+io_parquet_brotli = ["parquet2/brotli"]
+
 io_avro = ["avro-schema", "streaming-iterator"]
 io_avro_compression = [
     "avro-schema/compression",
