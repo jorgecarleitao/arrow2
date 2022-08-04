@@ -137,14 +137,17 @@
                         <h1 id="avro-read"><a class="header" href="#avro-read">Avro read</a></h1>
 <p>When compiled with feature <code>io_avro_async</code>, you can use this crate to read Avro files
 asynchronously.</p>
-<pre><pre class="playground"><code class="language-rust">use futures::pin_mut;
+<pre><pre class="playground"><code class="language-rust">use std::sync::Arc;
+
+use futures::pin_mut;
 use futures::StreamExt;
 use tokio::fs::File;
 use tokio_util::compat::*;
 
 use arrow2::error::Result;
-use arrow2::io::avro::read::{decompress_block, deserialize};
-use arrow2::io::avro::read_async::*;
+use arrow2::io::avro::avro_schema::file::Block;
+use arrow2::io::avro::avro_schema::read_async::{block_stream, decompress_block, read_metadata};
+use arrow2::io::avro::read::{deserialize, infer_schema};
 
 #[tokio::main(flavor = &quot;current_thread&quot;)]
 async fn main() -&gt; Result&lt;()&gt; {
@@ -155,22 +158,28 @@ async fn main() -&gt; Result&lt;()&gt; {
 
     let mut reader = File::open(file_path).await?.compat();
 
-    let (avro_schemas, schema, compression, marker) = read_metadata(&amp;mut reader).await?;
-    let avro_schemas = Box::new(avro_schemas);
-    let projection = Box::new(schema.fields.iter().map(|_| true).collect::&lt;Vec&lt;_&gt;&gt;());
+    let metadata = read_metadata(&amp;mut reader).await?;
+    let schema = infer_schema(&amp;metadata.record)?;
+    let metadata = Arc::new(metadata);
+    let projection = Arc::new(schema.fields.iter().map(|_| true).collect::&lt;Vec&lt;_&gt;&gt;());
 
-    let blocks = block_stream(&amp;mut reader, marker).await;
+    let blocks = block_stream(&amp;mut reader, metadata.marker).await;
 
     pin_mut!(blocks);
     while let Some(mut block) = blocks.next().await.transpose()? {
         let schema = schema.clone();
-        let avro_schemas = avro_schemas.clone();
+        let metadata = metadata.clone();
         let projection = projection.clone();
         // the content here is CPU-bounded. It should run on a dedicated thread pool
         let handle = tokio::task::spawn_blocking(move || {
             let mut decompressed = Block::new(0, vec![]);
-            decompress_block(&amp;mut block, &amp;mut decompressed, compression)?;
-            deserialize(&amp;decompressed, &amp;schema.fields, &amp;avro_schemas, &amp;projection)
+            decompress_block(&amp;mut block, &amp;mut decompressed, metadata.compression)?;
+            deserialize(
+                &amp;decompressed,
+                &amp;schema.fields,
+                &amp;metadata.record.fields,
+                &amp;projection,
+            )
         });
         let chunk = handle.await.unwrap()?;
         assert!(!chunk.is_empty());

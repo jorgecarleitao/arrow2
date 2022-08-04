@@ -143,6 +143,7 @@ use arrow2::{
     array::{Array, Int32Array},
     datatypes::{Field, Schema},
     error::Result,
+    io::avro::avro_schema,
     io::avro::write,
 };
 
@@ -150,26 +151,27 @@ fn write_avro&lt;W: std::io::Write&gt;(
     file: &amp;mut W,
     arrays: &amp;[&amp;dyn Array],
     schema: &amp;Schema,
-    compression: Option&lt;write::Compression&gt;,
+    compression: Option&lt;avro_schema::file::Compression&gt;,
 ) -&gt; Result&lt;()&gt; {
-    let avro_fields = write::to_avro_schema(schema)?;
+    let record = write::to_record(schema)?;
 
     let mut serializers = arrays
         .iter()
-        .zip(avro_fields.iter())
+        .zip(record.fields.iter())
         .map(|(array, field)| write::new_serializer(*array, &amp;field.schema))
         .collect::&lt;Vec&lt;_&gt;&gt;();
-    let mut block = write::Block::new(arrays[0].len(), vec![]);
+    let mut block = avro_schema::file::Block::new(arrays[0].len(), vec![]);
 
     write::serialize(&amp;mut serializers, &amp;mut block);
 
-    let mut compressed_block = write::CompressedBlock::default();
+    let mut compressed_block = avro_schema::file::CompressedBlock::default();
 
-    let _was_compressed = write::compress(&amp;mut block, &amp;mut compressed_block, compression)?;
+    let _was_compressed =
+        avro_schema::write::compress(&amp;mut block, &amp;mut compressed_block, compression)?;
 
-    write::write_metadata(file, avro_fields.clone(), compression)?;
+    avro_schema::write::write_metadata(file, record, compression)?;
 
-    write::write_block(file, &amp;compressed_block)?;
+    avro_schema::write::write_block(file, &amp;compressed_block)?;
 
     Ok(())
 }
