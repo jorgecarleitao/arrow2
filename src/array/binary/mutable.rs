@@ -1,7 +1,9 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{specification::check_offsets, Array, MutableArray, Offset, TryExtend, TryPush},
+    array::{
+        specification::check_offsets, Array, MutableArray, Offset, Preallocate, TryExtend, TryPush,
+    },
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{Error, Result},
@@ -183,6 +185,12 @@ impl<O: Offset> MutableBinaryArray<O> {
     /// returns its offsets.
     pub fn offsets(&self) -> &Vec<O> {
         &self.offsets
+    }
+}
+
+impl<O: Offset> Preallocate for MutableBinaryArray<O> {
+    fn with_capacity(capacity: usize) -> Self {
+        MutableBinaryArray::with_capacity(capacity)
     }
 }
 

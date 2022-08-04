@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, MutableArray, Offset, TryExtend, TryPush},
+    array::{Array, MutableArray, Offset, Preallocate, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::{DataType, Field},
     error::{Error, Result},
@@ -208,6 +208,12 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         if let Some(validity) = &mut self.validity {
             validity.shrink_to_fit()
         }
+    }
+}
+
+impl<O: Offset, M: MutableArray + Default + 'static> Preallocate for MutableListArray<O, M> {
+    fn with_capacity(capacity: usize) -> Self {
+        MutableListArray::with_capacity(capacity)
     }
 }
 

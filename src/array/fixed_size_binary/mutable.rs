@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, MutableArray},
+    array::{Array, MutableArray, Preallocate},
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{Error, Result},
@@ -208,6 +208,12 @@ impl MutableFixedSizeBinaryArray {
     /// Returns a mutable slice of values.
     pub fn values_mut_slice(&mut self) -> &mut [u8] {
         self.values.as_mut_slice()
+    }
+}
+
+impl Preallocate for MutableFixedSizeBinaryArray {
+    fn with_capacity(capacity: usize) -> Self {
+        MutableFixedSizeBinaryArray::with_capacity(capacity, 0)
     }
 }
 
