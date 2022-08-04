@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Read Arrow - arrow2 documentation</title>
+        <title>Memory map Arrow - arrow2 documentation</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="../arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="../low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="../high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="../compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="../metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="../ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="../extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="../io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../io/csv_reader.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="../io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="../io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="../io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="../io/ipc_read.html" class="active"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="../io/ipc_mmap.html"><strong aria-hidden="true">9.6.</strong> Memory map Arrow</a></li><li class="chapter-item expanded "><a href="../io/ipc_stream_read.html"><strong aria-hidden="true">9.7.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="../io/ipc_write.html"><strong aria-hidden="true">9.8.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="../io/avro_read.html"><strong aria-hidden="true">9.9.</strong> Read Avro</a></li><li class="chapter-item expanded "><a href="../io/avro_write.html"><strong aria-hidden="true">9.10.</strong> Write Avro</a></li><li class="chapter-item expanded "><a href="../io/json_read.html"><strong aria-hidden="true">9.11.</strong> Read JSON</a></li><li class="chapter-item expanded "><a href="../io/json_write.html"><strong aria-hidden="true">9.12.</strong> Write JSON</a></li><li class="chapter-item expanded "><a href="../io/odbc.html"><strong aria-hidden="true">9.13.</strong> Read and Write ODBC</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="../arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="../low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="../high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="../compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="../metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="../ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="../extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="../io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../io/csv_reader.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="../io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="../io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="../io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="../io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="../io/ipc_mmap.html" class="active"><strong aria-hidden="true">9.6.</strong> Memory map Arrow</a></li><li class="chapter-item expanded "><a href="../io/ipc_stream_read.html"><strong aria-hidden="true">9.7.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="../io/ipc_write.html"><strong aria-hidden="true">9.8.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="../io/avro_read.html"><strong aria-hidden="true">9.9.</strong> Read Avro</a></li><li class="chapter-item expanded "><a href="../io/avro_write.html"><strong aria-hidden="true">9.10.</strong> Write Avro</a></li><li class="chapter-item expanded "><a href="../io/json_read.html"><strong aria-hidden="true">9.11.</strong> Read JSON</a></li><li class="chapter-item expanded "><a href="../io/json_write.html"><strong aria-hidden="true">9.12.</strong> Write JSON</a></li><li class="chapter-item expanded "><a href="../io/odbc.html"><strong aria-hidden="true">9.13.</strong> Read and Write ODBC</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -135,82 +135,42 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="read-arrow"><a class="header" href="#read-arrow">Read Arrow</a></h1>
-<p>When compiled with feature <code>io_ipc</code>, this crate can be used to read Arrow files.</p>
-<p>An Arrow file is composed by a header, a footer, and blocks of <code>Array</code>s.
-Reading it generally consists of:</p>
-<ol>
-<li>read metadata, containing the block positions in the file</li>
-<li>seek to each block and read it</li>
-</ol>
-<p>The example below shows how to read them into <code>Chunk</code>es:</p>
-<pre><pre class="playground"><code class="language-rust">use std::fs::File;
+<p>When compiled with feature <code>io_ipc</code>, this crate can be used to memory map IPC Arrow files
+into arrays.</p>
+<p>The example below shows how to memory map an IPC Arrow file into <code>Chunk</code>es:</p>
+<pre><pre class="playground"><code class="language-rust">//! Example showing how to memory map an Arrow IPC file into a [`Chunk`].
+use std::sync::Arc;
 
-use arrow2::array::Array;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::Schema;
 use arrow2::error::Result;
 use arrow2::io::ipc::read;
-use arrow2::io::print;
+use arrow2::mmap::{mmap_dictionaries_unchecked, mmap_unchecked};
 
-/// Simplest way: read all record batches from the file. This can be used e.g. for random access.
-#[allow(clippy::type_complexity)]
-fn read_chunks(path: &amp;str) -&gt; Result&lt;(Schema, Vec&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt;)&gt; {
-    let mut file = File::open(path)?;
+// Arrow2 requires a struct that implements `Clone + AsRef&lt;[u8]&gt;`, which
+// usually `Arc&lt;Mmap&gt;` supports. Here we mock it
+#[derive(Clone)]
+struct Mmap(Arc&lt;Vec&lt;u8&gt;&gt;);
 
-    // read the files' metadata. At this point, we can distribute the read whatever we like.
-    let metadata = read::read_file_metadata(&amp;mut file)?;
-
-    let schema = metadata.schema.clone();
-
-    // Simplest way: use the reader, an iterator over batches.
-    let reader = read::FileReader::new(file, metadata, None, None);
-
-    let chunks = reader.collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
-    Ok((schema, chunks))
-}
-
-/// Random access way: read a single record batch from the file. This can be used e.g. for random access.
-fn read_batch(path: &amp;str) -&gt; Result&lt;(Schema, Chunk&lt;Box&lt;dyn Array&gt;&gt;)&gt; {
-    let mut file = File::open(path)?;
-
-    // read the files' metadata. At this point, we can distribute the read whatever we like.
-    let metadata = read::read_file_metadata(&amp;mut file)?;
-
-    let schema = metadata.schema.clone();
-
-    // advanced way: read the dictionary
-    let dictionaries = read::read_file_dictionaries(&amp;mut file, &amp;metadata, &amp;mut Default::default())?;
-
-    // and the chunk
-    let chunk_index = 0;
-
-    let chunk = read::read_batch(
-        &amp;mut file,
-        &amp;dictionaries,
-        &amp;metadata,
-        None,
-        None,
-        chunk_index,
-        &amp;mut Default::default(),
-        &amp;mut Default::default(),
-    )?;
-
-    Ok((schema, chunk))
+impl AsRef&lt;[u8]&gt; for Mmap {
+    #[inline]
+    fn as_ref(&amp;self) -&gt; &amp;[u8] {
+        self.0.as_ref()
+    }
 }
 
 fn main() -&gt; Result&lt;()&gt; {
-    use std::env;
-    let args: Vec&lt;String&gt; = env::args().collect();
+    // given a mmap
+    let mmap = Mmap(Arc::new(vec![]));
 
-    let file_path = &amp;args[1];
+    // read the metadata
+    let metadata = read::read_file_metadata(&amp;mut std::io::Cursor::new(mmap.as_ref()))?;
 
-    let (schema, chunks) = read_chunks(file_path)?;
-    let names = schema.fields.iter().map(|f| &amp;f.name).collect::&lt;Vec&lt;_&gt;&gt;();
-    println!(&quot;{}&quot;, print::write(&amp;chunks, &amp;names));
+    // mmap the dictionaries
+    let dictionaries = unsafe { mmap_dictionaries_unchecked(&amp;metadata, mmap.clone())? };
 
-    let (schema, chunk) = read_batch(file_path)?;
-    let names = schema.fields.iter().map(|f| &amp;f.name).collect::&lt;Vec&lt;_&gt;&gt;();
-    println!(&quot;{}&quot;, print::write(&amp;[chunk], &amp;names));
+    // and finally mmap a chunk (0 in this case).
+    let chunk = unsafe { mmap_unchecked(&amp;metadata, &amp;dictionaries, mmap, 0) }?;
+
+    println!(&quot;{chunk:?}&quot;);
     Ok(())
 }
 </code></pre></pre>
@@ -219,10 +179,10 @@ fn main() -&gt; Result&lt;()&gt; {
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../io/parquet_write.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../io/ipc_read.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                            <a rel="next" href="../io/ipc_mmap.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../io/ipc_stream_read.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
@@ -231,10 +191,10 @@ fn main() -&gt; Result&lt;()&gt; {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../io/parquet_write.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../io/ipc_read.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                    <a rel="next" href="../io/ipc_mmap.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../io/ipc_stream_read.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
