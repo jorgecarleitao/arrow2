@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.13.1](https://github.com/jorgecarleitao/arrow2/tree/v0.13.1) (2022-08-04)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.13.0...v0.13.1)
+
+**Fixed bugs:**
+
+- Fix escaped like wildcards [\#1204](https://github.com/jorgecarleitao/arrow2/pull/1204) ([daniel-martinez-maqueda-sap](https://github.com/daniel-martinez-maqueda-sap))
+- Removed println :\( [\#1203](https://github.com/jorgecarleitao/arrow2/pull/1203) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.13.0](https://github.com/jorgecarleitao/arrow2/tree/v0.13.0) (2022-07-31)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.12.0...v0.13.0)
