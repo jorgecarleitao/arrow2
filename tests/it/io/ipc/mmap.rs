@@ -3,6 +3,7 @@ use arrow2::chunk::Chunk;
 use arrow2::datatypes::{DataType, Field, Schema};
 use arrow2::error::Result;
 use arrow2::io::ipc::read::read_file_metadata;
+use std::sync::Arc;
 
 use super::write::file::write;
 
@@ -10,9 +11,9 @@ fn round_trip(array: Box<dyn Array>) -> Result<()> {
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array.clone()])?;
 
-    let data = write(&[columns], &schema, None, None)?;
+    let data = Arc::new(write(&[columns], &schema, None, None)?);
 
-    let metadata = read_file_metadata(&mut std::io::Cursor::new(&data))?;
+    let metadata = read_file_metadata(&mut std::io::Cursor::new(data.as_ref()))?;
 
     let dictionaries =
         unsafe { arrow2::mmap::mmap_dictionaries_unchecked(&metadata, data.clone())? };
