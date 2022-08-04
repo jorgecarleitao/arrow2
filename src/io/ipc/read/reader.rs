@@ -27,13 +27,13 @@ pub struct FileMetadata {
     /// The blocks in the file
     ///
     /// A block indicates the regions in the file to read to get data
-    pub(crate) blocks: Vec<arrow_format::ipc::Block>,
+    pub blocks: Vec<arrow_format::ipc::Block>,
 
     /// Dictionaries associated to each dict_id
     pub(crate) dictionaries: Option<Vec<arrow_format::ipc::Block>>,
 
     /// The total size of the file in bytes
-    pub(crate) size: u64,
+    pub size: u64,
 }
 
 fn read_dictionary_message<R: Read + Seek>(

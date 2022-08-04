@@ -8,7 +8,7 @@ use arrow2::mmap::{mmap_dictionaries_unchecked, mmap_unchecked};
 // Arrow2 requires a struct that implements `Clone + AsRef<[u8]>`, which
 // usually `Arc<Mmap>` supports. Here we mock it
 #[derive(Clone)]
-struct Mmap(Arc<Vec<u8>>);
+struct Mmap(Vec<u8>);
 
 impl AsRef<[u8]> for Mmap {
     #[inline]
@@ -19,7 +19,7 @@ impl AsRef<[u8]> for Mmap {
 
 fn main() -> Result<()> {
     // given a mmap
-    let mmap = Mmap(Arc::new(vec![]));
+    let mmap = Arc::new(Mmap(vec![]));
 
     // read the metadata
     let metadata = read::read_file_metadata(&mut std::io::Cursor::new(mmap.as_ref()))?;

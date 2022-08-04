@@ -1,5 +1,6 @@
 //! Memory maps regions defined on the IPC format into [`Array`].
 use std::collections::VecDeque;
+use std::sync::Arc;
 
 use crate::array::Array;
 use crate::chunk::Chunk;
@@ -74,10 +75,10 @@ fn get_buffers_nodes(
     Ok((buffers, field_nodes))
 }
 
-unsafe fn _mmap_record<T: Clone + AsRef<[u8]>>(
+unsafe fn _mmap_record<T: AsRef<[u8]>>(
     fields: &[Field],
     ipc_fields: &[IpcField],
-    data: T,
+    data: Arc<T>,
     batch: RecordBatchRef,
     offset: usize,
     dictionaries: &Dictionaries,
@@ -104,14 +105,14 @@ unsafe fn _mmap_record<T: Clone + AsRef<[u8]>>(
         .and_then(Chunk::try_new)
 }
 
-unsafe fn _mmap_unchecked<T: Clone + AsRef<[u8]>>(
+unsafe fn _mmap_unchecked<T: AsRef<[u8]>>(
     fields: &[Field],
     ipc_fields: &[IpcField],
-    data: T,
+    data: Arc<T>,
     block: Block,
     dictionaries: &Dictionaries,
 ) -> Result<Chunk<Box<dyn Array>>, Error> {
-    let (message, offset) = read_message(data.as_ref(), block)?;
+    let (message, offset) = read_message(data.as_ref().as_ref(), block)?;
     let batch = get_record_batch(message)?;
     _mmap_record(
         fields,
@@ -134,15 +135,15 @@ unsafe fn _mmap_unchecked<T: Clone + AsRef<[u8]>>(
 /// The caller must ensure that `data` contains a valid buffers, for example:
 /// * Offsets in variable-sized containers must be in-bounds and increasing
 /// * Utf8 data is valid
-pub unsafe fn mmap_unchecked<T: Clone + AsRef<[u8]>>(
+pub unsafe fn mmap_unchecked<T: AsRef<[u8]>>(
     metadata: &FileMetadata,
     dictionaries: &Dictionaries,
-    data: T,
+    data: Arc<T>,
     chunk: usize,
 ) -> Result<Chunk<Box<dyn Array>>, Error> {
     let block = metadata.blocks[chunk];
 
-    let (message, offset) = read_message(data.as_ref(), block)?;
+    let (message, offset) = read_message(data.as_ref().as_ref(), block)?;
     let batch = get_record_batch(message)?;
     _mmap_record(
         &metadata.schema.fields,
@@ -154,13 +155,13 @@ pub unsafe fn mmap_unchecked<T: Clone + AsRef<[u8]>>(
     )
 }
 
-unsafe fn mmap_dictionary<T: Clone + AsRef<[u8]>>(
+unsafe fn mmap_dictionary<T: AsRef<[u8]>>(
     metadata: &FileMetadata,
-    data: T,
+    data: Arc<T>,
     block: Block,
     dictionaries: &mut Dictionaries,
 ) -> Result<(), Error> {
-    let (message, offset) = read_message(data.as_ref(), block)?;
+    let (message, offset) = read_message(data.as_ref().as_ref(), block)?;
     let batch = get_dictionary_batch(&message)?;
 
     let id = batch
@@ -205,9 +206,9 @@ unsafe fn mmap_dictionary<T: Clone + AsRef<[u8]>>(
 /// The caller must ensure that `data` contains a valid buffers, for example:
 /// * Offsets in variable-sized containers must be in-bounds and increasing
 /// * Utf8 data is valid
-pub unsafe fn mmap_dictionaries_unchecked<T: Clone + AsRef<[u8]>>(
+pub unsafe fn mmap_dictionaries_unchecked<T: AsRef<[u8]>>(
     metadata: &FileMetadata,
-    data: T,
+    data: Arc<T>,
 ) -> Result<Dictionaries, Error> {
     let blocks = if let Some(blocks) = &metadata.dictionaries {
         blocks

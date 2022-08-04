@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::sync::Arc;
 
 use crate::array::{Array, DictionaryKey, FixedSizeListArray, ListArray, Offset, StructArray};
 use crate::datatypes::DataType;
@@ -85,11 +86,11 @@ fn get_validity<'a>(
 }
 
 fn create_array<
-    T: Clone + AsRef<[u8]>,
+    T: AsRef<[u8]>,
     I: Iterator<Item = Option<*const u8>>,
     II: Iterator<Item = ArrowArray>,
 >(
-    data: T,
+    data: Arc<T>,
     num_rows: usize,
     null_count: usize,
     buffers: I,
@@ -111,7 +112,7 @@ fn create_array<
 
     let dictionary_ptr = dictionary.map(|array| Box::into_raw(Box::new(array)));
 
-    let mut private_data = Box::new(PrivateData::<T> {
+    let mut private_data = Box::new(PrivateData::<Arc<T>> {
         data,
         buffers_ptr,
         children_ptr,
@@ -127,7 +128,7 @@ fn create_array<
         buffers: private_data.buffers_ptr.as_mut_ptr(),
         children: private_data.children_ptr.as_mut_ptr(),
         dictionary: private_data.dictionary_ptr.unwrap_or(std::ptr::null_mut()),
-        release: Some(release::<T>),
+        release: Some(release::<Arc<T>>),
         private_data: Box::into_raw(private_data) as *mut ::std::os::raw::c_void,
     }
 }
@@ -152,8 +153,8 @@ unsafe extern "C" fn release<T>(array: *mut ArrowArray) {
     array.release = None;
 }
 
-fn mmap_binary<O: Offset, T: Clone + AsRef<[u8]>>(
-    data: T,
+fn mmap_binary<O: Offset, T: AsRef<[u8]>>(
+    data: Arc<T>,
     node: &Node,
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
@@ -168,7 +169,7 @@ fn mmap_binary<O: Offset, T: Clone + AsRef<[u8]>>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let data_ref = data.as_ref();
+    let data_ref = data.as_ref().as_ref();
 
     let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
 
@@ -186,8 +187,8 @@ fn mmap_binary<O: Offset, T: Clone + AsRef<[u8]>>(
     ))
 }
 
-fn mmap_fixed_size_binary<T: Clone + AsRef<[u8]>>(
-    data: T,
+fn mmap_fixed_size_binary<T: AsRef<[u8]>>(
+    data: Arc<T>,
     node: &Node,
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
@@ -202,7 +203,7 @@ fn mmap_fixed_size_binary<T: Clone + AsRef<[u8]>>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let data_ref = data.as_ref();
+    let data_ref = data.as_ref().as_ref();
 
     let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
 
@@ -218,8 +219,8 @@ fn mmap_fixed_size_binary<T: Clone + AsRef<[u8]>>(
     ))
 }
 
-fn mmap_null<T: Clone + AsRef<[u8]>>(
-    data: T,
+fn mmap_null<T: AsRef<[u8]>>(
+    data: Arc<T>,
     node: &Node,
     _block_offset: usize,
     _buffers: &mut VecDeque<IpcBuffer>,
@@ -244,8 +245,8 @@ fn mmap_null<T: Clone + AsRef<[u8]>>(
     ))
 }
 
-fn mmap_boolean<T: Clone + AsRef<[u8]>>(
-    data: T,
+fn mmap_boolean<T: AsRef<[u8]>>(
+    data: Arc<T>,
     node: &Node,
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
@@ -260,7 +261,7 @@ fn mmap_boolean<T: Clone + AsRef<[u8]>>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let data_ref = data.as_ref();
+    let data_ref = data.as_ref().as_ref();
 
     let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
 
@@ -280,13 +281,13 @@ fn mmap_boolean<T: Clone + AsRef<[u8]>>(
     ))
 }
 
-fn mmap_primitive<P: NativeType, T: Clone + AsRef<[u8]>>(
-    data: T,
+fn mmap_primitive<P: NativeType, T: AsRef<[u8]>>(
+    data: Arc<T>,
     node: &Node,
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
 ) -> Result<ArrowArray, Error> {
-    let data_ref = data.as_ref();
+    let data_ref = data.as_ref().as_ref();
 
     let num_rows: usize = node
         .length()
@@ -313,8 +314,8 @@ fn mmap_primitive<P: NativeType, T: Clone + AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn mmap_list<O: Offset, T: Clone + AsRef<[u8]>>(
-    data: T,
+fn mmap_list<O: Offset, T: AsRef<[u8]>>(
+    data: Arc<T>,
     node: &Node,
     block_offset: usize,
     data_type: &DataType,
@@ -335,7 +336,7 @@ fn mmap_list<O: Offset, T: Clone + AsRef<[u8]>>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let data_ref = data.as_ref();
+    let data_ref = data.as_ref().as_ref();
 
     let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
 
@@ -363,8 +364,8 @@ fn mmap_list<O: Offset, T: Clone + AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn mmap_fixed_size_list<T: Clone + AsRef<[u8]>>(
-    data: T,
+fn mmap_fixed_size_list<T: AsRef<[u8]>>(
+    data: Arc<T>,
     node: &Node,
     block_offset: usize,
     data_type: &DataType,
@@ -387,7 +388,7 @@ fn mmap_fixed_size_list<T: Clone + AsRef<[u8]>>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let data_ref = data.as_ref();
+    let data_ref = data.as_ref().as_ref();
 
     let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
 
@@ -412,8 +413,8 @@ fn mmap_fixed_size_list<T: Clone + AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn mmap_struct<T: Clone + AsRef<[u8]>>(
-    data: T,
+fn mmap_struct<T: AsRef<[u8]>>(
+    data: Arc<T>,
     node: &Node,
     block_offset: usize,
     data_type: &DataType,
@@ -434,7 +435,7 @@ fn mmap_struct<T: Clone + AsRef<[u8]>>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let data_ref = data.as_ref();
+    let data_ref = data.as_ref().as_ref();
 
     let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
 
@@ -466,8 +467,8 @@ fn mmap_struct<T: Clone + AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn mmap_dict<K: DictionaryKey, T: Clone + AsRef<[u8]>>(
-    data: T,
+fn mmap_dict<K: DictionaryKey, T: AsRef<[u8]>>(
+    data: Arc<T>,
     node: &Node,
     block_offset: usize,
     _: &DataType,
@@ -486,7 +487,7 @@ fn mmap_dict<K: DictionaryKey, T: Clone + AsRef<[u8]>>(
         .try_into()
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
-    let data_ref = data.as_ref();
+    let data_ref = data.as_ref().as_ref();
 
     let dictionary = dictionaries
         .get(&ipc_field.dictionary_id.unwrap())
@@ -507,8 +508,8 @@ fn mmap_dict<K: DictionaryKey, T: Clone + AsRef<[u8]>>(
     ))
 }
 
-fn get_array<T: Clone + AsRef<[u8]>>(
-    data: T,
+fn get_array<T: AsRef<[u8]>>(
+    data: Arc<T>,
     block_offset: usize,
     data_type: &DataType,
     ipc_field: &IpcField,
@@ -587,8 +588,8 @@ fn get_array<T: Clone + AsRef<[u8]>>(
 }
 
 /// Maps a memory region to an [`Array`].
-pub(crate) unsafe fn mmap<T: Clone + AsRef<[u8]>>(
-    data: T,
+pub(crate) unsafe fn mmap<T: AsRef<[u8]>>(
+    data: Arc<T>,
     block_offset: usize,
     data_type: DataType,
     ipc_field: &IpcField,
