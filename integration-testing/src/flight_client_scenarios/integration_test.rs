@@ -21,23 +21,15 @@ use arrow2::{
     array::Array,
     chunk::Chunk,
     datatypes::*,
-    io::ipc::{
-        read::{self, Dictionaries},
-        write, IpcSchema,
-    },
     io::{
         flight::{self, deserialize_batch, serialize_batch},
-        ipc::IpcField,
+        ipc::{read::Dictionaries, write, IpcField, IpcSchema},
     },
+};
+use arrow_format::flight::data::{
+    flight_descriptor::DescriptorType, FlightData, FlightDescriptor, Location, Ticket,
 };
 use arrow_format::flight::service::flight_service_client::FlightServiceClient;
-use arrow_format::ipc;
-use arrow_format::{
-    flight::data::{
-        flight_descriptor::DescriptorType, FlightData, FlightDescriptor, Location, Ticket,
-    },
-    ipc::planus::ReadAsRoot,
-};
 use futures::{stream::BoxStream, StreamExt, TryStreamExt};
 use tonic::{Request, Streaming};
 
@@ -233,30 +225,14 @@ async fn read_dictionaries(
     dictionaries: &mut Dictionaries,
 ) -> Option<FlightData> {
     let mut data = stream.next().await?.ok()?;
-    let mut message =
-        ipc::MessageRef::read_as_root(&data.data_header).expect("Error parsing first message");
 
-    while let ipc::MessageHeaderRef::DictionaryBatch(chunk) = message
-        .header()
-        .expect("Header to be valid flatbuffers")
-        .expect("Header to be present")
-    {
-        let length = data.data_body.len();
-        let mut reader = std::io::Cursor::new(&data.data_body);
-        read::read_dictionary(
-            chunk,
-            fields,
-            ipc_schema,
-            dictionaries,
-            &mut reader,
-            0,
-            length as u64,
-            &mut Default::default(),
-        )
-        .expect("Error reading dictionary");
-
+    let existing = dictionaries.len();
+    loop {
+        flight::deserialize_dictionary(&data, fields, ipc_schema, dictionaries).ok()?;
+        if dictionaries.len() == existing {
+            break;
+        }
         data = stream.next().await?.ok()?;
-        message = ipc::MessageRef::read_as_root(&data.data_header).expect("Error parsing message");
     }
 
     Some(data)

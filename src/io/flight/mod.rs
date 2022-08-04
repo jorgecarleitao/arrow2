@@ -14,6 +14,7 @@ use crate::{
     io::ipc::write::common::{encode_chunk, DictionaryTracker, EncodedData},
 };
 
+use super::ipc::read::Dictionaries;
 use super::ipc::{IpcField, IpcSchema};
 
 pub use super::ipc::write::default_ipc_fields;
@@ -114,7 +115,7 @@ pub fn deserialize_schemas(bytes: &[u8]) -> Result<(Schema, IpcSchema)> {
     read::deserialize_schema(bytes)
 }
 
-/// Deserializes [`FlightData`] to [`Chunk`].
+/// Deserializes [`FlightData`] representing a record batch message to [`Chunk`].
 pub fn deserialize_batch(
     data: &FlightData,
     fields: &[Field],
@@ -147,5 +148,104 @@ pub fn deserialize_batch(
         _ => Err(Error::nyi(
             "flight currently only supports reading RecordBatch messages",
         )),
+    }
+}
+
+/// Deserializes [`FlightData`], assuming it to be a dictionary message, into `dictionaries`.
+pub fn deserialize_dictionary(
+    data: &FlightData,
+    fields: &[Field],
+    ipc_schema: &IpcSchema,
+    dictionaries: &mut read::Dictionaries,
+) -> Result<()> {
+    let message = ipc::MessageRef::read_as_root(&data.data_header)?;
+
+    let chunk = if let ipc::MessageHeaderRef::DictionaryBatch(chunk) = message
+        .header()?
+        .ok_or_else(|| Error::oos("Header is required"))?
+    {
+        chunk
+    } else {
+        return Ok(());
+    };
+
+    let length = data.data_body.len();
+    let mut reader = std::io::Cursor::new(&data.data_body);
+    read::read_dictionary(
+        chunk,
+        fields,
+        ipc_schema,
+        dictionaries,
+        &mut reader,
+        0,
+        length as u64,
+        &mut Default::default(),
+    )?;
+
+    Ok(())
+}
+
+/// Deserializes [`FlightData`] into either a [`Chunk`] (when the message is a record batch)
+/// or by upserting into `dictionaries` (when the message is a dictionary)
+pub fn deserialize_message(
+    data: &FlightData,
+    fields: &[Field],
+    ipc_schema: &IpcSchema,
+    dictionaries: &mut Dictionaries,
+) -> Result<Option<Chunk<Box<dyn Array>>>> {
+    let FlightData {
+        data_header,
+        data_body,
+        ..
+    } = data;
+
+    let message = arrow_format::ipc::MessageRef::read_as_root(data_header)?;
+    let header = message
+        .header()?
+        .ok_or_else(|| Error::oos("IPC Message must contain a header"))?;
+
+    match header {
+        ipc::MessageHeaderRef::RecordBatch(batch) => {
+            let length = data_body.len();
+            let mut reader = std::io::Cursor::new(data_body);
+
+            let chunk = read::read_record_batch(
+                batch,
+                fields,
+                ipc_schema,
+                None,
+                None,
+                dictionaries,
+                arrow_format::ipc::MetadataVersion::V5,
+                &mut reader,
+                0,
+                length as u64,
+                &mut Default::default(),
+            )?;
+
+            Ok(chunk.into())
+        }
+        ipc::MessageHeaderRef::DictionaryBatch(dict_batch) => {
+            let length = data_body.len();
+            let mut reader = std::io::Cursor::new(data_body);
+
+            read::read_dictionary(
+                dict_batch,
+                fields,
+                ipc_schema,
+                dictionaries,
+                &mut reader,
+                0,
+                length as u64,
+                &mut Default::default(),
+            )?;
+            Ok(None)
+        }
+        t => {
+            return Err(Error::nyi(format!(
+                "Reading types other than record batches not yet supported, unable to read {:?}",
+                t
+            )));
+        }
     }
 }
