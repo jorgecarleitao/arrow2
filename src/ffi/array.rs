@@ -493,7 +493,7 @@ impl InternalArrowArray {
     }
 }
 
-impl ArrowArrayRef for Box<InternalArrowArray> {
+impl ArrowArrayRef for InternalArrowArray {
     /// the data_type as declared in the schema
     fn data_type(&self) -> &DataType {
         &self.data_type

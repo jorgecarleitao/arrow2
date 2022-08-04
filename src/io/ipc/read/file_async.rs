@@ -14,7 +14,7 @@ use crate::error::{Error, Result};
 use crate::io::ipc::{IpcSchema, ARROW_MAGIC, CONTINUATION_MARKER};
 
 use super::common::{apply_projection, prepare_projection, read_dictionary, read_record_batch};
-use super::reader::{deserialize_footer, get_serialized_batch};
+use super::reader::{deserialize_footer, get_record_batch};
 use super::Dictionaries;
 use super::FileMetadata;
 use super::OutOfSpecKind;
@@ -205,7 +205,7 @@ where
     let message = arrow_format::ipc::MessageRef::read_as_root(meta_buffer)
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferMessage(err)))?;
 
-    let batch = get_serialized_batch(&message)?;
+    let batch = get_record_batch(message)?;
 
     let block_length: usize = message
         .body_length()

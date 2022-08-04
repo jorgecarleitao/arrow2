@@ -15,3 +15,5 @@ mod read_stream_async;
 
 #[cfg(feature = "io_ipc_read_async")]
 mod read_file_async;
+
+mod mmap;

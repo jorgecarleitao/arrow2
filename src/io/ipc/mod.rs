@@ -81,7 +81,7 @@ pub mod read;
 pub mod write;
 
 const ARROW_MAGIC: [u8; 6] = [b'A', b'R', b'R', b'O', b'W', b'1'];
-const CONTINUATION_MARKER: [u8; 4] = [0xff; 4];
+pub(crate) const CONTINUATION_MARKER: [u8; 4] = [0xff; 4];
 
 /// Struct containing `dictionary_id` and nested `IpcField`, allowing users
 /// to specify the dictionary ids of the IPC fields when writing to IPC.

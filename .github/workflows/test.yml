@@ -114,6 +114,25 @@ jobs:
       - name: Run
         run: MIRIFLAGS="-Zmiri-disable-isolation" cargo miri test --tests --features io_ipc,io_json_integration io::ipc::write::write_sliced_list
 
+  miri-checks-mmap:
+    name: MIRI on IO IPC mmaping
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2022-07-12
+          override: true
+      - uses: Swatinem/rust-cache@v1
+        with:
+          key: key1
+      - name: Install Miri
+        run: |
+          rustup component add miri
+          cargo miri setup
+      - name: Run
+        run: cargo miri test --tests --features io_ipc io::ipc::mmap
+
   feature-compilation:
     name: Feature coverage
     runs-on: ubuntu-latest

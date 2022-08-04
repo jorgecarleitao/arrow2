@@ -27,6 +27,7 @@ pub mod stream_async;
 #[cfg_attr(docsrs, doc(cfg(feature = "io_ipc_read_async")))]
 pub mod file_async;
 
+pub(crate) use common::first_dict_field;
 pub use common::{read_dictionary, read_record_batch};
 pub use reader::{
     read_batch, read_file_dictionaries, read_file_metadata, FileMetadata, FileReader,
