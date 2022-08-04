@@ -157,7 +157,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         &mut self.values
     }
 
-    /// The offseta
+    /// The offsets
     pub fn offsets(&self) -> &Vec<O> {
         &self.offsets
     }

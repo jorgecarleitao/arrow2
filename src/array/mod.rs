@@ -132,7 +132,7 @@ pub trait MutableArray: std::fmt::Debug + Send + Sync {
     /// The optional validity of the array.
     fn validity(&self) -> Option<&MutableBitmap>;
 
-    /// Convert itself to an (immutable) ['Array'].
+    /// Convert itself to an (immutable) [`Array`].
     fn as_box(&mut self) -> Box<dyn Array>;
 
     /// Convert itself to an (immutable) atomically reference counted [`Array`].
