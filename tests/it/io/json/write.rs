@@ -2,7 +2,7 @@ use arrow2::{
     array::*,
     bitmap::Bitmap,
     buffer::Buffer,
-    datatypes::{DataType, Field, TimeUnit},
+    datatypes::{DataType, Field, Metadata, Schema, TimeUnit},
     error::Result,
 };
 
@@ -209,6 +209,49 @@ fn nested_list() -> Result<()> {
         r#"[{"c1":[[1,2],[3]],"c2":"foo"},{"c1":[],"c2":"bar"},{"c1":[[4,5,6]],"c2":null}]"#;
 
     test!(array, expected)
+}
+
+#[test]
+fn nested_list_records() -> Result<()> {
+    let iter = vec![
+        vec![Some(vec![Some(1), Some(2)]), Some(vec![Some(3)])],
+        vec![],
+        vec![Some(vec![Some(4), Some(5), Some(6)])],
+    ];
+
+    let iter = iter.into_iter().map(Some);
+
+    let inner = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new_with_field(
+        MutablePrimitiveArray::<i32>::new(),
+        "b",
+        false,
+    );
+    let mut c1 =
+        MutableListArray::<i32, MutableListArray<i32, MutablePrimitiveArray<i32>>>::new_with_field(
+            inner, "c1", false,
+        );
+    c1.try_extend(iter).unwrap();
+    let c1: ListArray<i32> = c1.into();
+
+    let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None]);
+
+    let schema = Schema {
+        fields: vec![
+            Field::new("c1", c1.data_type().clone(), true),
+            Field::new("c2", c2.data_type().clone(), true),
+        ],
+        metadata: Metadata::default(),
+    };
+
+    let arrays: Vec<Box<dyn Array>> = vec![Box::new(c1), Box::new(c2)];
+    let chunk = Chunk::new(arrays);
+
+    let expected =
+        r#"[{"c1":[[1,2],[3]],"c2":"foo"},{"c1":[],"c2":"bar"},{"c1":[[4,5,6]],"c2":null}]"#;
+
+    let buf = write_record_batch(schema, chunk)?;
+    assert_eq!(String::from_utf8(buf).unwrap(), expected);
+    Ok(())
 }
 
 #[test]
