@@ -5,7 +5,7 @@ use indexmap::set::IndexSet as HashSet;
 use json_deserializer::{Number, Value};
 
 use crate::datatypes::*;
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 const ITEM_NAME: &str = "item";
 
@@ -18,6 +18,46 @@ pub fn infer(json: &Value) -> Result<DataType> {
         Value::Number(number) => infer_number(number),
         Value::String(_) => DataType::Utf8,
         Value::Object(inner) => infer_object(inner)?,
+    })
+}
+
+/// Infers [`Schema`] from JSON [`Value`] in (pandas-compatible) records format.
+pub fn infer_records_schema(json: &Value) -> Result<Schema> {
+    let outer_array = match json {
+        Value::Array(array) => Ok(array),
+        _ => Err(Error::ExternalFormat(
+            "outer type is not an array".to_string(),
+        )),
+    }?;
+
+    let fields = match outer_array.iter().next() {
+        Some(Value::Object(record)) => record
+            .iter()
+            .map(|(name, json)| {
+                let data_type = infer(json)?;
+
+                Ok(Field {
+                    name: name.clone(),
+                    data_type: DataType::List(Box::new(Field {
+                        name: format!("{}-records", name),
+                        data_type,
+                        is_nullable: true,
+                        metadata: Metadata::default(),
+                    })),
+                    is_nullable: true,
+                    metadata: Metadata::default(),
+                })
+            })
+            .collect::<Result<Vec<_>>>(),
+        None => Ok(vec![]),
+        _ => Err(Error::ExternalFormat(
+            "first element in array is not a record".to_string(),
+        )),
+    }?;
+
+    Ok(Schema {
+        fields,
+        metadata: Metadata::default(),
     })
 }
 
