@@ -4,6 +4,7 @@ use crate::{
     datatypes::{DataType, Field},
     error::Error,
 };
+use std::sync::Arc;
 
 use super::{
     new_empty_array,
@@ -126,8 +127,8 @@ impl<O: Offset> ListArray<O> {
     }
 
     /// Boxes self into a [`Arc<dyn Array>`].
-    pub fn arced(self) -> std::sync::Arc<dyn Array> {
-        std::sync::Arc::new(self)
+    pub fn arced(self) -> Arc<dyn Array> {
+        Arc::new(self)
     }
 }
 

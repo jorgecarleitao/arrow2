@@ -3,6 +3,7 @@
 
 use crate::array::*;
 use crate::datatypes::*;
+use std::sync::Arc;
 
 mod binary;
 pub use binary::GrowableBinary;
@@ -44,7 +45,7 @@ pub trait Growable<'a> {
 
     /// Converts this [`Growable`] to an [`Arc<dyn Array>`], thereby finishing the mutation.
     /// Self will be empty after such operation.
-    fn as_arc(&mut self) -> std::sync::Arc<dyn Array> {
+    fn as_arc(&mut self) -> Arc<dyn Array> {
         self.as_box().into()
     }
 

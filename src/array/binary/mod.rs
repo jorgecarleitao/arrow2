@@ -157,13 +157,13 @@ impl<O: Offset> BinaryArray<O> {
         &self.data_type
     }
 
-    /// Returns the values of this [`Utf8Array`].
+    /// Returns the values of this [`BinaryArray`].
     #[inline]
     pub fn values(&self) -> &Buffer<u8> {
         &self.values
     }
 
-    /// Returns the offsets of this [`Utf8Array`].
+    /// Returns the offsets of this [`BinaryArray`].
     #[inline]
     pub fn offsets(&self) -> &Buffer<O> {
         &self.offsets
