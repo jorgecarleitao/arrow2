@@ -207,4 +207,8 @@ impl MutableArray for MutableStructArray {
     fn shrink_to_fit(&mut self) {
         self.shrink_to_fit()
     }
+
+    fn reserve(&mut self, additional: usize) {
+        self.reserve(additional)
+    }
 }
