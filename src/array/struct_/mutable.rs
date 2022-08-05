@@ -100,7 +100,9 @@ impl MutableStructArray {
 impl MutableStructArray {
     /// Reserves `additional` entries.
     pub fn reserve(&mut self, additional: usize) {
-        self.values.reserve(additional);
+        for v in &mut self.values {
+            v.reserve(additional);
+        }
         if let Some(x) = self.validity.as_mut() {
             x.reserve(additional)
         }
