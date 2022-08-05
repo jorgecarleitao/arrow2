@@ -1,7 +1,7 @@
 use ahash::AHashMap;
 use std::{pin::Pin, task::Poll};
 
-use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink, TryFutureExt};
+use futures::{future::BoxFuture, AsyncWrite, AsyncWriteExt, FutureExt, Sink, TryFutureExt};
 use parquet2::metadata::KeyValue;
 use parquet2::write::FileStreamer;
 use parquet2::write::WriteOptions as ParquetWriteOptions;
@@ -218,6 +218,7 @@ where
 
                     this.task = Some(Box::pin(async move {
                         writer.end(kv_meta).map_err(Error::from).await?;
+                        writer.into_inner().close().map_err(Error::from).await?;
                         Ok(None)
                     }));
                     this.poll_complete(cx)
