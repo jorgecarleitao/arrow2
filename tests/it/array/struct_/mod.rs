@@ -1,4 +1,5 @@
 mod iterator;
+mod mutable;
 
 use arrow2::array::*;
 use arrow2::bitmap::Bitmap;
