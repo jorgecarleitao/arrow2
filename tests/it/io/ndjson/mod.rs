@@ -311,3 +311,22 @@ fn case(case: &str) -> (String, Box<dyn Array>) {
         _ => todo!(),
     }
 }
+
+#[test]
+fn infer_object() -> Result<()> {
+    let data = r#"{"i64": 1, "f64": 0.1, "utf8": "foo1", "bools": true}
+    {"i64": 2, "f64": 0.2, "utf8": "foo2", "bools": false}
+    {"i64": 3, "f64": 0.3, "utf8": "foo3"}
+    {"i64": 4, "f64": 0.4, "utf8": "foo4", "bools": false}
+    "#;
+    let u64_fld = Field::new("i64", DataType::Int64, true);
+    let f64_fld = Field::new("f64", DataType::Float64, true);
+    let utf8_fld = Field::new("utf8", DataType::Utf8, true);
+    let bools_fld = Field::new("bools", DataType::Boolean, true);
+
+    let expected = DataType::Struct(vec![u64_fld, f64_fld, utf8_fld, bools_fld]);
+    let actual = infer(data)?;
+
+    assert_eq!(expected, actual);
+    Ok(())
+}

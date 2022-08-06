@@ -1,5 +1,4 @@
 use std::borrow::Borrow;
-use std::collections::BTreeMap;
 
 use indexmap::map::IndexMap as HashMap;
 use indexmap::set::IndexSet as HashSet;
@@ -30,7 +29,7 @@ fn filter_map_nulls(dt: DataType) -> Option<DataType> {
     }
 }
 
-fn infer_object(inner: &BTreeMap<String, Value>) -> Result<DataType> {
+fn infer_object(inner: &HashMap<String, Value>) -> Result<DataType> {
     let fields = inner
         .iter()
         .filter_map(|(key, value)| {
