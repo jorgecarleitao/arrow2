@@ -25,11 +25,20 @@ fn main() -> Result<(), Error> {
 
     println!("{:#?}", statistics);
 
-    // and create an iterator of
-    let reader = read::FileReader::new(reader, metadata, schema, Some(1024 * 8 * 8), None, None);
+    // say we found that we only need to read the first two row groups, "0" and "1"
+    let row_groups = metadata
+        .row_groups
+        .into_iter()
+        .enumerate()
+        .filter(|(index, _)| *index == 0 || *index == 1)
+        .map(|(_, row_group)| row_group)
+        .collect();
+
+    // we can then read the row groups into chunks
+    let chunks = read::FileReader::new(reader, row_groups, schema, Some(1024 * 8 * 8), None);
 
     let start = SystemTime::now();
-    for maybe_chunk in reader {
+    for maybe_chunk in chunks {
         let chunk = maybe_chunk?;
         assert!(!chunk.is_empty());
     }

@@ -500,7 +500,7 @@ fn all_types() -> Result<()> {
 
     let metadata = read_metadata(&mut reader)?;
     let schema = infer_schema(&metadata)?;
-    let reader = FileReader::new(reader, metadata, schema, None, None, None);
+    let reader = FileReader::new(reader, metadata.row_groups, schema, None, None);
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(batches.len(), 1);
@@ -542,7 +542,7 @@ fn all_types_chunked() -> Result<()> {
     let metadata = read_metadata(&mut reader)?;
     let schema = infer_schema(&metadata)?;
     // chunk it in 5 (so, (5,3))
-    let reader = FileReader::new(reader, metadata, schema, Some(5), None, None);
+    let reader = FileReader::new(reader, metadata.row_groups, schema, Some(5), None);
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(batches.len(), 2);
@@ -605,7 +605,7 @@ fn invalid_utf8() -> Result<()> {
 
     let metadata = read_metadata(&mut reader)?;
     let schema = infer_schema(&metadata)?;
-    let reader = FileReader::new(reader, metadata, schema, Some(5), None, None);
+    let reader = FileReader::new(reader, metadata.row_groups, schema, Some(5), None);
 
     let error = reader.collect::<Result<Vec<_>>>().unwrap_err();
     assert!(

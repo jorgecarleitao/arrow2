@@ -39,9 +39,7 @@ pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayS
 
     let statistics = deserialize(field, &metadata.row_groups)?;
 
-    let metadata = p_read::read_metadata(&mut reader)?;
-    let schema = p_read::infer_schema(&metadata)?;
-    let mut reader = p_read::FileReader::new(reader, metadata, schema, None, None, None);
+    let mut reader = p_read::FileReader::new(reader, metadata.row_groups, schema, None, None);
 
     Ok((
         reader.next().unwrap()?.into_arrays().pop().unwrap(),
@@ -1157,11 +1155,10 @@ fn integration_read(data: &[u8], limit: Option<usize>) -> Result<IntegrationRead
 
     let reader = p_read::FileReader::new(
         Cursor::new(data),
-        metadata,
+        metadata.row_groups,
         schema.clone(),
         None,
         limit,
-        None,
     );
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
@@ -1541,15 +1538,16 @@ fn filter_chunk() -> Result<()> {
     let new_schema = p_read::infer_schema(&metadata)?;
     assert_eq!(new_schema, schema);
 
-    let reader = p_read::FileReader::new(
-        reader,
-        metadata,
-        schema,
-        None,
-        None,
-        // select chunk 1
-        Some(std::sync::Arc::new(|i, _| i == 0)),
-    );
+    // select chunk 1
+    let row_groups = metadata
+        .row_groups
+        .into_iter()
+        .enumerate()
+        .filter(|(index, _)| *index == 0)
+        .map(|(_, row_group)| row_group)
+        .collect();
+
+    let reader = p_read::FileReader::new(reader, row_groups, schema, None, None);
 
     let new_chunks = reader.collect::<Result<Vec<_>>>()?;
 
