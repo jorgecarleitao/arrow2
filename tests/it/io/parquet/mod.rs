@@ -33,19 +33,15 @@ pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayS
         &schema.fields,
     )?;
 
-    let column = schema
-        .fields
-        .iter()
-        .enumerate()
-        .find_map(|(i, f)| if f.name == column { Some(i) } else { None })
-        .unwrap();
+    let schema = schema.filter(|_, f| f.name == column);
 
-    let field = &schema.fields[column];
+    let field = &schema.fields[0];
 
     let statistics = deserialize(field, &metadata.row_groups)?;
 
-    let mut reader =
-        p_read::FileReader::try_new(reader, metadata, Some(&[column]), None, None, None)?;
+    let metadata = p_read::read_metadata(&mut reader)?;
+    let schema = p_read::infer_schema(&metadata)?;
+    let mut reader = p_read::FileReader::new(reader, metadata, schema, None, None, None);
 
     Ok((
         reader.next().unwrap()?.into_arrays().pop().unwrap(),
@@ -1153,12 +1149,20 @@ type IntegrationRead = (Schema, Vec<Chunk<Box<dyn Array>>>);
 fn integration_read(data: &[u8], limit: Option<usize>) -> Result<IntegrationRead> {
     let mut reader = Cursor::new(data);
     let metadata = p_read::read_metadata(&mut reader)?;
-    let reader = p_read::FileReader::try_new(Cursor::new(data), metadata, None, None, limit, None)?;
-    let schema = reader.schema().clone();
+    let schema = p_read::infer_schema(&metadata)?;
 
     for field in &schema.fields {
-        let mut _statistics = deserialize(field, &reader.metadata().row_groups)?;
+        let mut _statistics = deserialize(field, &metadata.row_groups)?;
     }
+
+    let reader = p_read::FileReader::new(
+        Cursor::new(data),
+        metadata,
+        schema.clone(),
+        None,
+        limit,
+        None,
+    );
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
 
@@ -1534,24 +1538,21 @@ fn filter_chunk() -> Result<()> {
 
     let metadata = p_read::read_metadata(&mut reader)?;
 
-    let reader = p_read::FileReader::try_new(
+    let new_schema = p_read::infer_schema(&metadata)?;
+    assert_eq!(new_schema, schema);
+
+    let reader = p_read::FileReader::new(
         reader,
         metadata,
-        None,
+        schema,
         None,
         None,
         // select chunk 1
         Some(std::sync::Arc::new(|i, _| i == 0)),
-    )?;
-    let new_schema = reader.schema().clone();
-
-    for field in &schema.fields {
-        let mut _statistics = deserialize(field, &reader.metadata().row_groups)?;
-    }
+    );
 
     let new_chunks = reader.collect::<Result<Vec<_>>>()?;
 
-    assert_eq!(new_schema, schema);
     assert_eq!(new_chunks, vec![chunk1]);
     Ok(())
 }

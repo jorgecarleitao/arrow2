@@ -4,13 +4,10 @@ use std::sync::Arc;
 use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::Schema;
+use crate::error::Result;
 use crate::io::parquet::read::read_columns_many;
-use crate::{
-    datatypes::Field,
-    error::{Error, Result},
-};
 
-use super::{infer_schema, FileMetaData, RowGroupDeserializer, RowGroupMetaData};
+use super::{FileMetaData, RowGroupDeserializer, RowGroupMetaData};
 
 type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool + Send + Sync>;
 
@@ -20,88 +17,37 @@ type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool + Send + Sync>;
 /// mapped to an [`Iterator<Item=Chunk>`] and each iterator is iterated upon until either the limit
 /// or the last iterator ends.
 /// # Implementation
-/// This iterator mixes IO-bounded and CPU-bounded operations.
+/// This iterator is single threaded on both IO-bounded and CPU-bounded tasks, and mixes them.
 pub struct FileReader<R: Read + Seek> {
     row_groups: RowGroupReader<R>,
-    metadata: FileMetaData,
     remaining_rows: usize,
     current_row_group: Option<RowGroupDeserializer>,
 }
 
 impl<R: Read + Seek> FileReader<R> {
     /// Returns a new [`FileReader`].
-    ///
-    /// # Error
-    /// This function errors iff:
-    /// * it is not possible to derive an arrow schema from the parquet file
-    /// * the projection contains columns that do not exist
-    pub fn try_new(
+    pub fn new(
         reader: R,
         metadata: FileMetaData,
-        projection: Option<&[usize]>,
+        schema: Schema,
         chunk_size: Option<usize>,
         limit: Option<usize>,
         groups_filter: Option<GroupFilter>,
-    ) -> Result<Self> {
-        let schema = infer_schema(&metadata)?;
-
-        let schema_metadata = schema.metadata;
-        let fields: Vec<Field> = if let Some(projection) = &projection {
-            schema
-                .fields
-                .into_iter()
-                .enumerate()
-                .filter_map(|(index, f)| {
-                    if projection.iter().any(|&i| i == index) {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                })
-                .collect()
-        } else {
-            schema.fields.into_iter().collect()
-        };
-
-        if let Some(projection) = &projection {
-            if fields.len() != projection.len() {
-                return Err(Error::InvalidArgumentError(
-                    "While reading parquet, some columns in the projection do not exist in the file"
-                        .to_string(),
-                ));
-            }
-        }
-
-        let schema = Schema {
-            fields,
-            metadata: schema_metadata,
-        };
-
+    ) -> Self {
         let row_groups = RowGroupReader::new(
             reader,
             schema,
             groups_filter,
-            metadata.row_groups.clone(),
+            metadata.row_groups,
             chunk_size,
             limit,
         );
 
-        Ok(Self {
+        Self {
             row_groups,
-            metadata,
             remaining_rows: limit.unwrap_or(usize::MAX),
             current_row_group: None,
-        })
-    }
-
-    /// Returns the derived arrow [`Schema`] of the file
-    pub fn schema(&self) -> &Schema {
-        &self.row_groups.schema
-    }
-
-    /// Returns parquet's [`FileMetaData`].
-    pub fn metadata(&self) -> &FileMetaData {
-        &self.metadata
+        }
     }
 
     /// Sets the groups filter
@@ -239,12 +185,10 @@ impl<R: Read + Seek> RowGroupReader<R> {
 
         let result = RowGroupDeserializer::new(
             column_chunks,
-            row_group.num_rows() as usize,
+            row_group.num_rows(),
             Some(self.remaining_rows),
         );
-        self.remaining_rows = self
-            .remaining_rows
-            .saturating_sub(row_group.num_rows() as usize);
+        self.remaining_rows = self.remaining_rows.saturating_sub(row_group.num_rows());
         Ok(Some(result))
     }
 }

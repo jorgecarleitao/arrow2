@@ -1,29 +1,32 @@
 use std::fs::File;
 use std::time::SystemTime;
 
-use arrow2::error::Result;
+use arrow2::error::Error;
 use arrow2::io::parquet::read;
 
-fn main() -> Result<()> {
+fn main() -> Result<(), Error> {
+    // say we have a file
     use std::env;
     let args: Vec<String> = env::args().collect();
-
     let file_path = &args[1];
-
     let mut reader = File::open(file_path)?;
 
+    // we can read its metadata:
     let metadata = read::read_metadata(&mut reader)?;
-    let reader = read::FileReader::try_new(reader, metadata, None, Some(1024 * 8 * 8), None, None)?;
 
-    println!("{:#?}", reader.schema());
+    // and infer a [`Schema`] from the `metadata`.
+    let schema = read::infer_schema(&metadata)?;
 
-    // say we want to evaluate if the we can skip some row groups based on a field's value
-    let field = &reader.schema().fields[0];
+    // we can filter the columns we need (here we select all)
+    let schema = schema.filter(|_index, _field| true);
 
-    // we can deserialize the parquet statistics from this field
-    let statistics = read::statistics::deserialize(field, &reader.metadata().row_groups)?;
+    // we can read the statistics of all parquet's row groups (here for the first field)
+    let statistics = read::statistics::deserialize(&schema.fields[0], &metadata.row_groups)?;
 
     println!("{:#?}", statistics);
+
+    // and create an iterator of
+    let reader = read::FileReader::new(reader, metadata, schema, Some(1024 * 8 * 8), None, None);
 
     let start = SystemTime::now();
     for maybe_chunk in reader {
