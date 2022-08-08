@@ -260,8 +260,6 @@ pub async fn read_columns_many_async<
     field_columns
         .into_iter()
         .zip(fields.into_iter())
-        .map(|(columns, field)| {
-            to_deserializer(columns, field, row_group.num_rows() as usize, chunk_size)
-        })
+        .map(|(columns, field)| to_deserializer(columns, field, row_group.num_rows(), chunk_size))
         .collect()
 }

@@ -63,7 +63,7 @@ async fn test_parquet_async_roundtrip() {
         let column_chunks = read_columns_many_async(factory, group, schema.fields.clone(), None)
             .await
             .unwrap();
-        let chunks = RowGroupDeserializer::new(column_chunks, group.num_rows() as usize, None);
+        let chunks = RowGroupDeserializer::new(column_chunks, group.num_rows(), None);
         let mut chunks = chunks.collect::<Result<Vec<_>>>().unwrap();
         out.append(&mut chunks);
     }

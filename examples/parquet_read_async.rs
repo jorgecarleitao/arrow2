@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
         // the runtime.
         // Furthermore, this operation is trivially paralellizable e.g. via rayon, as each iterator
         // can be advanced in parallel (parallel decompression and deserialization).
-        let chunks = RowGroupDeserializer::new(column_chunks, row_group.num_rows() as usize, None);
+        let chunks = RowGroupDeserializer::new(column_chunks, row_group.num_rows(), None);
         for maybe_chunk in chunks {
             let chunk = maybe_chunk?;
             println!("{}", chunk.len());
