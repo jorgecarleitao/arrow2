@@ -1,9 +1,9 @@
 use std::io::Cursor;
 
+use arrow2::chunk::Chunk;
 use arrow2::error::Error;
 use arrow2::{array::*, datatypes::*, error::Result, io::parquet::read::*, io::parquet::write::*};
 use parquet2::indexes::{compute_rows, select_pages};
-use parquet2::read::IndexedPageReader;
 
 /// Returns 2 sets of pages with different the same number of rows distributed un-evenly
 fn pages(
@@ -75,6 +75,11 @@ fn read_with_indexes(
     (pages1, pages2, schema): (Vec<EncodedPage>, Vec<EncodedPage>, Schema),
     expected: Box<dyn Array>,
 ) -> Result<()> {
+    let expected = Chunk::new(vec![
+        PrimitiveArray::<i64>::from_slice([5]).boxed(),
+        expected,
+    ]);
+
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
@@ -103,32 +108,56 @@ fn read_with_indexes(
 
     let schema = infer_schema(&metadata)?;
 
-    let row_group = &metadata.row_groups[0];
+    // todo: enable filter and projection pushdown...
+    //let schema = schema.filter(|index, _| index == 1);
 
-    let pages = read_pages_locations(&mut reader, row_group.columns())?;
+    // per row group,
+    // per field,
+    // per column,
+    let pages = metadata
+        .row_groups
+        .iter()
+        .map(|row_group| {
+            // one vec per column
+            let locations = read_pages_locations(&mut reader, row_group.columns())?;
 
-    // say we concluded from the indexes that we only needed the "6" from the first column, so second page.
-    let _indexes = read_columns_indexes(&mut reader, row_group.columns(), &schema.fields)?;
-    let intervals = compute_rows(&[false, true, false], &pages[0], row_group.num_rows())?;
+            // one column index per column
+            let _indexes = read_columns_indexes(&mut reader, row_group.columns(), &schema.fields)?;
+            // say we concluded from the indexes from column 0 that we only needed the second page
+            let selected_0 = &[false, true, false];
 
-    // based on the intervals from c1, we compute which pages from the second column are required:
-    let pages = select_pages(&intervals, &pages[1], row_group.num_rows())?;
+            let intervals = compute_rows(selected_0, &locations[0], row_group.num_rows())?;
+            // for multiple page filters, perform an OR over intervals.
 
-    // and read them:
-    let c1 = &metadata.row_groups[0].columns()[1];
+            schema
+                .fields
+                .iter()
+                .map(|field| &field.name)
+                .map(|field_name| {
+                    // one vec per field
+                    let locations = get_field_pages(row_group.columns(), &locations, field_name);
 
-    let pages = IndexedPageReader::new(reader, c1, pages, vec![], vec![]);
-    let pages = BasicDecompressor::new(pages, vec![]);
+                    let pages = locations
+                        .into_iter()
+                        .map(|locations| select_pages(&intervals, locations, row_group.num_rows()))
+                        .collect::<std::result::Result<Vec<_>, ParquetError>>()?;
 
-    let arrays = column_iter_to_arrays(
-        vec![pages],
-        vec![&c1.descriptor().descriptor.primitive_type],
-        schema.fields[1].clone(),
+                    Ok(pages)
+                })
+                .collect()
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    let chunks = FileReader::new(
+        reader,
+        metadata.row_groups,
+        schema,
+        Some(1024 * 8 * 8),
         None,
-        row_group.num_rows(),
-    )?;
+        Some(pages),
+    );
 
-    let arrays = arrays.collect::<Result<Vec<_>>>()?;
+    let arrays = chunks.collect::<Result<Vec<_>>>()?;
 
     assert_eq!(arrays, vec![expected]);
     Ok(())

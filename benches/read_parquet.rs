@@ -41,7 +41,7 @@ fn read_chunk(buffer: &[u8], size: usize, column: usize) -> Result<()> {
 
     let schema = schema.filter(|index, _| index == column);
 
-    let reader = read::FileReader::new(reader, metadata.row_groups, schema, None, None);
+    let reader = read::FileReader::new(reader, metadata.row_groups, schema, None, None, None);
 
     for maybe_chunk in reader {
         let columns = maybe_chunk?;

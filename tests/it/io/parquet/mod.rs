@@ -39,7 +39,7 @@ pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayS
 
     let statistics = deserialize(field, &metadata.row_groups)?;
 
-    let mut reader = p_read::FileReader::new(reader, metadata.row_groups, schema, None, None);
+    let mut reader = p_read::FileReader::new(reader, metadata.row_groups, schema, None, None, None);
 
     Ok((
         reader.next().unwrap()?.into_arrays().pop().unwrap(),
@@ -1171,6 +1171,7 @@ fn integration_read(data: &[u8], limit: Option<usize>) -> Result<IntegrationRead
         schema.clone(),
         None,
         limit,
+        None,
     );
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
@@ -1559,7 +1560,7 @@ fn filter_chunk() -> Result<()> {
         .map(|(_, row_group)| row_group)
         .collect();
 
-    let reader = p_read::FileReader::new(reader, row_groups, schema, None, None);
+    let reader = p_read::FileReader::new(reader, row_groups, schema, None, None, None);
 
     let new_chunks = reader.collect::<Result<Vec<_>>>()?;
 

@@ -35,7 +35,7 @@ fn main() -> Result<(), Error> {
         .collect();
 
     // we can then read the row groups into chunks
-    let chunks = read::FileReader::new(reader, row_groups, schema, Some(1024 * 8 * 8), None);
+    let chunks = read::FileReader::new(reader, row_groups, schema, Some(1024 * 8 * 8), None, None);
 
     let start = SystemTime::now();
     for maybe_chunk in chunks {

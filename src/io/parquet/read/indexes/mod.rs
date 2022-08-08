@@ -45,7 +45,7 @@ impl ColumnIndex {
 ///
 /// This function maps timestamps, decimal types, etc. accordingly.
 /// # Implementation
-/// This function is CPU-bounded but `O(P)` where `P` is the total number of pages in all columns.
+/// This function is CPU-bounded `O(P)` where `P` is the total number of pages in all columns.
 /// # Error
 /// This function errors iff the value is not deserializable to arrow (e.g. invalid utf-8)
 fn deserialize(
@@ -115,6 +115,8 @@ fn populate_dt(data_type: &DataType, container: &mut Vec<DataType>) {
 
 /// Reads the column indexes from the reader assuming a valid set of derived Arrow fields
 /// for all parquet the columns in the file.
+///
+/// It returns one [`ColumnIndex`] per field in `fields`
 ///
 /// This function is expected to be used to filter out parquet pages.
 ///
