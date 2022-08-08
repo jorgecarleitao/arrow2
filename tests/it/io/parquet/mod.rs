@@ -1150,8 +1150,7 @@ fn integration_write(schema: &Schema, chunks: &[Chunk<Box<dyn Array>>]) -> Resul
 type IntegrationRead = (Schema, Vec<Chunk<Box<dyn Array>>>);
 
 fn integration_read(data: &[u8], limit: Option<usize>) -> Result<IntegrationRead> {
-    let reader = Cursor::new(data);
-    let reader = FileReader::try_new(reader, None, None, limit, None)?;
+    let reader = FileReader::try_new(Cursor::new(data), None, None, limit, None)?;
     let schema = reader.schema().clone();
 
     for field in &schema.fields {
@@ -1518,4 +1517,33 @@ fn nested_dict_limit() -> Result<()> {
     let (schema, chunk) = nested_dict_data(DataType::Float32)?;
 
     assert_roundtrip(schema, chunk, Some(2))
+}
+
+#[test]
+fn filter_chunk() -> Result<()> {
+    let chunk1 = Chunk::new(vec![PrimitiveArray::from_slice([1i16, 3]).boxed()]);
+    let chunk2 = Chunk::new(vec![PrimitiveArray::from_slice([2i16, 4]).boxed()]);
+    let schema = Schema::from(vec![Field::new("c1", DataType::Int16, true)]);
+
+    let r = integration_write(&schema, &[chunk1.clone(), chunk2.clone()])?;
+
+    let reader = FileReader::try_new(
+        Cursor::new(r),
+        None,
+        None,
+        None,
+        // select chunk 1
+        Some(std::sync::Arc::new(|i, _| i == 0)),
+    )?;
+    let new_schema = reader.schema().clone();
+
+    for field in &schema.fields {
+        let mut _statistics = deserialize(field, &reader.metadata().row_groups)?;
+    }
+
+    let new_chunks = reader.collect::<Result<Vec<_>>>()?;
+
+    assert_eq!(new_schema, schema);
+    assert_eq!(new_chunks, vec![chunk1]);
+    Ok(())
 }
