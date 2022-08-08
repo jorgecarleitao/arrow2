@@ -496,9 +496,10 @@ fn v1_map_nullable() -> Result<()> {
 #[test]
 fn all_types() -> Result<()> {
     let path = "testing/parquet-testing/data/alltypes_plain.parquet";
-    let reader = std::fs::File::open(path)?;
+    let mut reader = std::fs::File::open(path)?;
 
-    let reader = FileReader::try_new(reader, None, None, None, None)?;
+    let metadata = read_metadata(&mut reader)?;
+    let reader = FileReader::try_new(reader, metadata, None, None, None, None)?;
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(batches.len(), 1);
@@ -535,10 +536,11 @@ fn all_types() -> Result<()> {
 fn all_types_chunked() -> Result<()> {
     // this has one batch with 8 elements
     let path = "testing/parquet-testing/data/alltypes_plain.parquet";
-    let reader = std::fs::File::open(path)?;
+    let mut reader = std::fs::File::open(path)?;
 
+    let metadata = read_metadata(&mut reader)?;
     // chunk it in 5 (so, (5,3))
-    let reader = FileReader::try_new(reader, None, Some(5), None, None)?;
+    let reader = FileReader::try_new(reader, metadata, None, Some(5), None, None)?;
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
     assert_eq!(batches.len(), 2);
@@ -584,7 +586,7 @@ fn all_types_chunked() -> Result<()> {
 
 #[cfg(feature = "io_parquet_compression")]
 #[test]
-fn invalid_utf8() {
+fn invalid_utf8() -> Result<()> {
     let invalid_data = &[
         0x50, 0x41, 0x52, 0x31, 0x15, 0x00, 0x15, 0x24, 0x15, 0x28, 0x2c, 0x15, 0x02, 0x15, 0x00,
         0x15, 0x06, 0x15, 0x08, 0x00, 0x00, 0x12, 0x44, 0x02, 0x00, 0x00, 0x00, 0x03, 0xff, 0x08,
@@ -597,8 +599,10 @@ fn invalid_utf8() {
         0x42, 0x00, 0x51, 0x00, 0x00, 0x00, 0x50, 0x41, 0x52, 0x31,
     ];
 
-    let reader = Cursor::new(invalid_data);
-    let reader = FileReader::try_new(reader, None, Some(5), None, None).unwrap();
+    let mut reader = Cursor::new(invalid_data);
+
+    let metadata = read_metadata(&mut reader)?;
+    let reader = FileReader::try_new(reader, metadata, None, Some(5), None, None)?;
 
     let error = reader.collect::<Result<Vec<_>>>().unwrap_err();
     assert!(
@@ -606,4 +610,5 @@ fn invalid_utf8() {
         "unexpected error: {}",
         error
     );
+    Ok(())
 }
