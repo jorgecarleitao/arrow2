@@ -10,7 +10,7 @@ use crate::{
     error::{Error, Result},
 };
 
-use super::{infer_schema, read_metadata, FileMetaData, RowGroupDeserializer, RowGroupMetaData};
+use super::{infer_schema, FileMetaData, RowGroupDeserializer, RowGroupMetaData};
 
 type GroupFilter = Arc<dyn Fn(usize, &RowGroupMetaData) -> bool + Send + Sync>;
 
@@ -29,23 +29,20 @@ pub struct FileReader<R: Read + Seek> {
 }
 
 impl<R: Read + Seek> FileReader<R> {
-    /// Creates a new [`FileReader`] by reading the metadata from `reader` and constructing
-    /// Arrow's schema from it.
+    /// Returns a new [`FileReader`].
     ///
     /// # Error
     /// This function errors iff:
-    /// * reading the metadata from the reader fails
     /// * it is not possible to derive an arrow schema from the parquet file
     /// * the projection contains columns that do not exist
     pub fn try_new(
-        mut reader: R,
+        reader: R,
+        metadata: FileMetaData,
         projection: Option<&[usize]>,
         chunk_size: Option<usize>,
         limit: Option<usize>,
         groups_filter: Option<GroupFilter>,
     ) -> Result<Self> {
-        let metadata = read_metadata(&mut reader)?;
-
         let schema = infer_schema(&metadata)?;
 
         let schema_metadata = schema.metadata;

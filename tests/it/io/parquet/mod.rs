@@ -7,8 +7,8 @@ use arrow2::{
     chunk::Chunk,
     datatypes::*,
     error::Result,
+    io::parquet::read as p_read,
     io::parquet::read::statistics::*,
-    io::parquet::read::*,
     io::parquet::write::*,
     types::{days_ms, NativeType},
 };
@@ -23,11 +23,11 @@ mod write_async;
 type ArrayStats = (Box<dyn Array>, Statistics);
 
 pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayStats> {
-    let metadata = read_metadata(&mut reader)?;
-    let schema = infer_schema(&metadata)?;
+    let metadata = p_read::read_metadata(&mut reader)?;
+    let schema = p_read::infer_schema(&metadata)?;
 
     // verify that we can read indexes
-    let _indexes = read_columns_indexes(
+    let _indexes = p_read::read_columns_indexes(
         &mut reader,
         metadata.row_groups[0].columns(),
         &schema.fields,
@@ -40,11 +40,12 @@ pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayS
         .find_map(|(i, f)| if f.name == column { Some(i) } else { None })
         .unwrap();
 
-    let mut reader = FileReader::try_new(reader, Some(&[column]), None, None, None)?;
-
     let field = &schema.fields[column];
 
     let statistics = deserialize(field, &metadata.row_groups)?;
+
+    let mut reader =
+        p_read::FileReader::try_new(reader, metadata, Some(&[column]), None, None, None)?;
 
     Ok((
         reader.next().unwrap()?.into_arrays().pop().unwrap(),
@@ -1150,7 +1151,9 @@ fn integration_write(schema: &Schema, chunks: &[Chunk<Box<dyn Array>>]) -> Resul
 type IntegrationRead = (Schema, Vec<Chunk<Box<dyn Array>>>);
 
 fn integration_read(data: &[u8], limit: Option<usize>) -> Result<IntegrationRead> {
-    let reader = FileReader::try_new(Cursor::new(data), None, None, limit, None)?;
+    let mut reader = Cursor::new(data);
+    let metadata = p_read::read_metadata(&mut reader)?;
+    let reader = p_read::FileReader::try_new(Cursor::new(data), metadata, None, None, limit, None)?;
     let schema = reader.schema().clone();
 
     for field in &schema.fields {
@@ -1527,8 +1530,13 @@ fn filter_chunk() -> Result<()> {
 
     let r = integration_write(&schema, &[chunk1.clone(), chunk2.clone()])?;
 
-    let reader = FileReader::try_new(
-        Cursor::new(r),
+    let mut reader = Cursor::new(r);
+
+    let metadata = p_read::read_metadata(&mut reader)?;
+
+    let reader = p_read::FileReader::try_new(
+        reader,
+        metadata,
         None,
         None,
         None,
