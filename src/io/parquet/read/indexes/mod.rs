@@ -10,14 +10,17 @@ mod boolean;
 mod fixed_len_binary;
 mod primitive;
 
+use std::collections::VecDeque;
 use std::io::{Read, Seek};
 
-use crate::datatypes::Field;
+use crate::datatypes::{Field, PrimitiveType};
 use crate::{
     array::{Array, UInt64Array},
-    datatypes::DataType,
+    datatypes::{DataType, PhysicalType},
     error::Error,
 };
+
+use super::get_field_pages;
 
 /// Arrow-deserialized [`ColumnIndex`] containing the minimum and maximum value
 /// of every page from the column.
@@ -49,67 +52,91 @@ impl ColumnIndex {
 /// # Error
 /// This function errors iff the value is not deserializable to arrow (e.g. invalid utf-8)
 fn deserialize(
-    indexes: &[Box<dyn ParquetIndex>],
-    data_types: Vec<DataType>,
-) -> Result<Vec<ColumnIndex>, Error> {
-    indexes
-        .iter()
-        .zip(data_types.into_iter())
-        .map(|(index, data_type)| match index.physical_type() {
-            ParquetPhysicalType::Boolean => {
-                let index = index.as_any().downcast_ref::<BooleanIndex>().unwrap();
-                Ok(boolean::deserialize(&index.indexes))
+    mut indexes: VecDeque<&Box<dyn ParquetIndex>>,
+    data_type: DataType,
+) -> Result<ColumnIndex, Error> {
+    match data_type.to_physical_type() {
+        PhysicalType::Boolean => {
+            let index = indexes
+                .pop_front()
+                .unwrap()
+                .as_any()
+                .downcast_ref::<BooleanIndex>()
+                .unwrap();
+            Ok(boolean::deserialize(&index.indexes))
+        }
+        PhysicalType::Primitive(PrimitiveType::Int32) => {
+            let index = indexes
+                .pop_front()
+                .unwrap()
+                .as_any()
+                .downcast_ref::<NativeIndex<i32>>()
+                .unwrap();
+            Ok(primitive::deserialize_i32(&index.indexes, data_type))
+        }
+        PhysicalType::Primitive(PrimitiveType::Int64) => {
+            let index = indexes.pop_front().unwrap();
+            match index.physical_type() {
+                ParquetPhysicalType::Int64 => {
+                    let index = index.as_any().downcast_ref::<NativeIndex<i64>>().unwrap();
+                    Ok(primitive::deserialize_i64(
+                        &index.indexes,
+                        &index.primitive_type,
+                        data_type,
+                    ))
+                }
+                parquet2::schema::types::PhysicalType::Int96 => {
+                    let index = index
+                        .as_any()
+                        .downcast_ref::<NativeIndex<[u32; 3]>>()
+                        .unwrap();
+                    Ok(primitive::deserialize_i96(&index.indexes, data_type))
+                }
+                other => Err(Error::nyi(format!(
+                    "Deserialize {other:?} to arrow's int64"
+                ))),
             }
-            ParquetPhysicalType::Int32 => {
-                let index = index.as_any().downcast_ref::<NativeIndex<i32>>().unwrap();
-                Ok(primitive::deserialize_i32(&index.indexes, data_type))
-            }
-            ParquetPhysicalType::Int64 => {
-                let index = index.as_any().downcast_ref::<NativeIndex<i64>>().unwrap();
-                Ok(primitive::deserialize_i64(
-                    &index.indexes,
-                    &index.primitive_type,
-                    data_type,
-                ))
-            }
-            ParquetPhysicalType::Int96 => {
-                let index = index
-                    .as_any()
-                    .downcast_ref::<NativeIndex<[u32; 3]>>()
-                    .unwrap();
-                Ok(primitive::deserialize_i96(&index.indexes, data_type))
-            }
-            ParquetPhysicalType::Float => {
-                let index = index.as_any().downcast_ref::<NativeIndex<f32>>().unwrap();
-                Ok(primitive::deserialize_id(&index.indexes, data_type))
-            }
-            ParquetPhysicalType::Double => {
-                let index = index.as_any().downcast_ref::<NativeIndex<f64>>().unwrap();
-                Ok(primitive::deserialize_id(&index.indexes, data_type))
-            }
-            ParquetPhysicalType::ByteArray => {
-                let index = index.as_any().downcast_ref::<ByteIndex>().unwrap();
-                binary::deserialize(&index.indexes, &data_type)
-            }
-            ParquetPhysicalType::FixedLenByteArray(_) => {
-                let index = index.as_any().downcast_ref::<FixedLenByteIndex>().unwrap();
-                Ok(fixed_len_binary::deserialize(&index.indexes, data_type))
-            }
-        })
-        .collect()
-}
-
-// recursive function to get the corresponding leaf data_types corresponding to the
-// parquet columns
-fn populate_dt(data_type: &DataType, container: &mut Vec<DataType>) {
-    match data_type.to_logical_type() {
-        DataType::List(inner) => populate_dt(&inner.data_type, container),
-        DataType::LargeList(inner) => populate_dt(&inner.data_type, container),
-        DataType::Dictionary(_, inner, _) => populate_dt(inner, container),
-        DataType::Struct(fields) => fields
-            .iter()
-            .for_each(|f| populate_dt(&f.data_type, container)),
-        _ => container.push(data_type.clone()),
+        }
+        PhysicalType::Primitive(PrimitiveType::Float32) => {
+            let index = indexes
+                .pop_front()
+                .unwrap()
+                .as_any()
+                .downcast_ref::<NativeIndex<f32>>()
+                .unwrap();
+            Ok(primitive::deserialize_id(&index.indexes, data_type))
+        }
+        PhysicalType::Primitive(PrimitiveType::Float64) => {
+            let index = indexes
+                .pop_front()
+                .unwrap()
+                .as_any()
+                .downcast_ref::<NativeIndex<f64>>()
+                .unwrap();
+            Ok(primitive::deserialize_id(&index.indexes, data_type))
+        }
+        PhysicalType::Binary
+        | PhysicalType::LargeBinary
+        | PhysicalType::Utf8
+        | PhysicalType::LargeUtf8 => {
+            let index = indexes
+                .pop_front()
+                .unwrap()
+                .as_any()
+                .downcast_ref::<ByteIndex>()
+                .unwrap();
+            binary::deserialize(&index.indexes, &data_type)
+        }
+        PhysicalType::FixedSizeBinary => {
+            let index = indexes
+                .pop_front()
+                .unwrap()
+                .as_any()
+                .downcast_ref::<FixedLenByteIndex>()
+                .unwrap();
+            Ok(fixed_len_binary::deserialize(&index.indexes, data_type))
+        }
+        _ => todo!(),
     }
 }
 
@@ -131,13 +158,13 @@ pub fn read_columns_indexes<R: Read + Seek>(
 ) -> Result<Vec<ColumnIndex>, Error> {
     let indexes = _read_columns_indexes(reader, chunks)?;
 
-    // map arrow fields to the corresponding columns in parquet taking into account
-    // that fields may be nested but parquet column indexes are only leaf columns
-    let mut data_types = vec![];
     fields
         .iter()
-        .map(|f| &f.data_type)
-        .for_each(|d| populate_dt(d, &mut data_types));
+        .map(|field| {
+            let indexes = get_field_pages(chunks, &indexes, &field.name);
+            let indexes = indexes.into_iter().collect();
 
-    deserialize(&indexes, data_types)
+            deserialize(indexes, field.data_type.clone())
+        })
+        .collect()
 }

@@ -75,11 +75,6 @@ fn read_with_indexes(
     (pages1, pages2, schema): (Vec<EncodedPage>, Vec<EncodedPage>, Schema),
     expected: Box<dyn Array>,
 ) -> Result<()> {
-    let expected = Chunk::new(vec![
-        PrimitiveArray::<i64>::from_slice([5]).boxed(),
-        expected,
-    ]);
-
     let options = WriteOptions {
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
@@ -108,8 +103,9 @@ fn read_with_indexes(
 
     let schema = infer_schema(&metadata)?;
 
-    // todo: enable filter and projection pushdown...
-    //let schema = schema.filter(|index, _| index == 1);
+    // apply projection pushdown
+    let schema = schema.filter(|index, _| index == 1);
+    let expected = Chunk::new(vec![expected]);
 
     // per row group,
     // per field,
