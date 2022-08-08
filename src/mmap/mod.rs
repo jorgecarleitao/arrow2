@@ -8,7 +8,7 @@ use crate::datatypes::{DataType, Field};
 use crate::error::Error;
 use crate::ffi::mmap;
 
-use crate::io::ipc::read::reader::{get_dictionary_batch, get_record_batch};
+use crate::io::ipc::read::file::{get_dictionary_batch, get_record_batch};
 use crate::io::ipc::read::{first_dict_field, Dictionaries, FileMetadata};
 use crate::io::ipc::read::{IpcBuffer, Node, OutOfSpecKind};
 use crate::io::ipc::{IpcField, CONTINUATION_MARKER};
