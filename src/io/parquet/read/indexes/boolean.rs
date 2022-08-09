@@ -16,6 +16,7 @@ pub fn deserialize(indexes: &[PageIndex<bool>]) -> ColumnIndex {
             indexes
                 .iter()
                 .map(|index| index.null_count.map(|x| x as u64)),
-        ),
+        )
+        .boxed(),
     }
 }

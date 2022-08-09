@@ -27,11 +27,13 @@ pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayS
     let schema = p_read::infer_schema(&metadata)?;
 
     // verify that we can read indexes
-    let _indexes = p_read::read_columns_indexes(
-        &mut reader,
-        metadata.row_groups[0].columns(),
-        &schema.fields,
-    )?;
+    if p_read::has_indexes(&metadata.row_groups) {
+        let _indexes = p_read::read_columns_indexes(
+            &mut reader,
+            metadata.row_groups[0].columns(),
+            &schema.fields,
+        )?;
+    }
 
     let schema = schema.filter(|_, f| f.name == column);
 

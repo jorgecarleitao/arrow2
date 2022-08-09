@@ -151,7 +151,8 @@ pub fn deserialize_i32(indexes: &[PageIndex<i32>], data_type: DataType) -> Colum
             indexes
                 .iter()
                 .map(|index| index.null_count.map(|x| x as u64)),
-        ),
+        )
+        .boxed(),
     }
 }
 
@@ -175,7 +176,8 @@ pub fn deserialize_i64(
             indexes
                 .iter()
                 .map(|index| index.null_count.map(|x| x as u64)),
-        ),
+        )
+        .boxed(),
     }
 }
 
@@ -187,7 +189,8 @@ pub fn deserialize_i96(indexes: &[PageIndex<[u32; 3]>], data_type: DataType) -> 
             indexes
                 .iter()
                 .map(|index| index.null_count.map(|x| x as u64)),
-        ),
+        )
+        .boxed(),
     }
 }
 
@@ -199,6 +202,7 @@ pub fn deserialize_id<T: NativeType>(indexes: &[PageIndex<T>], data_type: DataTy
             indexes
                 .iter()
                 .map(|index| index.null_count.map(|x| x as u64)),
-        ),
+        )
+        .boxed(),
     }
 }

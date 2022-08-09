@@ -20,7 +20,8 @@ pub fn deserialize(
             indexes
                 .iter()
                 .map(|index| index.null_count.map(|x| x as u64)),
-        ),
+        )
+        .boxed(),
     })
 }
 

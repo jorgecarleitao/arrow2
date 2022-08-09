@@ -19,7 +19,8 @@ pub fn deserialize(indexes: &[PageIndex<Vec<u8>>], data_type: DataType) -> Colum
             indexes
                 .iter()
                 .map(|index| index.null_count.map(|x| x as u64)),
-        ),
+        )
+        .boxed(),
     }
 }
 
