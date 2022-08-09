@@ -1,30 +1,44 @@
 use std::fs::File;
 use std::time::SystemTime;
 
-use arrow2::error::Result;
+use arrow2::error::Error;
 use arrow2::io::parquet::read;
 
-fn main() -> Result<()> {
+fn main() -> Result<(), Error> {
+    // say we have a file
     use std::env;
     let args: Vec<String> = env::args().collect();
-
     let file_path = &args[1];
+    let mut reader = File::open(file_path)?;
 
-    let reader = File::open(file_path)?;
-    let reader = read::FileReader::try_new(reader, None, Some(1024 * 8 * 8), None, None)?;
+    // we can read its metadata:
+    let metadata = read::read_metadata(&mut reader)?;
 
-    println!("{:#?}", reader.schema());
+    // and infer a [`Schema`] from the `metadata`.
+    let schema = read::infer_schema(&metadata)?;
 
-    // say we want to evaluate if the we can skip some row groups based on a field's value
-    let field = &reader.schema().fields[0];
+    // we can filter the columns we need (here we select all)
+    let schema = schema.filter(|_index, _field| true);
 
-    // we can deserialize the parquet statistics from this field
-    let statistics = read::statistics::deserialize(field, &reader.metadata().row_groups)?;
+    // we can read the statistics of all parquet's row groups (here for the first field)
+    let statistics = read::statistics::deserialize(&schema.fields[0], &metadata.row_groups)?;
 
     println!("{:#?}", statistics);
 
+    // say we found that we only need to read the first two row groups, "0" and "1"
+    let row_groups = metadata
+        .row_groups
+        .into_iter()
+        .enumerate()
+        .filter(|(index, _)| *index == 0 || *index == 1)
+        .map(|(_, row_group)| row_group)
+        .collect();
+
+    // we can then read the row groups into chunks
+    let chunks = read::FileReader::new(reader, row_groups, schema, Some(1024 * 8 * 8), None);
+
     let start = SystemTime::now();
-    for maybe_chunk in reader {
+    for maybe_chunk in chunks {
         let chunk = maybe_chunk?;
         assert!(!chunk.is_empty());
     }

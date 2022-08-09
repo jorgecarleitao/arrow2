@@ -71,7 +71,7 @@ async fn main() -> Result<()> {
 
     // this is CPU-bounded and should be sent to a separate thread-pool.
     // We do it here for simplicity
-    let chunks = read::RowGroupDeserializer::new(column_chunks, group.num_rows() as usize, None);
+    let chunks = read::RowGroupDeserializer::new(column_chunks, group.num_rows(), None);
     let chunks = chunks.collect::<Result<Vec<_>>>()?;
 
     // this is a single chunk because chunk_size is `None`

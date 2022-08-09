@@ -26,6 +26,28 @@ impl Schema {
             metadata,
         }
     }
+
+    /// Returns a new [`Schema`] with a subset of all fields whose `predicate`
+    /// evaluates to true.
+    pub fn filter<F: Fn(usize, &Field) -> bool>(self, predicate: F) -> Self {
+        let fields = self
+            .fields
+            .into_iter()
+            .enumerate()
+            .filter_map(|(index, f)| {
+                if (predicate)(index, &f) {
+                    Some(f)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Schema {
+            fields,
+            metadata: self.metadata,
+        }
+    }
 }
 
 impl From<Vec<Field>> for Schema {

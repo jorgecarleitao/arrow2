@@ -32,10 +32,16 @@ fn to_buffer(
     buffer
 }
 
-fn read_batch(buffer: &[u8], size: usize, column: usize) -> Result<()> {
-    let file = Cursor::new(buffer);
+fn read_chunk(buffer: &[u8], size: usize, column: usize) -> Result<()> {
+    let mut reader = Cursor::new(buffer);
 
-    let reader = read::FileReader::try_new(file, Some(&[column]), None, None, None)?;
+    let metadata = read::read_metadata(&mut reader)?;
+
+    let schema = read::infer_schema(&metadata)?;
+
+    let schema = schema.filter(|index, _| index == column);
+
+    let reader = read::FileReader::new(reader, metadata.row_groups, schema, None, None);
 
     for maybe_chunk in reader {
         let columns = maybe_chunk?;
@@ -49,43 +55,43 @@ fn add_benchmark(c: &mut Criterion) {
         let size = 2usize.pow(i);
         let buffer = to_buffer(size, true, false, false, false);
         let a = format!("read i64 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 0).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 0).unwrap()));
 
         let a = format!("read utf8 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 2).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 2).unwrap()));
 
         let a = format!("read utf8 large 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 6).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 6).unwrap()));
 
         let a = format!("read utf8 emoji 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 12).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 12).unwrap()));
 
         let a = format!("read bool 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 3).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 3).unwrap()));
 
         let buffer = to_buffer(size, true, true, false, false);
         let a = format!("read utf8 dict 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 2).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 2).unwrap()));
 
         let buffer = to_buffer(size, true, false, false, true);
         let a = format!("read i64 snappy 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 0).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 0).unwrap()));
 
         let buffer = to_buffer(size, true, false, true, false);
         let a = format!("read utf8 multi 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 2).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 2).unwrap()));
 
         let buffer = to_buffer(size, true, false, true, true);
         let a = format!("read utf8 multi snappy 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 2).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 2).unwrap()));
 
         let buffer = to_buffer(size, true, false, true, true);
         let a = format!("read i64 multi snappy 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 0).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 0).unwrap()));
 
         let buffer = to_buffer(size, false, false, false, false);
         let a = format!("read required utf8 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 2).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 2).unwrap()));
     });
 }
 

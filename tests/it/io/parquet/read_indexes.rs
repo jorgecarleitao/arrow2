@@ -125,7 +125,7 @@ fn read_with_indexes(
         vec![&c1.descriptor().descriptor.primitive_type],
         schema.fields[1].clone(),
         None,
-        row_group.num_rows() as usize,
+        row_group.num_rows(),
     )?;
 
     let arrays = arrays.collect::<Result<Vec<_>>>()?;
