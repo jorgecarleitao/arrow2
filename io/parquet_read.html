@@ -148,30 +148,44 @@ It makes minimal assumptions on how you to decompose CPU and IO intensive tasks.
 <pre><pre class="playground"><code class="language-rust">use std::fs::File;
 use std::time::SystemTime;
 
-use arrow2::error::Result;
+use arrow2::error::Error;
 use arrow2::io::parquet::read;
 
-fn main() -&gt; Result&lt;()&gt; {
+fn main() -&gt; Result&lt;(), Error&gt; {
+    // say we have a file
     use std::env;
     let args: Vec&lt;String&gt; = env::args().collect();
-
     let file_path = &amp;args[1];
+    let mut reader = File::open(file_path)?;
 
-    let reader = File::open(file_path)?;
-    let reader = read::FileReader::try_new(reader, None, Some(1024 * 8 * 8), None, None)?;
+    // we can read its metadata:
+    let metadata = read::read_metadata(&amp;mut reader)?;
 
-    println!(&quot;{:#?}&quot;, reader.schema());
+    // and infer a [`Schema`] from the `metadata`.
+    let schema = read::infer_schema(&amp;metadata)?;
 
-    // say we want to evaluate if the we can skip some row groups based on a field's value
-    let field = &amp;reader.schema().fields[0];
+    // we can filter the columns we need (here we select all)
+    let schema = schema.filter(|_index, _field| true);
 
-    // we can deserialize the parquet statistics from this field
-    let statistics = read::statistics::deserialize(field, &amp;reader.metadata().row_groups)?;
+    // we can read the statistics of all parquet's row groups (here for the first field)
+    let statistics = read::statistics::deserialize(&amp;schema.fields[0], &amp;metadata.row_groups)?;
 
     println!(&quot;{:#?}&quot;, statistics);
 
+    // say we found that we only need to read the first two row groups, &quot;0&quot; and &quot;1&quot;
+    let row_groups = metadata
+        .row_groups
+        .into_iter()
+        .enumerate()
+        .filter(|(index, _)| *index == 0 || *index == 1)
+        .map(|(_, row_group)| row_group)
+        .collect();
+
+    // we can then read the row groups into chunks
+    let chunks = read::FileReader::new(reader, row_groups, schema, Some(1024 * 8 * 8), None);
+
     let start = SystemTime::now();
-    for maybe_chunk in reader {
+    for maybe_chunk in chunks {
         let chunk = maybe_chunk?;
         assert!(!chunk.is_empty());
     }
