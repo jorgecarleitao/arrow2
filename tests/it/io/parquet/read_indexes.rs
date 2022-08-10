@@ -110,6 +110,8 @@ fn read_with_indexes(
     let pages = row_groups
         .iter()
         .map(|row_group| {
+            assert!(indexes::has_indexes(row_group));
+
             indexes::read_filtered_pages(&mut reader, row_group, &schema.fields, |_, intervals| {
                 let first_field = &intervals[0];
                 let first_field_column = &first_field[0];

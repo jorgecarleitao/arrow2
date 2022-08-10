@@ -302,9 +302,6 @@ pub fn read_columns_many<'a, R: Read + Seek>(
 /// Returns a vector of iterators of [`Array`] corresponding to the top level parquet fields whose
 /// name matches `fields`'s names.
 ///
-/// This operation is IO-bounded `O(C)` where C is the number of columns in the row group -
-/// it reads all the columns to memory from the row group associated to the requested fields.
-///
 /// # Implementation
 /// This operation is IO-bounded `O(C)` where C is the number of columns in the row group -
 /// it reads all the columns to memory from the row group associated to the requested fields.

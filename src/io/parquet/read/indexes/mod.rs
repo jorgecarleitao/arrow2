@@ -16,7 +16,7 @@ mod primitive;
 use std::collections::VecDeque;
 use std::io::{Read, Seek};
 
-use crate::array::{DictionaryArray, ListArray, PrimitiveArray, StructArray};
+use crate::array::UInt64Array;
 use crate::datatypes::{Field, PrimitiveType};
 use crate::{
     array::Array,
@@ -28,44 +28,49 @@ use super::get_field_pages;
 
 pub use parquet2::indexes::{FilteredPage, Interval};
 
-/// Arrow-deserialized [`ColumnIndex`] containing the minimum and maximum value
-/// of every page from the column.
-/// # Invariants
-/// The minimum and maximum are guaranteed to have the same logical type and length
+/// Page statistics of an Arrow field.
 #[derive(Debug, PartialEq)]
-pub struct ColumnIndex {
+pub enum FieldPageStatistics {
+    /// Variant used for fields with a single parquet column (e.g. primitives, dictionaries, list)
+    Single(ColumnPageStatistics),
+    /// Variant used for fields with multiple parquet columns (e.g. Struct, Map)
+    Multiple(Vec<FieldPageStatistics>),
+}
+
+impl From<ColumnPageStatistics> for FieldPageStatistics {
+    fn from(column: ColumnPageStatistics) -> Self {
+        Self::Single(column)
+    }
+}
+
+/// [`ColumnPageStatistics`] contains the minimum, maximum, and null_count
+/// of each page of a parquet column, as an [`Array`].
+/// This struct has the following invariants:
+/// * `min`, `max` and `null_count` have the same length (equal to the number of pages in the column)
+/// * `min`, `max` and `null_count` are guaranteed to be non-null
+/// * `min` and `max` have the same logical type
+#[derive(Debug, PartialEq)]
+pub struct ColumnPageStatistics {
     /// The minimum values in the pages
     pub min: Box<dyn Array>,
     /// The maximum values in the pages
     pub max: Box<dyn Array>,
-    /// The number of null values in the pages. A [`UInt64Array`] for non-nested types
-    pub null_count: Box<dyn Array>,
-}
-
-impl ColumnIndex {
-    /// The [`DataType`] of the column index.
-    pub fn data_type(&self) -> &DataType {
-        self.min.data_type()
-    }
-
-    /// The number of elements (= number of pages)
-    pub fn len(&self) -> usize {
-        self.min.len()
-    }
+    /// The number of null values in the pages.
+    pub null_count: UInt64Array,
 }
 
 /// Given a sequence of [`ParquetIndex`] representing the page indexes of each column in the
-/// parquet file, returns the page-level statistics as arrow's arrays, as a vector of [`ColumnIndex`].
+/// parquet file, returns the page-level statistics as a [`FieldPageStatistics`].
 ///
 /// This function maps timestamps, decimal types, etc. accordingly.
 /// # Implementation
-/// This function is CPU-bounded `O(P)` where `P` is the total number of pages in all columns.
+/// This function is CPU-bounded `O(P)` where `P` is the total number of pages on all columns.
 /// # Error
 /// This function errors iff the value is not deserializable to arrow (e.g. invalid utf-8)
 fn deserialize(
     indexes: &mut VecDeque<&Box<dyn ParquetIndex>>,
     data_type: DataType,
-) -> Result<ColumnIndex, Error> {
+) -> Result<FieldPageStatistics, Error> {
     match data_type.to_physical_type() {
         PhysicalType::Boolean => {
             let index = indexes
@@ -74,26 +79,29 @@ fn deserialize(
                 .as_any()
                 .downcast_ref::<BooleanIndex>()
                 .unwrap();
-            Ok(boolean::deserialize(&index.indexes))
+            Ok(boolean::deserialize(&index.indexes).into())
         }
         PhysicalType::Primitive(PrimitiveType::Int128) => {
             let index = indexes.pop_front().unwrap();
             match index.physical_type() {
                 ParquetPhysicalType::Int32 => {
                     let index = index.as_any().downcast_ref::<NativeIndex<i32>>().unwrap();
-                    Ok(primitive::deserialize_i32(&index.indexes, data_type))
+                    Ok(primitive::deserialize_i32(&index.indexes, data_type).into())
                 }
                 parquet2::schema::types::PhysicalType::Int64 => {
                     let index = index.as_any().downcast_ref::<NativeIndex<i64>>().unwrap();
-                    Ok(primitive::deserialize_i64(
-                        &index.indexes,
-                        &index.primitive_type,
-                        data_type,
-                    ))
+                    Ok(
+                        primitive::deserialize_i64(
+                            &index.indexes,
+                            &index.primitive_type,
+                            data_type,
+                        )
+                        .into(),
+                    )
                 }
                 parquet2::schema::types::PhysicalType::FixedLenByteArray(_) => {
                     let index = index.as_any().downcast_ref::<FixedLenByteIndex>().unwrap();
-                    Ok(fixed_len_binary::deserialize(&index.indexes, data_type))
+                    Ok(fixed_len_binary::deserialize(&index.indexes, data_type).into())
                 }
                 other => Err(Error::nyi(format!(
                     "Deserialize {other:?} to arrow's int64"
@@ -110,25 +118,28 @@ fn deserialize(
                 .as_any()
                 .downcast_ref::<NativeIndex<i32>>()
                 .unwrap();
-            Ok(primitive::deserialize_i32(&index.indexes, data_type))
+            Ok(primitive::deserialize_i32(&index.indexes, data_type).into())
         }
         PhysicalType::Primitive(PrimitiveType::Int64) => {
             let index = indexes.pop_front().unwrap();
             match index.physical_type() {
                 ParquetPhysicalType::Int64 => {
                     let index = index.as_any().downcast_ref::<NativeIndex<i64>>().unwrap();
-                    Ok(primitive::deserialize_i64(
-                        &index.indexes,
-                        &index.primitive_type,
-                        data_type,
-                    ))
+                    Ok(
+                        primitive::deserialize_i64(
+                            &index.indexes,
+                            &index.primitive_type,
+                            data_type,
+                        )
+                        .into(),
+                    )
                 }
                 parquet2::schema::types::PhysicalType::Int96 => {
                     let index = index
                         .as_any()
                         .downcast_ref::<NativeIndex<[u32; 3]>>()
                         .unwrap();
-                    Ok(primitive::deserialize_i96(&index.indexes, data_type))
+                    Ok(primitive::deserialize_i96(&index.indexes, data_type).into())
                 }
                 other => Err(Error::nyi(format!(
                     "Deserialize {other:?} to arrow's int64"
@@ -142,7 +153,7 @@ fn deserialize(
                 .as_any()
                 .downcast_ref::<NativeIndex<f32>>()
                 .unwrap();
-            Ok(primitive::deserialize_id(&index.indexes, data_type))
+            Ok(primitive::deserialize_id(&index.indexes, data_type).into())
         }
         PhysicalType::Primitive(PrimitiveType::Float64) => {
             let index = indexes
@@ -151,7 +162,7 @@ fn deserialize(
                 .as_any()
                 .downcast_ref::<NativeIndex<f64>>()
                 .unwrap();
-            Ok(primitive::deserialize_id(&index.indexes, data_type))
+            Ok(primitive::deserialize_id(&index.indexes, data_type).into())
         }
         PhysicalType::Binary
         | PhysicalType::LargeBinary
@@ -163,7 +174,7 @@ fn deserialize(
                 .as_any()
                 .downcast_ref::<ByteIndex>()
                 .unwrap();
-            binary::deserialize(&index.indexes, &data_type)
+            binary::deserialize(&index.indexes, &data_type).map(|x| x.into())
         }
         PhysicalType::FixedSizeBinary => {
             let index = indexes
@@ -172,95 +183,28 @@ fn deserialize(
                 .as_any()
                 .downcast_ref::<FixedLenByteIndex>()
                 .unwrap();
-            Ok(fixed_len_binary::deserialize(&index.indexes, data_type))
+            Ok(fixed_len_binary::deserialize(&index.indexes, data_type).into())
         }
         PhysicalType::Dictionary(_) => {
-            if let DataType::Dictionary(key, inner, is_sorted) = data_type.to_logical_type() {
-                let child = deserialize(indexes, (**inner).clone())?;
-                Ok(match_integer_type!(key, |$T| {
-                    let keys: Vec<$T> = (0..child.min.len() as $T).collect();
-                    let keys = PrimitiveArray::<$T>::from_vec(keys);
-                    ColumnIndex {
-                        min: DictionaryArray::<$T>::try_new(data_type.clone(), keys.clone(), child.min).map(|x|x.boxed())?,
-                        max: DictionaryArray::<$T>::try_new(data_type.clone(), keys.clone(), child.max).map(|x|x.boxed())?,
-                        null_count: DictionaryArray::<$T>::try_new(DataType::Dictionary(*key, Box::new(child.null_count.data_type().clone()), *is_sorted), keys, child.null_count).map(|x|x.boxed())?,
-                    }
-                }))
+            if let DataType::Dictionary(_, inner, _) = data_type.to_logical_type() {
+                deserialize(indexes, (**inner).clone())
             } else {
                 unreachable!()
             }
         }
         PhysicalType::List => {
-            let inner = if let DataType::List(inner) = data_type.to_logical_type() {
-                inner
+            if let DataType::List(inner) = data_type.to_logical_type() {
+                deserialize(indexes, inner.data_type.clone())
             } else {
                 unreachable!()
-            };
-            let child = deserialize(indexes, inner.data_type.clone())?;
-            let offsets = vec![0, child.min.len() as i32];
-            Ok(ColumnIndex {
-                min: ListArray::<i32>::new(
-                    data_type.clone(),
-                    offsets.clone().into(),
-                    child.min,
-                    None,
-                )
-                .boxed(),
-                max: ListArray::<i32>::new(
-                    data_type.clone(),
-                    offsets.clone().into(),
-                    child.max,
-                    None,
-                )
-                .boxed(),
-                null_count: ListArray::<i32>::new(
-                    DataType::List({
-                        let mut inner = (**inner).clone();
-                        inner.data_type = child.null_count.data_type().clone();
-                        Box::new(inner)
-                    }),
-                    offsets.into(),
-                    child.null_count,
-                    None,
-                )
-                .boxed(),
-            })
+            }
         }
         PhysicalType::LargeList => {
-            let inner = if let DataType::LargeList(inner) = data_type.to_logical_type() {
-                inner
+            if let DataType::LargeList(inner) = data_type.to_logical_type() {
+                deserialize(indexes, inner.data_type.clone())
             } else {
                 unreachable!()
-            };
-            let child = deserialize(indexes, inner.data_type.clone())?;
-            let offsets = vec![0, child.min.len() as i64];
-            Ok(ColumnIndex {
-                min: ListArray::<i64>::new(
-                    data_type.clone(),
-                    offsets.clone().into(),
-                    child.min,
-                    None,
-                )
-                .boxed(),
-                max: ListArray::<i64>::new(
-                    data_type.clone(),
-                    offsets.clone().into(),
-                    child.max,
-                    None,
-                )
-                .boxed(),
-                null_count: ListArray::<i64>::new(
-                    DataType::LargeList({
-                        let mut inner = (**inner).clone();
-                        inner.data_type = child.null_count.data_type().clone();
-                        Box::new(inner)
-                    }),
-                    offsets.into(),
-                    child.null_count,
-                    None,
-                )
-                .boxed(),
-            })
+            }
         }
         PhysicalType::Struct => {
             let children_fields = if let DataType::Struct(children) = data_type.to_logical_type() {
@@ -272,37 +216,8 @@ fn deserialize(
                 .iter()
                 .map(|child| deserialize(indexes, child.data_type.clone()))
                 .collect::<Result<Vec<_>, Error>>()?;
-            Ok(ColumnIndex {
-                min: StructArray::new(
-                    data_type.clone(),
-                    children.iter().map(|child| child.min.clone()).collect(),
-                    None,
-                )
-                .boxed(),
-                max: StructArray::new(
-                    data_type.clone(),
-                    children.iter().map(|child| child.max.clone()).collect(),
-                    None,
-                )
-                .boxed(),
-                null_count: StructArray::new(
-                    DataType::Struct({
-                        let mut children_fields = children_fields.clone();
-                        children_fields.iter_mut().zip(children.iter()).for_each(
-                            |(child_field, child)| {
-                                child_field.data_type = child.null_count.data_type().clone();
-                            },
-                        );
-                        children_fields
-                    }),
-                    children
-                        .iter()
-                        .map(|child| child.null_count.clone())
-                        .collect(),
-                    None,
-                )
-                .boxed(),
-            })
+
+            Ok(FieldPageStatistics::Multiple(children))
         }
 
         other => Err(Error::nyi(format!(
@@ -311,20 +226,18 @@ fn deserialize(
     }
 }
 
-/// Checks whether the row groups have page index information
-pub fn has_indexes(row_groups: &[RowGroupMetaData]) -> bool {
-    row_groups.iter().all(|group| {
-        group
-            .columns()
-            .iter()
-            .all(|chunk| chunk.column_chunk().column_index_offset.is_some())
-    })
+/// Checks whether the row group have page index information (page statistics)
+pub fn has_indexes(row_group: &RowGroupMetaData) -> bool {
+    row_group
+        .columns()
+        .iter()
+        .all(|chunk| chunk.column_chunk().column_index_offset.is_some())
 }
 
 /// Reads the column indexes from the reader assuming a valid set of derived Arrow fields
 /// for all parquet the columns in the file.
 ///
-/// It returns one [`ColumnIndex`] per field in `fields`
+/// It returns one [`FieldPageStatistics`] per field in `fields`
 ///
 /// This function is expected to be used to filter out parquet pages.
 ///
@@ -336,7 +249,7 @@ fn read_columns_indexes<R: Read + Seek>(
     reader: &mut R,
     chunks: &[ColumnChunkMetaData],
     fields: &[Field],
-) -> Result<Vec<ColumnIndex>, Error> {
+) -> Result<Vec<FieldPageStatistics>, Error> {
     let indexes = _read_columns_indexes(reader, chunks)?;
 
     fields
@@ -381,19 +294,19 @@ fn compute_page_row_intervals(
 ///
 /// The non-trivial argument of this function is `predicate`, that controls which pages are selected.
 /// Its signature contains 2 arguments:
-/// * 0th argument (indexes): contains one [`ColumnIndex`] (page statistics) per field.
+/// * 0th argument (indexes): contains one [`ColumnPageStatistics`] (page statistics) per field.
 ///   Use it to evaluate the predicate against
 /// * 1th argument (intervals): contains one [`Vec<Vec<Interval>>`] (row positions) per field.
 ///   For each field, the outermost vector corresponds to each parquet column:
 ///   a primitive field contains 1 column, a struct field with 2 primitive fields contain 2 columns.
-///   The inner `Vec<Interval>` contains one [`Interval`] per page: its length equals the length of [`ColumnIndex`].
+///   The inner `Vec<Interval>` contains one [`Interval`] per page: its length equals the length of [`ColumnPageStatistics`].
 /// It returns a single [`Vec<Interval>`] denoting the set of intervals that the predicate selects (over all columns).
 ///
 /// This returns one item per `field`. For each field, there is one item per column (for non-nested types it returns one column)
 /// and finally [`Vec<FilteredPage>`], that corresponds to the set of selected pages.
 pub fn read_filtered_pages<
     R: Read + Seek,
-    F: Fn(&[ColumnIndex], &[Vec<Vec<Interval>>]) -> Vec<Interval>,
+    F: Fn(&[FieldPageStatistics], &[Vec<Vec<Interval>>]) -> Vec<Interval>,
 >(
     reader: &mut R,
     row_group: &RowGroupMetaData,
@@ -411,7 +324,7 @@ pub fn read_filtered_pages<
         .map(|field| get_field_pages(row_group.columns(), &locations, &field.name))
         .collect::<Vec<_>>();
 
-    // one ColumnIndex per field
+    // one ColumnPageStatistics per field
     let indexes = read_columns_indexes(reader, row_group.columns(), fields)?;
 
     let intervals = locations

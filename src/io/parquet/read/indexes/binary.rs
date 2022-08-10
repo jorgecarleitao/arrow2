@@ -7,21 +7,20 @@ use crate::{
     trusted_len::TrustedLen,
 };
 
-use super::ColumnIndex;
+use super::ColumnPageStatistics;
 
 pub fn deserialize(
     indexes: &[PageIndex<Vec<u8>>],
     data_type: &DataType,
-) -> Result<ColumnIndex, Error> {
-    Ok(ColumnIndex {
+) -> Result<ColumnPageStatistics, Error> {
+    Ok(ColumnPageStatistics {
         min: deserialize_binary_iter(indexes.iter().map(|index| index.min.as_ref()), data_type)?,
         max: deserialize_binary_iter(indexes.iter().map(|index| index.max.as_ref()), data_type)?,
         null_count: PrimitiveArray::from_trusted_len_iter(
             indexes
                 .iter()
                 .map(|index| index.null_count.map(|x| x as u64)),
-        )
-        .boxed(),
+        ),
     })
 }
 

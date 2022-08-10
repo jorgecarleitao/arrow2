@@ -6,10 +6,10 @@ use crate::{
     trusted_len::TrustedLen,
 };
 
-use super::ColumnIndex;
+use super::ColumnPageStatistics;
 
-pub fn deserialize(indexes: &[PageIndex<Vec<u8>>], data_type: DataType) -> ColumnIndex {
-    ColumnIndex {
+pub fn deserialize(indexes: &[PageIndex<Vec<u8>>], data_type: DataType) -> ColumnPageStatistics {
+    ColumnPageStatistics {
         min: deserialize_binary_iter(
             indexes.iter().map(|index| index.min.as_ref()),
             data_type.clone(),
@@ -19,8 +19,7 @@ pub fn deserialize(indexes: &[PageIndex<Vec<u8>>], data_type: DataType) -> Colum
             indexes
                 .iter()
                 .map(|index| index.null_count.map(|x| x as u64)),
-        )
-        .boxed(),
+        ),
     }
 }
 
