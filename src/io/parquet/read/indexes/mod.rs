@@ -1,8 +1,11 @@
+//! API to perform page-level filtering (also known as indexes)
+use parquet2::error::Error as ParquetError;
 use parquet2::indexes::{
-    BooleanIndex, ByteIndex, FixedLenByteIndex, Index as ParquetIndex, NativeIndex,
+    select_pages, BooleanIndex, ByteIndex, FixedLenByteIndex, Index as ParquetIndex, NativeIndex,
+    PageLocation,
 };
 use parquet2::metadata::{ColumnChunkMetaData, RowGroupMetaData};
-use parquet2::read::read_columns_indexes as _read_columns_indexes;
+use parquet2::read::{read_columns_indexes as _read_columns_indexes, read_pages_locations};
 use parquet2::schema::types::PhysicalType as ParquetPhysicalType;
 
 mod binary;
@@ -23,10 +26,12 @@ use crate::{
 
 use super::get_field_pages;
 
+pub use parquet2::indexes::{FilteredPage, Interval};
+
 /// Arrow-deserialized [`ColumnIndex`] containing the minimum and maximum value
 /// of every page from the column.
 /// # Invariants
-/// The minimum and maximum are guaranteed to have the same logical type.
+/// The minimum and maximum are guaranteed to have the same logical type and length
 #[derive(Debug, PartialEq)]
 pub struct ColumnIndex {
     /// The minimum values in the pages
@@ -41,6 +46,11 @@ impl ColumnIndex {
     /// The [`DataType`] of the column index.
     pub fn data_type(&self) -> &DataType {
         self.min.data_type()
+    }
+
+    /// The number of elements (= number of pages)
+    pub fn len(&self) -> usize {
+        self.min.len()
     }
 }
 
@@ -322,7 +332,7 @@ pub fn has_indexes(row_groups: &[RowGroupMetaData]) -> bool {
 /// This function is IO-bounded and calls `reader.read_exact` exactly once.
 /// # Error
 /// Errors iff the indexes can't be read or their deserialization to arrow is incorrect (e.g. invalid utf-8)
-pub fn read_columns_indexes<R: Read + Seek>(
+fn read_columns_indexes<R: Read + Seek>(
     reader: &mut R,
     chunks: &[ColumnChunkMetaData],
     fields: &[Field],
@@ -336,6 +346,93 @@ pub fn read_columns_indexes<R: Read + Seek>(
             let mut indexes = indexes.into_iter().collect();
 
             deserialize(&mut indexes, field.data_type.clone())
+        })
+        .collect()
+}
+
+/// Returns the set of (row) intervals of the pages.
+fn compute_page_row_intervals(
+    locations: &[PageLocation],
+    num_rows: usize,
+) -> Result<Vec<Interval>, ParquetError> {
+    if locations.is_empty() {
+        return Ok(vec![]);
+    };
+
+    let last = (|| {
+        let start: usize = locations.last().unwrap().first_row_index.try_into()?;
+        let length = num_rows - start;
+        Result::<_, ParquetError>::Ok(Interval::new(start, length))
+    })();
+
+    let pages_lengths = locations
+        .windows(2)
+        .map(|x| {
+            let start = usize::try_from(x[0].first_row_index)?;
+            let length = usize::try_from(x[1].first_row_index - x[0].first_row_index)?;
+            Ok(Interval::new(start, length))
+        })
+        .chain(std::iter::once(last));
+    pages_lengths.collect()
+}
+
+/// Reads all page locations and index locations (IO-bounded) and uses `predicate` to compute
+/// the set of [`FilteredPage`] that fulfill the predicate.
+///
+/// The non-trivial argument of this function is `predicate`, that controls which pages are selected.
+/// Its signature contains 2 arguments:
+/// * 0th argument (indexes): contains one [`ColumnIndex`] (page statistics) per field.
+///   Use it to evaluate the predicate against
+/// * 1th argument (intervals): contains one [`Vec<Vec<Interval>>`] (row positions) per field.
+///   For each field, the outermost vector corresponds to each parquet column:
+///   a primitive field contains 1 column, a struct field with 2 primitive fields contain 2 columns.
+///   The inner `Vec<Interval>` contains one [`Interval`] per page: its length equals the length of [`ColumnIndex`].
+/// It returns a single [`Vec<Interval>`] denoting the set of intervals that the predicate selects (over all columns).
+///
+/// This returns one item per `field`. For each field, there is one item per column (for non-nested types it returns one column)
+/// and finally [`Vec<FilteredPage>`], that corresponds to the set of selected pages.
+pub fn read_filtered_pages<
+    R: Read + Seek,
+    F: Fn(&[ColumnIndex], &[Vec<Vec<Interval>>]) -> Vec<Interval>,
+>(
+    reader: &mut R,
+    row_group: &RowGroupMetaData,
+    fields: &[Field],
+    predicate: F,
+    //is_intersection: bool,
+) -> Result<Vec<Vec<Vec<FilteredPage>>>, Error> {
+    let num_rows = row_group.num_rows();
+
+    // one vec per column
+    let locations = read_pages_locations(reader, row_group.columns())?;
+    // one Vec<Vec<>> per field (non-nested contain a single entry on the first column)
+    let locations = fields
+        .iter()
+        .map(|field| get_field_pages(row_group.columns(), &locations, &field.name))
+        .collect::<Vec<_>>();
+
+    // one ColumnIndex per field
+    let indexes = read_columns_indexes(reader, row_group.columns(), fields)?;
+
+    let intervals = locations
+        .iter()
+        .map(|locations| {
+            locations
+                .iter()
+                .map(|locations| Ok(compute_page_row_intervals(locations, num_rows)?))
+                .collect::<Result<Vec<_>, Error>>()
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
+
+    let intervals = predicate(&indexes, &intervals);
+
+    locations
+        .into_iter()
+        .map(|locations| {
+            locations
+                .into_iter()
+                .map(|locations| Ok(select_pages(&intervals, locations, num_rows)?))
+                .collect::<Result<Vec<_>, Error>>()
         })
         .collect()
 }

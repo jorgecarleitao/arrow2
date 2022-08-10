@@ -2,8 +2,8 @@ use std::io::Cursor;
 
 use arrow2::chunk::Chunk;
 use arrow2::error::Error;
+use arrow2::io::parquet::read::indexes;
 use arrow2::{array::*, datatypes::*, error::Result, io::parquet::read::*, io::parquet::write::*};
-use parquet2::indexes::{compute_rows, select_pages};
 
 /// Returns 2 sets of pages with different the same number of rows distributed un-evenly
 fn pages(
@@ -103,50 +103,47 @@ fn read_with_indexes(
 
     let schema = infer_schema(&metadata)?;
 
-    // apply projection pushdown
-    let schema = schema.filter(|index, _| index == 1);
-    let expected = Chunk::new(vec![expected]);
+    // row group-based filtering can be done here
+    let row_groups = metadata.row_groups;
 
-    // per row group,
-    // per field,
-    // per column,
-    let pages = metadata
-        .row_groups
+    // one per row group
+    let pages = row_groups
         .iter()
         .map(|row_group| {
-            // one vec per column
-            let locations = read_pages_locations(&mut reader, row_group.columns())?;
+            indexes::read_filtered_pages(&mut reader, row_group, &schema.fields, |_, intervals| {
+                let first_field = &intervals[0];
+                let first_field_column = &first_field[0];
+                assert_eq!(first_field_column.len(), 3);
+                let selection = [false, true, false];
 
-            // one column index per column
-            let _indexes = read_columns_indexes(&mut reader, row_group.columns(), &schema.fields)?;
-            // say we concluded from the indexes from column 0 that we only needed the second page
-            let selected_0 = &[false, true, false];
-
-            let intervals = compute_rows(selected_0, &locations[0], row_group.num_rows())?;
-            // for multiple page filters, perform an OR over intervals.
-
-            schema
-                .fields
-                .iter()
-                .map(|field| &field.name)
-                .map(|field_name| {
-                    // one vec per field
-                    let locations = get_field_pages(row_group.columns(), &locations, field_name);
-
-                    let pages = locations
-                        .into_iter()
-                        .map(|locations| select_pages(&intervals, locations, row_group.num_rows()))
-                        .collect::<std::result::Result<Vec<_>, ParquetError>>()?;
-
-                    Ok(pages)
-                })
-                .collect()
+                first_field_column
+                    .iter()
+                    .zip(selection)
+                    .filter_map(|(i, is_selected)| is_selected.then(|| *i))
+                    .collect()
+            })
         })
         .collect::<Result<Vec<_>>>()?;
 
+    // apply projection pushdown
+    let schema = schema.filter(|index, _| index == 1);
+    let pages = pages
+        .into_iter()
+        .map(|pages| {
+            pages
+                .into_iter()
+                .enumerate()
+                .filter(|(index, _)| *index == 1)
+                .map(|(_, pages)| pages)
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let expected = Chunk::new(vec![expected]);
+
     let chunks = FileReader::new(
         reader,
-        metadata.row_groups,
+        row_groups,
         schema,
         Some(1024 * 8 * 8),
         None,
