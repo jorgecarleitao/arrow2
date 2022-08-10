@@ -59,7 +59,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         let buffer = to_buffer(size, true, true, false, false);
         let a = format!("read ts dict 2^{}", i);
-        c.bench_function(&a, |b| b.iter(|| read_batch(&buffer, size, 11).unwrap()));
+        c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 11).unwrap()));
 
         let a = format!("read utf8 2^{}", i);
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 2).unwrap()));
