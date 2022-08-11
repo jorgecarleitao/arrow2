@@ -175,3 +175,15 @@ pub fn utf8_large_to_utf8(from: &Utf8Array<i64>) -> Result<Utf8Array<i32>> {
     // Safety: sound because `offsets` fulfills the same invariants as `from.offsets()`
     Ok(unsafe { Utf8Array::<i32>::from_data_unchecked(data_type, offsets, values, validity) })
 }
+
+/// Conversion to binary
+pub fn utf8_to_binary<O: Offset>(from: &Utf8Array<O>, to_data_type: DataType) -> BinaryArray<O> {
+    unsafe {
+        BinaryArray::<O>::new_unchecked(
+            to_data_type,
+            from.offsets().clone(),
+            from.values().clone(),
+            from.validity().cloned(),
+        )
+    }
+}

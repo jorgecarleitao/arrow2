@@ -36,6 +36,37 @@ pub fn binary_large_to_binary(
     ))
 }
 
+/// Conversion to utf8
+pub fn binary_to_utf8<O: Offset>(
+    from: &BinaryArray<O>,
+    to_data_type: DataType,
+) -> Result<Utf8Array<O>> {
+    Utf8Array::<O>::try_new(
+        to_data_type,
+        from.offsets().clone(),
+        from.values().clone(),
+        from.validity().cloned(),
+    )
+}
+
+/// Conversion to utf8
+/// # Errors
+/// This function errors if the values are not valid utf8
+pub fn binary_to_large_utf8(
+    from: &BinaryArray<i32>,
+    to_data_type: DataType,
+) -> Result<Utf8Array<i64>> {
+    let values = from.values().clone();
+    let offsets = from
+        .offsets()
+        .iter()
+        .map(|x| *x as i64)
+        .collect::<Vec<_>>()
+        .into();
+
+    Utf8Array::<i64>::try_new(to_data_type, offsets, values, from.validity().cloned())
+}
+
 /// Casts a [`BinaryArray`] to a [`PrimitiveArray`] at best-effort using `lexical_core::parse_partial`, making any uncastable value as zero.
 pub fn partial_binary_to_primitive<O: Offset, T>(
     from: &BinaryArray<O>,
