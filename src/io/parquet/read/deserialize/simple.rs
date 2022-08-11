@@ -12,7 +12,7 @@ use crate::{
     types::{days_ms, NativeType},
 };
 
-use super::super::{ArrayIter, DataPages};
+use super::super::{ArrayIter, Pages};
 use super::binary;
 use super::boolean;
 use super::fixed_size_binary;
@@ -54,9 +54,9 @@ where
     })
 }
 
-/// An iterator adapter that maps an iterator of DataPages into an iterator of Arrays
+/// An iterator adapter that maps an iterator of Pages into an iterator of Arrays
 /// of [`DataType`] `data_type` and length `chunk_size`.
-pub fn page_iter_to_arrays<'a, I: 'a + DataPages>(
+pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
     pages: I,
     type_: &PrimitiveType,
     data_type: DataType,
@@ -339,7 +339,7 @@ fn unifiy_timestmap_unit(
     }
 }
 
-fn timestamp<'a, I: 'a + DataPages>(
+fn timestamp<'a, I: Pages + 'a>(
     pages: I,
     physical_type: &PhysicalType,
     logical_type: &Option<PrimitiveLogicalType>,
@@ -377,7 +377,7 @@ fn timestamp<'a, I: 'a + DataPages>(
     }
 }
 
-fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
+fn timestamp_dict<'a, K: DictionaryKey, I: Pages + 'a>(
     pages: I,
     physical_type: &PhysicalType,
     logical_type: &Option<PrimitiveLogicalType>,
@@ -429,7 +429,7 @@ fn timestamp_dict<'a, K: DictionaryKey, I: 'a + DataPages>(
     }
 }
 
-fn dict_read<'a, K: DictionaryKey, I: 'a + DataPages>(
+fn dict_read<'a, K: DictionaryKey, I: Pages + 'a>(
     iter: I,
     physical_type: &PhysicalType,
     logical_type: &Option<PrimitiveLogicalType>,

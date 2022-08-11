@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use parquet2::{
     deserialize::SliceFilteredIter,
     encoding::{hybrid_rle, Encoding},
-    page::{split_buffer, DataPage, FixedLenByteArrayPageDict},
+    page::{split_buffer, DataPage, DictPage},
     schema::Repetition,
 };
 
@@ -16,8 +16,10 @@ use super::super::utils::{
     DecodedState, Decoder, FilteredOptionalPageValidity, MaybeNext, OptionalPageValidity,
     PageState, Pushable,
 };
-use super::super::DataPages;
+use super::super::Pages;
 use super::utils::FixedSizeBinary;
+
+type Dict = Vec<u8>;
 
 #[derive(Debug)]
 struct Optional<'a> {
@@ -83,11 +85,11 @@ impl<'a> FilteredRequired<'a> {
 #[derive(Debug)]
 struct RequiredDictionary<'a> {
     pub values: hybrid_rle::HybridRleDecoder<'a>,
-    dict: &'a FixedLenByteArrayPageDict,
+    dict: &'a Dict,
 }
 
 impl<'a> RequiredDictionary<'a> {
-    fn try_new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Result<Self> {
+    fn try_new(page: &'a DataPage, dict: &'a Dict) -> Result<Self> {
         let values = dict_indices_decoder(page)?;
 
         Ok(Self { dict, values })
@@ -103,11 +105,11 @@ impl<'a> RequiredDictionary<'a> {
 struct OptionalDictionary<'a> {
     values: hybrid_rle::HybridRleDecoder<'a>,
     validity: OptionalPageValidity<'a>,
-    dict: &'a FixedLenByteArrayPageDict,
+    dict: &'a Dict,
 }
 
 impl<'a> OptionalDictionary<'a> {
-    fn try_new(page: &'a DataPage, dict: &'a FixedLenByteArrayPageDict) -> Result<Self> {
+    fn try_new(page: &'a DataPage, dict: &'a Dict) -> Result<Self> {
         let values = dict_indices_decoder(page)?;
 
         Ok(Self {
@@ -148,7 +150,7 @@ struct BinaryDecoder {
     size: usize,
 }
 
-impl<'a> DecodedState<'a> for (FixedSizeBinary, MutableBitmap) {
+impl DecodedState for (FixedSizeBinary, MutableBitmap) {
     fn len(&self) -> usize {
         self.0.len()
     }
@@ -156,19 +158,15 @@ impl<'a> DecodedState<'a> for (FixedSizeBinary, MutableBitmap) {
 
 impl<'a> Decoder<'a> for BinaryDecoder {
     type State = State<'a>;
+    type Dict = Dict;
     type DecodedState = (FixedSizeBinary, MutableBitmap);
 
-    fn build_state(&self, page: &'a DataPage) -> Result<Self::State> {
+    fn build_state(&self, page: &'a DataPage, dict: Option<&'a Self::Dict>) -> Result<Self::State> {
         let is_optional =
             page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
         let is_filtered = page.selected_rows().is_some();
 
-        match (
-            page.encoding(),
-            page.dictionary_page(),
-            is_optional,
-            is_filtered,
-        ) {
+        match (page.encoding(), dict, is_optional, is_filtered) {
             (Encoding::Plain, _, true, false) => {
                 Ok(State::Optional(Optional::try_new(page, self.size)?))
             }
@@ -176,12 +174,10 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                 Ok(State::Required(Required::new(page, self.size)))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
-                RequiredDictionary::try_new(page, dict.as_any().downcast_ref().unwrap())
-                    .map(State::RequiredDictionary)
+                RequiredDictionary::try_new(page, dict).map(State::RequiredDictionary)
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
-                OptionalDictionary::try_new(page, dict.as_any().downcast_ref().unwrap())
-                    .map(State::OptionalDictionary)
+                OptionalDictionary::try_new(page, dict).map(State::OptionalDictionary)
             }
             (Encoding::Plain, None, false, true) => Ok(State::FilteredRequired(
                 FilteredRequired::new(page, self.size),
@@ -232,11 +228,9 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                 }
             }
             State::OptionalDictionary(page) => {
-                let dict_values = page.dict.values();
-                let size = page.dict.size();
                 let op = |index: u32| {
                     let index = index as usize;
-                    &dict_values[index * size..(index + 1) * size]
+                    &page.dict[index * self.size..(index + 1) * self.size]
                 };
 
                 extend_from_decoder(
@@ -248,11 +242,9 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                 )
             }
             State::RequiredDictionary(page) => {
-                let dict_values = page.dict.values();
-                let size = page.dict.size();
                 let op = |index: u32| {
                     let index = index as usize;
-                    &dict_values[index * size..(index + 1) * size]
+                    &page.dict[index * self.size..(index + 1) * self.size]
                 };
 
                 for x in page.values.by_ref().map(op).take(remaining) {
@@ -270,6 +262,10 @@ impl<'a> Decoder<'a> for BinaryDecoder {
             }
         }
     }
+
+    fn deserialize_dict(&self, page: &DictPage) -> Self::Dict {
+        page.buffer.clone()
+    }
 }
 
 fn finish(
@@ -280,16 +276,17 @@ fn finish(
     FixedSizeBinaryArray::new(data_type.clone(), values.values.into(), validity.into())
 }
 
-pub struct Iter<I: DataPages> {
+pub struct Iter<I: Pages> {
     iter: I,
     data_type: DataType,
     size: usize,
     items: VecDeque<(FixedSizeBinary, MutableBitmap)>,
+    dict: Option<Dict>,
     chunk_size: Option<usize>,
     remaining: usize,
 }
 
-impl<I: DataPages> Iter<I> {
+impl<I: Pages> Iter<I> {
     pub fn new(iter: I, data_type: DataType, num_rows: usize, chunk_size: Option<usize>) -> Self {
         let size = FixedSizeBinaryArray::get_size(&data_type);
         Self {
@@ -297,19 +294,21 @@ impl<I: DataPages> Iter<I> {
             data_type,
             size,
             items: VecDeque::new(),
+            dict: None,
             chunk_size,
             remaining: num_rows,
         }
     }
 }
 
-impl<I: DataPages> Iterator for Iter<I> {
+impl<I: Pages> Iterator for Iter<I> {
     type Item = Result<FixedSizeBinaryArray>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let maybe_state = next(
             &mut self.iter,
             &mut self.items,
+            &mut self.dict,
             &mut self.remaining,
             self.chunk_size,
             &BinaryDecoder { size: self.size },

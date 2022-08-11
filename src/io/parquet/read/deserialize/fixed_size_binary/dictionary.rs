@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use parquet2::page::{DictPage, FixedLenByteArrayPageDict};
+use parquet2::page::DictPage;
 
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, FixedSizeBinaryArray},
@@ -12,18 +12,18 @@ use crate::{
 
 use super::super::dictionary::*;
 use super::super::utils::MaybeNext;
-use super::super::DataPages;
+use super::super::Pages;
 
-/// An iterator adapter over [`DataPages`] assumed to be encoded as parquet's dictionary-encoded binary representation
+/// An iterator adapter over [`Pages`] assumed to be encoded as parquet's dictionary-encoded binary representation
 #[derive(Debug)]
 pub struct DictIter<K, I>
 where
-    I: DataPages,
+    I: Pages,
     K: DictionaryKey,
 {
     iter: I,
     data_type: DataType,
-    values: Dict,
+    values: Option<Box<dyn Array>>,
     items: VecDeque<(Vec<K>, MutableBitmap)>,
     remaining: usize,
     chunk_size: Option<usize>,
@@ -32,13 +32,13 @@ where
 impl<K, I> DictIter<K, I>
 where
     K: DictionaryKey,
-    I: DataPages,
+    I: Pages,
 {
     pub fn new(iter: I, data_type: DataType, num_rows: usize, chunk_size: Option<usize>) -> Self {
         Self {
             iter,
             data_type,
-            values: Dict::Empty,
+            values: None,
             items: VecDeque::new(),
             remaining: num_rows,
             chunk_size,
@@ -46,27 +46,20 @@ where
     }
 }
 
-fn read_dict(data_type: DataType, dict: &dyn DictPage) -> Box<dyn Array> {
+fn read_dict(data_type: DataType, dict: &DictPage) -> Box<dyn Array> {
     let data_type = match data_type {
         DataType::Dictionary(_, values, _) => *values,
         _ => data_type,
     };
-    let dict = dict
-        .as_any()
-        .downcast_ref::<FixedLenByteArrayPageDict>()
-        .unwrap();
-    let values = dict.values().to_vec();
 
-    Box::new(FixedSizeBinaryArray::from_data(
-        data_type,
-        values.into(),
-        None,
-    ))
+    let values = dict.buffer.clone();
+
+    FixedSizeBinaryArray::from_data(data_type, values.into(), None).boxed()
 }
 
 impl<K, I> Iterator for DictIter<K, I>
 where
-    I: DataPages,
+    I: Pages,
     K: DictionaryKey,
 {
     type Item = Result<DictionaryArray<K>>;
@@ -94,13 +87,13 @@ where
 #[derive(Debug)]
 pub struct NestedDictIter<K, I>
 where
-    I: DataPages,
+    I: Pages,
     K: DictionaryKey,
 {
     iter: I,
     init: Vec<InitNested>,
     data_type: DataType,
-    values: Dict,
+    values: Option<Box<dyn Array>>,
     items: VecDeque<(NestedState, (Vec<K>, MutableBitmap))>,
     remaining: usize,
     chunk_size: Option<usize>,
@@ -108,7 +101,7 @@ where
 
 impl<K, I> NestedDictIter<K, I>
 where
-    I: DataPages,
+    I: Pages,
     K: DictionaryKey,
 {
     pub fn new(
@@ -122,7 +115,7 @@ where
             iter,
             init,
             data_type,
-            values: Dict::Empty,
+            values: None,
             remaining: num_rows,
             items: VecDeque::new(),
             chunk_size,
@@ -132,7 +125,7 @@ where
 
 impl<K, I> Iterator for NestedDictIter<K, I>
 where
-    I: DataPages,
+    I: Pages,
     K: DictionaryKey,
 {
     type Item = Result<(NestedState, DictionaryArray<K>)>;

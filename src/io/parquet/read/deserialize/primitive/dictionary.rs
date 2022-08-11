@@ -1,9 +1,6 @@
 use std::collections::VecDeque;
 
-use parquet2::{
-    page::{DictPage, PrimitivePageDict},
-    types::NativeType as ParquetNativeType,
-};
+use parquet2::{page::DictPage, types::NativeType as ParquetNativeType};
 
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
@@ -17,9 +14,10 @@ use super::super::dictionary::nested_next_dict;
 use super::super::dictionary::*;
 use super::super::nested_utils::{InitNested, NestedState};
 use super::super::utils::MaybeNext;
-use super::super::DataPages;
+use super::super::Pages;
+use super::basic::deserialize_plain;
 
-fn read_dict<P, T, F>(data_type: DataType, op: F, dict: &dyn DictPage) -> Box<dyn Array>
+fn read_dict<P, T, F>(data_type: DataType, op: F, dict: &DictPage) -> Box<dyn Array>
 where
     T: NativeType,
     P: ParquetNativeType,
@@ -29,20 +27,16 @@ where
         DataType::Dictionary(_, values, _) => *values,
         _ => data_type,
     };
-    let dict = dict
-        .as_any()
-        .downcast_ref::<PrimitivePageDict<P>>()
-        .unwrap();
-    let values = dict.values().iter().map(|x| (op)(*x)).collect::<Vec<_>>();
+    let values = deserialize_plain(&dict.buffer, op);
 
     Box::new(PrimitiveArray::new(data_type, values.into(), None))
 }
 
-/// An iterator adapter over [`DataPages`] assumed to be encoded as boolean arrays
+/// An iterator adapter over [`Pages`] assumed to be encoded as boolean arrays
 #[derive(Debug)]
 pub struct DictIter<K, T, I, P, F>
 where
-    I: DataPages,
+    I: Pages,
     T: NativeType,
     K: DictionaryKey,
     P: ParquetNativeType,
@@ -50,7 +44,7 @@ where
 {
     iter: I,
     data_type: DataType,
-    values: Dict,
+    values: Option<Box<dyn Array>>,
     items: VecDeque<(Vec<K>, MutableBitmap)>,
     remaining: usize,
     chunk_size: Option<usize>,
@@ -61,7 +55,7 @@ where
 impl<K, T, I, P, F> DictIter<K, T, I, P, F>
 where
     K: DictionaryKey,
-    I: DataPages,
+    I: Pages,
     T: NativeType,
 
     P: ParquetNativeType,
@@ -77,7 +71,7 @@ where
         Self {
             iter,
             data_type,
-            values: Dict::Empty,
+            values: None,
             items: VecDeque::new(),
             chunk_size,
             remaining: num_rows,
@@ -89,7 +83,7 @@ where
 
 impl<K, T, I, P, F> Iterator for DictIter<K, T, I, P, F>
 where
-    I: DataPages,
+    I: Pages,
     T: NativeType,
     K: DictionaryKey,
     P: ParquetNativeType,
@@ -120,7 +114,7 @@ where
 #[derive(Debug)]
 pub struct NestedDictIter<K, T, I, P, F>
 where
-    I: DataPages,
+    I: Pages,
     T: NativeType,
     K: DictionaryKey,
     P: ParquetNativeType,
@@ -129,7 +123,7 @@ where
     iter: I,
     init: Vec<InitNested>,
     data_type: DataType,
-    values: Dict,
+    values: Option<Box<dyn Array>>,
     items: VecDeque<(NestedState, (Vec<K>, MutableBitmap))>,
     remaining: usize,
     chunk_size: Option<usize>,
@@ -140,7 +134,7 @@ where
 impl<K, T, I, P, F> NestedDictIter<K, T, I, P, F>
 where
     K: DictionaryKey,
-    I: DataPages,
+    I: Pages,
     T: NativeType,
 
     P: ParquetNativeType,
@@ -158,7 +152,7 @@ where
             iter,
             init,
             data_type,
-            values: Dict::Empty,
+            values: None,
             items: VecDeque::new(),
             remaining: num_rows,
             chunk_size,
@@ -170,7 +164,7 @@ where
 
 impl<K, T, I, P, F> Iterator for NestedDictIter<K, T, I, P, F>
 where
-    I: DataPages,
+    I: Pages,
     T: NativeType,
     K: DictionaryKey,
     P: ParquetNativeType,

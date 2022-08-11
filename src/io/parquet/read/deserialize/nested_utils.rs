@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use parquet2::{
     encoding::hybrid_rle::HybridRleDecoder,
-    page::{split_buffer, DataPage},
+    page::{split_buffer, DataPage, DictPage, Page},
     read::levels::get_bit_width,
 };
 
@@ -10,7 +10,7 @@ use crate::{array::Array, bitmap::MutableBitmap, error::Result};
 
 pub use super::utils::Zip;
 use super::utils::{DecodedState, MaybeNext};
-use super::{super::DataPages, utils::PageState};
+use super::{super::Pages, utils::PageState};
 
 /// trait describing deserialized repetition and definition levels
 pub trait Nested: std::fmt::Debug + Send + Sync {
@@ -246,15 +246,22 @@ impl Nested for NestedStruct {
 /// A decoder that knows how to map `State` -> Array
 pub(super) trait NestedDecoder<'a> {
     type State: PageState<'a>;
-    type DecodedState: DecodedState<'a>;
+    type Dictionary;
+    type DecodedState: DecodedState;
 
-    fn build_state(&self, page: &'a DataPage) -> Result<Self::State>;
+    fn build_state(
+        &self,
+        page: &'a DataPage,
+        dict: Option<&'a Self::Dictionary>,
+    ) -> Result<Self::State>;
 
     /// Initializes a new state
     fn with_capacity(&self, capacity: usize) -> Self::DecodedState;
 
     fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState);
     fn push_null(&self, decoded: &mut Self::DecodedState);
+
+    fn deserialize_dict(&self, page: &DictPage) -> Self::Dictionary;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -340,11 +347,12 @@ pub(super) fn extend<'a, D: NestedDecoder<'a>>(
     page: &'a DataPage,
     init: &[InitNested],
     items: &mut VecDeque<(NestedState, D::DecodedState)>,
+    dict: Option<&'a D::Dictionary>,
     remaining: &mut usize,
     decoder: &D,
     chunk_size: Option<usize>,
 ) -> Result<()> {
-    let mut values_page = decoder.build_state(page)?;
+    let mut values_page = decoder.build_state(page, dict)?;
     let mut page = NestedPage::try_new(page)?;
 
     let capacity = chunk_size.unwrap_or(0);
@@ -467,13 +475,14 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
 pub(super) fn next<'a, I, D>(
     iter: &'a mut I,
     items: &mut VecDeque<(NestedState, D::DecodedState)>,
+    dict: &'a mut Option<D::Dictionary>,
     remaining: &mut usize,
     init: &[InitNested],
     chunk_size: Option<usize>,
     decoder: &D,
 ) -> MaybeNext<Result<(NestedState, D::DecodedState)>>
 where
-    I: DataPages,
+    I: Pages,
     D: NestedDecoder<'a>,
 {
     // front[a1, a2, a3, ...]back
@@ -499,8 +508,24 @@ where
             }
         }
         Ok(Some(page)) => {
+            let page = match page {
+                Page::Data(page) => page,
+                Page::Dict(dict_page) => {
+                    *dict = Some(decoder.deserialize_dict(dict_page));
+                    return MaybeNext::More;
+                }
+            };
+
             // there is a new page => consume the page from the start
-            let error = extend(page, init, items, remaining, decoder, chunk_size);
+            let error = extend(
+                page,
+                init,
+                items,
+                dict.as_ref(),
+                remaining,
+                decoder,
+                chunk_size,
+            );
             match error {
                 Ok(_) => {}
                 Err(e) => return MaybeNext::Some(Err(e)),

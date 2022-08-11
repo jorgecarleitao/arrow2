@@ -180,11 +180,13 @@ pub fn to_deserializer<'a>(
     let (columns, types): (Vec<_>, Vec<_>) = columns
         .into_iter()
         .map(|(column_meta, chunk)| {
+            let len = chunk.len();
             let pages = PageReader::new(
                 std::io::Cursor::new(chunk),
                 column_meta,
                 std::sync::Arc::new(|_, _| true),
                 vec![],
+                len * 2 + 1024,
             );
             (
                 BasicDecompressor::new(pages, vec![]),
