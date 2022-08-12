@@ -241,11 +241,9 @@ pub fn deserialize_message(
             )?;
             Ok(None)
         }
-        t => {
-            return Err(Error::nyi(format!(
-                "Reading types other than record batches not yet supported, unable to read {:?}",
-                t
-            )));
-        }
+        t => Err(Error::nyi(format!(
+            "Reading types other than record batches not yet supported, unable to read {:?}",
+            t
+        ))),
     }
 }
