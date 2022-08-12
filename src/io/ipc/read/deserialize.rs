@@ -58,76 +58,66 @@ pub fn read<R: Read + Seek>(
             )
             .map(|x| x.boxed())
         }),
-        Binary => {
-            let array = read_binary::<i32, _>(
-                field_nodes,
-                data_type,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-                compression,
-                limit,
-                scratch,
-            )?;
-            Ok(Box::new(array))
-        }
-        LargeBinary => {
-            let array = read_binary::<i64, _>(
-                field_nodes,
-                data_type,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-                compression,
-                limit,
-                scratch,
-            )?;
-            Ok(Box::new(array))
-        }
-        FixedSizeBinary => {
-            let array = read_fixed_size_binary(
-                field_nodes,
-                data_type,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-                compression,
-                limit,
-                scratch,
-            )?;
-            Ok(Box::new(array))
-        }
-        Utf8 => {
-            let array = read_utf8::<i32, _>(
-                field_nodes,
-                data_type,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-                compression,
-                limit,
-                scratch,
-            )?;
-            Ok(Box::new(array))
-        }
-        LargeUtf8 => {
-            let array = read_utf8::<i64, _>(
-                field_nodes,
-                data_type,
-                buffers,
-                reader,
-                block_offset,
-                is_little_endian,
-                compression,
-                limit,
-                scratch,
-            )?;
-            Ok(Box::new(array))
-        }
+        Binary => read_binary::<i32, _>(
+            field_nodes,
+            data_type,
+            buffers,
+            reader,
+            block_offset,
+            is_little_endian,
+            compression,
+            limit,
+            scratch,
+        )
+        .map(|x| x.boxed()),
+        LargeBinary => read_binary::<i64, _>(
+            field_nodes,
+            data_type,
+            buffers,
+            reader,
+            block_offset,
+            is_little_endian,
+            compression,
+            limit,
+            scratch,
+        )
+        .map(|x| x.boxed()),
+        FixedSizeBinary => read_fixed_size_binary(
+            field_nodes,
+            data_type,
+            buffers,
+            reader,
+            block_offset,
+            is_little_endian,
+            compression,
+            limit,
+            scratch,
+        )
+        .map(|x| x.boxed()),
+        Utf8 => read_utf8::<i32, _>(
+            field_nodes,
+            data_type,
+            buffers,
+            reader,
+            block_offset,
+            is_little_endian,
+            compression,
+            limit,
+            scratch,
+        )
+        .map(|x| x.boxed()),
+        LargeUtf8 => read_utf8::<i64, _>(
+            field_nodes,
+            data_type,
+            buffers,
+            reader,
+            block_offset,
+            is_little_endian,
+            compression,
+            limit,
+            scratch,
+        )
+        .map(|x| x.boxed()),
         List => read_list::<i32, _>(
             field_nodes,
             data_type,
