@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":[["deserialize","Deserializes column `column` from `stripe`, assumed to represent an array of `data_type`."],["infer_schema","Infers a [`Schema`] from the files’ [`Footer`]."]]};

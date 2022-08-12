@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":[["lexical_to_bytes","Converts numeric type to a `String`"],["lexical_to_bytes_mut","Converts numeric type to a `String`"],["lexical_to_string","Converts numeric type to a `String`"]]};
