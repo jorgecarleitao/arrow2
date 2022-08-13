@@ -115,6 +115,15 @@ impl MutableStructArray {
     /// This function panics if any of the children does not have exactly one more
     /// element than before the last call of `push`.
     pub fn push(&mut self, valid: bool) {
+        self.push_unchecked(valid);
+        self.assert_lengths();
+    }
+
+    /// Call this after pushing into each child array.
+    /// # Safety
+    /// The caller must ensure that each of the children has exactly one more
+    /// element than before the last call of `push`.
+    pub fn push_unchecked(&mut self, valid: bool) {
         match &mut self.validity {
             Some(validity) => validity.push(valid),
             None => match valid {
@@ -122,7 +131,6 @@ impl MutableStructArray {
                 false => self.init_validity(),
             },
         };
-        self.assert_lengths();
     }
 
     fn push_null(&mut self) {
