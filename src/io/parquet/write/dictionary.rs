@@ -149,8 +149,7 @@ macro_rules! dyn_prim {
     ($from:ty, $to:ty, $array:expr, $options:expr, $type_:expr) => {{
         let values = $array.values().as_any().downcast_ref().unwrap();
 
-        let mut buffer = vec![];
-        primitive_encode_plain::<$from, $to>(values, false, &mut buffer);
+        let buffer = primitive_encode_plain::<$from, $to>(values, false, vec![]);
         let stats = primitive_build_statistics::<$from, $to>(values, $type_.clone());
         let stats = serialize_statistics(&stats);
         (DictPage::new(buffer, values.len(), false), stats)

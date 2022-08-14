@@ -92,6 +92,28 @@ fn int64_optional_v2() -> Result<()> {
     )
 }
 
+#[test]
+fn int64_optional_delta() -> Result<()> {
+    round_trip(
+        "int64",
+        "nullable",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::DeltaBinaryPacked],
+    )
+}
+
+#[test]
+fn int64_required_delta() -> Result<()> {
+    round_trip(
+        "int64",
+        "required",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::DeltaBinaryPacked],
+    )
+}
+
 #[cfg(feature = "io_parquet_compression")]
 #[test]
 fn int64_optional_v2_compressed() -> Result<()> {

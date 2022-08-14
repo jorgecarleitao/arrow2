@@ -198,6 +198,30 @@ fn indexed_optional_i32() -> Result<()> {
 }
 
 #[test]
+fn indexed_optional_i32_delta() -> Result<()> {
+    let array21 = Int32Array::from([Some(1), Some(2), None]);
+    let array22 = Int32Array::from([None, Some(5), Some(6)]);
+    let expected = Int32Array::from_slice([5]).boxed();
+
+    read_with_indexes(
+        pages(&[&array21, &array22], Encoding::DeltaBinaryPacked)?,
+        expected,
+    )
+}
+
+#[test]
+fn indexed_required_i32_delta() -> Result<()> {
+    let array21 = Int32Array::from_slice([1, 2, 3]);
+    let array22 = Int32Array::from_slice([4, 5, 6]);
+    let expected = Int32Array::from_slice([5]).boxed();
+
+    read_with_indexes(
+        pages(&[&array21, &array22], Encoding::DeltaBinaryPacked)?,
+        expected,
+    )
+}
+
+#[test]
 fn indexed_optional_utf8() -> Result<()> {
     let array21 = Utf8Array::<i32>::from([Some("a"), Some("b"), None]);
     let array22 = Utf8Array::<i32>::from([None, Some("e"), Some("f")]);

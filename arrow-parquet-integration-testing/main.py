@@ -24,7 +24,7 @@ def _prepare(
         write,
         "--version",
         version,
-        "--encoding-utf8",
+        "--encoding-int",
         encoding_utf8,
         "--compression",
         compression,
@@ -75,8 +75,8 @@ def variations():
             # "generated_custom_metadata",
         ]:
             # pyarrow does not support decoding "delta"-encoded values.
-            # for encoding in ["plain", "delta"]:
-            for encoding in ["plain"]:
+            for encoding in ["plain", "delta"]:
+            #for encoding in ["plain"]:
                 for compression in ["uncompressed", "zstd", "snappy"]:
                     yield (version, file, compression, encoding)
 
@@ -95,4 +95,4 @@ if __name__ == "__main__":
             if str(c1.type) in ["month_interval", "day_time_interval"]:
                 # pyarrow does not support interval types from parquet
                 continue
-            assert c1 == c2
+            assert c1 == c2, (c1, c2)
