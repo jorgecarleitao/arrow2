@@ -5,8 +5,9 @@ use futures::{
     AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt,
 };
 use parquet2::{
+    indexes::FilteredPage,
     metadata::ColumnChunkMetaData,
-    read::{BasicDecompressor, PageReader},
+    read::{BasicDecompressor, IndexedPageReader, PageMetaData, PageReader},
 };
 
 use crate::{
@@ -91,6 +92,21 @@ pub fn get_field_columns<'a>(
         .collect()
 }
 
+/// Returns all [`ColumnChunkMetaData`] associated to `field_name`.
+/// For non-nested parquet types, this returns a single column
+pub fn get_field_pages<'a, T>(
+    columns: &'a [ColumnChunkMetaData],
+    items: &'a [T],
+    field_name: &str,
+) -> Vec<&'a T> {
+    columns
+        .iter()
+        .zip(items)
+        .filter(|(metadata, _)| metadata.descriptor().path_in_schema[0] == field_name)
+        .map(|(_, item)| item)
+        .collect()
+}
+
 /// Reads all columns that are part of the parquet field `field_name`
 /// # Implementation
 /// This operation is IO-bounded `O(C)` where C is the number of columns associated to
@@ -167,6 +183,12 @@ pub async fn read_columns_async<
     try_join_all(futures).await
 }
 
+type Pages = Box<
+    dyn Iterator<Item = std::result::Result<parquet2::page::CompressedPage, parquet2::error::Error>>
+        + Sync
+        + Send,
+>;
+
 /// Converts a vector of columns associated with the parquet field whose name is [`Field`]
 /// to an iterator of [`Array`], [`ArrayIter`] of chunk size `chunk_size`.
 pub fn to_deserializer<'a>(
@@ -174,26 +196,59 @@ pub fn to_deserializer<'a>(
     field: Field,
     num_rows: usize,
     chunk_size: Option<usize>,
+    pages: Option<Vec<Vec<FilteredPage>>>,
 ) -> Result<ArrayIter<'a>> {
     let chunk_size = chunk_size.map(|c| c.min(num_rows));
 
-    let (columns, types): (Vec<_>, Vec<_>) = columns
-        .into_iter()
-        .map(|(column_meta, chunk)| {
-            let len = chunk.len();
-            let pages = PageReader::new(
-                std::io::Cursor::new(chunk),
-                column_meta,
-                std::sync::Arc::new(|_, _| true),
-                vec![],
-                len * 2 + 1024,
-            );
-            (
-                BasicDecompressor::new(pages, vec![]),
-                &column_meta.descriptor().descriptor.primitive_type,
-            )
-        })
-        .unzip();
+    let (columns, types) = if let Some(pages) = pages {
+        let (columns, types): (Vec<_>, Vec<_>) = columns
+            .into_iter()
+            .zip(pages.into_iter())
+            .map(|((column_meta, chunk), mut pages)| {
+                // de-offset the start, since we read in chunks (and offset is from start of file)
+                let mut meta: PageMetaData = column_meta.into();
+                pages
+                    .iter_mut()
+                    .for_each(|page| page.start -= meta.column_start);
+                meta.column_start = 0;
+                let pages = IndexedPageReader::new_with_page_meta(
+                    std::io::Cursor::new(chunk),
+                    meta,
+                    pages,
+                    vec![],
+                    vec![],
+                );
+                let pages = Box::new(pages) as Pages;
+                (
+                    BasicDecompressor::new(pages, vec![]),
+                    &column_meta.descriptor().descriptor.primitive_type,
+                )
+            })
+            .unzip();
+
+        (columns, types)
+    } else {
+        let (columns, types): (Vec<_>, Vec<_>) = columns
+            .into_iter()
+            .map(|(column_meta, chunk)| {
+                let len = chunk.len();
+                let pages = PageReader::new(
+                    std::io::Cursor::new(chunk),
+                    column_meta,
+                    std::sync::Arc::new(|_, _| true),
+                    vec![],
+                    len * 2 + 1024,
+                );
+                let pages = Box::new(pages) as Pages;
+                (
+                    BasicDecompressor::new(pages, vec![]),
+                    &column_meta.descriptor().descriptor.primitive_type,
+                )
+            })
+            .unzip();
+
+        (columns, types)
+    };
 
     column_iter_to_arrays(columns, types, field, chunk_size, num_rows)
 }
@@ -214,6 +269,7 @@ pub fn read_columns_many<'a, R: Read + Seek>(
     fields: Vec<Field>,
     chunk_size: Option<usize>,
     limit: Option<usize>,
+    pages: Option<Vec<Vec<Vec<FilteredPage>>>>,
 ) -> Result<Vec<ArrayIter<'a>>> {
     let num_rows = row_group.num_rows();
     let num_rows = limit.map(|limit| limit.min(num_rows)).unwrap_or(num_rows);
@@ -225,18 +281,26 @@ pub fn read_columns_many<'a, R: Read + Seek>(
         .map(|field| read_columns(reader, row_group.columns(), &field.name))
         .collect::<Result<Vec<_>>>()?;
 
-    field_columns
-        .into_iter()
-        .zip(fields.into_iter())
-        .map(|(columns, field)| to_deserializer(columns, field, num_rows, chunk_size))
-        .collect()
+    if let Some(pages) = pages {
+        field_columns
+            .into_iter()
+            .zip(fields)
+            .zip(pages)
+            .map(|((columns, field), pages)| {
+                to_deserializer(columns, field, num_rows, chunk_size, Some(pages))
+            })
+            .collect()
+    } else {
+        field_columns
+            .into_iter()
+            .zip(fields.into_iter())
+            .map(|(columns, field)| to_deserializer(columns, field, num_rows, chunk_size, None))
+            .collect()
+    }
 }
 
 /// Returns a vector of iterators of [`Array`] corresponding to the top level parquet fields whose
 /// name matches `fields`'s names.
-///
-/// This operation is IO-bounded `O(C)` where C is the number of columns in the row group -
-/// it reads all the columns to memory from the row group associated to the requested fields.
 ///
 /// # Implementation
 /// This operation is IO-bounded `O(C)` where C is the number of columns in the row group -
@@ -252,16 +316,32 @@ pub async fn read_columns_many_async<
     row_group: &RowGroupMetaData,
     fields: Vec<Field>,
     chunk_size: Option<usize>,
+    limit: Option<usize>,
+    pages: Option<Vec<Vec<Vec<FilteredPage>>>>,
 ) -> Result<Vec<ArrayIter<'a>>> {
+    let num_rows = row_group.num_rows();
+    let num_rows = limit.map(|limit| limit.min(num_rows)).unwrap_or(num_rows);
+
     let futures = fields
         .iter()
         .map(|field| read_columns_async(factory.clone(), row_group.columns(), &field.name));
 
     let field_columns = try_join_all(futures).await?;
 
-    field_columns
-        .into_iter()
-        .zip(fields.into_iter())
-        .map(|(columns, field)| to_deserializer(columns, field, row_group.num_rows(), chunk_size))
-        .collect()
+    if let Some(pages) = pages {
+        field_columns
+            .into_iter()
+            .zip(fields)
+            .zip(pages)
+            .map(|((columns, field), pages)| {
+                to_deserializer(columns, field, num_rows, chunk_size, Some(pages))
+            })
+            .collect()
+    } else {
+        field_columns
+            .into_iter()
+            .zip(fields.into_iter())
+            .map(|(columns, field)| to_deserializer(columns, field, num_rows, chunk_size, None))
+            .collect()
+    }
 }

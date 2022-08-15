@@ -35,8 +35,15 @@ async fn main() -> Result<()> {
     for row_group in &metadata.row_groups {
         // A row group is consumed in two steps: the first step is to read the (compressed)
         // columns into memory, which is IO-bounded.
-        let column_chunks =
-            read::read_columns_many_async(factory, row_group, schema.fields.clone(), None).await?;
+        let column_chunks = read::read_columns_many_async(
+            factory,
+            row_group,
+            schema.fields.clone(),
+            None,
+            None,
+            None,
+        )
+        .await?;
 
         // the second step is to iterate over the columns in chunks.
         // this operation is CPU-bounded and should be sent to a separate thread pool (e.g. `tokio_rayon`) to not block

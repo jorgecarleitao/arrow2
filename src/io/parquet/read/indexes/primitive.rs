@@ -7,7 +7,7 @@ use crate::datatypes::{DataType, TimeUnit};
 use crate::trusted_len::TrustedLen;
 use crate::types::NativeType;
 
-use super::ColumnIndex;
+use super::ColumnPageStatistics;
 
 #[inline]
 fn deserialize_int32<I: TrustedLen<Item = Option<i32>>>(
@@ -143,8 +143,8 @@ fn deserialize_id_s<T: NativeType, I: TrustedLen<Item = Option<T>>>(
     Box::new(PrimitiveArray::<T>::from_trusted_len_iter(iter).to(data_type))
 }
 
-pub fn deserialize_i32(indexes: &[PageIndex<i32>], data_type: DataType) -> ColumnIndex {
-    ColumnIndex {
+pub fn deserialize_i32(indexes: &[PageIndex<i32>], data_type: DataType) -> ColumnPageStatistics {
+    ColumnPageStatistics {
         min: deserialize_int32(indexes.iter().map(|index| index.min), data_type.clone()),
         max: deserialize_int32(indexes.iter().map(|index| index.max), data_type),
         null_count: PrimitiveArray::from_trusted_len_iter(
@@ -159,8 +159,8 @@ pub fn deserialize_i64(
     indexes: &[PageIndex<i64>],
     primitive_type: &PrimitiveType,
     data_type: DataType,
-) -> ColumnIndex {
-    ColumnIndex {
+) -> ColumnPageStatistics {
+    ColumnPageStatistics {
         min: deserialize_int64(
             indexes.iter().map(|index| index.min),
             primitive_type,
@@ -179,8 +179,11 @@ pub fn deserialize_i64(
     }
 }
 
-pub fn deserialize_i96(indexes: &[PageIndex<[u32; 3]>], data_type: DataType) -> ColumnIndex {
-    ColumnIndex {
+pub fn deserialize_i96(
+    indexes: &[PageIndex<[u32; 3]>],
+    data_type: DataType,
+) -> ColumnPageStatistics {
+    ColumnPageStatistics {
         min: deserialize_int96(indexes.iter().map(|index| index.min), data_type.clone()),
         max: deserialize_int96(indexes.iter().map(|index| index.max), data_type),
         null_count: PrimitiveArray::from_trusted_len_iter(
@@ -191,8 +194,11 @@ pub fn deserialize_i96(indexes: &[PageIndex<[u32; 3]>], data_type: DataType) -> 
     }
 }
 
-pub fn deserialize_id<T: NativeType>(indexes: &[PageIndex<T>], data_type: DataType) -> ColumnIndex {
-    ColumnIndex {
+pub fn deserialize_id<T: NativeType>(
+    indexes: &[PageIndex<T>],
+    data_type: DataType,
+) -> ColumnPageStatistics {
+    ColumnPageStatistics {
         min: deserialize_id_s(indexes.iter().map(|index| index.min), data_type.clone()),
         max: deserialize_id_s(indexes.iter().map(|index| index.max), data_type),
         null_count: PrimitiveArray::from_trusted_len_iter(

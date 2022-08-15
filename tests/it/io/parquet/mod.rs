@@ -26,12 +26,17 @@ pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayS
     let metadata = p_read::read_metadata(&mut reader)?;
     let schema = p_read::infer_schema(&metadata)?;
 
+    let row_group = &metadata.row_groups[0];
+
     // verify that we can read indexes
-    let _indexes = p_read::read_columns_indexes(
-        &mut reader,
-        metadata.row_groups[0].columns(),
-        &schema.fields,
-    )?;
+    if p_read::indexes::has_indexes(row_group) {
+        let _indexes = p_read::indexes::read_filtered_pages(
+            &mut reader,
+            row_group,
+            &schema.fields,
+            |_, _| vec![],
+        )?;
+    }
 
     let schema = schema.filter(|_, f| f.name == column);
 
@@ -39,7 +44,7 @@ pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayS
 
     let statistics = deserialize(field, &metadata.row_groups)?;
 
-    let mut reader = p_read::FileReader::new(reader, metadata.row_groups, schema, None, None);
+    let mut reader = p_read::FileReader::new(reader, metadata.row_groups, schema, None, None, None);
 
     Ok((
         reader.next().unwrap()?.into_arrays().pop().unwrap(),
@@ -1171,6 +1176,7 @@ fn integration_read(data: &[u8], limit: Option<usize>) -> Result<IntegrationRead
         schema.clone(),
         None,
         limit,
+        None,
     );
 
     let batches = reader.collect::<Result<Vec<_>>>()?;
@@ -1559,7 +1565,7 @@ fn filter_chunk() -> Result<()> {
         .map(|(_, row_group)| row_group)
         .collect();
 
-    let reader = p_read::FileReader::new(reader, row_groups, schema, None, None);
+    let reader = p_read::FileReader::new(reader, row_groups, schema, None, None, None);
 
     let new_chunks = reader.collect::<Result<Vec<_>>>()?;
 
