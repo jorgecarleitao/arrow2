@@ -354,6 +354,6 @@ pub fn deserialize(data_type: DataType, column: &Column) -> Result<Box<dyn Array
         DataType::LargeUtf8 => deserialize_utf8::<i64>(data_type, column).map(|x| x.boxed()),
         DataType::Binary => deserialize_binary::<i32>(data_type, column).map(|x| x.boxed()),
         DataType::LargeBinary => deserialize_binary::<i64>(data_type, column).map(|x| x.boxed()),
-        dt => return Err(Error::nyi(format!("Deserializing {dt:?} from ORC"))),
+        dt => Err(Error::nyi(format!("Deserializing {dt:?} from ORC"))),
     }
 }
