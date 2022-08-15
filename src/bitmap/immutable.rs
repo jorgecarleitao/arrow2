@@ -151,7 +151,7 @@ impl Bitmap {
 
     /// Returns the number of unset bits on this [`Bitmap`].
     ///
-    /// Guaranted to be `<= self.len()`.
+    /// Guaranteed to be `<= self.len()`.
     /// # Implementation
     /// This function is `O(1)` - the number of unset bits is computed when the bitmap is
     /// created
