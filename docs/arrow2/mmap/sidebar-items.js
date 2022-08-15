@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":[["mmap_dictionaries_unchecked","Memory maps dictionaries from an IPC file into"],["mmap_unchecked","Memory maps an record batch from an IPC file into a [`Chunk`]."]]};
