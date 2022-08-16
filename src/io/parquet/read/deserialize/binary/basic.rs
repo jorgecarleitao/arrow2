@@ -3,7 +3,7 @@ use std::default::Default;
 
 use parquet2::{
     deserialize::SliceFilteredIter,
-    encoding::{hybrid_rle, Encoding},
+    encoding::{delta_length_byte_array, hybrid_rle, Encoding},
     page::{split_buffer, DataPage, DictPage},
     schema::Repetition,
 };
@@ -22,44 +22,6 @@ use super::super::utils::{
 };
 use super::super::Pages;
 use super::{super::utils, utils::*};
-
-/*
-fn read_delta_optional<O: Offset>(
-    validity_buffer: &[u8],
-    values_buffer: &[u8],
-    additional: usize,
-    values: &mut Binary<O>,
-    validity: &mut MutableBitmap,
-) {
-    let Binary {
-        offsets,
-        values,
-        last_offset,
-    } = values;
-
-    // values_buffer: first 4 bytes are len, remaining is values
-    let mut values_iterator = delta_length_byte_array::Decoder::new(values_buffer);
-    let offsets_iterator = values_iterator.by_ref().map(|x| {
-        *last_offset += O::from_usize(x as usize).unwrap();
-        *last_offset
-    });
-
-    let mut page_validity = OptionalPageValidity::new(validity_buffer, additional);
-
-    // offsets:
-    extend_from_decoder(
-        validity,
-        &mut page_validity,
-        None,
-        offsets,
-        offsets_iterator,
-    );
-
-    // values:
-    let new_values = values_iterator.into_values();
-    values.extend_from_slice(new_values);
-}
- */
 
 #[derive(Debug)]
 pub(super) struct Required<'a> {
@@ -80,6 +42,52 @@ impl<'a> Required<'a> {
 }
 
 #[derive(Debug)]
+pub(super) struct Delta<'a> {
+    pub lengths: std::vec::IntoIter<usize>,
+    pub values: &'a [u8],
+}
+
+impl<'a> Delta<'a> {
+    pub fn try_new(page: &'a DataPage) -> Result<Self> {
+        let (_, _, values) = split_buffer(page)?;
+
+        let mut lengths_iter = delta_length_byte_array::Decoder::new(values);
+
+        #[allow(clippy::needless_collect)] // we need to consume it to get the values
+        let lengths = lengths_iter
+            .by_ref()
+            .map(|x| x as usize)
+            .collect::<Vec<_>>();
+
+        let values = lengths_iter.into_values();
+        Ok(Self {
+            lengths: lengths.into_iter(),
+            values,
+        })
+    }
+
+    pub fn len(&self) -> usize {
+        self.lengths.size_hint().0
+    }
+}
+
+impl<'a> Iterator for Delta<'a> {
+    type Item = &'a [u8];
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        let length = self.lengths.next()?;
+        let (item, remaining) = self.values.split_at(length);
+        self.values = remaining;
+        Some(item)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.lengths.size_hint()
+    }
+}
+
+#[derive(Debug)]
 pub(super) struct FilteredRequired<'a> {
     pub values: SliceFilteredIter<SizedBinaryIter<'a>>,
 }
@@ -92,6 +100,26 @@ impl<'a> FilteredRequired<'a> {
         let values = SliceFilteredIter::new(values, rows);
 
         Self { values }
+    }
+
+    pub fn len(&self) -> usize {
+        self.values.size_hint().0
+    }
+}
+
+#[derive(Debug)]
+pub(super) struct FilteredDelta<'a> {
+    pub values: SliceFilteredIter<Delta<'a>>,
+}
+
+impl<'a> FilteredDelta<'a> {
+    pub fn try_new(page: &'a DataPage) -> Result<Self> {
+        let values = Delta::try_new(page)?;
+
+        let rows = get_selected_rows(page);
+        let values = SliceFilteredIter::new(values, rows);
+
+        Ok(Self { values })
     }
 
     pub fn len(&self) -> usize {
@@ -167,7 +195,11 @@ enum State<'a> {
     Required(Required<'a>),
     RequiredDictionary(RequiredDictionary<'a>),
     OptionalDictionary(OptionalPageValidity<'a>, ValuesDictionary<'a>),
+    Delta(Delta<'a>),
+    OptionalDelta(OptionalPageValidity<'a>, Delta<'a>),
     FilteredRequired(FilteredRequired<'a>),
+    FilteredDelta(FilteredDelta<'a>),
+    FilteredOptionalDelta(FilteredOptionalPageValidity<'a>, Delta<'a>),
     FilteredOptional(FilteredOptionalPageValidity<'a>, BinaryIter<'a>),
     FilteredRequiredDictionary(FilteredRequiredDictionary<'a>),
     FilteredOptionalDictionary(FilteredOptionalPageValidity<'a>, ValuesDictionary<'a>),
@@ -178,10 +210,14 @@ impl<'a> utils::PageState<'a> for State<'a> {
         match self {
             State::Optional(validity, _) => validity.len(),
             State::Required(state) => state.len(),
+            State::Delta(state) => state.len(),
+            State::OptionalDelta(state, _) => state.len(),
             State::RequiredDictionary(values) => values.len(),
             State::OptionalDictionary(optional, _) => optional.len(),
             State::FilteredRequired(state) => state.len(),
             State::FilteredOptional(validity, _) => validity.len(),
+            State::FilteredDelta(state) => state.len(),
+            State::FilteredOptionalDelta(state, _) => state.len(),
             State::FilteredRequiredDictionary(values) => values.len(),
             State::FilteredOptionalDictionary(optional, _) => optional.len(),
         }
@@ -284,6 +320,20 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                     BinaryIter::new(values),
                 ))
             }
+            (Encoding::DeltaLengthByteArray, _, false, false) => {
+                Delta::try_new(page).map(State::Delta)
+            }
+            (Encoding::DeltaLengthByteArray, _, true, false) => Ok(State::OptionalDelta(
+                OptionalPageValidity::try_new(page)?,
+                Delta::try_new(page)?,
+            )),
+            (Encoding::DeltaLengthByteArray, _, false, true) => {
+                FilteredDelta::try_new(page).map(State::FilteredDelta)
+            }
+            (Encoding::DeltaLengthByteArray, _, true, true) => Ok(State::FilteredOptionalDelta(
+                FilteredOptionalPageValidity::try_new(page)?,
+                Delta::try_new(page)?,
+            )),
             _ => Err(utils::not_implemented(page)),
         }
     }
@@ -315,7 +365,40 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                     values.push(x)
                 }
             }
+            State::Delta(page) => {
+                values.extend_lengths(page.lengths.by_ref().take(additional), &mut page.values);
+            }
+            State::OptionalDelta(page_validity, page_values) => {
+                let Binary {
+                    offsets,
+                    values: values_,
+                    last_offset,
+                } = values;
+
+                let offset = *last_offset;
+                extend_from_decoder(
+                    validity,
+                    page_validity,
+                    Some(additional),
+                    offsets,
+                    page_values.lengths.by_ref().map(|x| {
+                        *last_offset += O::from_usize(x).unwrap();
+                        *last_offset
+                    }),
+                );
+
+                let length = *last_offset - offset;
+
+                let (consumed, remaining) = page_values.values.split_at(length.to_usize());
+                page_values.values = remaining;
+                values_.extend_from_slice(consumed);
+            }
             State::FilteredRequired(page) => {
+                for x in page.values.by_ref().take(additional) {
+                    values.push(x)
+                }
+            }
+            State::FilteredDelta(page) => {
                 for x in page.values.by_ref().take(additional) {
                     values.push(x)
                 }
@@ -340,6 +423,15 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                 }
             }
             State::FilteredOptional(page_validity, page_values) => {
+                utils::extend_from_decoder(
+                    validity,
+                    page_validity,
+                    Some(additional),
+                    values,
+                    page_values.by_ref(),
+                );
+            }
+            State::FilteredOptionalDelta(page_validity, page_values) => {
                 utils::extend_from_decoder(
                     validity,
                     page_validity,

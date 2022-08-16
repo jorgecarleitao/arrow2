@@ -339,11 +339,21 @@ fn list_large_binary_optional_v1() -> Result<()> {
 }
 
 #[test]
-#[ignore]
 fn utf8_optional_v2_delta() -> Result<()> {
     round_trip(
         "string",
         "nullable",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::DeltaLengthByteArray],
+    )
+}
+
+#[test]
+fn utf8_required_v2_delta() -> Result<()> {
+    round_trip(
+        "string",
+        "required",
         Version::V2,
         CompressionOptions::Uncompressed,
         vec![Encoding::DeltaLengthByteArray],
