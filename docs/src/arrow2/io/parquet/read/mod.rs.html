@@ -1,0 +1,164 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/read/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../../storage.js"></script><script defer src="../../../../../source-script.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<span id="2">2</span>
+<span id="3">3</span>
+<span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+</pre><pre class="rust"><code><span class="doccomment">//! APIs to read from Parquet format.
+</span><span class="attribute">#![allow(clippy::type_complexity)]</span>
+
+<span class="kw">mod </span>deserialize;
+<span class="kw">mod </span>file;
+<span class="kw">pub mod </span>indexes;
+<span class="kw">mod </span>row_group;
+<span class="kw">pub mod </span>schema;
+<span class="kw">pub mod </span>statistics;
+
+<span class="kw">use </span>std::io::{Read, Seek};
+
+<span class="kw">use </span>futures::{AsyncRead, AsyncSeek};
+
+<span class="comment">// re-exports of parquet2&#39;s relevant APIs
+</span><span class="kw">pub use </span>parquet2::{
+    error::Error <span class="kw">as </span>ParquetError,
+    fallible_streaming_iterator,
+    metadata::{ColumnChunkMetaData, ColumnDescriptor, RowGroupMetaData},
+    page::{CompressedDataPage, DataPageHeader, Page},
+    read::{
+        decompress, get_column_iterator, get_page_stream,
+        read_columns_indexes <span class="kw">as </span>_read_columns_indexes, read_metadata <span class="kw">as </span>_read_metadata,
+        read_metadata_async <span class="kw">as </span>_read_metadata_async, read_pages_locations, BasicDecompressor,
+        ColumnChunkIter, Decompressor, MutStreamingIterator, PageFilter, PageReader,
+        ReadColumnIterator, State,
+    },
+    schema::types::{
+        GroupLogicalType, ParquetType, PhysicalType, PrimitiveConvertedType, PrimitiveLogicalType,
+        TimeUnit <span class="kw">as </span>ParquetTimeUnit,
+    },
+    types::int96_to_i64_ns,
+    FallibleStreamingIterator,
+};
+
+<span class="kw">use crate</span>::{array::Array, error::Result};
+
+<span class="kw">pub use </span>deserialize::{column_iter_to_arrays, get_page_iterator};
+<span class="kw">pub use </span>file::{FileReader, RowGroupReader};
+<span class="kw">pub use </span>row_group::<span class="kw-2">*</span>;
+<span class="kw">pub use </span>schema::{infer_schema, FileMetaData};
+
+<span class="doccomment">/// Trait describing a [`FallibleStreamingIterator`] of [`Page`]
+</span><span class="kw">pub trait </span>Pages:
+    FallibleStreamingIterator&lt;Item = Page, Error = ParquetError&gt; + Send + Sync
+{
+}
+
+<span class="kw">impl</span>&lt;I: FallibleStreamingIterator&lt;Item = Page, Error = ParquetError&gt; + Send + Sync&gt; Pages <span class="kw">for </span>I {}
+
+<span class="doccomment">/// Type def for a sharable, boxed dyn [`Iterator`] of arrays
+</span><span class="kw">pub type </span>ArrayIter&lt;<span class="lifetime">&#39;a</span>&gt; = Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;&gt; + Send + Sync + <span class="lifetime">&#39;a</span>&gt;;
+
+<span class="doccomment">/// Reads parquets&#39; metadata syncronously.
+</span><span class="kw">pub fn </span>read_metadata&lt;R: Read + Seek&gt;(reader: <span class="kw-2">&amp;mut </span>R) -&gt; <span class="prelude-ty">Result</span>&lt;FileMetaData&gt; {
+    <span class="prelude-val">Ok</span>(_read_metadata(reader)<span class="question-mark">?</span>)
+}
+
+<span class="doccomment">/// Reads parquets&#39; metadata asynchronously.
+</span><span class="kw">pub async fn </span>read_metadata_async&lt;R: AsyncRead + AsyncSeek + Send + Unpin&gt;(
+    reader: <span class="kw-2">&amp;mut </span>R,
+) -&gt; <span class="prelude-ty">Result</span>&lt;FileMetaData&gt; {
+    <span class="prelude-val">Ok</span>(_read_metadata_async(reader).<span class="kw">await</span><span class="question-mark">?</span>)
+}
+
+<span class="kw">fn </span>convert_days_ms(value: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="kw">crate</span>::types::days_ms {
+    <span class="kw">crate</span>::types::days_ms(
+        i32::from_le_bytes(value[<span class="number">4</span>..<span class="number">8</span>].try_into().unwrap()),
+        i32::from_le_bytes(value[<span class="number">8</span>..<span class="number">12</span>].try_into().unwrap()),
+    )
+}
+
+<span class="kw">fn </span>convert_i128(value: <span class="kw-2">&amp;</span>[u8], n: usize) -&gt; i128 {
+    <span class="comment">// Copy the fixed-size byte value to the start of a 16 byte stack
+    // allocated buffer, then use an arithmetic right shift to fill in
+    // MSBs, which accounts for leading 1&#39;s in negative (two&#39;s complement)
+    // values.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>bytes = [<span class="number">0u8</span>; <span class="number">16</span>];
+    bytes[..n].copy_from_slice(value);
+    i128::from_be_bytes(bytes) &gt;&gt; (<span class="number">8 </span>* (<span class="number">16 </span>- n))
+}
+</code></pre></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (40336865f 2022-08-15)" ></div></body></html>
