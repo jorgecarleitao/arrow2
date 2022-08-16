@@ -168,6 +168,18 @@ fn indexed_required_utf8() -> Result<()> {
 }
 
 #[test]
+fn indexed_required_utf8_delta() -> Result<()> {
+    let array21 = Utf8Array::<i32>::from_slice(["a", "b", "c"]);
+    let array22 = Utf8Array::<i32>::from_slice(["d", "e", "f"]);
+    let expected = Utf8Array::<i32>::from_slice(["e"]).boxed();
+
+    read_with_indexes(
+        pages(&[&array21, &array22], Encoding::DeltaLengthByteArray)?,
+        expected,
+    )
+}
+
+#[test]
 fn indexed_required_i32() -> Result<()> {
     let array21 = Int32Array::from_slice([1, 2, 3]);
     let array22 = Int32Array::from_slice([4, 5, 6]);
@@ -192,6 +204,18 @@ fn indexed_optional_utf8() -> Result<()> {
     let expected = Utf8Array::<i32>::from_slice(["e"]).boxed();
 
     read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
+}
+
+#[test]
+fn indexed_optional_utf8_delta() -> Result<()> {
+    let array21 = Utf8Array::<i32>::from([Some("a"), Some("b"), None]);
+    let array22 = Utf8Array::<i32>::from([None, Some("e"), Some("f")]);
+    let expected = Utf8Array::<i32>::from_slice(["e"]).boxed();
+
+    read_with_indexes(
+        pages(&[&array21, &array22], Encoding::DeltaLengthByteArray)?,
+        expected,
+    )
 }
 
 #[test]

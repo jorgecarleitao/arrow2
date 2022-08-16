@@ -138,6 +138,13 @@ pub(crate) fn encode_delta<O: Offset>(
 
             delta_bitpacked::encode(lengths, buffer);
         } else {
+            println!(
+                "{:?}",
+                offsets
+                    .windows(2)
+                    .map(|w| (w[1] - w[0]).to_usize() as i64)
+                    .collect::<Vec<_>>()
+            );
             let lengths = offsets.windows(2).map(|w| (w[1] - w[0]).to_usize() as i64);
             delta_bitpacked::encode(lengths, buffer);
         }

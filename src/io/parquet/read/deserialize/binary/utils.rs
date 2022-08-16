@@ -13,6 +13,17 @@ pub struct Binary<O: Offset> {
 #[derive(Debug)]
 pub struct Offsets<O: Offset>(pub Vec<O>);
 
+impl<O: Offset> Offsets<O> {
+    #[inline]
+    pub fn extend_lengths<I: Iterator<Item = usize>>(&mut self, lengths: I) {
+        let mut last_offset = *self.0.last().unwrap();
+        self.0.extend(lengths.map(|length| {
+            last_offset += O::from_usize(length).unwrap();
+            last_offset
+        }));
+    }
+}
+
 impl<O: Offset> Pushable<O> for Offsets<O> {
     #[inline]
     fn len(&self) -> usize {
@@ -62,6 +73,17 @@ impl<O: Offset> Binary<O> {
     #[inline]
     pub fn len(&self) -> usize {
         self.offsets.len()
+    }
+
+    #[inline]
+    pub fn extend_lengths<I: Iterator<Item = usize>>(&mut self, lengths: I, values: &mut &[u8]) {
+        let current_offset = self.last_offset;
+        self.offsets.extend_lengths(lengths);
+        self.last_offset = *self.offsets.0.last().unwrap(); // guaranteed to have one
+        let length = self.last_offset.to_usize() - current_offset.to_usize();
+        let (consumed, remaining) = values.split_at(length);
+        *values = remaining;
+        self.values.extend_from_slice(consumed);
     }
 }
 
