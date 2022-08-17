@@ -65,9 +65,6 @@ fn write_def_levels(buffer: &mut Vec<u8>, nested: &[Nested], version: Version) -
 
     let levels = def::DefLevelsIter::new(nested);
 
-    let mut buffer1 = vec![];
-    encode_u32(&mut buffer1, def::DefLevelsIter::new(nested), num_bits).unwrap();
-
     match version {
         Version::V1 => write_levels_v1(buffer, move |buffer: &mut Vec<u8>| {
             encode_u32(buffer, levels, num_bits)?;
