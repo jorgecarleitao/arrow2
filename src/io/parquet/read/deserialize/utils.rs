@@ -126,7 +126,7 @@ impl<'a> PageValidity<'a> for FilteredOptionalPageValidity<'a> {
             (run, offset)
         } else {
             // a new run
-            let run = self.iter.next()?; // no run -> None
+            let run = self.iter.next()?.unwrap(); // no run -> None
             self.current = Some((run, 0));
             return self.next_limited(limit);
         };
@@ -234,7 +234,7 @@ impl<'a> OptionalPageValidity<'a> {
             (run, offset)
         } else {
             // a new run
-            let run = self.iter.next()?; // no run -> None
+            let run = self.iter.next()?.unwrap(); // no run -> None
             self.current = Some((run, 0));
             return self.next_limited(limit);
         };
@@ -492,9 +492,6 @@ pub(super) fn dict_indices_decoder(page: &DataPage) -> Result<hybrid_rle::Hybrid
     let bit_width = indices_buffer[0];
     let indices_buffer = &indices_buffer[1..];
 
-    Ok(hybrid_rle::HybridRleDecoder::new(
-        indices_buffer,
-        bit_width as u32,
-        page.num_values(),
-    ))
+    hybrid_rle::HybridRleDecoder::try_new(indices_buffer, bit_width as u32, page.num_values())
+        .map_err(Error::from)
 }

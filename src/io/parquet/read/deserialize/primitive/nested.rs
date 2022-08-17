@@ -113,7 +113,7 @@ where
         )
     }
 
-    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState) {
+    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState) -> Result<()> {
         let (values, validity) = decoded;
         match state {
             State::Optional(page_values) => {
@@ -128,19 +128,24 @@ where
                 values.push(value.unwrap_or_default());
             }
             State::RequiredDictionary(page) => {
-                let op1 = |index: u32| page.dict[index as usize];
-                let value = page.values.next().map(op1);
+                let value = page
+                    .values
+                    .next()
+                    .map(|index| page.dict[index.unwrap() as usize]);
 
                 values.push(value.unwrap_or_default());
             }
             State::OptionalDictionary(page) => {
-                let op1 = |index: u32| page.dict[index as usize];
-                let value = page.values.next().map(op1);
+                let value = page
+                    .values
+                    .next()
+                    .map(|index| page.dict[index.unwrap() as usize]);
 
                 values.push(value.unwrap_or_default());
                 validity.push(true);
             }
         }
+        Ok(())
     }
 
     fn push_null(&self, decoded: &mut Self::DecodedState) {

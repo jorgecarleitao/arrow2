@@ -163,7 +163,8 @@ where
                 Some(remaining),
                 values,
                 &mut page.values.by_ref().map(|x| {
-                    let x: usize = x.try_into().unwrap();
+                    // todo: rm unwrap
+                    let x: usize = x.unwrap().try_into().unwrap();
                     match x.try_into() {
                         Ok(key) => key,
                         // todo: convert this to an error.
@@ -176,7 +177,8 @@ where
                     page.values
                         .by_ref()
                         .map(|x| {
-                            let x: usize = x.try_into().unwrap();
+                            // todo: rm unwrap
+                            let x: usize = x.unwrap().try_into().unwrap();
                             let x: K = match x.try_into() {
                                 Ok(key) => key,
                                 // todo: convert this to an error.
@@ -195,7 +197,8 @@ where
                 Some(remaining),
                 values,
                 &mut page_values.by_ref().map(|x| {
-                    let x: usize = x.try_into().unwrap();
+                    // todo: rm unwrap
+                    let x: usize = x.unwrap().try_into().unwrap();
                     let x: K = match x.try_into() {
                         Ok(key) => key,
                         // todo: convert this to an error.
@@ -211,7 +214,8 @@ where
                     page.values
                         .by_ref()
                         .map(|x| {
-                            let x: usize = x.try_into().unwrap();
+                            // todo: rm unwrap
+                            let x: usize = x.unwrap().try_into().unwrap();
                             let x: K = match x.try_into() {
                                 Ok(key) => key,
                                 // todo: convert this to an error.

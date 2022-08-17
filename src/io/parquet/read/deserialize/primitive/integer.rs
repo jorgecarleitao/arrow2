@@ -13,7 +13,7 @@ use crate::{
     array::MutablePrimitiveArray,
     bitmap::MutableBitmap,
     datatypes::DataType,
-    error::Result,
+    error::{Error, Result},
     io::parquet::read::deserialize::utils::{
         get_selected_rows, FilteredOptionalPageValidity, OptionalPageValidity,
     },
@@ -94,18 +94,20 @@ where
         match (page.encoding(), dict, is_optional, is_filtered) {
             (Encoding::DeltaBinaryPacked, _, false, false) => {
                 let (_, _, values) = split_buffer(page)?;
-                Ok(State::DeltaBinaryPackedRequired(Decoder::new(values)))
+                Decoder::try_new(values)
+                    .map(State::DeltaBinaryPackedRequired)
+                    .map_err(Error::from)
             }
             (Encoding::DeltaBinaryPacked, _, true, false) => {
                 let (_, _, values) = split_buffer(page)?;
                 Ok(State::DeltaBinaryPackedOptional(
                     OptionalPageValidity::try_new(page)?,
-                    Decoder::new(values),
+                    Decoder::try_new(values)?,
                 ))
             }
             (Encoding::DeltaBinaryPacked, _, false, true) => {
                 let (_, _, values) = split_buffer(page)?;
-                let values = Decoder::new(values);
+                let values = Decoder::try_new(values)?;
 
                 let rows = get_selected_rows(page);
                 let values = SliceFilteredIter::new(values, rows);
@@ -114,7 +116,7 @@ where
             }
             (Encoding::DeltaBinaryPacked, _, true, true) => {
                 let (_, _, values) = split_buffer(page)?;
-                let values = Decoder::new(values);
+                let values = Decoder::try_new(values)?;
 
                 Ok(State::FilteredDeltaBinaryPackedOptional(
                     FilteredOptionalPageValidity::try_new(page)?,
@@ -142,7 +144,7 @@ where
                 values.extend(
                     state
                         .by_ref()
-                        .map(|x| x.as_())
+                        .map(|x| x.unwrap().as_())
                         .map(self.0.op)
                         .take(remaining),
                 );
@@ -153,13 +155,16 @@ where
                     page_validity,
                     Some(remaining),
                     values,
-                    page_values.by_ref().map(|x| x.as_()).map(self.0.op),
+                    page_values
+                        .by_ref()
+                        .map(|x| x.unwrap().as_())
+                        .map(self.0.op),
                 )
             }
             State::FilteredDeltaBinaryPackedRequired(page) => {
                 values.extend(
                     page.by_ref()
-                        .map(|x| x.as_())
+                        .map(|x| x.unwrap().as_())
                         .map(self.0.op)
                         .take(remaining),
                 );
@@ -170,7 +175,10 @@ where
                     page_validity,
                     Some(remaining),
                     values,
-                    page_values.by_ref().map(|x| x.as_()).map(self.0.op),
+                    page_values
+                        .by_ref()
+                        .map(|x| x.unwrap().as_())
+                        .map(self.0.op),
                 );
             }
         }

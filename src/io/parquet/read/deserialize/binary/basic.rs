@@ -13,7 +13,7 @@ use crate::{
     bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
     datatypes::DataType,
-    error::Result,
+    error::{Error, Result},
 };
 
 use super::super::utils::{
@@ -51,13 +51,13 @@ impl<'a> Delta<'a> {
     pub fn try_new(page: &'a DataPage) -> Result<Self> {
         let (_, _, values) = split_buffer(page)?;
 
-        let mut lengths_iter = delta_length_byte_array::Decoder::new(values);
+        let mut lengths_iter = delta_length_byte_array::Decoder::try_new(values)?;
 
         #[allow(clippy::needless_collect)] // we need to consume it to get the values
         let lengths = lengths_iter
             .by_ref()
-            .map(|x| x as usize)
-            .collect::<Vec<_>>();
+            .map(|x| x.map(|x| x as usize).map_err(Error::from))
+            .collect::<Result<Vec<_>>>()?;
 
         let values = lengths_iter.into_values();
         Ok(Self {
@@ -405,20 +405,26 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
             }
             State::OptionalDictionary(page_validity, page_values) => {
                 let page_dict = &page_values.dict;
-                let op = move |index: u32| page_dict[index as usize].as_ref();
                 utils::extend_from_decoder(
                     validity,
                     page_validity,
                     Some(additional),
                     values,
-                    &mut page_values.values.by_ref().map(op),
+                    &mut page_values
+                        .values
+                        .by_ref()
+                        .map(|index| page_dict[index.unwrap() as usize].as_ref()),
                 )
             }
             State::RequiredDictionary(page) => {
                 let page_dict = &page.dict;
-                let op = move |index: u32| page_dict[index as usize].as_ref();
 
-                for x in page.values.by_ref().map(op).take(additional) {
+                for x in page
+                    .values
+                    .by_ref()
+                    .map(|index| page_dict[index.unwrap() as usize].as_ref())
+                    .take(additional)
+                {
                     values.push(x)
                 }
             }
@@ -442,21 +448,26 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
             }
             State::FilteredRequiredDictionary(page) => {
                 let page_dict = &page.dict;
-                let op = move |index: u32| page_dict[index as usize].as_ref();
-
-                for x in page.values.by_ref().map(op).take(additional) {
+                for x in page
+                    .values
+                    .by_ref()
+                    .map(|index| page_dict[index.unwrap() as usize].as_ref())
+                    .take(additional)
+                {
                     values.push(x)
                 }
             }
             State::FilteredOptionalDictionary(page_validity, page_values) => {
                 let page_dict = &page_values.dict;
-                let op = move |index: u32| page_dict[index as usize].as_ref();
                 utils::extend_from_decoder(
                     validity,
                     page_validity,
                     Some(additional),
                     values,
-                    &mut page_values.values.by_ref().map(op),
+                    &mut page_values
+                        .values
+                        .by_ref()
+                        .map(|index| page_dict[index.unwrap() as usize].as_ref()),
                 )
             }
         }

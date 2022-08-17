@@ -22,6 +22,6 @@ impl From<parquet2::error::Error> for Error {
 
 impl From<Error> for parquet2::error::Error {
     fn from(error: Error) -> Self {
-        parquet2::error::Error::General(error.to_string())
+        parquet2::error::Error::OutOfSpec(error.to_string())
     }
 }

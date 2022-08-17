@@ -227,27 +227,26 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                     values.push(x)
                 }
             }
-            State::OptionalDictionary(page) => {
-                let op = |index: u32| {
-                    let index = index as usize;
+            State::OptionalDictionary(page) => extend_from_decoder(
+                validity,
+                &mut page.validity,
+                Some(remaining),
+                values,
+                page.values.by_ref().map(|index| {
+                    let index = index.unwrap() as usize;
                     &page.dict[index * self.size..(index + 1) * self.size]
-                };
-
-                extend_from_decoder(
-                    validity,
-                    &mut page.validity,
-                    Some(remaining),
-                    values,
-                    page.values.by_ref().map(op),
-                )
-            }
+                }),
+            ),
             State::RequiredDictionary(page) => {
-                let op = |index: u32| {
-                    let index = index as usize;
-                    &page.dict[index * self.size..(index + 1) * self.size]
-                };
-
-                for x in page.values.by_ref().map(op).take(remaining) {
+                for x in page
+                    .values
+                    .by_ref()
+                    .map(|index| {
+                        let index = index.unwrap() as usize;
+                        &page.dict[index * self.size..(index + 1) * self.size]
+                    })
+                    .take(remaining)
+                {
                     values.push(x)
                 }
             }

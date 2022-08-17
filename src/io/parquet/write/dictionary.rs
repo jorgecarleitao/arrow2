@@ -48,20 +48,20 @@ fn serialize_keys_values<K: DictionaryKey>(
         let keys = keys
             .zip(validity.iter())
             .filter_map(|(key, is_valid)| is_valid.then(|| key));
-        let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64) as u8;
+        let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64);
 
         let keys = utils::ExactSizedIter::new(keys, array.len() - validity.unset_bits());
 
         // num_bits as a single byte
-        buffer.push(num_bits);
+        buffer.push(num_bits as u8);
 
         // followed by the encoded indices.
         Ok(encode_u32(buffer, keys, num_bits)?)
     } else {
-        let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64) as u8;
+        let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64);
 
         // num_bits as a single byte
-        buffer.push(num_bits);
+        buffer.push(num_bits as u8);
 
         // followed by the encoded indices.
         Ok(encode_u32(buffer, keys, num_bits)?)

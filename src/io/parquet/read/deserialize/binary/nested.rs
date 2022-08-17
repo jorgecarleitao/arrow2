@@ -90,7 +90,7 @@ impl<'a, O: Offset> NestedDecoder<'a> for BinaryDecoder<O> {
         )
     }
 
-    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState) {
+    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState) -> Result<()> {
         let (values, validity) = decoded;
         match state {
             State::Optional(page) => {
@@ -104,18 +104,25 @@ impl<'a, O: Offset> NestedDecoder<'a> for BinaryDecoder<O> {
             }
             State::RequiredDictionary(page) => {
                 let dict_values = &page.dict;
-                let op = move |index: u32| dict_values[index as usize].as_ref();
-                let item = page.values.next().map(op).unwrap_or_default();
+                let item = page
+                    .values
+                    .next()
+                    .map(|index| dict_values[index.unwrap() as usize].as_ref())
+                    .unwrap_or_default();
                 values.push(item);
             }
             State::OptionalDictionary(page) => {
                 let dict_values = &page.dict;
-                let op = move |index: u32| dict_values[index as usize].as_ref();
-                let item = page.values.next().map(op).unwrap_or_default();
+                let item = page
+                    .values
+                    .next()
+                    .map(|index| dict_values[index.unwrap() as usize].as_ref())
+                    .unwrap_or_default();
                 values.push(item);
                 validity.push(true);
             }
         }
+        Ok(())
     }
 
     fn push_null(&self, decoded: &mut Self::DecodedState) {

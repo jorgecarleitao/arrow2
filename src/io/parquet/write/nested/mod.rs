@@ -33,7 +33,7 @@ fn write_rep_levels(buffer: &mut Vec<u8>, nested: &[Nested], version: Version) -
     if max_level == 0 {
         return Ok(());
     }
-    let num_bits = get_bit_width(max_level) as u8;
+    let num_bits = get_bit_width(max_level);
 
     let levels = rep::RepLevelsIter::new(nested);
 
@@ -61,7 +61,7 @@ fn write_def_levels(buffer: &mut Vec<u8>, nested: &[Nested], version: Version) -
     if max_level == 0 {
         return Ok(());
     }
-    let num_bits = get_bit_width(max_level) as u8;
+    let num_bits = get_bit_width(max_level);
 
     let levels = def::DefLevelsIter::new(nested);
 
