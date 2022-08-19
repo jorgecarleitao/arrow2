@@ -165,6 +165,34 @@ fn list_serializer<'a, O: Offset>(
     ))
 }
 
+fn fixed_size_list_serializer<'a>(
+    array: &'a FixedSizeListArray,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
+    let mut serializer = new_serializer(array.values().as_ref());
+
+    Box::new(BufStreamingIterator::new(
+        zip_validity(0..array.len(), array.validity().map(|x| x.iter())),
+        move |ix, buf| {
+            if let Some(_) = ix {
+                let length = array.size();
+                buf.push(b'[');
+                let mut is_first_row = true;
+                for _ in 0..length {
+                    if !is_first_row {
+                        buf.push(b',');
+                    }
+                    is_first_row = false;
+                    buf.extend(serializer.next().unwrap());
+                }
+                buf.push(b']');
+            } else {
+                buf.extend(b"null");
+            }
+        },
+        vec![],
+    ))
+}
+
 fn date_serializer<'a, T, F>(
     array: &'a PrimitiveArray<T>,
     convert: F,
@@ -226,6 +254,9 @@ pub(crate) fn new_serializer<'a>(
         DataType::Utf8 => utf8_serializer::<i32>(array.as_any().downcast_ref().unwrap()),
         DataType::LargeUtf8 => utf8_serializer::<i64>(array.as_any().downcast_ref().unwrap()),
         DataType::Struct(_) => struct_serializer(array.as_any().downcast_ref().unwrap()),
+        DataType::FixedSizeList(_, _) => {
+            fixed_size_list_serializer(array.as_any().downcast_ref().unwrap())
+        }
         DataType::List(_) => list_serializer::<i32>(array.as_any().downcast_ref().unwrap()),
         DataType::LargeList(_) => list_serializer::<i64>(array.as_any().downcast_ref().unwrap()),
         DataType::Date32 => date_serializer(array.as_any().downcast_ref().unwrap(), date32_to_date),

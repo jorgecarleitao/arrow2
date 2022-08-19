@@ -293,6 +293,30 @@ fn deserialize_list_into<'a, O: Offset, A: Borrow<Value<'a>>>(
     target.expand(arrays);
 }
 
+fn deserialize_fixed_size_list_into<'a, A: Borrow<Value<'a>>>(
+    target: &mut MutableFixedSizeListArray<Box<dyn MutableArray>>,
+    rows: &[A],
+) {
+    for row in rows {
+        match row.borrow() {
+            Value::Array(value) => {
+                if value.len() == target.size() {
+                    {
+                        let child = target.mut_values();
+                        deserialize_into(child, &value);
+                    }
+                    // unless alignment is already off, the if above should
+                    // prevent this from ever happening.
+                    target.try_push_valid().expect("unaligned backing array");
+                } else {
+                    target.push_null();
+                }
+            }
+            _ => target.push_null(),
+        }
+    }
+}
+
 fn try_deserialize_into<'a, A: Borrow<Value<'a>>, T: NativeType>(
     target: &mut Box<dyn MutableArray>,
     rows: &[A],
@@ -323,6 +347,11 @@ fn deserialize_into<'a, A: Borrow<Value<'a>>>(target: &mut Box<dyn MutableArray>
         .downcast_mut::<MutableListArray<i32, Box<dyn MutableArray>>>()
     {
         deserialize_list_into(list_array, rows);
+    } else if let Some(fixed_size_list_array) = target
+        .as_mut_any()
+        .downcast_mut::<MutableFixedSizeListArray<Box<dyn MutableArray>>>()
+    {
+        deserialize_fixed_size_list_into(fixed_size_list_array, rows);
     } else if try_generic_deserialize_into::<_, MutableBooleanArray>(
         target,
         rows,
@@ -543,28 +572,35 @@ pub fn deserialize(json: &Value, data_type: DataType) -> Result<Box<dyn Array>, 
 }
 
 fn allocate_array(f: &Field) -> Box<dyn MutableArray> {
-    use PrimitiveType::*;
-    match f.data_type() {
-        DataType::List(inner) => match inner.data_type().to_physical_type() {
-            PhysicalType::Primitive(Int8) => Box::new(MutablePrimitiveArray::<i8>::new()),
-            PhysicalType::Primitive(Int16) => Box::new(MutablePrimitiveArray::<i16>::new()),
-            PhysicalType::Primitive(Int32) => Box::new(MutablePrimitiveArray::<i32>::new()),
-            PhysicalType::Primitive(Int64) => Box::new(MutablePrimitiveArray::<i64>::new()),
-            PhysicalType::Primitive(Int128) => Box::new(MutablePrimitiveArray::<i128>::new()),
-            PhysicalType::Primitive(UInt8) => Box::new(MutablePrimitiveArray::<u8>::new()),
-            PhysicalType::Primitive(UInt16) => Box::new(MutablePrimitiveArray::<u16>::new()),
-            PhysicalType::Primitive(UInt32) => Box::new(MutablePrimitiveArray::<u32>::new()),
-            PhysicalType::Primitive(UInt64) => Box::new(MutablePrimitiveArray::<u64>::new()),
-            PhysicalType::Primitive(Float16) => Box::new(MutablePrimitiveArray::<f16>::new()),
-            PhysicalType::Primitive(Float32) => Box::new(MutablePrimitiveArray::<f32>::new()),
-            PhysicalType::Primitive(Float64) => Box::new(MutablePrimitiveArray::<f64>::new()),
-            PhysicalType::List => Box::new(MutableListArray::<i32, _>::new_from(
-                allocate_array(inner),
-                inner.data_type().clone(),
-                0,
-            )),
+    fn allocate_inner(f: &Field) -> Box<dyn MutableArray> {
+        match f.data_type() {
+            DataType::Int8 => Box::new(MutablePrimitiveArray::<i8>::new()),
+            DataType::Int16 => Box::new(MutablePrimitiveArray::<i16>::new()),
+            DataType::Int32 => Box::new(MutablePrimitiveArray::<i32>::new()),
+            DataType::Int64 => Box::new(MutablePrimitiveArray::<i64>::new()),
+            DataType::UInt8 => Box::new(MutablePrimitiveArray::<u8>::new()),
+            DataType::UInt16 => Box::new(MutablePrimitiveArray::<u16>::new()),
+            DataType::UInt32 => Box::new(MutablePrimitiveArray::<u32>::new()),
+            DataType::UInt64 => Box::new(MutablePrimitiveArray::<u64>::new()),
+            DataType::Float16 => Box::new(MutablePrimitiveArray::<f16>::new()),
+            DataType::Float32 => Box::new(MutablePrimitiveArray::<f32>::new()),
+            DataType::Float64 => Box::new(MutablePrimitiveArray::<f64>::new()),
+            DataType::List(..) => allocate_array(f),
+            DataType::FixedSizeList(..) => allocate_array(f),
             _ => todo!(),
-        },
+        }
+    }
+    match f.data_type() {
+        DataType::List(inner) => Box::new(MutableListArray::<i32, _>::new_from(
+            allocate_array(inner),
+            f.data_type().clone(),
+            0,
+        )),
+        DataType::FixedSizeList(child, size) => Box::new(MutableFixedSizeListArray::<_>::new_from(
+            allocate_inner(child),
+            f.data_type().clone(),
+            *size,
+        )),
         _ => todo!(),
     }
 }

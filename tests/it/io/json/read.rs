@@ -116,3 +116,55 @@ fn read_json_records() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn read_json_fixed_size_records() -> Result<()> {
+    let data = br#"[
+        {
+            "a": [1, 2.2, 3, 4]
+        },
+        {
+            "a": [5, 6, 7, 8]
+        },
+        {
+            "a": [7, 8, 9]
+        }
+    ]"#;
+
+    let a_iter = vec![
+        Some(vec![Some(1.), Some(2.2), Some(3.), Some(4.)]),
+        Some(vec![Some(5.), Some(6.), Some(7.), Some(8.)]),
+        None,
+    ];
+
+    let a_iter = a_iter.into_iter();
+    let mut a = MutableFixedSizeListArray::<MutablePrimitiveArray<f64>>::new_with_field(
+        MutablePrimitiveArray::<f64>::new(),
+        "inner",
+        false,
+        4,
+    );
+    a.try_extend(a_iter).unwrap();
+    let a_expected: FixedSizeListArray = a.into();
+
+    let json = json_deserializer::parse(data)?;
+
+    let schema = Schema {
+        fields: vec![Field::new("a", a_expected.data_type().clone(), true)],
+        metadata: Metadata::default(),
+    };
+    let actual = read::deserialize_records(&json, &schema)?;
+
+    for (f, arr) in schema.fields.iter().zip(actual.arrays().iter()) {
+        let (expected, actual) = if f.name == "a" {
+            (&a_expected, arr.as_ref())
+        } else {
+            panic!("unexpected field found: {}", f.name);
+        };
+
+        // No idea why assert_eq! doesn't work here, but this does.
+        assert_eq!(format!("{:?}", expected), format!("{:?}", actual));
+    }
+
+    Ok(())
+}

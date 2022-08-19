@@ -255,6 +255,39 @@ fn nested_list_records() -> Result<()> {
 }
 
 #[test]
+fn fixed_size_list_records() -> Result<()> {
+    let iter = vec![
+        vec![Some(1), Some(2), Some(3)],
+        vec![Some(4), Some(5), Some(6)],
+    ];
+
+    let iter = iter.into_iter().map(Some);
+
+    let mut inner = MutableFixedSizeListArray::<MutablePrimitiveArray<i32>>::new_with_field(
+        MutablePrimitiveArray::new(),
+        "vs",
+        false,
+        3,
+    );
+    inner.try_extend(iter).unwrap();
+    let inner: FixedSizeListArray = inner.into();
+
+    let schema = Schema {
+        fields: vec![Field::new("vs", inner.data_type().clone(), true)],
+        metadata: Metadata::default(),
+    };
+
+    let arrays: Vec<Box<dyn Array>> = vec![Box::new(inner)];
+    let chunk = Chunk::new(arrays);
+
+    let expected = r#"[{"vs":[1,2,3]},{"vs":[4,5,6]}]"#;
+
+    let buf = write_record_batch(schema, chunk)?;
+    assert_eq!(String::from_utf8(buf).unwrap(), expected);
+    Ok(())
+}
+
+#[test]
 fn list_of_struct() -> Result<()> {
     let inner = vec![Field::new("c121", DataType::Utf8, false)];
     let fields = vec![
