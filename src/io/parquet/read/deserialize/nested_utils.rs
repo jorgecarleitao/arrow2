@@ -258,7 +258,7 @@ pub(super) trait NestedDecoder<'a> {
     /// Initializes a new state
     fn with_capacity(&self, capacity: usize) -> Self::DecodedState;
 
-    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState);
+    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState) -> Result<()>;
     fn push_null(&self, decoded: &mut Self::DecodedState);
 
     fn deserialize_dict(&self, page: &DictPage) -> Self::Dictionary;
@@ -309,9 +309,9 @@ impl<'a> NestedPage<'a> {
         let max_def_level = page.descriptor.max_def_level;
 
         let reps =
-            HybridRleDecoder::new(rep_levels, get_bit_width(max_rep_level), page.num_values());
+            HybridRleDecoder::try_new(rep_levels, get_bit_width(max_rep_level), page.num_values())?;
         let defs =
-            HybridRleDecoder::new(def_levels, get_bit_width(max_def_level), page.num_values());
+            HybridRleDecoder::try_new(def_levels, get_bit_width(max_def_level), page.num_values())?;
 
         let iter = reps.zip(defs).peekable();
 
@@ -377,7 +377,7 @@ pub(super) fn extend<'a, D: NestedDecoder<'a>>(
         &mut decoded,
         decoder,
         additional,
-    );
+    )?;
     *remaining -= nested.len() - existing;
     items.push_back((nested, decoded));
 
@@ -393,7 +393,7 @@ pub(super) fn extend<'a, D: NestedDecoder<'a>>(
             &mut decoded,
             decoder,
             additional,
-        );
+        )?;
         *remaining -= nested.len();
         items.push_back((nested, decoded));
     }
@@ -407,7 +407,7 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
     decoded: &mut D::DecodedState,
     decoder: &D,
     additional: usize,
-) {
+) -> Result<()> {
     let mut values_count = vec![0; nested.len()];
 
     for (depth, nest) in nested.iter().enumerate().skip(1) {
@@ -431,6 +431,8 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
 
     let mut rows = 0;
     while let Some((rep, def)) = page.iter.next() {
+        let rep = rep?;
+        let def = def?;
         if rep == 0 {
             rows += 1;
         }
@@ -455,7 +457,7 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
                     // the leaf / primitive
                     let is_valid = (def != cum_sum[depth]) || !nest.is_nullable();
                     if right_level && is_valid {
-                        decoder.push_valid(values_state, decoded);
+                        decoder.push_valid(values_state, decoded)?;
                     } else {
                         decoder.push_null(decoded);
                     }
@@ -463,12 +465,19 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
             }
         }
 
-        let next_rep = page.iter.peek().map(|x| x.0).unwrap_or(0);
+        let next_rep = *page
+            .iter
+            .peek()
+            .map(|x| x.0.as_ref())
+            .transpose()
+            .unwrap() // todo: fix this
+            .unwrap_or(&0);
 
         if next_rep == 0 && rows == additional {
             break;
         }
     }
+    Ok(())
 }
 
 #[inline]

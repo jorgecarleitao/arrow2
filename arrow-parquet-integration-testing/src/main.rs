@@ -1,10 +1,9 @@
 use std::fs::File;
-use std::{io::Read};
+use std::io::Read;
 
 use arrow2::array::Array;
 use arrow2::io::ipc::IpcField;
 use arrow2::{
-    AHashMap,
     chunk::Chunk,
     datatypes::{DataType, Schema},
     error::Result,
@@ -16,6 +15,7 @@ use arrow2::{
             RowGroupIterator, Version as ParquetVersion, WriteOptions,
         },
     },
+    AHashMap,
 };
 use clap::Parser;
 use flate2::read::GzDecoder;
@@ -110,6 +110,8 @@ struct Args {
     projection: Option<String>,
     #[clap(short, long, arg_enum, help = "encoding scheme for utf8", default_value_t = EncodingScheme::Plain)]
     encoding_utf8: EncodingScheme,
+    #[clap(short('i'), long, arg_enum, help = "encoding scheme for int", default_value_t = EncodingScheme::Plain)]
+    encoding_int: EncodingScheme,
     #[clap(short, long, arg_enum)]
     compression: Compression,
 }
@@ -178,6 +180,13 @@ fn main() -> Result<()> {
         .map(|f| {
             transverse(&f.data_type, |dt| match dt {
                 DataType::Dictionary(..) => Encoding::RleDictionary,
+                DataType::Int32 => {
+                    if args.encoding_int == EncodingScheme::Delta {
+                        Encoding::DeltaBinaryPacked
+                    } else {
+                        Encoding::Plain
+                    }
+                }
                 DataType::Utf8 | DataType::LargeUtf8 => {
                     if args.encoding_utf8 == EncodingScheme::Delta {
                         Encoding::DeltaLengthByteArray

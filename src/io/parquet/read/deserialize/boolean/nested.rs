@@ -82,7 +82,7 @@ impl<'a> NestedDecoder<'a> for BooleanDecoder {
         )
     }
 
-    fn push_valid(&self, state: &mut State, decoded: &mut Self::DecodedState) {
+    fn push_valid(&self, state: &mut State, decoded: &mut Self::DecodedState) -> Result<()> {
         let (values, validity) = decoded;
         match state {
             State::Optional(page_values) => {
@@ -95,6 +95,7 @@ impl<'a> NestedDecoder<'a> for BooleanDecoder {
                 values.push(value);
             }
         }
+        Ok(())
     }
 
     fn push_null(&self, decoded: &mut Self::DecodedState) {

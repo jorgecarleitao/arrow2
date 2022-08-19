@@ -48,20 +48,20 @@ fn serialize_keys_values<K: DictionaryKey>(
         let keys = keys
             .zip(validity.iter())
             .filter_map(|(key, is_valid)| is_valid.then(|| key));
-        let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64) as u8;
+        let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64);
 
         let keys = utils::ExactSizedIter::new(keys, array.len() - validity.unset_bits());
 
         // num_bits as a single byte
-        buffer.push(num_bits);
+        buffer.push(num_bits as u8);
 
         // followed by the encoded indices.
         Ok(encode_u32(buffer, keys, num_bits)?)
     } else {
-        let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64) as u8;
+        let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64);
 
         // num_bits as a single byte
-        buffer.push(num_bits);
+        buffer.push(num_bits as u8);
 
         // followed by the encoded indices.
         Ok(encode_u32(buffer, keys, num_bits)?)
@@ -149,8 +149,7 @@ macro_rules! dyn_prim {
     ($from:ty, $to:ty, $array:expr, $options:expr, $type_:expr) => {{
         let values = $array.values().as_any().downcast_ref().unwrap();
 
-        let mut buffer = vec![];
-        primitive_encode_plain::<$from, $to>(values, false, &mut buffer);
+        let buffer = primitive_encode_plain::<$from, $to>(values, false, vec![]);
         let stats = primitive_build_statistics::<$from, $to>(values, $type_.clone());
         let stats = serialize_statistics(&stats);
         (DictPage::new(buffer, values.len(), false), stats)

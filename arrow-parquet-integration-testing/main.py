@@ -10,7 +10,12 @@ def get_file_path(file: str):
 
 
 def _prepare(
-    file: str, version: str, compression: str, encoding_utf8: str, projection=None
+    file: str,
+    version: str,
+    compression: str,
+    encoding_utf8: str,
+    encoding_int: str,
+    projection=None,
 ):
     write = f"{file}.parquet"
 
@@ -26,6 +31,8 @@ def _prepare(
         version,
         "--encoding-utf8",
         encoding_utf8,
+        "--encoding-int",
+        encoding_int,
         "--compression",
         compression,
     ]
@@ -38,7 +45,7 @@ def _prepare(
     return write
 
 
-def _expected(file: str):
+def _expected(file: str) -> pyarrow.Table:
     return pyarrow.ipc.RecordBatchFileReader(get_file_path(file)).read_all()
 
 
@@ -75,16 +82,19 @@ def variations():
             # "generated_custom_metadata",
         ]:
             # pyarrow does not support decoding "delta"-encoded values.
-            # for encoding in ["plain", "delta"]:
-            for encoding in ["plain"]:
+            for encoding_int in ["plain", "delta"]:
+                if encoding_int == "delta" and file in {"generated_primitive", "generated_null"}:
+                    # see https://issues.apache.org/jira/browse/ARROW-17465
+                    continue
+
                 for compression in ["uncompressed", "zstd", "snappy"]:
-                    yield (version, file, compression, encoding)
+                    yield (version, file, compression, "plain", encoding_int)
 
 
 if __name__ == "__main__":
-    for (version, file, compression, encoding_utf8) in variations():
+    for (version, file, compression, encoding_utf8, encoding_int) in variations():
         expected = _expected(file)
-        path = _prepare(file, version, compression, encoding_utf8)
+        path = _prepare(file, version, compression, encoding_utf8, encoding_int)
 
         table = pq.read_table(path)
         os.remove(path)
@@ -95,4 +105,4 @@ if __name__ == "__main__":
             if str(c1.type) in ["month_interval", "day_time_interval"]:
                 # pyarrow does not support interval types from parquet
                 continue
-            assert c1 == c2
+            assert c1 == c2, (c1, c2)

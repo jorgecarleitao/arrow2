@@ -31,7 +31,7 @@ where
     let (repetition_levels_byte_length, definition_levels_byte_length) =
         nested::write_rep_and_def(options.version, nested, &mut buffer)?;
 
-    encode_plain(array, is_optional, &mut buffer);
+    let buffer = encode_plain(array, is_optional, buffer);
 
     let statistics = if options.write_statistics {
         Some(serialize_statistics(&build_statistics(

@@ -71,14 +71,14 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
     Ok(match data_type.to_logical_type() {
         Null => null::iter_to_arrays(pages, data_type, chunk_size, num_rows),
         Boolean => dyn_iter(boolean::Iter::new(pages, data_type, chunk_size, num_rows)),
-        UInt8 => dyn_iter(iden(primitive::Iter::new(
+        UInt8 => dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x as u8,
         ))),
-        UInt16 => dyn_iter(iden(primitive::Iter::new(
+        UInt16 => dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
@@ -86,7 +86,7 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
             |x: i32| x as u16,
         ))),
         UInt32 => match physical_type {
-            PhysicalType::Int32 => dyn_iter(iden(primitive::Iter::new(
+            PhysicalType::Int32 => dyn_iter(iden(primitive::IntegerIter::new(
                 pages,
                 data_type,
                 num_rows,
@@ -94,7 +94,7 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
                 |x: i32| x as u32,
             ))),
             // some implementations of parquet write arrow's u32 into i64.
-            PhysicalType::Int64 => dyn_iter(iden(primitive::Iter::new(
+            PhysicalType::Int64 => dyn_iter(iden(primitive::IntegerIter::new(
                 pages,
                 data_type,
                 num_rows,
@@ -108,21 +108,21 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
                 )))
             }
         },
-        Int8 => dyn_iter(iden(primitive::Iter::new(
+        Int8 => dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x as i8,
         ))),
-        Int16 => dyn_iter(iden(primitive::Iter::new(
+        Int16 => dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x as i16,
         ))),
-        Int32 | Date32 | Time32(_) => dyn_iter(iden(primitive::Iter::new(
+        Int32 | Date32 | Time32(_) => dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
@@ -200,14 +200,14 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
         }
 
         Decimal(_, _) => match physical_type {
-            PhysicalType::Int32 => dyn_iter(iden(primitive::Iter::new(
+            PhysicalType::Int32 => dyn_iter(iden(primitive::IntegerIter::new(
                 pages,
                 data_type,
                 num_rows,
                 chunk_size,
                 |x: i32| x as i128,
             ))),
-            PhysicalType::Int64 => dyn_iter(iden(primitive::Iter::new(
+            PhysicalType::Int64 => dyn_iter(iden(primitive::IntegerIter::new(
                 pages,
                 data_type,
                 num_rows,
@@ -250,14 +250,14 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
         },
 
         // INT64
-        Int64 | Date64 | Time64(_) | Duration(_) => dyn_iter(iden(primitive::Iter::new(
+        Int64 | Date64 | Time64(_) | Duration(_) => dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
             chunk_size,
             |x: i64| x as i64,
         ))),
-        UInt64 => dyn_iter(iden(primitive::Iter::new(
+        UInt64 => dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
@@ -368,7 +368,7 @@ fn timestamp<'a, I: Pages + 'a>(
         ));
     }
 
-    let iter = primitive::Iter::new(pages, data_type, num_rows, chunk_size, |x: i64| x);
+    let iter = primitive::IntegerIter::new(pages, data_type, num_rows, chunk_size, |x: i64| x);
     let (factor, is_multiplier) = unifiy_timestmap_unit(logical_type, time_unit);
     match (factor, is_multiplier) {
         (1, _) => Ok(dyn_iter(iden(iter))),

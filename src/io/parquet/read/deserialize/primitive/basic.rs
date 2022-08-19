@@ -19,7 +19,7 @@ use super::super::utils::{get_selected_rows, FilteredOptionalPageValidity, Optio
 use super::super::Pages;
 
 #[derive(Debug)]
-struct FilteredRequiredValues<'a> {
+pub(super) struct FilteredRequiredValues<'a> {
     values: SliceFilteredIter<std::slice::ChunksExact<'a, u8>>,
 }
 
@@ -89,7 +89,7 @@ where
 
 // The state of a `DataPage` of `Primitive` parquet primitive type
 #[derive(Debug)]
-enum State<'a, T>
+pub(super) enum State<'a, T>
 where
     T: NativeType,
 {
@@ -118,7 +118,7 @@ where
 }
 
 #[derive(Debug)]
-struct PrimitiveDecoder<T, P, F>
+pub(super) struct PrimitiveDecoder<T, P, F>
 where
     T: NativeType,
     P: ParquetNativeType,
@@ -126,7 +126,7 @@ where
 {
     phantom: std::marker::PhantomData<T>,
     phantom_p: std::marker::PhantomData<P>,
-    op: F,
+    pub op: F,
 }
 
 impl<T, P, F> PrimitiveDecoder<T, P, F>
@@ -136,7 +136,7 @@ where
     F: Fn(P) -> T,
 {
     #[inline]
-    fn new(op: F) -> Self {
+    pub(super) fn new(op: F) -> Self {
         Self {
             phantom: std::marker::PhantomData,
             phantom_p: std::marker::PhantomData,
@@ -183,9 +183,9 @@ where
                 Ok(State::Optional(validity, values))
             }
             (Encoding::Plain, _, false, false) => Ok(State::Required(Values::try_new::<P>(page)?)),
-            (Encoding::Plain, _, false, true) => Ok(State::FilteredRequired(
-                FilteredRequiredValues::try_new::<P>(page)?,
-            )),
+            (Encoding::Plain, _, false, true) => {
+                FilteredRequiredValues::try_new::<P>(page).map(State::FilteredRequired)
+            }
             (Encoding::Plain, _, true, true) => Ok(State::FilteredOptional(
                 FilteredOptionalPageValidity::try_new(page)?,
                 Values::try_new::<P>(page)?,
@@ -232,12 +232,18 @@ where
                     page_validity,
                     Some(remaining),
                     values,
-                    &mut page_values.values.by_ref().map(op1),
+                    &mut page_values.values.by_ref().map(|x| x.unwrap()).map(op1),
                 )
             }
             State::RequiredDictionary(page) => {
                 let op1 = |index: u32| page.dict[index as usize];
-                values.extend(page.values.by_ref().map(op1).take(remaining));
+                values.extend(
+                    page.values
+                        .by_ref()
+                        .map(|x| x.unwrap())
+                        .map(op1)
+                        .take(remaining),
+                );
             }
             State::FilteredRequired(page) => {
                 values.extend(

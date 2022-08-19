@@ -110,11 +110,11 @@ impl<'a, K: DictionaryKey> NestedDecoder<'a> for DictionaryDecoder<K> {
         )
     }
 
-    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState) {
+    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState) -> Result<()> {
         let (values, validity) = decoded;
         match state {
             State::Optional(page_values) => {
-                let key = page_values.next();
+                let key = page_values.next().transpose()?;
                 // todo: convert unwrap to error
                 let key = match K::try_from(key.unwrap_or_default() as usize) {
                     Ok(key) => key,
@@ -124,7 +124,7 @@ impl<'a, K: DictionaryKey> NestedDecoder<'a> for DictionaryDecoder<K> {
                 validity.push(true);
             }
             State::Required(page_values) => {
-                let key = page_values.values.next();
+                let key = page_values.values.next().transpose()?;
                 let key = match K::try_from(key.unwrap_or_default() as usize) {
                     Ok(key) => key,
                     Err(_) => todo!(),
@@ -132,6 +132,7 @@ impl<'a, K: DictionaryKey> NestedDecoder<'a> for DictionaryDecoder<K> {
                 values.push(key);
             }
         }
+        Ok(())
     }
 
     fn push_null(&self, decoded: &mut Self::DecodedState) {
