@@ -10,10 +10,10 @@ A Rust crate to work with [Apache Arrow](https://arrow.apache.org/).
 The most feature-complete implementation of the Arrow format after the C++
 implementation.
 
-Check out [the guide](https://jorgecarleitao.github.io/arrow2/) for a general introduction
-on how to use this crate, and
-[API docs](https://jorgecarleitao.github.io/arrow2/docs/arrow2/index.html) for a detailed
-documentation of each of its APIs.
+Check out [the guide](https://jorgecarleitao.github.io/arrow2/main/guide)
+for a general introduction on how to use this crate, and
+[API docs](https://jorgecarleitao.github.io/arrow2/main/docs)
+for a detailed documentation of each of its APIs.
 
 ## Features
 
