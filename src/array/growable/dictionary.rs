@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
-    bitmap::{utils::zip_validity, Bitmap, MutableBitmap},
+    bitmap::{utils::zip_validity, MutableBitmap},
     datatypes::DataType,
 };
 

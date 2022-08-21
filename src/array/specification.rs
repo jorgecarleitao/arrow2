@@ -1,4 +1,3 @@
-use crate::bitmap::Bitmap;
 use crate::error::{Error, Result};
 use crate::types::Offset;
 
@@ -102,7 +101,7 @@ pub fn check_indexes<'i, K>(keys: impl Iterator<Item = Option<&'i K>>, len: usiz
 where
     K: std::fmt::Debug + Copy + TryInto<usize> + 'i,
 {
-    keys.filter_map(|x|x).try_for_each(|key| {
+    keys.flatten().try_for_each(|key| {
         let key: usize = (*key)
             .try_into()
             .map_err(|_| Error::oos(format!("The dictionary key must fit in a `usize`, but {:?} does not", key)))?;
