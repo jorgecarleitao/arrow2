@@ -47,7 +47,7 @@ pip install pyarrow==6 pyorc
 # Generate the parquet files (this might take some time, depending on your computer setup)
 python parquet_integration/write_parquet.py
 # generate ORC files
-python parquet_integration/write_parquet.py
+python tests/it/io/orc/write.py
 
 # Get out of venv, back to normal terminal
 deactivate
