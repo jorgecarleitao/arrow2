@@ -119,7 +119,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     ) -> Result<Self, Error> {
         check_data_type(K::KEY_TYPE, &data_type, values.data_type())?;
 
-        check_indexes(keys.values(), values.len())?;
+        check_indexes(keys.iter(), values.len())?;
 
         Ok(Self {
             data_type,

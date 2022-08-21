@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
-    bitmap::MutableBitmap,
+    bitmap::{utils::zip_validity, Bitmap, MutableBitmap},
     datatypes::DataType,
 };
 
@@ -90,7 +90,8 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
 
         #[cfg(debug_assertions)]
         {
-            crate::array::specification::check_indexes(&key_values, self.values.len()).unwrap();
+            let iter = zip_validity(key_values.iter(), Some(validity.iter()));
+            crate::array::specification::check_indexes(iter, self.values.len()).unwrap();
         }
         let keys =
             PrimitiveArray::<T>::new(T::PRIMITIVE.into(), key_values.into(), validity.into());
