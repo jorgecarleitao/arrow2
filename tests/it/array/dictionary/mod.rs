@@ -91,6 +91,14 @@ fn try_new_out_of_bounds_neg() {
 }
 
 #[test]
+fn try_new_dictionary_from_empty_keys() {
+    let values = Utf8Array::<i32>::new_empty(DataType::Utf8);
+
+    DictionaryArray::try_from_keys(UInt32Array::new_null(DataType::UInt32, 2), values.boxed())
+        .unwrap();
+}
+
+#[test]
 fn new_null() {
     let dt = DataType::Dictionary(i16::KEY_TYPE, Box::new(DataType::Int32), false);
     let array = DictionaryArray::<i16>::new_null(dt, 2);
