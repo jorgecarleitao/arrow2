@@ -56,7 +56,7 @@ impl StructArray {
         }
         if fields.len() != values.len() {
             return Err(Error::oos(
-                "A StructArray must a number of fields in its DataType equal to the number of child values",
+                "A StructArray must have a number of fields in its DataType equal to the number of child values",
             ));
         }
 
