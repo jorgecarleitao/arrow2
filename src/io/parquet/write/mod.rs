@@ -1,4 +1,17 @@
 //! APIs to write to Parquet format.
+//!
+//! # Arrow/Parquet Interoperability
+//! As of [parquet-format v2.9](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)
+//! there are Arrow [DataTypes](crate::datatypes::DataType) which do not have a parquet
+//! representation. These include but are not limited to:
+//! * `DataType::Timestamp(TimeUnit::Second, _)`
+//! * `DataType::Int64`
+//! * `DataType::Duration`
+//! * `DataType::Date64`
+//! * `DataType::Time32(TimeUnit::Second)`
+//!
+//! The use of these arrow types will result in no logical type being stored within a parquet file.
+
 mod binary;
 mod boolean;
 mod dictionary;
