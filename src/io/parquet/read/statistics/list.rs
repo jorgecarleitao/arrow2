@@ -40,7 +40,7 @@ impl MutableArray for DynMutableListArray {
 
         match self.data_type.to_logical_type() {
             DataType::List(_) => {
-                let offsets = vec![0, inner.len() as i32].into();
+                let offsets = (0..=inner.len() as i32).collect::<Vec<_>>().into();
                 Box::new(ListArray::<i32>::new(
                     self.data_type.clone(),
                     offsets,
@@ -49,7 +49,7 @@ impl MutableArray for DynMutableListArray {
                 ))
             }
             DataType::LargeList(_) => {
-                let offsets = vec![0, inner.len() as i64].into();
+                let offsets = (0..=inner.len() as i64).collect::<Vec<_>>().into();
                 Box::new(ListArray::<i64>::new(
                     self.data_type.clone(),
                     offsets,
