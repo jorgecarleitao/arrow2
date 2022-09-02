@@ -408,26 +408,19 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
     decoder: &D,
     additional: usize,
 ) -> Result<()> {
-    let mut values_count = vec![0; nested.len()];
+    let max_depth = nested.len();
 
-    for (depth, nest) in nested.iter().enumerate().skip(1) {
-        values_count[depth - 1] = nest.len() as i64
-    }
-    *values_count.last_mut().unwrap() = nested.last().unwrap().len() as i64;
-
-    let mut cum_sum = vec![0u32; nested.len() + 1];
+    let mut cum_sum = vec![0u32; max_depth + 1];
     for (i, nest) in nested.iter().enumerate() {
         let delta = nest.is_nullable() as u32 + nest.is_repeated() as u32;
         cum_sum[i + 1] = cum_sum[i] + delta;
     }
 
-    let mut cum_rep = vec![0u32; nested.len() + 1];
+    let mut cum_rep = vec![0u32; max_depth + 1];
     for (i, nest) in nested.iter().enumerate() {
         let delta = nest.is_repeated() as u32;
         cum_rep[i + 1] = cum_rep[i] + delta;
     }
-
-    let max_depth = nested.len() - 1;
 
     let mut rows = 0;
     while let Some((rep, def)) = page.iter.next() {
@@ -438,22 +431,26 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
         }
 
         let mut is_required = false;
-        for (depth, nest) in nested.iter_mut().enumerate() {
+        for depth in 0..max_depth {
             let right_level = rep <= cum_rep[depth] && def >= cum_sum[depth];
             if is_required || right_level {
+                let length = nested
+                    .get(depth + 1)
+                    .map(|x| x.len() as i64)
+                    // the last depth is the leaf, which is always increased by 1
+                    .unwrap_or(1);
+
+                let nest = &mut nested[depth];
+
                 let is_valid = nest.is_nullable() && def > cum_sum[depth];
-                let length = values_count[depth];
                 nest.push(length, is_valid);
-                if depth > 0 {
-                    values_count[depth - 1] = nest.len() as i64;
-                };
                 if nest.is_required() && !is_valid {
                     is_required = true;
                 } else {
                     is_required = false
                 };
 
-                if depth == max_depth {
+                if depth == max_depth - 1 {
                     // the leaf / primitive
                     let is_valid = (def != cum_sum[depth]) || !nest.is_nullable();
                     if right_level && is_valid {
