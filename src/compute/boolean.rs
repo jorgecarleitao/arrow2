@@ -6,17 +6,24 @@ use crate::scalar::BooleanScalar;
 
 use super::utils::combine_validities;
 
-/// Helper function to implement binary kernels
-fn binary_boolean_kernel<F>(lhs: &BooleanArray, rhs: &BooleanArray, op: F) -> BooleanArray
-where
-    F: Fn(&Bitmap, &Bitmap) -> Bitmap,
-{
+fn assert_lengths(lhs: &BooleanArray, rhs: &BooleanArray) {
     assert_eq!(
         lhs.len(),
         rhs.len(),
         "lhs and rhs must have the same length"
     );
+}
 
+/// Helper function to implement binary kernels
+pub(crate) fn binary_boolean_kernel<F>(
+    lhs: &BooleanArray,
+    rhs: &BooleanArray,
+    op: F,
+) -> BooleanArray
+where
+    F: Fn(&Bitmap, &Bitmap) -> Bitmap,
+{
+    assert_lengths(lhs, rhs);
     let validity = combine_validities(lhs.validity(), rhs.validity());
 
     let left_buffer = lhs.values();
@@ -41,6 +48,31 @@ where
 /// assert_eq!(and_ab, BooleanArray::from(&[Some(false), Some(true), None]));
 /// ```
 pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
+    if lhs.null_count() == 0 && rhs.null_count() == 0 {
+        let left_buffer = lhs.values();
+        let right_buffer = rhs.values();
+
+        match (left_buffer.unset_bits(), right_buffer.unset_bits()) {
+            // all values are `true` on both sides
+            (0, 0) => {
+                assert_lengths(lhs, rhs);
+                return lhs.clone();
+            }
+            // all values are `false` on left side
+            (l, _) if l == lhs.len() => {
+                assert_lengths(lhs, rhs);
+                return lhs.clone();
+            }
+            // all values are `false` on right side
+            (_, r) if r == rhs.len() => {
+                assert_lengths(lhs, rhs);
+                return rhs.clone();
+            }
+            // ignore the rest
+            _ => {}
+        }
+    }
+
     binary_boolean_kernel(lhs, rhs, |lhs, rhs| lhs & rhs)
 }
 
@@ -58,6 +90,31 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
 /// assert_eq!(or_ab, BooleanArray::from(vec![Some(true), Some(true), None]));
 /// ```
 pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
+    if lhs.null_count() == 0 && rhs.null_count() == 0 {
+        let left_buffer = lhs.values();
+        let right_buffer = rhs.values();
+
+        match (left_buffer.unset_bits(), right_buffer.unset_bits()) {
+            // all values are `true` on left side
+            (0, _) => {
+                assert_lengths(lhs, rhs);
+                return lhs.clone();
+            }
+            // all values are `true` on right side
+            (_, 0) => {
+                assert_lengths(lhs, rhs);
+                return rhs.clone();
+            }
+            // all values on lhs and rhs are `false`
+            (l, r) if l == lhs.len() && r == rhs.len() => {
+                assert_lengths(lhs, rhs);
+                return rhs.clone();
+            }
+            // ignore the rest
+            _ => {}
+        }
+    }
+
     binary_boolean_kernel(lhs, rhs, |lhs, rhs| lhs | rhs)
 }
 

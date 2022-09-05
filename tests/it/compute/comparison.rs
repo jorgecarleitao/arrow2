@@ -1,7 +1,7 @@
 use arrow2::array::*;
 use arrow2::bitmap::Bitmap;
-use arrow2::compute::comparison::{self, boolean::*, primitive};
-use arrow2::datatypes::{DataType::*, IntegerType, IntervalUnit, TimeUnit};
+use arrow2::compute::comparison::{self, boolean::*, primitive, utf8};
+use arrow2::datatypes::{DataType, DataType::*, IntegerType, IntervalUnit, TimeUnit};
 use arrow2::scalar::new_scalar;
 
 #[test]
@@ -380,4 +380,24 @@ fn primitive_gt_eq() {
         a,
         BooleanArray::from([Some(true), Some(false), Some(true), None, None])
     )
+}
+
+#[test]
+#[cfg(any(feature = "compute_cast", feature = "compute_boolean_kleene"))]
+fn utf8_and_validity() {
+    use arrow2::compute::cast::CastOptions;
+    let a1 = Utf8Array::<i32>::from([Some("0"), Some("1"), None, Some("2")]);
+    let a2 = Int32Array::from([Some(0), Some(1), None, Some(2)]);
+
+    // due to the cast the values underneath the validity bits differ
+    let a2 = arrow2::compute::cast::cast(&a2, &DataType::Utf8, CastOptions::default()).unwrap();
+    let a2 = a2.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
+
+    let expected = BooleanArray::from_slice([true, true, true, true]);
+    assert_eq!(utf8::eq_and_validity(&a1, &a1), expected);
+    assert_eq!(utf8::eq_and_validity(&a1, a2), expected);
+
+    let expected = BooleanArray::from_slice([false, false, false, false]);
+    assert_eq!(utf8::neq_and_validity(&a1, &a1), expected);
+    assert_eq!(utf8::neq_and_validity(&a1, a2), expected);
 }
