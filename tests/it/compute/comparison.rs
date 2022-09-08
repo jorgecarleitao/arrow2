@@ -383,7 +383,7 @@ fn primitive_gt_eq() {
 }
 
 #[test]
-#[cfg(any(feature = "compute_cast", feature = "compute_boolean_kleene"))]
+#[cfg(all(feature = "compute_cast", feature = "compute_boolean_kleene"))]
 fn utf8_and_validity() {
     use arrow2::compute::cast::CastOptions;
     let a1 = Utf8Array::<i32>::from([Some("0"), Some("1"), None, Some("2")]);
@@ -400,4 +400,17 @@ fn utf8_and_validity() {
     let expected = BooleanArray::from_slice([false, false, false, false]);
     assert_eq!(utf8::neq_and_validity(&a1, &a1), expected);
     assert_eq!(utf8::neq_and_validity(&a1, a2), expected);
+}
+
+#[test]
+#[cfg(feature = "compute_boolean_kleene")]
+fn primitive_and_validity() {
+    let a1 = Int32Array::from([Some(0), None]);
+    let a2 = Int32Array::from([Some(10), None]);
+
+    let expected = BooleanArray::from_slice([true, false]);
+    assert_eq!(primitive::neq_and_validity(&a1, &a2), expected);
+
+    let expected = BooleanArray::from_slice([false, true]);
+    assert_eq!(primitive::eq_and_validity(&a1, &a2), expected);
 }

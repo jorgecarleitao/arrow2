@@ -612,9 +612,12 @@ fn finish_neq_validities(
                     if both_sides_invalid.values().unset_bits() != both_sides_invalid.len() {
                         // we use the `binary` kernel directly to save allocations
                         // and apply `lhs & !rhs)` in one shot.
-                        compute::boolean::binary_boolean_kernel(&lhs, &rhs, |lhs, rhs| {
-                            binary(lhs, rhs, |lhs, rhs| (lhs & !rhs))
-                        })
+
+                        compute::boolean::binary_boolean_kernel(
+                            &or,
+                            &both_sides_invalid,
+                            |lhs, rhs| binary(lhs, rhs, |lhs, rhs| (lhs & !rhs)),
+                        )
                     } else {
                         or
                     }
