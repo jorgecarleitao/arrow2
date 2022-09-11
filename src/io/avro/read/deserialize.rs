@@ -160,6 +160,7 @@ fn deserialize_value<'a>(
                 let values = array.mut_values(index);
                 block = deserialize_item(values, *is_nullable, &field.schema, block)?;
             }
+            array.try_push_valid()?;
         }
         _ => match data_type.to_physical_type() {
             PhysicalType::Boolean => {

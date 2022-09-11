@@ -1,6 +1,6 @@
 use parquet2::{
     encoding::{hybrid_rle::encode_u32, Encoding},
-    page::{DictPage, EncodedPage},
+    page::{DictPage, Page as EncodedPage},
     schema::types::PrimitiveType,
     statistics::{serialize_statistics, ParquetStatistics},
     write::DynIter,

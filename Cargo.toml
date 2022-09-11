@@ -77,7 +77,7 @@ futures = { version = "0.3", optional = true }
 async-stream = { version = "0.3.2", optional = true }
 
 # parquet support
-parquet2 = { version = "0.16", optional = true, default_features = false, features = ["async"] }
+parquet2 = { git = "https://github.com/jorgecarleitao/parquet2.git", rev = "21a7f98f", optional = true, features = ["full"] }
 
 # avro support
 avro-schema = { version = "0.3", optional = true }

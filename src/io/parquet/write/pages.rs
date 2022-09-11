@@ -1,5 +1,5 @@
 use parquet2::schema::types::{ParquetType, PrimitiveType as ParquetPrimitiveType};
-use parquet2::{page::EncodedPage, write::DynIter};
+use parquet2::{page::{Page as EncodedPage}, write::DynIter};
 
 use crate::array::{ListArray, Offset, StructArray};
 use crate::bitmap::Bitmap;

@@ -9,7 +9,7 @@ use arrow2::{array::*, datatypes::*, error::Result, io::parquet::read::*, io::pa
 fn pages(
     arrays: &[&dyn Array],
     encoding: Encoding,
-) -> Result<(Vec<EncodedPage>, Vec<EncodedPage>, Schema)> {
+) -> Result<(Vec<Page>, Vec<Page>, Schema)> {
     // create pages with different number of rows
     let array11 = PrimitiveArray::<i64>::from_slice([1, 2, 3, 4]);
     let array12 = PrimitiveArray::<i64>::from_slice([5]);
@@ -72,7 +72,7 @@ fn pages(
 
 /// Tests reading pages while skipping indexes
 fn read_with_indexes(
-    (pages1, pages2, schema): (Vec<EncodedPage>, Vec<EncodedPage>, Schema),
+    (pages1, pages2, schema): (Vec<Page>, Vec<Page>, Schema),
     expected: Box<dyn Array>,
 ) -> Result<()> {
     let options = WriteOptions {
@@ -81,7 +81,7 @@ fn read_with_indexes(
         version: Version::V1,
     };
 
-    let to_compressed = |pages: Vec<EncodedPage>| {
+    let to_compressed = |pages: Vec<Page>| {
         let encoded_pages = DynIter::new(pages.into_iter().map(Ok));
         let compressed_pages =
             Compressor::new(encoded_pages, options.compression, vec![]).map_err(Error::from);
