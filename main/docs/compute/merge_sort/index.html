@@ -21,7 +21,7 @@ generally the more expensive the <code>take</code> operation will be.</p>
 For example, given a set of arrays <code>[a0, a1, a2, a3]</code> representing the same field,
 e.g. over 4 batches of arrays, they can be sorted in parallel as follows (pseudo-code):</p>
 
-<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore"><code><span class="comment">// in parallel
+<div class="example-wrap"><div class='information'><div class='tooltip ignore'>ⓘ</div></div><pre class="rust rust-example-rendered ignore"><code><span class="comment">// in parallel
 </span><span class="kw">let </span>a0 = sort(a0);
 <span class="kw">let </span>a1 = sort(a1);
 <span class="kw">let </span>a2 = sort(a2);
@@ -38,7 +38,7 @@ same sorting field (e.g. merge-sort multiple batches of arrays).
 To perform this, use the same idea as above, but use <code>take_arrays</code> over
 each independent field (which can again be parallelized):</p>
 
-<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore"><code><span class="comment">// `slices` computed before-hand
+<div class="example-wrap"><div class='information'><div class='tooltip ignore'>ⓘ</div></div><pre class="rust rust-example-rendered ignore"><code><span class="comment">// `slices` computed before-hand
 // in parallel
 </span><span class="kw">let </span>array1 = take_arrays(<span class="kw-2">&amp;</span>[a0, a1, a2, a3], slices, <span class="prelude-val">None</span>);
 <span class="kw">let </span>array2 = take_arrays(<span class="kw-2">&amp;</span>[b0, b1, b2, b3], slices, <span class="prelude-val">None</span>);</code></pre></div>
@@ -67,4 +67,4 @@ For example, <code>[(0, 0, 2), (1, 0, 1), (0, 2, 3)]</code> represents 2 arrays 
 This representation is useful when building arrays in memory as it allows to memcopy slices of arrays.
 This is particularly useful in merge-sort because sorted arrays (passed to the merge-sort) are more likely
 to have contiguous blocks of sorted elements (than by random).</p>
-</div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (289279de1 2022-09-04)" ></div></body></html>
+</div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (228710758 2022-09-10)" ></div></body></html>
