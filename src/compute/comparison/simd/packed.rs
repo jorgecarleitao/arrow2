@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use std::simd::{SimdPartialEq, SimdPartialOrd, ToBitMask};
 
 use crate::types::simd::*;
-use crate::types::{days_ms, f16, months_days_ns};
+use crate::types::{days_ms, f16, i256, months_days_ns};
 
 use super::*;
 
@@ -71,6 +71,7 @@ simd8!(i16, i16x8);
 simd8!(i32, i32x8);
 simd8!(i64, i64x8);
 simd8_native_all!(i128);
+simd8_native_all!(i256);
 simd8_native!(f16);
 simd8_native_partial_eq!(f16);
 simd8!(f32, f32x8);

@@ -116,6 +116,19 @@ class TestCase(unittest.TestCase):
         b = arrow_pyarrow_integration_testing.round_trip_array(a)
         self.assertEqual(a, b)
 
+    def test_decimal256_roundtrip(self):
+        """
+        Python -> Rust -> Python
+        """
+        data = [
+            round(decimal.Decimal(722.82), 2),
+            round(decimal.Decimal(-934.11), 2),
+            None,
+        ]
+        a = pyarrow.array(data, pyarrow.decimal256(5, 2))
+        b = arrow_pyarrow_integration_testing.round_trip_array(a)
+        self.assertEqual(a, b)
+
     def test_list_array(self):
         """
         Python -> Rust -> Python

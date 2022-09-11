@@ -331,9 +331,18 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                                     "Decimal bit width is not a valid integer".to_string(),
                                 )
                             })?;
-                            if bit_width != 128 {
-                                return Err(Error::OutOfSpec(
-                                    "Decimal256 is not supported".to_string(),
+                            if bit_width == 256 {
+                                return Ok(DataType::Decimal256(
+                                    precision_raw.parse::<usize>().map_err(|_| {
+                                        Error::OutOfSpec(
+                                            "Decimal precision is not a valid integer".to_string(),
+                                        )
+                                    })?,
+                                    scale_raw.parse::<usize>().map_err(|_| {
+                                        Error::OutOfSpec(
+                                            "Decimal scale is not a valid integer".to_string(),
+                                        )
+                                    })?,
                                 ));
                             }
                             (precision_raw, scale_raw)
@@ -438,6 +447,7 @@ fn to_format(data_type: &DataType) -> String {
             )
         }
         DataType::Decimal(precision, scale) => format!("d:{},{}", precision, scale),
+        DataType::Decimal256(precision, scale) => format!("d:{},{},256", precision, scale),
         DataType::List(_) => "+l".to_string(),
         DataType::LargeList(_) => "+L".to_string(),
         DataType::Struct(_) => "+s".to_string(),

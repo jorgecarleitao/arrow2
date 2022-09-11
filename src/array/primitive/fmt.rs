@@ -2,7 +2,7 @@ use std::fmt::{Debug, Formatter, Result, Write};
 
 use crate::array::Array;
 use crate::datatypes::{IntervalUnit, TimeUnit};
-use crate::types::{days_ms, months_days_ns};
+use crate::types::{days_ms, i256, months_days_ns};
 
 use super::PrimitiveArray;
 use crate::array::fmt::write_vec;
@@ -118,12 +118,23 @@ pub fn get_write_value<'a, T: NativeType, F: Write>(
         Decimal(_, scale) => {
             // The number 999.99 has a precision of 5 and scale of 2
             let scale = *scale as u32;
-            let display = move |x| {
-                let base = x / 10i128.pow(scale);
-                let decimals = x - base * 10i128.pow(scale);
+            let factor = 10i128.pow(scale);
+            let display = move |x: i128| {
+                let base = x / factor;
+                let decimals = (x - base * factor).abs();
                 format!("{}.{}", base, decimals)
             };
             dyn_primitive!(array, i128, display)
+        }
+        Decimal256(_, scale) => {
+            let scale = *scale as u32;
+            let factor = (ethnum::I256::ONE * 10).pow(scale);
+            let display = move |x: i256| {
+                let base = x.0 / factor;
+                let decimals = (x.0 - base * factor).abs();
+                format!("{}.{}", base, decimals)
+            };
+            dyn_primitive!(array, i256, display)
         }
         _ => unreachable!(),
     }

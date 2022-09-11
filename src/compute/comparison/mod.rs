@@ -69,12 +69,14 @@ macro_rules! match_eq_ord {(
 ) => ({
     macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
     use crate::datatypes::PrimitiveType::*;
+    use crate::types::i256;
     match $key_type {
         Int8 => __with_ty__! { i8 },
         Int16 => __with_ty__! { i16 },
         Int32 => __with_ty__! { i32 },
         Int64 => __with_ty__! { i64 },
         Int128 => __with_ty__! { i128 },
+        Int256 => __with_ty__! { i256 },
         DaysMs => todo!(),
         MonthDayNano => todo!(),
         UInt8 => __with_ty__! { u8 },
@@ -92,13 +94,14 @@ macro_rules! match_eq {(
 ) => ({
     macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
     use crate::datatypes::PrimitiveType::*;
-    use crate::types::{days_ms, months_days_ns, f16};
+    use crate::types::{days_ms, months_days_ns, f16, i256};
     match $key_type {
         Int8 => __with_ty__! { i8 },
         Int16 => __with_ty__! { i16 },
         Int32 => __with_ty__! { i32 },
         Int64 => __with_ty__! { i64 },
         Int128 => __with_ty__! { i128 },
+        Int256 => __with_ty__! { i256 },
         DaysMs => __with_ty__! { days_ms },
         MonthDayNano => __with_ty__! { months_days_ns },
         UInt8 => __with_ty__! { u8 },

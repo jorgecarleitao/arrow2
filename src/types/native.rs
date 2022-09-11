@@ -500,6 +500,105 @@ impl NativeType for f16 {
     }
 }
 
+/// Physical representation of a decimal
+#[derive(Clone, Copy, Default, Eq, Hash, PartialEq, PartialOrd)]
+#[allow(non_camel_case_types)]
+#[repr(C)]
+pub struct i256(pub ethnum::I256);
+
+impl i256 {
+    /// Returns a new [`i256`] from two `i128`.
+    pub fn from_words(hi: i128, lo: i128) -> Self {
+        Self(ethnum::I256::from_words(hi, lo))
+    }
+}
+
+impl Neg for i256 {
+    type Output = Self;
+
+    #[inline]
+    fn neg(self) -> Self::Output {
+        let (a, b) = self.0.into_words();
+        Self(ethnum::I256::from_words(-a, b))
+    }
+}
+
+impl std::fmt::Debug for i256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+
+impl std::fmt::Display for i256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+unsafe impl Pod for i256 {}
+unsafe impl Zeroable for i256 {}
+
+impl NativeType for i256 {
+    const PRIMITIVE: PrimitiveType = PrimitiveType::Int256;
+
+    type Bytes = [u8; 32];
+
+    #[inline]
+    fn to_le_bytes(&self) -> Self::Bytes {
+        let mut bytes = [0u8; 32];
+        let (a, b) = self.0.into_words();
+        let a = a.to_le_bytes();
+        (0..16).for_each(|i| {
+            bytes[i] = a[i];
+        });
+
+        let b = b.to_le_bytes();
+        (0..16).for_each(|i| {
+            bytes[i + 16] = b[i];
+        });
+
+        bytes
+    }
+
+    #[inline]
+    fn to_be_bytes(&self) -> Self::Bytes {
+        let mut bytes = [0u8; 32];
+        let (a, b) = self.0.into_words();
+
+        let b = b.to_be_bytes();
+        (0..16).for_each(|i| {
+            bytes[i] = b[i];
+        });
+
+        let a = a.to_be_bytes();
+        (0..16).for_each(|i| {
+            bytes[i + 16] = a[i];
+        });
+
+        bytes
+    }
+
+    #[inline]
+    fn from_be_bytes(bytes: Self::Bytes) -> Self {
+        let (b, a) = bytes.split_at(16);
+        let a: [u8; 16] = a.try_into().unwrap();
+        let b: [u8; 16] = b.try_into().unwrap();
+        let a = i128::from_be_bytes(a);
+        let b = i128::from_be_bytes(b);
+        Self(ethnum::I256::from_words(a, b))
+    }
+
+    #[inline]
+    fn from_le_bytes(bytes: Self::Bytes) -> Self {
+        let (b, a) = bytes.split_at(16);
+        let a: [u8; 16] = a.try_into().unwrap();
+        let b: [u8; 16] = b.try_into().unwrap();
+        let a = i128::from_le_bytes(a);
+        let b = i128::from_le_bytes(b);
+        Self(ethnum::I256::from_words(a, b))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

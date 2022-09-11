@@ -154,6 +154,8 @@ pub enum DataType {
     /// scale is the number of decimal places.
     /// The number 999.99 has a precision of 5 and scale of 2.
     Decimal(usize, usize),
+    /// Decimal backed by 256 bits
+    Decimal256(usize, usize),
     /// Extension type.
     Extension(String, Box<DataType>, Option<String>),
 }
@@ -233,6 +235,7 @@ impl DataType {
                 PhysicalType::Primitive(PrimitiveType::Int64)
             }
             Decimal(_, _) => PhysicalType::Primitive(PrimitiveType::Int128),
+            Decimal256(_, _) => PhysicalType::Primitive(PrimitiveType::Int256),
             UInt8 => PhysicalType::Primitive(PrimitiveType::UInt8),
             UInt16 => PhysicalType::Primitive(PrimitiveType::UInt16),
             UInt32 => PhysicalType::Primitive(PrimitiveType::UInt32),
@@ -299,6 +302,7 @@ impl From<PrimitiveType> for DataType {
             PrimitiveType::UInt32 => DataType::UInt32,
             PrimitiveType::UInt64 => DataType::UInt64,
             PrimitiveType::Int128 => DataType::Decimal(32, 32),
+            PrimitiveType::Int256 => DataType::Decimal256(32, 32),
             PrimitiveType::Float16 => DataType::Float16,
             PrimitiveType::Float32 => DataType::Float32,
             PrimitiveType::Float64 => DataType::Float64,

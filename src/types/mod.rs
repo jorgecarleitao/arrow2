@@ -47,6 +47,8 @@ pub enum PrimitiveType {
     Int64,
     /// A signed 128-bit integer.
     Int128,
+    /// A signed 256-bit integer.
+    Int256,
     /// An unsigned 8-bit integer.
     UInt8,
     /// An unsigned 16-bit integer.
@@ -79,6 +81,7 @@ mod private {
     impl Sealed for i32 {}
     impl Sealed for i64 {}
     impl Sealed for i128 {}
+    impl Sealed for super::i256 {}
     impl Sealed for super::f16 {}
     impl Sealed for f32 {}
     impl Sealed for f64 {}
