@@ -6,10 +6,7 @@ use arrow2::io::parquet::read::indexes;
 use arrow2::{array::*, datatypes::*, error::Result, io::parquet::read::*, io::parquet::write::*};
 
 /// Returns 2 sets of pages with different the same number of rows distributed un-evenly
-fn pages(
-    arrays: &[&dyn Array],
-    encoding: Encoding,
-) -> Result<(Vec<Page>, Vec<Page>, Schema)> {
+fn pages(arrays: &[&dyn Array], encoding: Encoding) -> Result<(Vec<Page>, Vec<Page>, Schema)> {
     // create pages with different number of rows
     let array11 = PrimitiveArray::<i64>::from_slice([1, 2, 3, 4]);
     let array12 = PrimitiveArray::<i64>::from_slice([5]);
