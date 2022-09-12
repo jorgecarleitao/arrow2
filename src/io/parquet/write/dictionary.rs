@@ -1,6 +1,6 @@
 use parquet2::{
     encoding::{hybrid_rle::encode_u32, Encoding},
-    page::{DictPage, Page},
+    page::{DictPage, EncodedPage},
     schema::types::PrimitiveType,
     statistics::{serialize_statistics, ParquetStatistics},
     write::DynIter,
@@ -106,7 +106,7 @@ fn serialize_keys<K: DictionaryKey>(
     nested: &[Nested],
     statistics: ParquetStatistics,
     options: WriteOptions,
-) -> Result<Page> {
+) -> Result<EncodedPage> {
     let mut buffer = vec![];
 
     // parquet only accepts a single validity - we "&" the validities into a single one
@@ -142,7 +142,7 @@ fn serialize_keys<K: DictionaryKey>(
         options,
         Encoding::RleDictionary,
     )
-    .map(Page::Data)
+    .map(EncodedPage::Data)
 }
 
 macro_rules! dyn_prim {
@@ -162,7 +162,7 @@ pub fn array_to_pages<K: DictionaryKey>(
     nested: &[Nested],
     options: WriteOptions,
     encoding: Encoding,
-) -> Result<DynIter<'static, Result<Page>>> {
+) -> Result<DynIter<'static, Result<EncodedPage>>> {
     match encoding {
         Encoding::PlainDictionary | Encoding::RleDictionary => {
             // write DictPage
@@ -230,7 +230,7 @@ pub fn array_to_pages<K: DictionaryKey>(
                     )))
                 }
             };
-            let dict_page = Page::Dict(dict_page);
+            let dict_page = EncodedPage::Dict(dict_page);
 
             // write DataPage pointing to DictPage
             let data_page = serialize_keys(array, type_, nested, statistics, options)?;

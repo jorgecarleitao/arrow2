@@ -6,7 +6,10 @@ use arrow2::io::parquet::read::indexes;
 use arrow2::{array::*, datatypes::*, error::Result, io::parquet::read::*, io::parquet::write::*};
 
 /// Returns 2 sets of pages with different the same number of rows distributed un-evenly
-fn pages(arrays: &[&dyn Array], encoding: Encoding) -> Result<(Vec<Page>, Vec<Page>, Schema)> {
+fn pages(
+    arrays: &[&dyn Array],
+    encoding: Encoding,
+) -> Result<(Vec<EncodedPage>, Vec<EncodedPage>, Schema)> {
     // create pages with different number of rows
     let array11 = PrimitiveArray::<i64>::from_slice([1, 2, 3, 4]);
     let array12 = PrimitiveArray::<i64>::from_slice([5]);
@@ -69,7 +72,7 @@ fn pages(arrays: &[&dyn Array], encoding: Encoding) -> Result<(Vec<Page>, Vec<Pa
 
 /// Tests reading pages while skipping indexes
 fn read_with_indexes(
-    (pages1, pages2, schema): (Vec<Page>, Vec<Page>, Schema),
+    (pages1, pages2, schema): (Vec<EncodedPage>, Vec<EncodedPage>, Schema),
     expected: Box<dyn Array>,
 ) -> Result<()> {
     let options = WriteOptions {
@@ -78,7 +81,7 @@ fn read_with_indexes(
         version: Version::V1,
     };
 
-    let to_compressed = |pages: Vec<Page>| {
+    let to_compressed = |pages: Vec<EncodedPage>| {
         let encoded_pages = DynIter::new(pages.into_iter().map(Ok));
         let compressed_pages =
             Compressor::new(encoded_pages, options.compression, vec![]).map_err(Error::from);

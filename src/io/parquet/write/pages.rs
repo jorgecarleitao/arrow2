@@ -1,5 +1,5 @@
 use parquet2::schema::types::{ParquetType, PrimitiveType as ParquetPrimitiveType};
-use parquet2::{page::Page, write::DynIter};
+use parquet2::{page::EncodedPage, write::DynIter};
 
 use crate::array::{ListArray, Offset, StructArray};
 use crate::bitmap::Bitmap;
@@ -193,13 +193,13 @@ fn to_parquet_leafs_recursive(type_: ParquetType, leafs: &mut Vec<ParquetPrimiti
     }
 }
 
-/// Returns a vector of iterators of [`Page`], one per leaf column in the array
+/// Returns a vector of iterators of [`EncodedPage`], one per leaf column in the array
 pub fn array_to_columns<A: AsRef<dyn Array> + Send + Sync>(
     array: A,
     type_: ParquetType,
     options: WriteOptions,
     encoding: &[Encoding],
-) -> Result<Vec<DynIter<'static, Result<Page>>>> {
+) -> Result<Vec<DynIter<'static, Result<EncodedPage>>>> {
     let array = array.as_ref();
     let nested = to_nested(array, &type_)?;
 

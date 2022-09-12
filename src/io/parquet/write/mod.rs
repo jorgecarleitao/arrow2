@@ -38,7 +38,7 @@ pub use parquet2::{
     encoding::Encoding,
     fallible_streaming_iterator,
     metadata::{Descriptor, FileMetaData, KeyValue, SchemaDescriptor, ThriftFileMetaData},
-    page::{CompressedDataPage, CompressedPage, Page as EncodedPage},
+    page::{CompressedDataPage, CompressedPage, EncodedPage},
     schema::types::{FieldInfo, ParquetType, PhysicalType as ParquetPhysicalType},
     write::{
         compress, write_metadata_sidecar, Compressor, DynIter, DynStreamingIterator, RowGroupIter,
