@@ -141,13 +141,13 @@ into arrays.</p>
 <pre><pre class="playground"><code class="language-rust">//! Example showing how to memory map an Arrow IPC file into a [`Chunk`].
 use std::sync::Arc;
 
-use arrow2::error::Result;
-use arrow2::io::ipc::read;
-use arrow2::mmap::{mmap_dictionaries_unchecked, mmap_unchecked};
+use arrow2::array::{Array, BooleanArray};
+use arrow2::chunk::Chunk;
+use arrow2::datatypes::{Field, Schema};
+use arrow2::error::Error;
 
-// Arrow2 requires a struct that implements `Clone + AsRef&lt;[u8]&gt;`, which
-// usually `Arc&lt;Mmap&gt;` supports. Here we mock it
-#[derive(Clone)]
+// Arrow2 requires something that implements `AsRef&lt;[u8]&gt;`, which
+// `Mmap` supports. Here we mock it
 struct Mmap(Vec&lt;u8&gt;);
 
 impl AsRef&lt;[u8]&gt; for Mmap {
@@ -157,21 +157,51 @@ impl AsRef&lt;[u8]&gt; for Mmap {
     }
 }
 
-fn main() -&gt; Result&lt;()&gt; {
+// Auxiliary function to write an arrow file
+// This function is guaranteed to produce a valid arrow file
+fn write(
+    chunks: &amp;[Chunk&lt;Box&lt;dyn Array&gt;&gt;],
+    schema: &amp;Schema,
+    ipc_fields: Option&lt;Vec&lt;arrow2::io::ipc::IpcField&gt;&gt;,
+    compression: Option&lt;arrow2::io::ipc::write::Compression&gt;,
+) -&gt; Result&lt;Vec&lt;u8&gt;, Error&gt; {
+    let result = vec![];
+    let options = arrow2::io::ipc::write::WriteOptions { compression };
+    let mut writer =
+        arrow2::io::ipc::write::FileWriter::try_new(result, schema, ipc_fields.clone(), options)?;
+    for chunk in chunks {
+        writer.write(chunk, ipc_fields.as_ref().map(|x| x.as_ref()))?;
+    }
+    writer.finish()?;
+    Ok(writer.into_inner())
+}
+
+fn check_round_trip(array: Box&lt;dyn Array&gt;) -&gt; Result&lt;(), Error&gt; {
+    let schema = Schema::from(vec![Field::new(&quot;a&quot;, array.data_type().clone(), true)]);
+    let columns = Chunk::try_new(vec![array.clone()])?;
+
     // given a mmap
-    let mmap = Arc::new(Mmap(vec![]));
+    let data = Arc::new(write(&amp;[columns], &amp;schema, None, None)?);
 
-    // read the metadata
-    let metadata = read::read_file_metadata(&amp;mut std::io::Cursor::new(mmap.as_ref()))?;
+    // we first read the files' metadata
+    let metadata =
+        arrow2::io::ipc::read::read_file_metadata(&amp;mut std::io::Cursor::new(data.as_ref()))?;
 
-    // mmap the dictionaries
-    let dictionaries = unsafe { mmap_dictionaries_unchecked(&amp;metadata, mmap.clone())? };
+    // next we mmap the dictionaries
+    // Safety: `write` above guarantees that this is a valid Arrow IPC file
+    let dictionaries =
+        unsafe { arrow2::mmap::mmap_dictionaries_unchecked(&amp;metadata, data.clone())? };
 
     // and finally mmap a chunk (0 in this case).
-    let chunk = unsafe { mmap_unchecked(&amp;metadata, &amp;dictionaries, mmap, 0) }?;
-
-    println!(&quot;{chunk:?}&quot;);
+    // Safety: `write` above guarantees that this is a valid Arrow IPC file
+    let new_array = unsafe { arrow2::mmap::mmap_unchecked(&amp;metadata, &amp;dictionaries, data, 0)? };
+    assert_eq!(new_array.into_arrays()[0], array);
     Ok(())
+}
+
+fn main() -&gt; Result&lt;(), Error&gt; {
+    let array = BooleanArray::from([None, None, Some(true)]).boxed();
+    check_round_trip(array)
 }
 </code></pre></pre>
 

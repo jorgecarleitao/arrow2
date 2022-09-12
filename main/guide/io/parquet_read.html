@@ -196,13 +196,6 @@ fn main() -&gt; Result&lt;(), Error&gt; {
 </code></pre></pre>
 <p>The example above minimizes memory usage at the expense of mixing IO and CPU tasks
 on the same thread, which may hurt performance if one of them is a bottleneck.</p>
-<p>For single-threaded reading, buffers used to read and decompress pages can be re-used.
-This create offers an API that encapsulates the above logic:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>{{#include ../../../examples/parquet_read_record.rs}}
-<span class="boring">}
-</span></code></pre></pre>
 <h3 id="parallelism-decoupling-of-cpu-from-io"><a class="header" href="#parallelism-decoupling-of-cpu-from-io">Parallelism decoupling of CPU from IO</a></h3>
 <p>One important aspect of the pages created by the iterator above is that they can cross
 thread boundaries. Consequently, the thread reading pages from a file (IO-bounded)
@@ -211,11 +204,82 @@ decoding, etc.).</p>
 <p>The example below assumes that CPU starves the consumption of pages,
 and that it is advantageous to have a single thread performing all IO-intensive work,
 by delegating all CPU-intensive tasks to separate threads.</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>{{#include ../../../examples/parquet_read_parallel.rs}}
-<span class="boring">}
-</span></code></pre></pre>
+<pre><pre class="playground"><code class="language-rust">//! Example demonstrating how to read from parquet in parallel using rayon
+use std::fs::File;
+use std::io::BufReader;
+use std::time::SystemTime;
+
+use log::trace;
+use rayon::prelude::*;
+
+use arrow2::{
+    array::Array,
+    chunk::Chunk,
+    error::Result,
+    io::parquet::read::{self, ArrayIter},
+};
+
+mod logger;
+
+/// Advances each iterator in parallel
+/// # Panic
+/// If the iterators are empty
+fn deserialize_parallel(iters: &amp;mut [ArrayIter&lt;'static&gt;]) -&gt; Result&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt; {
+    // CPU-bounded
+    let arrays = iters
+        .par_iter_mut()
+        .map(|iter| iter.next().transpose())
+        .collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
+
+    Chunk::try_new(arrays.into_iter().map(|x| x.unwrap()).collect())
+}
+
+fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;()&gt; {
+    // open the file
+    let mut file = BufReader::new(File::open(path)?);
+
+    // read Parquet's metadata and infer Arrow schema
+    let metadata = read::read_metadata(&amp;mut file)?;
+    let schema = read::infer_schema(&amp;metadata)?;
+
+    // select the row group from the metadata
+    let row_group = &amp;metadata.row_groups[row_group];
+
+    let chunk_size = 1024 * 8 * 8;
+
+    // read (IO-bounded) all columns into memory (use a subset of the fields to project)
+    let mut columns =
+        read::read_columns_many(&amp;mut file, row_group, schema.fields, Some(chunk_size))?;
+
+    // deserialize (CPU-bounded) to Arrow in chunks
+    let mut num_rows = row_group.num_rows();
+    while num_rows &gt; 0 {
+        num_rows = num_rows.saturating_sub(chunk_size);
+        trace!(&quot;[parquet/deserialize][start]&quot;);
+        let chunk = deserialize_parallel(&amp;mut columns)?;
+        trace!(&quot;[parquet/deserialize][end][{}]&quot;, chunk.len());
+        assert!(!chunk.is_empty());
+    }
+    Ok(())
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    log::set_logger(&amp;logger::LOGGER)
+        .map(|()| log::set_max_level(log::LevelFilter::Trace))
+        .unwrap();
+
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+    let file_path = &amp;args[1];
+    let row_group = args[2].parse::&lt;usize&gt;().unwrap();
+
+    let start = SystemTime::now();
+    parallel_read(file_path, row_group)?;
+    println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
+
+    Ok(())
+}
+</code></pre></pre>
 <p>This can of course be reversed; in configurations where IO is bounded (e.g. when a
 network is involved), we can use multiple producers of pages, potentially divided
 in file readers, and a single consumer that performs all CPU-intensive work.</p>

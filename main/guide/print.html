@@ -139,13 +139,53 @@
 <p>Arrow2 is a Rust library that implements data structures and functionality enabling
 interoperability with the arrow format.</p>
 <p>The typical use-case for this library is to perform CPU and memory-intensive analytics in a format that supports heterogeneous data structures, null values, and IPC and FFI interfaces across languages.</p>
-<p>Arrow2 is divided into 5 main parts: </p>
+<p>Arrow2 is divided in 5 main APIs:</p>
 <ul>
-<li>a <a href="./low_level.html">low-level API</a> to efficiently operate with contiguous memory regions;</li>
-<li>a <a href="./high_level.html">high-level API</a> to operate with arrow arrays;</li>
-<li>a <a href="./metadata.html">metadata API</a> to declare and operate with logical types and metadata;</li>
-<li>a <a href="./compute.html">compute API</a> with operators to operate over arrays;</li>
-<li>an <a href="./io/README.html">IO API</a> with interfaces to read from, and write to, other formats.</li>
+<li>a <a href="./low_level.html">low-level API</a> to efficiently operate with contiguous memory regions</li>
+<li>a <a href="./high_level.html">high-level API</a> to operate with arrow arrays</li>
+<li>a <a href="./metadata.html">metadata API</a> to declare and operate with logical types and metadata</li>
+<li>a <a href="./compute.html">compute API</a> with operators to operate over arrays</li>
+<li>an IO API with interfaces to read from, and write to, other formats
+<ul>
+<li>Arrow
+<ul>
+<li><a href="./io/ipc_read.html">Read files</a></li>
+<li><a href="./io/ipc_stream_read.html">Read streams</a></li>
+<li><a href="./io/ipc_mmap.html">Memory map files</a></li>
+<li><a href="./io/ipc_write.html">Write</a></li>
+</ul>
+</li>
+<li>CSV
+<ul>
+<li><a href="./io/csv_read.html">Read</a></li>
+<li><a href="./io/csv_write.html">Write</a></li>
+</ul>
+</li>
+<li>Parquet
+<ul>
+<li><a href="./io/parquet_read.html">Read</a></li>
+<li><a href="./io/parquet_write.html">Write</a></li>
+</ul>
+</li>
+<li>JSON and NDJSON
+<ul>
+<li><a href="./io/json_read.html">Read</a></li>
+<li><a href="./io/json_write.html">Write</a></li>
+</ul>
+</li>
+<li>Avro
+<ul>
+<li><a href="./io/avro_read.html">Read</a></li>
+<li><a href="./io/avro_write.html">Write</a></li>
+</ul>
+</li>
+<li>ODBC
+<ul>
+<li><a href="./io/odbc.html">Read and write</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
 <p>Welcome to the Arrow2 guide for the Rust programming language. This guide was
@@ -558,7 +598,44 @@ Essentially, all data is under an <code>Arc</code>, but it can be taken via <cod
 and operated in place.</p>
 <p>Below is a complete example of how to operate on a <code>Box&lt;dyn Array&gt;</code> without 
 extra allocations.</p>
-<pre><code class="language-rust ignore">{{#include ../examples/cow.rs}}
+<pre><code class="language-rust ignore">// This example demos how to operate on arrays in-place.
+use arrow2::array::{Array, PrimitiveArray};
+use arrow2::compute::arity_assign;
+
+fn main() {
+    // say we have have received an `Array`
+    let mut array: Box&lt;dyn Array&gt; = PrimitiveArray::from_vec(vec![1i32, 2]).boxed();
+
+    // we can apply a transformation to its values without allocating a new array as follows:
+
+    // 1. downcast it to the correct type (known via `array.data_type().to_physical_type()`)
+    let array = array
+        .as_any_mut()
+        .downcast_mut::&lt;PrimitiveArray&lt;i32&gt;&gt;()
+        .unwrap();
+
+    // 2. call `unary` with the function to apply to each value
+    arity_assign::unary(array, |x| x * 10);
+
+    // confirm that it gives the right result :)
+    assert_eq!(array, &amp;PrimitiveArray::from_vec(vec![10i32, 20]));
+
+    // alternatively, you can use `get_mut_values`. Unwrap works because it is single owned
+    let values = array.get_mut_values().unwrap();
+    values[0] = 0;
+
+    assert_eq!(array, &amp;PrimitiveArray::from_vec(vec![0, 20]));
+
+    // you can also modify the validity:
+    array.set_validity(Some([true, false].into()));
+    array.apply_validity(|bitmap| {
+        let mut mut_bitmap = bitmap.into_mut().right().unwrap();
+        mut_bitmap.set(1, true);
+        mut_bitmap.into()
+    });
+
+    assert_eq!(array, &amp;PrimitiveArray::from_vec(vec![0, 20]));
+}
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="compute-api"><a class="header" href="#compute-api">Compute API</a></h1>
 <p>When compiled with the feature <code>compute</code>, this crate offers a wide range of functions
@@ -834,16 +911,6 @@ fn read_ipc(buf: &amp;[u8]) -&gt; Result&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt
 }
 </code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="io"><a class="header" href="#io">IO</a></h1>
-<p>This crate offers optional features that enable interoperability with different formats:</p>
-<ul>
-<li>Arrow (<code>io_ipc</code>)</li>
-<li>CSV (<code>io_csv</code>)</li>
-<li>Parquet (<code>io_parquet</code>)</li>
-<li>JSON and NDJSON (<code>io_json</code>)</li>
-<li>Avro (<code>io_avro</code> and <code>io_avro_async</code>)</li>
-<li>ODBC-compliant databases (<code>io_odbc</code>)</li>
-</ul>
-<p>In this section you can find a guide and examples for each one of them.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="csv-reader"><a class="header" href="#csv-reader">CSV reader</a></h1>
 <p>When compiled with feature <code>io_csv</code>, you can use this crate to read CSV files.
 This crate makes minimal assumptions on how you want to read a CSV, and offers a large degree of customization to it, along with a useful default.</p>
@@ -1196,13 +1263,6 @@ fn main() -&gt; Result&lt;(), Error&gt; {
 </code></pre></pre>
 <p>The example above minimizes memory usage at the expense of mixing IO and CPU tasks
 on the same thread, which may hurt performance if one of them is a bottleneck.</p>
-<p>For single-threaded reading, buffers used to read and decompress pages can be re-used.
-This create offers an API that encapsulates the above logic:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>{{#include ../../../examples/parquet_read_record.rs}}
-<span class="boring">}
-</span></code></pre></pre>
 <h3 id="parallelism-decoupling-of-cpu-from-io"><a class="header" href="#parallelism-decoupling-of-cpu-from-io">Parallelism decoupling of CPU from IO</a></h3>
 <p>One important aspect of the pages created by the iterator above is that they can cross
 thread boundaries. Consequently, the thread reading pages from a file (IO-bounded)
@@ -1211,11 +1271,82 @@ decoding, etc.).</p>
 <p>The example below assumes that CPU starves the consumption of pages,
 and that it is advantageous to have a single thread performing all IO-intensive work,
 by delegating all CPU-intensive tasks to separate threads.</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>{{#include ../../../examples/parquet_read_parallel.rs}}
-<span class="boring">}
-</span></code></pre></pre>
+<pre><pre class="playground"><code class="language-rust">//! Example demonstrating how to read from parquet in parallel using rayon
+use std::fs::File;
+use std::io::BufReader;
+use std::time::SystemTime;
+
+use log::trace;
+use rayon::prelude::*;
+
+use arrow2::{
+    array::Array,
+    chunk::Chunk,
+    error::Result,
+    io::parquet::read::{self, ArrayIter},
+};
+
+mod logger;
+
+/// Advances each iterator in parallel
+/// # Panic
+/// If the iterators are empty
+fn deserialize_parallel(iters: &amp;mut [ArrayIter&lt;'static&gt;]) -&gt; Result&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt; {
+    // CPU-bounded
+    let arrays = iters
+        .par_iter_mut()
+        .map(|iter| iter.next().transpose())
+        .collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
+
+    Chunk::try_new(arrays.into_iter().map(|x| x.unwrap()).collect())
+}
+
+fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;()&gt; {
+    // open the file
+    let mut file = BufReader::new(File::open(path)?);
+
+    // read Parquet's metadata and infer Arrow schema
+    let metadata = read::read_metadata(&amp;mut file)?;
+    let schema = read::infer_schema(&amp;metadata)?;
+
+    // select the row group from the metadata
+    let row_group = &amp;metadata.row_groups[row_group];
+
+    let chunk_size = 1024 * 8 * 8;
+
+    // read (IO-bounded) all columns into memory (use a subset of the fields to project)
+    let mut columns =
+        read::read_columns_many(&amp;mut file, row_group, schema.fields, Some(chunk_size))?;
+
+    // deserialize (CPU-bounded) to Arrow in chunks
+    let mut num_rows = row_group.num_rows();
+    while num_rows &gt; 0 {
+        num_rows = num_rows.saturating_sub(chunk_size);
+        trace!(&quot;[parquet/deserialize][start]&quot;);
+        let chunk = deserialize_parallel(&amp;mut columns)?;
+        trace!(&quot;[parquet/deserialize][end][{}]&quot;, chunk.len());
+        assert!(!chunk.is_empty());
+    }
+    Ok(())
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    log::set_logger(&amp;logger::LOGGER)
+        .map(|()| log::set_max_level(log::LevelFilter::Trace))
+        .unwrap();
+
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+    let file_path = &amp;args[1];
+    let row_group = args[2].parse::&lt;usize&gt;().unwrap();
+
+    let start = SystemTime::now();
+    parallel_read(file_path, row_group)?;
+    println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
+
+    Ok(())
+}
+</code></pre></pre>
 <p>This can of course be reversed; in configurations where IO is bounded (e.g. when a
 network is involved), we can use multiple producers of pages, potentially divided
 in file readers, and a single consumer that performs all CPU-intensive work.</p>
@@ -1581,13 +1712,13 @@ into arrays.</p>
 <pre><pre class="playground"><code class="language-rust">//! Example showing how to memory map an Arrow IPC file into a [`Chunk`].
 use std::sync::Arc;
 
-use arrow2::error::Result;
-use arrow2::io::ipc::read;
-use arrow2::mmap::{mmap_dictionaries_unchecked, mmap_unchecked};
+use arrow2::array::{Array, BooleanArray};
+use arrow2::chunk::Chunk;
+use arrow2::datatypes::{Field, Schema};
+use arrow2::error::Error;
 
-// Arrow2 requires a struct that implements `Clone + AsRef&lt;[u8]&gt;`, which
-// usually `Arc&lt;Mmap&gt;` supports. Here we mock it
-#[derive(Clone)]
+// Arrow2 requires something that implements `AsRef&lt;[u8]&gt;`, which
+// `Mmap` supports. Here we mock it
 struct Mmap(Vec&lt;u8&gt;);
 
 impl AsRef&lt;[u8]&gt; for Mmap {
@@ -1597,21 +1728,51 @@ impl AsRef&lt;[u8]&gt; for Mmap {
     }
 }
 
-fn main() -&gt; Result&lt;()&gt; {
+// Auxiliary function to write an arrow file
+// This function is guaranteed to produce a valid arrow file
+fn write(
+    chunks: &amp;[Chunk&lt;Box&lt;dyn Array&gt;&gt;],
+    schema: &amp;Schema,
+    ipc_fields: Option&lt;Vec&lt;arrow2::io::ipc::IpcField&gt;&gt;,
+    compression: Option&lt;arrow2::io::ipc::write::Compression&gt;,
+) -&gt; Result&lt;Vec&lt;u8&gt;, Error&gt; {
+    let result = vec![];
+    let options = arrow2::io::ipc::write::WriteOptions { compression };
+    let mut writer =
+        arrow2::io::ipc::write::FileWriter::try_new(result, schema, ipc_fields.clone(), options)?;
+    for chunk in chunks {
+        writer.write(chunk, ipc_fields.as_ref().map(|x| x.as_ref()))?;
+    }
+    writer.finish()?;
+    Ok(writer.into_inner())
+}
+
+fn check_round_trip(array: Box&lt;dyn Array&gt;) -&gt; Result&lt;(), Error&gt; {
+    let schema = Schema::from(vec![Field::new(&quot;a&quot;, array.data_type().clone(), true)]);
+    let columns = Chunk::try_new(vec![array.clone()])?;
+
     // given a mmap
-    let mmap = Arc::new(Mmap(vec![]));
+    let data = Arc::new(write(&amp;[columns], &amp;schema, None, None)?);
 
-    // read the metadata
-    let metadata = read::read_file_metadata(&amp;mut std::io::Cursor::new(mmap.as_ref()))?;
+    // we first read the files' metadata
+    let metadata =
+        arrow2::io::ipc::read::read_file_metadata(&amp;mut std::io::Cursor::new(data.as_ref()))?;
 
-    // mmap the dictionaries
-    let dictionaries = unsafe { mmap_dictionaries_unchecked(&amp;metadata, mmap.clone())? };
+    // next we mmap the dictionaries
+    // Safety: `write` above guarantees that this is a valid Arrow IPC file
+    let dictionaries =
+        unsafe { arrow2::mmap::mmap_dictionaries_unchecked(&amp;metadata, data.clone())? };
 
     // and finally mmap a chunk (0 in this case).
-    let chunk = unsafe { mmap_unchecked(&amp;metadata, &amp;dictionaries, mmap, 0) }?;
-
-    println!(&quot;{chunk:?}&quot;);
+    // Safety: `write` above guarantees that this is a valid Arrow IPC file
+    let new_array = unsafe { arrow2::mmap::mmap_unchecked(&amp;metadata, &amp;dictionaries, data, 0)? };
+    assert_eq!(new_array.into_arrays()[0], array);
     Ok(())
+}
+
+fn main() -&gt; Result&lt;(), Error&gt; {
+    let array = BooleanArray::from([None, None, Some(true)]).boxed();
+    check_round_trip(array)
 }
 </code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="read-arrow-streams"><a class="header" href="#read-arrow-streams">Read Arrow streams</a></h1>
@@ -2018,11 +2179,90 @@ fn main() -&gt; Result&lt;()&gt; {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="odbc"><a class="header" href="#odbc">ODBC</a></h1>
 <p>When compiled with feature <code>io_odbc</code>, this crate can be used to read from, and write to
 any <a href="https://en.wikipedia.org/wiki/Open_Database_Connectivity">ODBC</a> interface:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>{{#include ../../../examples/odbc.rs}}
-<span class="boring">}
-</span></code></pre></pre>
+<pre><pre class="playground"><code class="language-rust">//! Demo of how to write to, and read from, an ODBC connector
+//!
+//! On an Ubuntu, you need to run the following (to install the driver):
+//! ```bash
+//! sudo apt install libsqliteodbc sqlite3 unixodbc-dev
+//! sudo sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
+//! ```
+use arrow2::array::{Array, Int32Array, Utf8Array};
+use arrow2::chunk::Chunk;
+use arrow2::datatypes::{DataType, Field};
+use arrow2::error::Result;
+use arrow2::io::odbc::api;
+use arrow2::io::odbc::api::Cursor;
+use arrow2::io::odbc::read;
+use arrow2::io::odbc::write;
+
+fn main() -&gt; Result&lt;()&gt; {
+    let connector = &quot;Driver={SQLite3};Database=sqlite-test.db&quot;;
+    let env = api::Environment::new()?;
+    let connection = env.connect_with_connection_string(connector)?;
+
+    // let's create an empty table with a schema
+    connection.execute(&quot;DROP TABLE IF EXISTS example;&quot;, ())?;
+    connection.execute(&quot;CREATE TABLE example (c1 INT, c2 TEXT);&quot;, ())?;
+
+    // and now let's write some data into it (from arrow arrays!)
+    // first, we prepare the statement
+    let query = &quot;INSERT INTO example (c1, c2) VALUES (?, ?)&quot;;
+    let prepared = connection.prepare(query).unwrap();
+
+    // secondly, we initialize buffers from odbc-api
+    let fields = vec![
+        // (for now) the types here must match the tables' schema
+        Field::new(&quot;unused&quot;, DataType::Int32, true),
+        Field::new(&quot;unused&quot;, DataType::LargeUtf8, true),
+    ];
+
+    // third, we initialize the writer
+    let mut writer = write::Writer::try_new(prepared, fields)?;
+
+    // say we have (or receive from a channel) a chunk:
+    let chunk = Chunk::new(vec![
+        Box::new(Int32Array::from_slice([1, 2, 3])) as Box&lt;dyn Array&gt;,
+        Box::new(Utf8Array::&lt;i64&gt;::from([Some(&quot;Hello&quot;), None, Some(&quot;World&quot;)])),
+    ]);
+
+    // we write it like this
+    writer.write(&amp;chunk)?;
+
+    // and we can later read from it
+    let chunks = read(&amp;connection, &quot;SELECT c1 FROM example&quot;)?;
+
+    // and the result should be the same
+    assert_eq!(chunks[0].columns()[0], chunk.columns()[0]);
+
+    Ok(())
+}
+
+/// Reads chunks from a query done against an ODBC connection
+pub fn read(connection: &amp;api::Connection&lt;'_&gt;, query: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt;&gt; {
+    let mut a = connection.prepare(query)?;
+    let fields = read::infer_schema(&amp;a)?;
+
+    let max_batch_size = 100;
+    let buffer = read::buffer_from_metadata(&amp;a, max_batch_size)?;
+
+    let cursor = a.execute(())?.unwrap();
+    let mut cursor = cursor.bind_buffer(buffer)?;
+
+    let mut chunks = vec![];
+    while let Some(batch) = cursor.fetch()? {
+        let arrays = (0..batch.num_cols())
+            .zip(fields.iter())
+            .map(|(index, field)| {
+                let column_view = batch.column(index);
+                read::deserialize(column_view, field.data_type.clone())
+            })
+            .collect::&lt;Vec&lt;_&gt;&gt;();
+        chunks.push(Chunk::new(arrays));
+    }
+
+    Ok(chunks)
+}
+</code></pre></pre>
 
                     </main>
 
