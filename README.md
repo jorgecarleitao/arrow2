@@ -12,7 +12,7 @@ implementation.
 
 Check out [the guide](https://jorgecarleitao.github.io/arrow2/main/guide)
 for a general introduction on how to use this crate, and
-[API docs](https://jorgecarleitao.github.io/arrow2/main/docs)
+[API docs](https://jorgecarleitao.github.io/arrow2/main/docs/arrow2)
 for a detailed documentation of each of its APIs.
 
 ## Features
