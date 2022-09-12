@@ -118,7 +118,7 @@ impl<W: Write> FileWriter<W> {
     /// Writes [`Chunk`] to the file
     pub fn write(
         &mut self,
-        columns: &Chunk<Box<dyn Array>>,
+        chunk: &Chunk<Box<dyn Array>>,
         ipc_fields: Option<&[IpcField]>,
     ) -> Result<()> {
         if self.state != State::Started {
@@ -134,7 +134,7 @@ impl<W: Write> FileWriter<W> {
         };
 
         let (encoded_dictionaries, encoded_message) = encode_chunk(
-            columns,
+            chunk,
             ipc_fields,
             &mut self.dictionary_tracker,
             &self.options,

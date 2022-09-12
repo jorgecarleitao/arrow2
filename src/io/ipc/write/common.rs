@@ -172,14 +172,14 @@ fn encode_dictionary(
 }
 
 pub fn encode_chunk(
-    columns: &Chunk<Box<dyn Array>>,
+    chunk: &Chunk<Box<dyn Array>>,
     fields: &[IpcField],
     dictionary_tracker: &mut DictionaryTracker,
     options: &WriteOptions,
 ) -> Result<(Vec<EncodedData>, EncodedData)> {
     let mut encoded_dictionaries = vec![];
 
-    for (field, array) in fields.iter().zip(columns.as_ref()) {
+    for (field, array) in fields.iter().zip(chunk.as_ref()) {
         encode_dictionary(
             field,
             array.as_ref(),
@@ -189,7 +189,7 @@ pub fn encode_chunk(
         )?;
     }
 
-    let encoded_message = columns_to_bytes(columns, options);
+    let encoded_message = chunk_to_bytes(chunk, options);
 
     Ok((encoded_dictionaries, encoded_message))
 }
@@ -213,12 +213,12 @@ fn serialize_compression(
 
 /// Write [`Chunk`] into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the batch's data
-fn columns_to_bytes(columns: &Chunk<Box<dyn Array>>, options: &WriteOptions) -> EncodedData {
+fn chunk_to_bytes(chunk: &Chunk<Box<dyn Array>>, options: &WriteOptions) -> EncodedData {
     let mut nodes: Vec<arrow_format::ipc::FieldNode> = vec![];
     let mut buffers: Vec<arrow_format::ipc::Buffer> = vec![];
     let mut arrow_data: Vec<u8> = vec![];
     let mut offset = 0;
-    for array in columns.arrays() {
+    for array in chunk.arrays() {
         write(
             array.as_ref(),
             &mut buffers,
@@ -236,7 +236,7 @@ fn columns_to_bytes(columns: &Chunk<Box<dyn Array>>, options: &WriteOptions) -> 
         version: arrow_format::ipc::MetadataVersion::V5,
         header: Some(arrow_format::ipc::MessageHeader::RecordBatch(Box::new(
             arrow_format::ipc::RecordBatch {
-                length: columns.len() as i64,
+                length: chunk.len() as i64,
                 nodes: Some(nodes),
                 buffers: Some(buffers),
                 compression,
