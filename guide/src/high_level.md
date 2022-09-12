@@ -279,5 +279,5 @@ Below is a complete example of how to operate on a `Box<dyn Array>` without
 extra allocations.
 
 ```rust,ignore
-{{#include ../examples/cow.rs}}
+{{#include ../../examples/cow.rs}}
 ```

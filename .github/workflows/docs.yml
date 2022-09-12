@@ -49,6 +49,6 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3.7.3
         with:
           personal_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/doc/arrow2
+          publish_dir: ./target/doc
           destination_dir: ./${{github.ref_name}}/docs
           keep_files: false

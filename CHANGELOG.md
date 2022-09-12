@@ -1,5 +1,65 @@
 # Changelog
 
+## [v0.14.0](https://github.com/jorgecarleitao/arrow2/tree/v0.14.0) (2022-09-12)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.13.0...v0.14.0)
+
+**Breaking changes:**
+
+- Removed `Count` \(parquet statistics\) [\#1217](https://github.com/jorgecarleitao/arrow2/pull/1217) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Exposed parquet indexed page filtering to `FileReader` [\#1216](https://github.com/jorgecarleitao/arrow2/pull/1216) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simpler IPC API [\#1208](https://github.com/jorgecarleitao/arrow2/pull/1208) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Migrated Avro code to avro-schema repo [\#1199](https://github.com/jorgecarleitao/arrow2/pull/1199) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for decimal 256 [\#1194](https://github.com/jorgecarleitao/arrow2/pull/1194) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**New features:**
+
+- Added support for decoding delta-length-encoded binary \(parquet\) [\#1228](https://github.com/jorgecarleitao/arrow2/pull/1228) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to read and write Parquet's delta-bitpacked \(integer encoding\) [\#1226](https://github.com/jorgecarleitao/arrow2/pull/1226) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for parquet sidecar to `FileReader` [\#1215](https://github.com/jorgecarleitao/arrow2/pull/1215) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Write 64bit aligned IPC files [\#1201](https://github.com/jorgecarleitao/arrow2/pull/1201) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support to mmap IPC format [\#1197](https://github.com/jorgecarleitao/arrow2/pull/1197) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `MutableStructArray` [\#1196](https://github.com/jorgecarleitao/arrow2/pull/1196) ([hohav](https://github.com/hohav))
+
+**Fixed bugs:**
+
+- Stack overflow in parquet RowGroupReader with groups\_filter  [\#1206](https://github.com/jorgecarleitao/arrow2/issues/1206)
+- fixed comparisson and validity kernels [\#1243](https://github.com/jorgecarleitao/arrow2/pull/1243) ([ritchie46](https://github.com/ritchie46))
+- Fixed reading nested stats [\#1240](https://github.com/jorgecarleitao/arrow2/pull/1240) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- `FileSink` now closes the underlying writer. [\#1213](https://github.com/jorgecarleitao/arrow2/pull/1213) ([samkaufman](https://github.com/samkaufman))
+- Fixed JSON infer order [\#1212](https://github.com/jorgecarleitao/arrow2/pull/1212) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed StackOverflow in skipping many parquet row groups [\#1210](https://github.com/jorgecarleitao/arrow2/pull/1210) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fix escaped like wildcards [\#1204](https://github.com/jorgecarleitao/arrow2/pull/1204) ([daniel-martinez-maqueda-sap](https://github.com/daniel-martinez-maqueda-sap))
+- Removed println :\( [\#1203](https://github.com/jorgecarleitao/arrow2/pull/1203) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Enhancements:**
+
+- Added schema to FileReader [\#1246](https://github.com/jorgecarleitao/arrow2/pull/1246) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simpler nested parquet read [\#1241](https://github.com/jorgecarleitao/arrow2/pull/1241) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Removed unneeded code [\#1229](https://github.com/jorgecarleitao/arrow2/pull/1229) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved `MutableStruct::push` [\#1223](https://github.com/jorgecarleitao/arrow2/pull/1223) ([hohav](https://github.com/hohav))
+- Reduced binary size [\#1221](https://github.com/jorgecarleitao/arrow2/pull/1221) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added utf8 \<\> binary cast [\#1220](https://github.com/jorgecarleitao/arrow2/pull/1220) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- split parquet compression backend features [\#1207](https://github.com/jorgecarleitao/arrow2/pull/1207) ([ritchie46](https://github.com/ritchie46))
+- Improved API of `mmap` [\#1205](https://github.com/jorgecarleitao/arrow2/pull/1205) ([ritchie46](https://github.com/ritchie46))
+- Added `MutableArray::reserve` [\#1202](https://github.com/jorgecarleitao/arrow2/pull/1202) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Delayed dict [\#1185](https://github.com/jorgecarleitao/arrow2/pull/1185) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Documentation updates:**
+
+- Fixed guide and improved examples [\#1247](https://github.com/jorgecarleitao/arrow2/pull/1247) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added documentation on parquet compatibility under `TimeUnit`. [\#1238](https://github.com/jorgecarleitao/arrow2/pull/1238) ([TurnOfACard](https://github.com/TurnOfACard))
+- Fixed typo in error message for impl StructArray [\#1237](https://github.com/jorgecarleitao/arrow2/pull/1237) ([knil-sama](https://github.com/knil-sama))
+- Fixed incorrect command in doc for generating ORC files [\#1234](https://github.com/jorgecarleitao/arrow2/pull/1234) ([poga](https://github.com/poga))
+- Improved github page generation [\#1233](https://github.com/jorgecarleitao/arrow2/pull/1233) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fix a typo in the docs [\#1225](https://github.com/jorgecarleitao/arrow2/pull/1225) ([teymour-aldridge](https://github.com/teymour-aldridge))
+- Fix some doc links/typos [\#1211](https://github.com/jorgecarleitao/arrow2/pull/1211) ([AnIrishDuck](https://github.com/AnIrishDuck))
+
+**Testing updates:**
+
+- Fixed clippy warnings [\#1227](https://github.com/jorgecarleitao/arrow2/pull/1227) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Updated integration test [\#1214](https://github.com/jorgecarleitao/arrow2/pull/1214) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
 ## [v0.13.0](https://github.com/jorgecarleitao/arrow2/tree/v0.13.0) (2022-07-31)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.12.0...v0.13.0)
