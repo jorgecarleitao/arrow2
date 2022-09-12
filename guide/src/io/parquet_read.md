@@ -19,13 +19,6 @@ Here is how to read a single column chunk from a single row group:
 The example above minimizes memory usage at the expense of mixing IO and CPU tasks
 on the same thread, which may hurt performance if one of them is a bottleneck.
 
-For single-threaded reading, buffers used to read and decompress pages can be re-used.
-This create offers an API that encapsulates the above logic:
-
-```rust
-{{#include ../../../examples/parquet_read_record.rs}}
-```
-
 ### Parallelism decoupling of CPU from IO
 
 One important aspect of the pages created by the iterator above is that they can cross
@@ -38,7 +31,7 @@ and that it is advantageous to have a single thread performing all IO-intensive 
 by delegating all CPU-intensive tasks to separate threads.
 
 ```rust
-{{#include ../../../examples/parquet_read_parallel.rs}}
+{{#include ../../../examples/parquet_read_parallel/src/main.rs}}
 ```
 
 This can of course be reversed; in configurations where IO is bounded (e.g. when a
