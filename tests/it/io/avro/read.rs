@@ -47,7 +47,17 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
                 "name": "",
                 "symbols" : ["SPADES", "HEARTS", "DIAMONDS", "CLUBS"]
             }},
-            {"name": "decimal", "type": {"type": "bytes", "logicalType": "decimal", "precision": 18, "scale": 5}}
+            {"name": "decimal", "type": {"type": "bytes", "logicalType": "decimal", "precision": 18, "scale": 5}},
+            {"name": "nullable_struct", "type": [
+                "null", {
+                    "type": "record",
+                    "name": "bla",
+                    "fields": [
+                        {"name": "e", "type": "double"}
+                    ]
+                }]
+                , "default": null
+            }
         ]
     }
 "#;
@@ -77,6 +87,11 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
             false,
         ),
         Field::new("decimal", DataType::Decimal(18, 5), false),
+        Field::new(
+            "nullable_struct",
+            DataType::Struct(vec![Field::new("e", DataType::Float64, false)]),
+            true,
+        ),
     ]);
 
     (AvroSchema::parse_str(raw_schema).unwrap(), schema)
@@ -116,6 +131,12 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
         PrimitiveArray::<i128>::from_slice([12345678i128, -12345678i128])
             .to(DataType::Decimal(18, 5))
             .boxed(),
+        StructArray::from_data(
+            DataType::Struct(vec![Field::new("e", DataType::Float64, false)]),
+            vec![Box::new(PrimitiveArray::<f64>::from_slice([1.0, 0.0]))],
+            Some([true, false].into()),
+        )
+        .boxed(),
     ];
 
     Chunk::try_new(columns).unwrap()
@@ -157,6 +178,13 @@ pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::
         "duration",
         Value::Duration(Duration::new(Months::new(1), Days::new(1), Millis::new(1))),
     );
+    record.put(
+        "nullable_struct",
+        Value::Union(Box::new(Value::Record(vec![(
+            "e".to_string(),
+            Value::Double(1.0f64),
+        )]))),
+    );
     writer.append(record)?;
 
     let mut record = Record::new(writer.schema()).unwrap();
@@ -187,8 +215,9 @@ pub(super) fn write_avro(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::
             255u8, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 67, 158, 178,
         ])),
     );
+    record.put("nullable_struct", Value::Union(Box::new(Value::Null)));
     writer.append(record)?;
-    Ok(writer.into_inner().unwrap())
+    writer.into_inner()
 }
 
 pub(super) fn read_avro(
