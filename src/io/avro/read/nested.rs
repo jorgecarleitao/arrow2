@@ -231,6 +231,14 @@ impl DynMutableStructArray {
     }
 
     #[inline]
+    pub fn try_push_valid(&mut self) -> Result<()> {
+        if let Some(validity) = &mut self.validity {
+            validity.push(true)
+        }
+        Ok(())
+    }
+
+    #[inline]
     fn push_null(&mut self) {
         self.values.iter_mut().for_each(|x| x.push_null());
         match &mut self.validity {
