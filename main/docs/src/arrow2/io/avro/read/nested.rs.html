@@ -303,6 +303,14 @@
 <span id="303">303</span>
 <span id="304">304</span>
 <span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::array::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::bitmap::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::datatypes::<span class="kw-2">*</span>;
@@ -533,6 +541,14 @@
     <span class="doccomment">/// The values
     </span><span class="kw">pub fn </span>mut_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>, field: usize) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>MutableArray {
         <span class="self">self</span>.values[field].as_mut()
+    }
+
+    <span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>try_push_valid(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.validity {
+            validity.push(<span class="bool-val">true</span>)
+        }
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="attribute">#[inline]

@@ -493,6 +493,7 @@
 <span id="493">493</span>
 <span id="494">494</span>
 <span id="495">495</span>
+<span id="496">496</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::convert::TryInto;
 
 <span class="kw">use </span>avro_schema::file::Block;
@@ -655,6 +656,7 @@
                 <span class="kw">let </span>values = array.mut_values(index);
                 block = deserialize_item(values, <span class="kw-2">*</span>is_nullable, <span class="kw-2">&amp;</span>field.schema, block)<span class="question-mark">?</span>;
             }
+            array.try_push_valid()<span class="question-mark">?</span>;
         }
         <span class="kw">_ </span>=&gt; <span class="kw">match </span>data_type.to_physical_type() {
             PhysicalType::Boolean =&gt; {
