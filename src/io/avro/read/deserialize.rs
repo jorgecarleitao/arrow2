@@ -123,7 +123,16 @@ fn deserialize_value<'a>(
                 .downcast_mut::<DynMutableListArray<i32>>()
                 .unwrap();
             loop {
-                let len = util::zigzag_i64(&mut block)? as usize;
+                let len = util::zigzag_i64(&mut block)?;
+                let len = if len < 0 {
+                    // Avro spec: If a block's count is negative, its absolute value is used,
+                    // and the count is followed immediately by a long block size indicating the number of bytes in the block. This block size permits fast skipping through data, e.g., when projecting a record to a subset of its fields.
+                    let _ = util::zigzag_i64(&mut block)?;
+
+                    -len
+                } else {
+                    len
+                };
 
                 if len == 0 {
                     break;
@@ -340,14 +349,35 @@ fn skip_item<'a>(field: &Field, avro_field: &AvroSchema, mut block: &'a [u8]) ->
             };
 
             loop {
-                let len = util::zigzag_i64(&mut block)? as usize;
+                let len = util::zigzag_i64(&mut block)?;
+                let (len, bytes) = if len < 0 {
+                    // Avro spec: If a block's count is negative, its absolute value is used,
+                    // and the count is followed immediately by a long block size indicating the number of bytes in the block. This block size permits fast skipping through data, e.g., when projecting a record to a subset of its fields.
+                    let bytes = util::zigzag_i64(&mut block)?;
+
+                    (-len, Some(bytes))
+                } else {
+                    (len, None)
+                };
+
+                let bytes: Option<usize> = bytes
+                    .map(|bytes| {
+                        bytes
+                            .try_into()
+                            .map_err(|_| Error::oos("Avro block size negative or too large"))
+                    })
+                    .transpose()?;
 
                 if len == 0 {
                     break;
                 }
 
-                for _ in 0..len {
-                    block = skip_item(inner, avro_inner, block)?;
+                if let Some(bytes) = bytes {
+                    block = &block[bytes..];
+                } else {
+                    for _ in 0..len {
+                        block = skip_item(inner, avro_inner, block)?;
+                    }
                 }
             }
         }
@@ -488,7 +518,7 @@ pub fn deserialize(
         arrays
             .iter_mut()
             .zip(projection.iter())
-            .filter_map(|x| if *x.1 { Some(x.0) } else { None })
+            .filter_map(|x| x.1.then(|| x.0))
             .map(|array| array.as_box())
             .collect(),
     )
