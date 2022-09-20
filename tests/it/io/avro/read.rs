@@ -282,3 +282,76 @@ fn test_projected() -> Result<()> {
     }
     Ok(())
 }
+
+fn schema_list() -> (AvroSchema, Schema) {
+    let raw_schema = r#"
+    {
+        "type": "record",
+        "name": "test",
+        "fields": [
+            {"name": "h", "type": {
+                "type": "array",
+                "items": {
+                    "name": "item",
+                    "type": "int"
+                }
+            }}
+        ]
+    }
+"#;
+
+    let schema = Schema::from(vec![Field::new(
+        "h",
+        DataType::List(Box::new(Field::new("item", DataType::Int32, false))),
+        false,
+    )]);
+
+    (AvroSchema::parse_str(raw_schema).unwrap(), schema)
+}
+
+pub(super) fn data_list() -> Chunk<Box<dyn Array>> {
+    let data = [Some(vec![Some(1i32), Some(2), Some(3)]), Some(vec![])];
+
+    let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new_from(
+        Default::default(),
+        DataType::List(Box::new(Field::new("item", DataType::Int32, false))),
+        0,
+    );
+    array.try_extend(data).unwrap();
+
+    let columns = vec![array.into_box()];
+
+    Chunk::try_new(columns).unwrap()
+}
+
+pub(super) fn write_list(codec: Codec) -> std::result::Result<Vec<u8>, avro_rs::Error> {
+    let (avro, _) = schema_list();
+    // a writer needs a schema and something to write to
+    let mut writer = Writer::with_codec(&avro, Vec::new(), codec);
+
+    // the Record type models our Record schema
+    let mut record = Record::new(writer.schema()).unwrap();
+    record.put(
+        "h",
+        Value::Array(vec![Value::Int(1), Value::Int(2), Value::Int(3)]),
+    );
+    writer.append(record)?;
+
+    let mut record = Record::new(writer.schema()).unwrap();
+    record.put("h", Value::Array(vec![]));
+    writer.append(record)?;
+    Ok(writer.into_inner().unwrap())
+}
+
+#[test]
+fn test_list() -> Result<()> {
+    let avro = write_list(Codec::Null).unwrap();
+    let expected = data_list();
+    let (_, expected_schema) = schema_list();
+
+    let (result, schema) = read_avro(&avro, None)?;
+
+    assert_eq!(schema, expected_schema);
+    assert_eq!(result, expected);
+    Ok(())
+}

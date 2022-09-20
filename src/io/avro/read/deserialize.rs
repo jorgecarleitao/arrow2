@@ -122,7 +122,9 @@ fn deserialize_value<'a>(
                 .as_mut_any()
                 .downcast_mut::<DynMutableListArray<i32>>()
                 .unwrap();
+            // Arrays are encoded as a series of blocks.
             loop {
+                // Each block consists of a long count value, followed by that many array items.
                 let len = util::zigzag_i64(&mut block)?;
                 let len = if len < 0 {
                     // Avro spec: If a block's count is negative, its absolute value is used,
@@ -134,16 +136,18 @@ fn deserialize_value<'a>(
                     len
                 };
 
+                // A block with count zero indicates the end of the array.
                 if len == 0 {
                     break;
                 }
 
+                // Each item is encoded per the array’s item schema.
                 let values = array.mut_values();
                 for _ in 0..len {
                     block = deserialize_item(values, is_nullable, avro_inner, block)?;
                 }
-                array.try_push_valid()?;
             }
+            array.try_push_valid()?;
         }
         DataType::Struct(inner_fields) => {
             let fields = match avro_field {
