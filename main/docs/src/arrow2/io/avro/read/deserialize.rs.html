@@ -494,6 +494,40 @@
 <span id="494">494</span>
 <span id="495">495</span>
 <span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::convert::TryInto;
 
 <span class="kw">use </span>avro_schema::file::Block;
@@ -618,19 +652,32 @@
                 .as_mut_any()
                 .downcast_mut::&lt;DynMutableListArray&lt;i32&gt;&gt;()
                 .unwrap();
-            <span class="kw">loop </span>{
-                <span class="kw">let </span>len = util::zigzag_i64(<span class="kw-2">&amp;mut </span>block)<span class="question-mark">? </span><span class="kw">as </span>usize;
+            <span class="comment">// Arrays are encoded as a series of blocks.
+            </span><span class="kw">loop </span>{
+                <span class="comment">// Each block consists of a long count value, followed by that many array items.
+                </span><span class="kw">let </span>len = util::zigzag_i64(<span class="kw-2">&amp;mut </span>block)<span class="question-mark">?</span>;
+                <span class="kw">let </span>len = <span class="kw">if </span>len &lt; <span class="number">0 </span>{
+                    <span class="comment">// Avro spec: If a block&#39;s count is negative, its absolute value is used,
+                    // and the count is followed immediately by a long block size indicating the number of bytes in the block. This block size permits fast skipping through data, e.g., when projecting a record to a subset of its fields.
+                    </span><span class="kw">let _ </span>= util::zigzag_i64(<span class="kw-2">&amp;mut </span>block)<span class="question-mark">?</span>;
 
-                <span class="kw">if </span>len == <span class="number">0 </span>{
+                    -len
+                } <span class="kw">else </span>{
+                    len
+                };
+
+                <span class="comment">// A block with count zero indicates the end of the array.
+                </span><span class="kw">if </span>len == <span class="number">0 </span>{
                     <span class="kw">break</span>;
                 }
 
-                <span class="kw">let </span>values = array.mut_values();
+                <span class="comment">// Each item is encoded per the array’s item schema.
+                </span><span class="kw">let </span>values = array.mut_values();
                 <span class="kw">for _ in </span><span class="number">0</span>..len {
                     block = deserialize_item(values, is_nullable, avro_inner, block)<span class="question-mark">?</span>;
                 }
-                array.try_push_valid()<span class="question-mark">?</span>;
             }
+            array.try_push_valid()<span class="question-mark">?</span>;
         }
         DataType::Struct(inner_fields) =&gt; {
             <span class="kw">let </span>fields = <span class="kw">match </span>avro_field {
@@ -837,14 +884,35 @@
             };
 
             <span class="kw">loop </span>{
-                <span class="kw">let </span>len = util::zigzag_i64(<span class="kw-2">&amp;mut </span>block)<span class="question-mark">? </span><span class="kw">as </span>usize;
+                <span class="kw">let </span>len = util::zigzag_i64(<span class="kw-2">&amp;mut </span>block)<span class="question-mark">?</span>;
+                <span class="kw">let </span>(len, bytes) = <span class="kw">if </span>len &lt; <span class="number">0 </span>{
+                    <span class="comment">// Avro spec: If a block&#39;s count is negative, its absolute value is used,
+                    // and the count is followed immediately by a long block size indicating the number of bytes in the block. This block size permits fast skipping through data, e.g., when projecting a record to a subset of its fields.
+                    </span><span class="kw">let </span>bytes = util::zigzag_i64(<span class="kw-2">&amp;mut </span>block)<span class="question-mark">?</span>;
+
+                    (-len, <span class="prelude-val">Some</span>(bytes))
+                } <span class="kw">else </span>{
+                    (len, <span class="prelude-val">None</span>)
+                };
+
+                <span class="kw">let </span>bytes: <span class="prelude-ty">Option</span>&lt;usize&gt; = bytes
+                    .map(|bytes| {
+                        bytes
+                            .try_into()
+                            .map_err(|<span class="kw">_</span>| Error::oos(<span class="string">&quot;Avro block size negative or too large&quot;</span>))
+                    })
+                    .transpose()<span class="question-mark">?</span>;
 
                 <span class="kw">if </span>len == <span class="number">0 </span>{
                     <span class="kw">break</span>;
                 }
 
-                <span class="kw">for _ in </span><span class="number">0</span>..len {
-                    block = skip_item(inner, avro_inner, block)<span class="question-mark">?</span>;
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(bytes) = bytes {
+                    block = <span class="kw-2">&amp;</span>block[bytes..];
+                } <span class="kw">else </span>{
+                    <span class="kw">for _ in </span><span class="number">0</span>..len {
+                        block = skip_item(inner, avro_inner, block)<span class="question-mark">?</span>;
+                    }
                 }
             }
         }
@@ -985,10 +1053,10 @@
         arrays
             .iter_mut()
             .zip(projection.iter())
-            .filter_map(|x| <span class="kw">if </span><span class="kw-2">*</span>x.<span class="number">1 </span>{ <span class="prelude-val">Some</span>(x.<span class="number">0</span>) } <span class="kw">else </span>{ <span class="prelude-val">None </span>})
+            .filter_map(|x| x.<span class="number">1</span>.then(|| x.<span class="number">0</span>))
             .map(|array| array.as_box())
             .collect(),
     )
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (cf9ed0dd5 2022-09-15)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (2019147c5 2022-09-19)" ></div></body></html>
