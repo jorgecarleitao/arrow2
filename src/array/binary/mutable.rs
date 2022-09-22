@@ -345,6 +345,21 @@ impl<O: Offset> MutableBinaryArray<O> {
         unsafe { self.extend_trusted_len_values_unchecked(iterator) }
     }
 
+    /// Extends the [`MutableBinaryArray`] from an iterator of values.
+    /// This differs from `extended_trusted_len` which accepts iterator of optional values.
+    #[inline]
+    pub fn extend_values<I, P>(&mut self, iterator: I)
+    where
+        P: AsRef<[u8]>,
+        I: Iterator<Item = P>,
+    {
+        let additional = extend_from_values_iter(&mut self.offsets, &mut self.values, iterator);
+
+        if let Some(validity) = self.validity.as_mut() {
+            validity.extend_constant(additional, true);
+        }
+    }
+
     /// Extends the [`MutableBinaryArray`] from an `iterator` of values of trusted length.
     /// This differs from `extend_trusted_len_unchecked` which accepts iterator of optional
     /// values.
