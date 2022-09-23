@@ -9,6 +9,8 @@ use crate::{
     trusted_len::TrustedLen,
 };
 
+use either::Either;
+
 use super::{
     specification::{try_check_offsets, try_check_offsets_bounds},
     Array, GenericBinaryArray, Offset,
@@ -236,6 +238,88 @@ impl<O: Offset> BinaryArray<O> {
             panic!("validity must be equal to the array's length")
         }
         self.validity = validity;
+    }
+
+    /// Try to convert this `BinaryArray` to a `MutableBinaryArray`
+    pub fn into_mut(mut self) -> Either<Self, MutableBinaryArray<O>> {
+        use Either::*;
+        if let Some(bitmap) = self.validity {
+            match bitmap.into_mut() {
+                // Safety: invariants are preserved
+                Left(bitmap) => Left(unsafe {
+                    BinaryArray::new_unchecked(
+                        self.data_type,
+                        self.offsets,
+                        self.values,
+                        Some(bitmap),
+                    )
+                }),
+                Right(mutable_bitmap) => match (
+                    self.values.get_mut().map(std::mem::take),
+                    self.offsets.get_mut().map(std::mem::take),
+                ) {
+                    (None, None) => {
+                        // Safety: invariants are preserved
+                        Left(unsafe {
+                            BinaryArray::new_unchecked(
+                                self.data_type,
+                                self.offsets,
+                                self.values,
+                                Some(mutable_bitmap.into()),
+                            )
+                        })
+                    }
+                    (None, Some(offsets)) => {
+                        // Safety: invariants are preserved
+                        Left(unsafe {
+                            BinaryArray::new_unchecked(
+                                self.data_type,
+                                offsets.into(),
+                                self.values,
+                                Some(mutable_bitmap.into()),
+                            )
+                        })
+                    }
+                    (Some(mutable_values), None) => {
+                        // Safety: invariants are preserved
+                        Left(unsafe {
+                            BinaryArray::new_unchecked(
+                                self.data_type,
+                                self.offsets,
+                                mutable_values.into(),
+                                Some(mutable_bitmap.into()),
+                            )
+                        })
+                    }
+                    (Some(values), Some(offsets)) => Right(unsafe {
+                        MutableBinaryArray::from_data(
+                            self.data_type,
+                            offsets,
+                            values,
+                            Some(mutable_bitmap),
+                        )
+                    }),
+                },
+            }
+        } else {
+            match (
+                self.values.get_mut().map(std::mem::take),
+                self.offsets.get_mut().map(std::mem::take),
+            ) {
+                (None, None) => Left(unsafe {
+                    BinaryArray::new_unchecked(self.data_type, self.offsets, self.values, None)
+                }),
+                (None, Some(offsets)) => Left(unsafe {
+                    BinaryArray::new_unchecked(self.data_type, offsets.into(), self.values, None)
+                }),
+                (Some(values), None) => Left(unsafe {
+                    BinaryArray::new_unchecked(self.data_type, self.offsets, values.into(), None)
+                }),
+                (Some(values), Some(offsets)) => Right(unsafe {
+                    MutableBinaryArray::from_data(self.data_type, offsets, values, None)
+                }),
+            }
+        }
     }
 
     /// Creates an empty [`BinaryArray`], i.e. whose `.len` is zero.
