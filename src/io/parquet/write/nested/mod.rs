@@ -37,9 +37,6 @@ fn write_rep_levels(buffer: &mut Vec<u8>, nested: &[Nested], version: Version) -
 
     let levels = rep::RepLevelsIter::new(nested);
 
-    let mut buffer1 = vec![];
-    encode_u32(&mut buffer1, rep::RepLevelsIter::new(nested), num_bits).unwrap();
-
     match version {
         Version::V1 => {
             write_levels_v1(buffer, |buffer: &mut Vec<u8>| {
