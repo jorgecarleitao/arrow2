@@ -114,9 +114,6 @@
 <span id="114">114</span>
 <span id="115">115</span>
 <span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
 </pre><pre class="rust"><code><span class="kw">mod </span>def;
 <span class="kw">mod </span>rep;
 
@@ -155,9 +152,6 @@
     <span class="kw">let </span>num_bits = get_bit_width(max_level);
 
     <span class="kw">let </span>levels = rep::RepLevelsIter::new(nested);
-
-    <span class="kw">let </span><span class="kw-2">mut </span>buffer1 = <span class="macro">vec!</span>[];
-    encode_u32(<span class="kw-2">&amp;mut </span>buffer1, rep::RepLevelsIter::new(nested), num_bits).unwrap();
 
     <span class="kw">match </span>version {
         Version::V1 =&gt; {
@@ -237,4 +231,4 @@
     <span class="prelude-val">Ok</span>((repetition_levels_byte_length, definition_levels_byte_length))
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (2019147c5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (3f83906b3 2022-09-24)" ></div></body></html>
