@@ -50,7 +50,7 @@ where
     }
 }
 
-fn read_dict<O: Offset>(data_type: DataType, dict: &DictPage) -> Box<dyn Array> {
+fn read_dict<O: Offset>(data_type: DataType, dict: &DictPage) -> Result<Box<dyn Array>> {
     let data_type = match data_type {
         DataType::Dictionary(_, values, _) => *values,
         _ => data_type,
@@ -66,11 +66,14 @@ fn read_dict<O: Offset>(data_type: DataType, dict: &DictPage) -> Box<dyn Array> 
 
     match data_type.to_physical_type() {
         PhysicalType::Utf8 | PhysicalType::LargeUtf8 => {
-            Utf8Array::<O>::new(data_type, data.offsets.0.into(), data.values.into(), None).boxed()
+            Utf8Array::<O>::try_new(data_type, data.offsets.0.into(), data.values.into(), None)
+                .map(|array| array.boxed())
         }
         PhysicalType::Binary | PhysicalType::LargeBinary => {
-            BinaryArray::<O>::new(data_type, data.offsets.0.into(), data.values.into(), None)
-                .boxed()
+            Ok(
+                BinaryArray::<O>::new(data_type, data.offsets.0.into(), data.values.into(), None)
+                    .boxed(),
+            )
         }
         _ => unreachable!(),
     }

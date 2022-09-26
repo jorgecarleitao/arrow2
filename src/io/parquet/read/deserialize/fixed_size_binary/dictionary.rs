@@ -46,7 +46,7 @@ where
     }
 }
 
-fn read_dict(data_type: DataType, dict: &DictPage) -> Box<dyn Array> {
+fn read_dict(data_type: DataType, dict: &DictPage) -> Result<Box<dyn Array>> {
     let data_type = match data_type {
         DataType::Dictionary(_, values, _) => *values,
         _ => data_type,
@@ -54,7 +54,7 @@ fn read_dict(data_type: DataType, dict: &DictPage) -> Box<dyn Array> {
 
     let values = dict.buffer.clone();
 
-    FixedSizeBinaryArray::from_data(data_type, values.into(), None).boxed()
+    Ok(FixedSizeBinaryArray::from_data(data_type, values.into(), None).boxed())
 }
 
 impl<K, I> Iterator for DictIter<K, I>

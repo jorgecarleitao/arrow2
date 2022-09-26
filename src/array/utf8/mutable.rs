@@ -92,18 +92,6 @@ impl<O: Offset> MutableUtf8Array<O> {
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
-        Self::from_data_unchecked(data_type, offsets, values, validity)
-    }
-
-    /// Alias of `new_unchecked`
-    /// # Safety
-    /// The caller must ensure that every value between offsets is a valid utf8.
-    pub unsafe fn from_data_unchecked(
-        data_type: DataType,
-        offsets: Vec<O>,
-        values: Vec<u8>,
-        validity: Option<MutableBitmap>,
-    ) -> Self {
         let values = MutableUtf8ValuesArray::new_unchecked(data_type, offsets, values);
         if let Some(ref validity) = validity {
             assert_eq!(values.len(), validity.len());
@@ -111,23 +99,20 @@ impl<O: Offset> MutableUtf8Array<O> {
         Self { values, validity }
     }
 
-    /// The canonical method to create a [`MutableUtf8Array`] out of low-end APIs.
-    /// # Panics
-    /// This function panics iff:
-    /// * The `offsets` and `values` are inconsistent
-    /// * The `values` between `offsets` are not utf8 encoded
-    /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
-    pub fn from_data(
-        data_type: DataType,
-        offsets: Vec<O>,
-        values: Vec<u8>,
-        validity: Option<MutableBitmap>,
-    ) -> Self {
-        Self::try_new(data_type, offsets, values, validity).unwrap()
+    /// Returns the default [`DataType`] of this container: [`DataType::Utf8`] or [`DataType::LargeUtf8`]
+    /// depending on the generic [`Offset`].
+    pub fn default_data_type() -> DataType {
+        Utf8Array::<O>::default_data_type()
     }
 
-    fn default_data_type() -> DataType {
-        Utf8Array::<O>::default_data_type()
+    /// returns its values.
+    pub fn values(&self) -> &Vec<u8> {
+        self.values.values()
+    }
+
+    /// returns its offsets.
+    pub fn offsets(&self) -> &Vec<O> {
+        self.values.offsets()
     }
 
     /// Initializes a new [`MutableUtf8Array`] with a pre-allocated capacity of slots.
@@ -223,8 +208,8 @@ impl<O: Offset> MutableUtf8Array<O> {
         }
     }
 
-    /// Extract the low-end APIs from the [`MutableUtf8Array`].
-    pub fn into_data(self) -> (DataType, Vec<O>, Vec<u8>, Option<MutableBitmap>) {
+    /// Returns the internal representation of this [`MutableUtf8Array`].
+    pub fn into_inner(self) -> (DataType, Vec<O>, Vec<u8>, Option<MutableBitmap>) {
         let (data_type, offsets, values) = self.values.into_inner();
         (data_type, offsets, values, self.validity)
     }
@@ -232,18 +217,6 @@ impl<O: Offset> MutableUtf8Array<O> {
     /// Returns an iterator of `&str`
     pub fn values_iter(&self) -> MutableUtf8ValuesIter<O> {
         self.values.iter()
-    }
-}
-
-impl<O: Offset> MutableUtf8Array<O> {
-    /// returns its values.
-    pub fn values(&self) -> &Vec<u8> {
-        self.values.values()
-    }
-
-    /// returns its offsets.
-    pub fn offsets(&self) -> &Vec<O> {
-        self.values.offsets()
     }
 }
 
@@ -262,7 +235,7 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
         // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
         let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
         unsafe {
-            Utf8Array::from_data_unchecked(
+            Utf8Array::new_unchecked(
                 data_type,
                 offsets.into(),
                 values.into(),
@@ -278,7 +251,7 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
         // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
         let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
         unsafe {
-            Utf8Array::from_data_unchecked(
+            Utf8Array::new_unchecked(
                 data_type,
                 offsets.into(),
                 values.into(),
@@ -416,7 +389,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         let (validity, offsets, values) = trusted_len_unzip(iterator);
 
         // soundness: P is `str`
-        Self::from_data_unchecked(Self::default_data_type(), offsets, values, validity)
+        Self::new_unchecked(Self::default_data_type(), offsets, values, validity)
     }
 
     /// Creates a [`MutableUtf8Array`] from an iterator of trusted length.
@@ -482,7 +455,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         let (validity, offsets, values) = try_trusted_len_unzip(iterator)?;
 
         // soundness: P is `str`
-        Ok(Self::from_data_unchecked(
+        Ok(Self::new_unchecked(
             Self::default_data_type(),
             offsets,
             values,

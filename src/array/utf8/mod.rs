@@ -75,7 +75,12 @@ pub struct Utf8Array<O: Offset> {
 
 // constructors
 impl<O: Offset> Utf8Array<O> {
-    /// Returns a [`Utf8Array`] created from its internal representation.
+    /// Returns an empty [`Utf8Array`] with its default [`DataType`]
+    pub fn new() -> Self {
+        Self::new_empty(Self::default_data_type())
+    }
+
+    /// Returns a [`Utf8Array`] from its internal representation.
     ///
     /// # Errors
     /// This function returns an error iff:
@@ -136,7 +141,7 @@ impl<O: Offset> Utf8Array<O> {
         zip_validity(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
     }
 
-    /// Returns an iterator of `&str`
+    /// Returns an iterator of `&str`. This disregards the validity
     pub fn values_iter(&self) -> Utf8ValuesIter<O> {
         Utf8ValuesIter::new(self)
     }
@@ -236,7 +241,7 @@ impl<O: Offset> Utf8Array<O> {
         Box::new(self)
     }
 
-    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
+    /// Arcs self into a [`std::sync::Arc<dyn Array>`].
     pub fn arced(self) -> std::sync::Arc<dyn Array> {
         std::sync::Arc::new(self)
     }
@@ -312,7 +317,7 @@ impl<O: Offset> Utf8Array<O> {
                         })
                     }
                     (Some(values), Some(offsets)) => Right(unsafe {
-                        MutableUtf8Array::from_data_unchecked(
+                        MutableUtf8Array::new_unchecked(
                             self.data_type,
                             offsets,
                             values,
@@ -336,7 +341,7 @@ impl<O: Offset> Utf8Array<O> {
                     Utf8Array::new_unchecked(self.data_type, self.offsets, values.into(), None)
                 }),
                 (Some(values), Some(offsets)) => Right(unsafe {
-                    MutableUtf8Array::from_data_unchecked(self.data_type, offsets, values, None)
+                    MutableUtf8Array::new_unchecked(self.data_type, offsets, values, None)
                 }),
             }
         }
@@ -348,7 +353,7 @@ impl<O: Offset> Utf8Array<O> {
     #[inline]
     pub fn new_empty(data_type: DataType) -> Self {
         unsafe {
-            Self::from_data_unchecked(
+            Self::new_unchecked(
                 data_type,
                 Buffer::from(vec![O::zero()]),
                 Buffer::new(),
@@ -360,12 +365,13 @@ impl<O: Offset> Utf8Array<O> {
     /// Returns a new [`Utf8Array`] whose all slots are null / `None`.
     #[inline]
     pub fn new_null(data_type: DataType, length: usize) -> Self {
-        Self::new(
+        Self::try_new(
             data_type,
             vec![O::default(); 1 + length].into(),
             Buffer::new(),
             Some(Bitmap::new_zeroed(length)),
         )
+        .unwrap() // all items are valid
     }
 
     /// Returns a default [`DataType`] of this array, which depends on the generic parameter `O`: `DataType::Utf8` or `DataType::LargeUtf8`
@@ -419,25 +425,6 @@ impl<O: Offset> Utf8Array<O> {
             values,
             validity,
         })
-    }
-
-    /// Creates a new [`Utf8Array`].
-    /// # Panics
-    /// This function panics iff:
-    /// * the offsets are not monotonically increasing
-    /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
-    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
-    /// * The `values` between two consecutive `offsets` are not valid utf8
-    /// # Implementation
-    /// This function is `O(N)` - checking monotinicity and utf8 is `O(N)`
-    pub fn new(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::try_new(data_type, offsets, values, validity).unwrap()
     }
 
     /// Creates a new [`Utf8Array`] without checking for offsets monotinicity.
@@ -524,30 +511,6 @@ impl<O: Offset> Utf8Array<O> {
     {
         MutableUtf8Array::<O>::try_from_trusted_len_iter(iter).map(|x| x.into())
     }
-
-    /// Alias for `new`
-    pub fn from_data(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new(data_type, offsets, values, validity)
-    }
-
-    /// Alias for [`Self::new_unchecked`]
-    /// # Safety
-    /// This function is unsafe iff:
-    /// * the offsets are not monotonically increasing
-    /// * The `values` between two consecutive `offsets` are not valid utf8
-    pub unsafe fn from_data_unchecked(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new_unchecked(data_type, offsets, values, validity)
-    }
 }
 
 impl<O: Offset> Array for Utf8Array<O> {
@@ -604,16 +567,6 @@ unsafe impl<O: Offset> GenericBinaryArray<O> for Utf8Array<O> {
 
 impl<O: Offset> Default for Utf8Array<O> {
     fn default() -> Self {
-        let data_type = if O::IS_LARGE {
-            DataType::LargeUtf8
-        } else {
-            DataType::Utf8
-        };
-        Utf8Array::new(
-            data_type,
-            vec![O::from_usize(0).unwrap()].into(),
-            Default::default(),
-            None,
-        )
+        Self::new()
     }
 }

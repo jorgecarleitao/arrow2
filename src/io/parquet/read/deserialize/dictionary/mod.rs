@@ -239,7 +239,12 @@ fn finish_key<K: DictionaryKey>(values: Vec<K>, validity: MutableBitmap) -> Prim
 }
 
 #[inline]
-pub(super) fn next_dict<'a, K: DictionaryKey, I: Pages, F: Fn(&DictPage) -> Box<dyn Array>>(
+pub(super) fn next_dict<
+    'a,
+    K: DictionaryKey,
+    I: Pages,
+    F: Fn(&DictPage) -> Result<Box<dyn Array>>,
+>(
     iter: &'a mut I,
     items: &mut VecDeque<(Vec<K>, MutableBitmap)>,
     dict: &mut Option<Box<dyn Array>>,
@@ -267,7 +272,10 @@ pub(super) fn next_dict<'a, K: DictionaryKey, I: Pages, F: Fn(&DictPage) -> Box<
                     )));
                 }
                 (_, Page::Dict(dict_page)) => {
-                    *dict = Some(read_dict(dict_page));
+                    *dict = Some(match read_dict(dict_page) {
+                        Ok(dict) => dict,
+                        Err(e) => return MaybeNext::Some(Err(e)),
+                    });
                     return next_dict(
                         iter, items, dict, data_type, remaining, chunk_size, read_dict,
                     );

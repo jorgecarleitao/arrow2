@@ -29,7 +29,7 @@ impl<O: Offset> From<MutableUtf8ValuesArray<O>> for Utf8Array<O> {
         // `MutableUtf8ValuesArray` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8ValuesArray` without checks.
         unsafe {
-            Utf8Array::<O>::from_data_unchecked(
+            Utf8Array::<O>::new_unchecked(
                 other.data_type,
                 other.offsets.into(),
                 other.values.into(),
@@ -44,12 +44,7 @@ impl<O: Offset> From<MutableUtf8ValuesArray<O>> for MutableUtf8Array<O> {
         // Safety:
         // `MutableUtf8ValuesArray` has the same invariants as `MutableUtf8Array`
         unsafe {
-            MutableUtf8Array::<O>::from_data_unchecked(
-                other.data_type,
-                other.offsets,
-                other.values,
-                None,
-            )
+            MutableUtf8Array::<O>::new_unchecked(other.data_type, other.offsets, other.values, None)
         }
     }
 }
@@ -231,7 +226,7 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
         self.offsets.shrink_to_fit();
     }
 
-    /// Extract the low-end APIs from the [`MutableUtf8ValuesArray`].
+    /// Returns the internal representation of this [`MutableUtf8ValuesArray`].
     pub fn into_inner(self) -> (DataType, Vec<O>, Vec<u8>) {
         (self.data_type, self.offsets, self.values)
     }
@@ -251,8 +246,7 @@ impl<O: Offset> MutableArray for MutableUtf8ValuesArray<O> {
         // `MutableUtf8ValuesArray` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8ValuesArray` without checks.
         let (data_type, offsets, values) = std::mem::take(self).into_inner();
-        unsafe { Utf8Array::from_data_unchecked(data_type, offsets.into(), values.into(), None) }
-            .boxed()
+        unsafe { Utf8Array::new_unchecked(data_type, offsets.into(), values.into(), None) }.boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
@@ -260,8 +254,7 @@ impl<O: Offset> MutableArray for MutableUtf8ValuesArray<O> {
         // `MutableUtf8ValuesArray` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8ValuesArray` without checks.
         let (data_type, offsets, values) = std::mem::take(self).into_inner();
-        unsafe { Utf8Array::from_data_unchecked(data_type, offsets.into(), values.into(), None) }
-            .arced()
+        unsafe { Utf8Array::new_unchecked(data_type, offsets.into(), values.into(), None) }.arced()
     }
 
     fn data_type(&self) -> &DataType {

@@ -17,7 +17,7 @@ use super::super::utils::MaybeNext;
 use super::super::Pages;
 use super::basic::deserialize_plain;
 
-fn read_dict<P, T, F>(data_type: DataType, op: F, dict: &DictPage) -> Box<dyn Array>
+fn read_dict<P, T, F>(data_type: DataType, op: F, dict: &DictPage) -> Result<Box<dyn Array>>
 where
     T: NativeType,
     P: ParquetNativeType,
@@ -29,7 +29,7 @@ where
     };
     let values = deserialize_plain(&dict.buffer, op);
 
-    Box::new(PrimitiveArray::new(data_type, values.into(), None))
+    Ok(PrimitiveArray::new(data_type, values.into(), None).boxed())
 }
 
 /// An iterator adapter over [`Pages`] assumed to be encoded as boolean arrays

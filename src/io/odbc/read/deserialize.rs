@@ -150,7 +150,7 @@ fn utf8(data_type: DataType, view: TextColumnView<u8>) -> Utf8Array<i32> {
     let (offsets, values, validity) = binary_generic(view.iter());
 
     // this O(N) check is necessary for the utf8 validity
-    Utf8Array::from_data(data_type, offsets, values, validity)
+    Utf8Array::try_new(data_type, offsets, values, validity).unwrap()
 }
 
 fn date(data_type: DataType, values: &[odbc_api::sys::Date]) -> PrimitiveArray<i32> {

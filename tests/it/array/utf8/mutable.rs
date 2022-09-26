@@ -67,28 +67,25 @@ fn pop_all_some() {
 
 /// Safety guarantee
 #[test]
-#[should_panic]
-fn not_utf8() {
+fn values_must_be_utf8() {
     let offsets = vec![0, 4];
     let values = vec![0, 159, 146, 150]; // invalid utf8
-    MutableUtf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    assert!(MutableUtf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err())
 }
 
 /// Safety guarantee
 #[test]
-#[should_panic]
-fn wrong_offsets() {
+fn offsets_must_be_monotonic() {
     let offsets = vec![0, 5, 4]; // invalid offsets
     let values = vec![0, 1, 2, 3, 4, 5];
-    MutableUtf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    assert!(MutableUtf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err())
 }
 
 #[test]
-#[should_panic]
-fn wrong_data_type() {
-    let offsets = vec![0, 4]; // invalid offsets
+fn data_type_must_match() {
+    let offsets = vec![0, 4];
     let values = vec![1, 2, 3, 4];
-    MutableUtf8Array::<i32>::from_data(DataType::Int8, offsets, values, None);
+    assert!(MutableUtf8Array::<i32>::try_new(DataType::Int8, offsets, values, None).is_err())
 }
 
 #[test]

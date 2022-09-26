@@ -10,12 +10,13 @@ fn not_shared() {
 #[allow(clippy::redundant_clone)]
 fn shared_validity() {
     let validity = Bitmap::from([true]);
-    let array = Utf8Array::<i32>::new(
+    let array = Utf8Array::<i32>::try_new(
         DataType::Utf8,
         vec![0, 1].into(),
         b"a".to_vec().into(),
         Some(validity.clone()),
-    );
+    )
+    .unwrap();
     assert!(array.into_mut().is_left())
 }
 
@@ -23,12 +24,13 @@ fn shared_validity() {
 #[allow(clippy::redundant_clone)]
 fn shared_values() {
     let values: Buffer<u8> = b"a".to_vec().into();
-    let array = Utf8Array::<i32>::new(
+    let array = Utf8Array::<i32>::try_new(
         DataType::Utf8,
         vec![0, 1].into(),
         values.clone(),
         Some(Bitmap::from([true])),
-    );
+    )
+    .unwrap();
     assert!(array.into_mut().is_left())
 }
 
@@ -37,12 +39,13 @@ fn shared_values() {
 fn shared_offsets_values() {
     let offsets: Buffer<i32> = vec![0, 1].into();
     let values: Buffer<u8> = b"a".to_vec().into();
-    let array = Utf8Array::<i32>::new(
+    let array = Utf8Array::<i32>::try_new(
         DataType::Utf8,
         offsets.clone(),
         values.clone(),
         Some(Bitmap::from([true])),
-    );
+    )
+    .unwrap();
     assert!(array.into_mut().is_left())
 }
 
@@ -50,12 +53,13 @@ fn shared_offsets_values() {
 #[allow(clippy::redundant_clone)]
 fn shared_offsets() {
     let offsets: Buffer<i32> = vec![0, 1].into();
-    let array = Utf8Array::<i32>::new(
+    let array = Utf8Array::<i32>::try_new(
         DataType::Utf8,
         offsets.clone(),
         b"a".to_vec().into(),
         Some(Bitmap::from([true])),
-    );
+    )
+    .unwrap();
     assert!(array.into_mut().is_left())
 }
 

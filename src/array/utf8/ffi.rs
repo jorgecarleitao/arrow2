@@ -56,8 +56,6 @@ impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for Utf8Array<O> {
         let offsets = unsafe { array.buffer::<O>(1) }?;
         let values = unsafe { array.buffer::<u8>(2)? };
 
-        Ok(Self::from_data_unchecked(
-            data_type, offsets, values, validity,
-        ))
+        Ok(Self::new_unchecked(data_type, offsets, values, validity))
     }
 }

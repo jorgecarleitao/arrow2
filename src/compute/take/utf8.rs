@@ -37,7 +37,7 @@ pub fn take<O: Offset, I: Index>(
         (false, true) => take_indices_validity(values.offsets(), values.values(), indices),
         (true, true) => take_values_indices_validity(values, indices),
     };
-    unsafe { Utf8Array::<O>::from_data_unchecked(data_type, offsets, values, validity) }
+    unsafe { Utf8Array::<O>::new_unchecked(data_type, offsets, values, validity) }
 }
 
 #[cfg(test)]

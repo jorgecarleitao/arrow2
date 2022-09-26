@@ -156,7 +156,7 @@ pub fn utf8_to_large_utf8(from: &Utf8Array<i32>) -> Utf8Array<i64> {
         .collect::<Vec<_>>()
         .into();
     // Safety: sound because `offsets` fulfills the same invariants as `from.offsets()`
-    unsafe { Utf8Array::<i64>::from_data_unchecked(data_type, offsets, values, validity) }
+    unsafe { Utf8Array::<i64>::new_unchecked(data_type, offsets, values, validity) }
 }
 
 /// Conversion of utf8
@@ -169,11 +169,12 @@ pub fn utf8_large_to_utf8(from: &Utf8Array<i64>) -> Result<Utf8Array<i32>> {
     let offsets = from
         .offsets()
         .iter()
+        // this cast is infalible - we checked above the largest value is smaller than i32::MAX
         .map(|x| *x as i32)
         .collect::<Vec<_>>()
         .into();
     // Safety: sound because `offsets` fulfills the same invariants as `from.offsets()`
-    Ok(unsafe { Utf8Array::<i32>::from_data_unchecked(data_type, offsets, values, validity) })
+    Ok(unsafe { Utf8Array::<i32>::new_unchecked(data_type, offsets, values, validity) })
 }
 
 /// Conversion to binary
