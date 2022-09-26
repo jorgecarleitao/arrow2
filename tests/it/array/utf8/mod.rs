@@ -1,6 +1,7 @@
 use arrow2::{array::*, bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::Result};
 
 mod mutable;
+mod mutable_values;
 mod to_mutable;
 
 #[test]

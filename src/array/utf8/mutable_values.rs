@@ -214,28 +214,18 @@ impl<O: Offset> MutableArray for MutableUtf8ValuesArray<O> {
         // Safety:
         // `MutableUtf8ValuesArray` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8ValuesArray` without checks.
-        Box::new(unsafe {
-            Utf8Array::from_data_unchecked(
-                self.data_type.clone(),
-                std::mem::take(&mut self.offsets).into(),
-                std::mem::take(&mut self.values).into(),
-                None,
-            )
-        })
+        let (data_type, offsets, values) = std::mem::take(self).into_inner();
+        unsafe { Utf8Array::from_data_unchecked(data_type, offsets.into(), values.into(), None) }
+            .boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
         // Safety:
         // `MutableUtf8ValuesArray` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8ValuesArray` without checks.
-        Arc::new(unsafe {
-            Utf8Array::from_data_unchecked(
-                self.data_type.clone(),
-                std::mem::take(&mut self.offsets).into(),
-                std::mem::take(&mut self.values).into(),
-                None,
-            )
-        })
+        let (data_type, offsets, values) = std::mem::take(self).into_inner();
+        unsafe { Utf8Array::from_data_unchecked(data_type, offsets.into(), values.into(), None) }
+            .arced()
     }
 
     fn data_type(&self) -> &DataType {
