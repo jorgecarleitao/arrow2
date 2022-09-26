@@ -4,6 +4,8 @@
 #![allow(unused_unsafe)]
 //
 #![allow(clippy::len_without_is_empty)]
+// this landed on 1.60. Let's not force everyone to bump just yet
+#![allow(clippy::unnecessary_lazy_evaluations)]
 // Trait objects must be returned as a &Box<dyn Array> so that they can be cloned
 #![allow(clippy::borrowed_box)]
 // Allow type complexity warning to avoid API break.
