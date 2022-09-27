@@ -1,0 +1,122 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/csv/read/infer_schema.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>infer_schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../../normalize.css"><link rel="stylesheet" href="../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../../dark.css" disabled><link rel="stylesheet" href="../../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../../storage.js"></script><script defer src="../../../../../source-script.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<span id="2">2</span>
+<span id="3">3</span>
+<span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+</pre><pre class="rust"><code><span class="kw">use </span>ahash::AHashSet;
+<span class="kw">use </span>std::io::{Read, Seek};
+
+<span class="kw">use </span><span class="kw">crate</span>::datatypes::{DataType, Field};
+<span class="kw">use </span><span class="kw">crate</span>::error::Result;
+
+<span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::utils::merge_schema;
+<span class="kw">use super</span>::{ByteRecord, Reader};
+
+<span class="doccomment">/// Infers the [`Field`]s of a CSV file by reading through the first n records up to `max_rows`.
+/// Also returns the number of rows used to infer.
+/// Seeks back to the begining of the file _after_ the header
+</span><span class="kw">pub fn </span>infer_schema&lt;R: Read + Seek, F: Fn(<span class="kw-2">&amp;</span>[u8]) -&gt; DataType&gt;(
+    reader: <span class="kw-2">&amp;mut </span>Reader&lt;R&gt;,
+    max_rows: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+    has_header: bool,
+    infer: <span class="kw-2">&amp;</span>F,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;Field&gt;, usize)&gt; {
+    <span class="comment">// get or create header names
+    // when has_header is false, creates default column names with column_ prefix
+    </span><span class="kw">let </span>headers: Vec&lt;String&gt; = <span class="kw">if </span>has_header {
+        reader.headers()<span class="question-mark">?</span>.iter().map(|s| s.to_string()).collect()
+    } <span class="kw">else </span>{
+        <span class="kw">let </span>first_record_count = <span class="kw-2">&amp;</span>reader.headers()<span class="question-mark">?</span>.len();
+        (<span class="number">0</span>..<span class="kw-2">*</span>first_record_count)
+            .map(|i| <span class="macro">format!</span>(<span class="string">&quot;column_{}&quot;</span>, i + <span class="number">1</span>))
+            .collect()
+    };
+
+    <span class="comment">// save the csv reader position after reading headers
+    </span><span class="kw">let </span>position = reader.position().clone();
+
+    <span class="kw">let </span>header_length = headers.len();
+    <span class="comment">// keep track of inferred field types
+    </span><span class="kw">let </span><span class="kw-2">mut </span>column_types: Vec&lt;AHashSet&lt;DataType&gt;&gt; = <span class="macro">vec!</span>[AHashSet::new(); header_length];
+
+    <span class="kw">let </span><span class="kw-2">mut </span>records_count = <span class="number">0</span>;
+
+    <span class="kw">let </span><span class="kw-2">mut </span>record = ByteRecord::new();
+    <span class="kw">let </span>max_records = max_rows.unwrap_or(usize::MAX);
+    <span class="kw">while </span>records_count &lt; max_records {
+        <span class="kw">if </span>!reader.read_byte_record(<span class="kw-2">&amp;mut </span>record)<span class="question-mark">? </span>{
+            <span class="kw">break</span>;
+        }
+        records_count += <span class="number">1</span>;
+
+        <span class="kw">for </span>(i, column) <span class="kw">in </span>column_types.iter_mut().enumerate() {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(string) = record.get(i) {
+                column.insert(infer(string));
+            }
+        }
+    }
+
+    <span class="kw">let </span>fields = merge_schema(<span class="kw-2">&amp;</span>headers, <span class="kw-2">&amp;mut </span>column_types);
+
+    <span class="comment">// return the reader seek back to the start
+    </span>reader.seek(position)<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>((fields, records_count))
+}
+</code></pre></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (8b705839c 2022-09-26)" ></div></body></html>
