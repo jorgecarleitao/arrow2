@@ -453,6 +453,21 @@
 <span id="453">453</span>
 <span id="454">454</span>
 <span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, sync::Arc};
 
 <span class="kw">use crate</span>::{
@@ -800,6 +815,21 @@
         </span><span class="kw">unsafe </span>{ <span class="self">self</span>.extend_trusted_len_values_unchecked(iterator) }
     }
 
+    <span class="doccomment">/// Extends the [`MutableBinaryArray`] from an iterator of values.
+    /// This differs from `extended_trusted_len` which accepts iterator of optional values.
+    </span><span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>extend_values&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
+    <span class="kw">where
+        </span>P: AsRef&lt;[u8]&gt;,
+        I: Iterator&lt;Item = P&gt;,
+    {
+        <span class="kw">let </span>additional = extend_from_values_iter(<span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets, <span class="kw-2">&amp;mut </span><span class="self">self</span>.values, iterator);
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="self">self</span>.validity.as_mut() {
+            validity.extend_constant(additional, <span class="bool-val">true</span>);
+        }
+    }
+
     <span class="doccomment">/// Extends the [`MutableBinaryArray`] from an `iterator` of values of trusted length.
     /// This differs from `extend_trusted_len_unchecked` which accepts iterator of optional
     /// values.
@@ -909,4 +939,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (f5193a9fc 2022-09-25)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (8b705839c 2022-09-26)" ></div></body></html>

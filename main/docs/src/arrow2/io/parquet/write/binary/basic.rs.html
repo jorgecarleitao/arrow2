@@ -170,13 +170,6 @@
 <span id="170">170</span>
 <span id="171">171</span>
 <span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
 </pre><pre class="rust"><code><span class="kw">use </span>parquet2::{
     encoding::{delta_bitpacked, Encoding},
     page::DataPage,
@@ -317,13 +310,6 @@
 
             delta_bitpacked::encode(lengths, buffer);
         } <span class="kw">else </span>{
-            <span class="macro">println!</span>(
-                <span class="string">&quot;{:?}&quot;</span>,
-                offsets
-                    .windows(<span class="number">2</span>)
-                    .map(|w| (w[<span class="number">1</span>] - w[<span class="number">0</span>]).to_usize() <span class="kw">as </span>i64)
-                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-            );
             <span class="kw">let </span>lengths = offsets.windows(<span class="number">2</span>).map(|w| (w[<span class="number">1</span>] - w[<span class="number">0</span>]).to_usize() <span class="kw">as </span>i64);
             delta_bitpacked::encode(lengths, buffer);
         }
@@ -357,4 +343,4 @@
     Equal
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (f5193a9fc 2022-09-25)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (8b705839c 2022-09-26)" ></div></body></html>
