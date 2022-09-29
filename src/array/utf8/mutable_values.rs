@@ -3,7 +3,7 @@ use std::{iter::FromIterator, sync::Arc};
 use crate::{
     array::{
         specification::{check_offsets_minimal, try_check_offsets_and_utf8},
-        Array, MutableArray, Offset, TryExtend, TryPush,
+        Array, ArrayValuesIter, MutableArray, Offset, TryExtend, TryPush,
     },
     bitmap::MutableBitmap,
     datatypes::DataType,
@@ -16,7 +16,7 @@ use crate::array::physical_binary::*;
 
 /// A [`MutableArray`] that builds a [`Utf8Array`]. It differs
 /// from [`MutableUtf8Array`] in that it builds non-null [`Utf8Array`].
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MutableUtf8ValuesArray<O: Offset> {
     data_type: DataType,
     offsets: Vec<O>,
@@ -168,6 +168,12 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
         self.offsets.capacity() - 1
     }
 
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.offsets.len() - 1
+    }
+
     /// Pushes a new item to the array.
     /// # Panic
     /// This operation panics iff the length of all values (in bytes) exceeds `O` maximum value.
@@ -189,6 +195,36 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
         Some(unsafe { String::from_utf8_unchecked(value) })
     }
 
+    /// Returns the value of the element at index `i`.
+    /// # Panic
+    /// This function panics iff `i >= self.len`.
+    #[inline]
+    pub fn value(&self, i: usize) -> &str {
+        assert!(i < self.len());
+        unsafe { self.value_unchecked(i) }
+    }
+
+    /// Returns the value of the element at index `i`.
+    /// # Safety
+    /// This function is safe iff `i < self.len`.
+    #[inline]
+    pub unsafe fn value_unchecked(&self, i: usize) -> &str {
+        // soundness: the invariant of the function
+        let start = self.offsets.get_unchecked(i).to_usize();
+        let end = self.offsets.get_unchecked(i + 1).to_usize();
+
+        // soundness: the invariant of the struct
+        let slice = self.values.get_unchecked(start..end);
+
+        // soundness: the invariant of the struct
+        std::str::from_utf8_unchecked(slice)
+    }
+
+    /// Returns an iterator of `&str`
+    pub fn iter(&self) -> ArrayValuesIter<Self> {
+        ArrayValuesIter::new(self)
+    }
+
     /// Shrinks the capacity of the [`MutableUtf8ValuesArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
@@ -203,7 +239,7 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
 
 impl<O: Offset> MutableArray for MutableUtf8ValuesArray<O> {
     fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.len()
     }
 
     fn validity(&self) -> Option<&MutableBitmap> {

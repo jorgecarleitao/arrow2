@@ -79,3 +79,23 @@ fn from_trusted_len() {
             .as_box()
     )
 }
+
+#[test]
+fn extend_from_iter() {
+    let offsets = vec![0, 2];
+    let values = b"ab".to_vec();
+    let mut b = MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values).unwrap();
+    b.extend_trusted_len(vec!["a", "b"].into_iter());
+
+    let a = b.clone();
+    b.extend_trusted_len(a.iter());
+
+    let offsets = vec![0, 2, 3, 4, 6, 7, 8];
+    let values = b"abababab".to_vec();
+    assert_eq!(
+        b.as_box(),
+        MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values)
+            .unwrap()
+            .as_box()
+    )
+}

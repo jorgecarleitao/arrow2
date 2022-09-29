@@ -3,13 +3,16 @@ use std::{iter::FromIterator, sync::Arc};
 use crate::array::physical_binary::*;
 use crate::{
     array::{Array, MutableArray, Offset, TryExtend, TryPush},
-    bitmap::{Bitmap, MutableBitmap},
+    bitmap::{
+        utils::{zip_validity, ZipValidity},
+        Bitmap, MutableBitmap,
+    },
     datatypes::DataType,
     error::{Error, Result},
     trusted_len::TrustedLen,
 };
 
-use super::{MutableUtf8ValuesArray, StrAsBytes, Utf8Array};
+use super::{MutableUtf8ValuesArray, MutableUtf8ValuesIter, StrAsBytes, Utf8Array};
 
 /// A [`MutableArray`] that builds a [`Utf8Array`]. It differs
 /// from [`MutableUtf8ValuesArray`] in that it can build nullable [`Utf8Array`]s.
@@ -153,12 +156,34 @@ impl<O: Offset> MutableUtf8Array<O> {
         self.values.capacity()
     }
 
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+
     /// Pushes a new element to the array.
     /// # Panic
     /// This operation panics iff the length of all values (in bytes) exceeds `O` maximum value.
     #[inline]
     pub fn push<T: AsRef<str>>(&mut self, value: Option<T>) {
         self.try_push(value).unwrap()
+    }
+
+    /// Returns the value of the element at index `i`, ignoring the array's validity.
+    /// # Safety
+    /// This function is safe iff `i < self.len`.
+    #[inline]
+    pub fn value(&self, i: usize) -> &str {
+        self.values.value(i)
+    }
+
+    /// Returns the value of the element at index `i`, ignoring the array's validity.
+    /// # Safety
+    /// This function is safe iff `i < self.len`.
+    #[inline]
+    pub unsafe fn value_unchecked(&self, i: usize) -> &str {
+        self.values.value_unchecked(i)
     }
 
     /// Pop the last entry from [`MutableUtf8Array`].
@@ -177,6 +202,11 @@ impl<O: Offset> MutableUtf8Array<O> {
         validity.extend_constant(self.len(), true);
         validity.set(self.len() - 1, false);
         self.validity = Some(validity);
+    }
+
+    /// Returns an iterator of `Option<&str>`
+    pub fn iter(&self) -> ZipValidity<&str, MutableUtf8ValuesIter<O>> {
+        zip_validity(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
     }
 
     /// Converts itself into an [`Array`].
@@ -198,6 +228,11 @@ impl<O: Offset> MutableUtf8Array<O> {
         let (data_type, offsets, values) = self.values.into_inner();
         (data_type, offsets, values, self.validity)
     }
+
+    /// Returns an iterator of `&str`
+    pub fn values_iter(&self) -> MutableUtf8ValuesIter<O> {
+        self.values.iter()
+    }
 }
 
 impl<O: Offset> MutableUtf8Array<O> {
@@ -214,7 +249,7 @@ impl<O: Offset> MutableUtf8Array<O> {
 
 impl<O: Offset> MutableArray for MutableUtf8Array<O> {
     fn len(&self) -> usize {
-        self.values.len()
+        self.len()
     }
 
     fn validity(&self) -> Option<&MutableBitmap> {

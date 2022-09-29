@@ -377,7 +377,11 @@ mod equal;
 mod ffi;
 mod fmt;
 pub mod growable;
+mod iterator;
 pub mod ord;
+
+pub(crate) use iterator::ArrayAccessor;
+pub use iterator::ArrayValuesIter;
 
 pub use equal::equal;
 pub use fmt::{get_display, get_value_display};
