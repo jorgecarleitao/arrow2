@@ -217,6 +217,10 @@ impl MutableArray for Box<dyn MutableArray> {
     fn shrink_to_fit(&mut self) {
         self.as_mut().shrink_to_fit();
     }
+
+    fn reserve(&mut self, additional: usize) {
+        self.as_mut().reserve(additional);
+    }
 }
 
 macro_rules! general_dyn {
