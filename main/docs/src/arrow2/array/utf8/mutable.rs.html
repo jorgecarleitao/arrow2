@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/utf8/mutable.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mutable.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../arrow2/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/utf8/mutable.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mutable.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../arrow2/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -544,88 +544,38 @@
 <span id="544">544</span>
 <span id="545">545</span>
 <span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, sync::Arc};
 
+<span class="kw">use </span><span class="kw">crate</span>::array::physical_binary::<span class="kw-2">*</span>;
 <span class="kw">use crate</span>::{
-    array::{
-        specification::{check_offsets_minimal, try_check_offsets_and_utf8},
-        Array, MutableArray, Offset, TryExtend, TryPush,
+    array::{Array, MutableArray, Offset, TryExtend, TryPush},
+    bitmap::{
+        utils::{zip_validity, ZipValidity},
+        Bitmap, MutableBitmap,
     },
-    bitmap::MutableBitmap,
     datatypes::DataType,
     error::{Error, <span class="prelude-ty">Result</span>},
     trusted_len::TrustedLen,
 };
 
-<span class="kw">use </span><span class="kw">super</span>::Utf8Array;
-<span class="kw">use </span><span class="kw">crate</span>::array::physical_binary::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::bitmap::Bitmap;
+<span class="kw">use super</span>::{MutableUtf8ValuesArray, MutableUtf8ValuesIter, StrAsBytes, Utf8Array};
 
-<span class="kw">struct </span>StrAsBytes&lt;P&gt;(P);
-<span class="kw">impl</span>&lt;T: AsRef&lt;str&gt;&gt; AsRef&lt;[u8]&gt; <span class="kw">for </span>StrAsBytes&lt;T&gt; {
-    <span class="attribute">#[inline]
-    </span><span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
-        <span class="self">self</span>.<span class="number">0</span>.as_ref().as_bytes()
-    }
-}
-
-<span class="doccomment">/// The mutable version of [`Utf8Array`]. See [`MutableArray`] for more details.
+<span class="doccomment">/// A [`MutableArray`] that builds a [`Utf8Array`]. It differs
+/// from [`MutableUtf8ValuesArray`] in that it can build nullable [`Utf8Array`]s.
 </span><span class="attribute">#[derive(Debug)]
 </span><span class="kw">pub struct </span>MutableUtf8Array&lt;O: Offset&gt; {
-    data_type: DataType,
-    offsets: Vec&lt;O&gt;,
-    values: Vec&lt;u8&gt;,
+    values: MutableUtf8ValuesArray&lt;O&gt;,
     validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; From&lt;MutableUtf8Array&lt;O&gt;&gt; <span class="kw">for </span>Utf8Array&lt;O&gt; {
     <span class="kw">fn </span>from(other: MutableUtf8Array&lt;O&gt;) -&gt; <span class="self">Self </span>{
-        <span class="comment">// Safety:
-        // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
-        // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
-        </span><span class="kw">let </span>validity = other.validity.and_then(|x| {
-            <span class="kw">let </span>bitmap: Bitmap = x.into();
-            <span class="kw">if </span>bitmap.unset_bits() == <span class="number">0 </span>{
-                <span class="prelude-val">None
-            </span>} <span class="kw">else </span>{
-                <span class="prelude-val">Some</span>(bitmap)
-            }
+        <span class="kw">let </span>validity = other.validity.and_then(|x| {
+            <span class="kw">let </span>validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt; = x.into();
+            validity
         });
-
-        <span class="kw">unsafe </span>{
-            Utf8Array::&lt;O&gt;::from_data_unchecked(
-                other.data_type,
-                other.offsets.into(),
-                other.values.into(),
-                validity,
-            )
-        }
+        <span class="kw">let </span>array: Utf8Array&lt;O&gt; = other.values.into();
+        array.with_validity(validity)
     }
 }
 
@@ -639,9 +589,7 @@
     <span class="doccomment">/// Initializes a new empty [`MutableUtf8Array`].
     </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            data_type: <span class="self">Self</span>::default_data_type(),
-            offsets: <span class="macro">vec!</span>[O::default()],
-            values: Vec::&lt;u8&gt;::new(),
+            values: Default::default(),
             validity: <span class="prelude-val">None</span>,
         }
     }
@@ -663,28 +611,50 @@
         values: Vec&lt;u8&gt;,
         validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-        try_check_offsets_and_utf8(<span class="kw-2">&amp;</span>offsets, <span class="kw-2">&amp;</span>values)<span class="question-mark">?</span>;
+        <span class="kw">let </span>values = MutableUtf8ValuesArray::try_new(data_type, offsets, values)<span class="question-mark">?</span>;
+
         <span class="kw">if </span>validity
             .as_ref()
-            .map_or(<span class="bool-val">false</span>, |validity| validity.len() != offsets.len() - <span class="number">1</span>)
+            .map_or(<span class="bool-val">false</span>, |validity| validity.len() != values.len())
         {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
                 <span class="string">&quot;validity&#39;s length must be equal to the number of values&quot;</span>,
             ));
         }
 
-        <span class="kw">if </span>data_type.to_physical_type() != <span class="self">Self</span>::default_data_type().to_physical_type() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-                <span class="string">&quot;MutableUtf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8&quot;</span>,
-            ));
-        }
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ values, validity })
+    }
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            data_type,
-            offsets,
-            values,
-            validity,
-        })
+    <span class="doccomment">/// Create a [`MutableUtf8Array`] out of low-end APIs.
+    /// # Safety
+    /// The caller must ensure that every value between offsets is a valid utf8.
+    /// # Panics
+    /// This function panics iff:
+    /// * The `offsets` and `values` are inconsistent
+    /// * The validity is not `None` and its length is different from `offsets`&#39;s length minus one.
+    </span><span class="kw">pub unsafe fn </span>new_unchecked(
+        data_type: DataType,
+        offsets: Vec&lt;O&gt;,
+        values: Vec&lt;u8&gt;,
+        validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::from_data_unchecked(data_type, offsets, values, validity)
+    }
+
+    <span class="doccomment">/// Alias of `new_unchecked`
+    /// # Safety
+    /// The caller must ensure that every value between offsets is a valid utf8.
+    </span><span class="kw">pub unsafe fn </span>from_data_unchecked(
+        data_type: DataType,
+        offsets: Vec&lt;O&gt;,
+        values: Vec&lt;u8&gt;,
+        validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>values = MutableUtf8ValuesArray::new_unchecked(data_type, offsets, values);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>validity) = validity {
+            <span class="macro">assert_eq!</span>(values.len(), validity.len());
+        }
+        <span class="self">Self </span>{ values, validity }
     }
 
     <span class="doccomment">/// The canonical method to create a [`MutableUtf8Array`] out of low-end APIs.
@@ -702,34 +672,6 @@
         <span class="self">Self</span>::try_new(data_type, offsets, values, validity).unwrap()
     }
 
-    <span class="doccomment">/// Create a [`MutableUtf8Array`] out of low-end APIs.
-    /// # Safety
-    /// The caller must ensure that every value between offsets is a valid utf8.
-    /// # Panics
-    /// This function panics iff:
-    /// * The `offsets` and `values` are inconsistent
-    /// * The validity is not `None` and its length is different from `offsets`&#39;s length minus one.
-    </span><span class="kw">pub unsafe fn </span>from_data_unchecked(
-        data_type: DataType,
-        offsets: Vec&lt;O&gt;,
-        values: Vec&lt;u8&gt;,
-        validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
-    ) -&gt; <span class="self">Self </span>{
-        check_offsets_minimal(<span class="kw-2">&amp;</span>offsets, values.len());
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>validity) = validity {
-            <span class="macro">assert_eq!</span>(offsets.len() - <span class="number">1</span>, validity.len());
-        }
-        <span class="kw">if </span>data_type.to_physical_type() != <span class="self">Self</span>::default_data_type().to_physical_type() {
-            <span class="macro">panic!</span>(<span class="string">&quot;MutableUtf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8&quot;</span>)
-        }
-        <span class="self">Self </span>{
-            data_type,
-            offsets,
-            values,
-            validity,
-        }
-    }
-
     <span class="kw">fn </span>default_data_type() -&gt; DataType {
         Utf8Array::&lt;O&gt;::default_data_type()
     }
@@ -741,29 +683,29 @@
 
     <span class="doccomment">/// Initializes a new [`MutableUtf8Array`] with a pre-allocated capacity of slots and values.
     </span><span class="kw">pub fn </span>with_capacities(capacity: usize, values: usize) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>offsets = Vec::&lt;O&gt;::with_capacity(capacity + <span class="number">1</span>);
-        offsets.push(O::default());
-
         <span class="self">Self </span>{
-            data_type: <span class="self">Self</span>::default_data_type(),
-            offsets,
-            values: Vec::&lt;u8&gt;::with_capacity(values),
+            values: MutableUtf8ValuesArray::with_capacities(capacity, values),
             validity: <span class="prelude-val">None</span>,
         }
     }
 
     <span class="doccomment">/// Reserves `additional` elements and `additional_values` on the values buffer.
     </span><span class="kw">pub fn </span>reserve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize, additional_values: usize) {
-        <span class="self">self</span>.offsets.reserve(additional);
+        <span class="self">self</span>.values.reserve(additional, additional_values);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = <span class="self">self</span>.validity.as_mut() {
             x.reserve(additional)
         }
-        <span class="self">self</span>.values.reserve(additional_values);
     }
 
-    <span class="attribute">#[inline]
-    </span><span class="kw">fn </span>last_offset(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; O {
-        <span class="kw-2">*</span><span class="self">self</span>.offsets.last().unwrap()
+    <span class="doccomment">/// Reserves `additional` elements and `additional_values` on the values buffer.
+    </span><span class="kw">pub fn </span>capacity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.values.capacity()
+    }
+
+    <span class="doccomment">/// Returns the length of this array
+    </span><span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.values.len()
     }
 
     <span class="doccomment">/// Pushes a new element to the array.
@@ -774,29 +716,43 @@
         <span class="self">self</span>.try_push(value).unwrap()
     }
 
+    <span class="doccomment">/// Returns the value of the element at index `i`, ignoring the array&#39;s validity.
+    /// # Safety
+    /// This function is safe iff `i &lt; self.len`.
+    </span><span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;</span>str {
+        <span class="self">self</span>.values.value(i)
+    }
+
+    <span class="doccomment">/// Returns the value of the element at index `i`, ignoring the array&#39;s validity.
+    /// # Safety
+    /// This function is safe iff `i &lt; self.len`.
+    </span><span class="attribute">#[inline]
+    </span><span class="kw">pub unsafe fn </span>value_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;</span>str {
+        <span class="self">self</span>.values.value_unchecked(i)
+    }
+
     <span class="doccomment">/// Pop the last entry from [`MutableUtf8Array`].
     /// This function returns `None` iff this array is empty.
     </span><span class="kw">pub fn </span>pop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-        <span class="kw">if </span><span class="self">self</span>.offsets.len() &lt; <span class="number">2 </span>{
-            <span class="kw">return </span><span class="prelude-val">None</span>;
-        }
-        <span class="self">self</span>.offsets.pop()<span class="question-mark">?</span>;
-        <span class="kw">let </span>value_start = <span class="self">self</span>.offsets.iter().last().cloned()<span class="question-mark">?</span>.to_usize();
-        <span class="kw">let </span>value = <span class="self">self</span>.values.split_off(value_start);
+        <span class="kw">let </span>value = <span class="self">self</span>.values.pop()<span class="question-mark">?</span>;
         <span class="self">self</span>.validity
             .as_mut()
             .map(|x| x.pop()<span class="question-mark">?</span>.then(|| ()))
             .unwrap_or_else(|| <span class="prelude-val">Some</span>(()))
-            .map(|<span class="kw">_</span>|
-                <span class="comment">// soundness: we always check for utf8 soundness on constructors.
-                </span><span class="kw">unsafe </span>{ String::from_utf8_unchecked(value) })
+            .map(|<span class="kw">_</span>| value)
     }
 
     <span class="kw">fn </span>init_validity(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">let </span><span class="kw-2">mut </span>validity = MutableBitmap::with_capacity(<span class="self">self</span>.offsets.capacity());
+        <span class="kw">let </span><span class="kw-2">mut </span>validity = MutableBitmap::with_capacity(<span class="self">self</span>.values.capacity());
         validity.extend_constant(<span class="self">self</span>.len(), <span class="bool-val">true</span>);
         validity.set(<span class="self">self</span>.len() - <span class="number">1</span>, <span class="bool-val">false</span>);
         <span class="self">self</span>.validity = <span class="prelude-val">Some</span>(validity);
+    }
+
+    <span class="doccomment">/// Returns an iterator of `Option&lt;&amp;str&gt;`
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ZipValidity&lt;<span class="kw-2">&amp;</span>str, MutableUtf8ValuesIter&lt;O&gt;&gt; {
+        zip_validity(<span class="self">self</span>.values_iter(), <span class="self">self</span>.validity.as_ref().map(|x| x.iter()))
     }
 
     <span class="doccomment">/// Converts itself into an [`Array`].
@@ -808,7 +764,6 @@
     <span class="doccomment">/// Shrinks the capacity of the [`MutableUtf8Array`] to fit its current length.
     </span><span class="kw">pub fn </span>shrink_to_fit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.values.shrink_to_fit();
-        <span class="self">self</span>.offsets.shrink_to_fit();
         <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.validity {
             validity.shrink_to_fit()
         }
@@ -816,26 +771,32 @@
 
     <span class="doccomment">/// Extract the low-end APIs from the [`MutableUtf8Array`].
     </span><span class="kw">pub fn </span>into_data(<span class="self">self</span>) -&gt; (DataType, Vec&lt;O&gt;, Vec&lt;u8&gt;, <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;) {
-        (<span class="self">self</span>.data_type, <span class="self">self</span>.offsets, <span class="self">self</span>.values, <span class="self">self</span>.validity)
+        <span class="kw">let </span>(data_type, offsets, values) = <span class="self">self</span>.values.into_inner();
+        (data_type, offsets, values, <span class="self">self</span>.validity)
+    }
+
+    <span class="doccomment">/// Returns an iterator of `&amp;str`
+    </span><span class="kw">pub fn </span>values_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MutableUtf8ValuesIter&lt;O&gt; {
+        <span class="self">self</span>.values.iter()
     }
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; MutableUtf8Array&lt;O&gt; {
     <span class="doccomment">/// returns its values.
     </span><span class="kw">pub fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;u8&gt; {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.values
+        <span class="self">self</span>.values.values()
     }
 
     <span class="doccomment">/// returns its offsets.
     </span><span class="kw">pub fn </span>offsets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;O&gt; {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.offsets
+        <span class="self">self</span>.values.offsets()
     }
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; MutableArray <span class="kw">for </span>MutableUtf8Array&lt;O&gt; {
     <span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.offsets.len() - <span class="number">1
-    </span>}
+        <span class="self">self</span>.len()
+    }
 
     <span class="kw">fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>MutableBitmap&gt; {
         <span class="self">self</span>.validity.as_ref()
@@ -845,28 +806,32 @@
         <span class="comment">// Safety:
         // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
-        </span>Box::new(<span class="kw">unsafe </span>{
+        </span><span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into_inner();
+        <span class="kw">unsafe </span>{
             Utf8Array::from_data_unchecked(
-                <span class="self">self</span>.data_type.clone(),
-                std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets).into(),
-                std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into(),
+                data_type,
+                offsets.into(),
+                values.into(),
                 std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity).map(|x| x.into()),
             )
-        })
+        }
+        .boxed()
     }
 
     <span class="kw">fn </span>as_arc(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Array&gt; {
         <span class="comment">// Safety:
         // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
-        </span>Arc::new(<span class="kw">unsafe </span>{
+        </span><span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into_inner();
+        <span class="kw">unsafe </span>{
             Utf8Array::from_data_unchecked(
-                <span class="self">self</span>.data_type.clone(),
-                std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets).into(),
-                std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into(),
+                data_type,
+                offsets.into(),
+                values.into(),
                 std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity).map(|x| x.into()),
             )
-        })
+        }
+        .arced()
     }
 
     <span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
@@ -925,8 +890,9 @@
         </span>P: AsRef&lt;str&gt;,
         I: Iterator&lt;Item = P&gt;,
     {
-        <span class="kw">let </span>iterator = iterator.map(StrAsBytes);
-        <span class="kw">let </span>additional = extend_from_values_iter(<span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets, <span class="kw-2">&amp;mut </span><span class="self">self</span>.values, iterator);
+        <span class="kw">let </span>length = <span class="self">self</span>.values.len();
+        <span class="self">self</span>.values.extend(iterator);
+        <span class="kw">let </span>additional = <span class="self">self</span>.values.len() - length;
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="self">self</span>.validity.as_mut() {
             validity.extend_constant(additional, <span class="bool-val">true</span>);
@@ -944,11 +910,9 @@
         </span>P: AsRef&lt;str&gt;,
         I: Iterator&lt;Item = P&gt;,
     {
-        <span class="kw">let </span>(<span class="kw">_</span>, upper) = iterator.size_hint();
-        <span class="kw">let </span>additional = upper.expect(<span class="string">&quot;extend_trusted_len_values requires an upper limit&quot;</span>);
-
-        <span class="kw">let </span>iterator = iterator.map(StrAsBytes);
-        extend_from_trusted_len_values_iter(<span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets, <span class="kw-2">&amp;mut </span><span class="self">self</span>.values, iterator);
+        <span class="kw">let </span>length = <span class="self">self</span>.values.len();
+        <span class="self">self</span>.values.extend_trusted_len_unchecked(iterator);
+        <span class="kw">let </span>additional = <span class="self">self</span>.values.len() - length;
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="self">self</span>.validity.as_mut() {
             validity.extend_constant(additional, <span class="bool-val">true</span>);
@@ -980,13 +944,8 @@
             <span class="self">self</span>.validity = <span class="prelude-val">Some</span>(validity);
         }
 
-        <span class="kw">let </span>iterator = iterator.map(|x| x.map(StrAsBytes));
-        extend_from_trusted_len_iter(
-            <span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets,
-            <span class="kw-2">&amp;mut </span><span class="self">self</span>.values,
-            <span class="self">self</span>.validity.as_mut().unwrap(),
-            iterator,
-        );
+        <span class="self">self</span>.values
+            .extend_from_trusted_len_iter(<span class="self">self</span>.validity.as_mut().unwrap(), iterator);
     }
 
     <span class="doccomment">/// Creates a [`MutableUtf8Array`] from an iterator of trusted length.
@@ -1025,10 +984,7 @@
     </span><span class="kw">pub unsafe fn </span>from_trusted_len_values_iter_unchecked&lt;T: AsRef&lt;str&gt;, I: Iterator&lt;Item = T&gt;&gt;(
         iterator: I,
     ) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>iterator = iterator.map(StrAsBytes);
-        <span class="kw">let </span>(offsets, values) = <span class="kw">unsafe </span>{ trusted_len_values_iter(iterator) };
-        <span class="comment">// soundness: T is AsRef&lt;str&gt;
-        </span><span class="self">Self</span>::from_data_unchecked(<span class="self">Self</span>::default_data_type(), offsets, values, <span class="prelude-val">None</span>)
+        MutableUtf8ValuesArray::from_trusted_len_iter_unchecked(iterator).into()
     }
 
     <span class="doccomment">/// Creates a new [`MutableUtf8Array`] from a [`TrustedLen`] of `&amp;str`.
@@ -1093,10 +1049,7 @@
 
     <span class="doccomment">/// Creates a new [`MutableUtf8Array`] from a [`Iterator`] of `&amp;str`.
     </span><span class="kw">pub fn </span>from_iter_values&lt;T: AsRef&lt;str&gt;, I: Iterator&lt;Item = T&gt;&gt;(iterator: I) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>iterator = iterator.map(StrAsBytes);
-        <span class="kw">let </span>(offsets, values) = values_iter(iterator);
-        <span class="comment">// soundness: T: AsRef&lt;str&gt;
-        </span><span class="kw">unsafe </span>{ <span class="self">Self</span>::from_data_unchecked(<span class="self">Self</span>::default_data_type(), offsets, values, <span class="prelude-val">None</span>) }
+        MutableUtf8ValuesArray::from_iter(iterator).into()
     }
 }
 
@@ -1119,12 +1072,7 @@
     </span><span class="kw">fn </span>try_push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: <span class="prelude-ty">Option</span>&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">match </span>value {
             <span class="prelude-val">Some</span>(value) =&gt; {
-                <span class="kw">let </span>bytes = value.as_ref().as_bytes();
-                <span class="self">self</span>.values.extend_from_slice(bytes);
-
-                <span class="kw">let </span>size = O::from_usize(<span class="self">self</span>.values.len()).ok_or(Error::Overflow)<span class="question-mark">?</span>;
-
-                <span class="self">self</span>.offsets.push(size);
+                <span class="self">self</span>.values.try_push(value.as_ref())<span class="question-mark">?</span>;
 
                 <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.validity {
                     <span class="prelude-val">Some</span>(validity) =&gt; validity.push(<span class="bool-val">true</span>),
@@ -1132,7 +1080,7 @@
                 }
             }
             <span class="prelude-val">None </span>=&gt; {
-                <span class="self">self</span>.offsets.push(<span class="self">self</span>.last_offset());
+                <span class="self">self</span>.values.push(<span class="string">&quot;&quot;</span>);
                 <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.validity {
                     <span class="prelude-val">Some</span>(validity) =&gt; validity.push(<span class="bool-val">false</span>),
                     <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.init_validity(),
@@ -1143,4 +1091,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (8b705839c 2022-09-26)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (f83e0266c 2022-10-03)" ></div></body></html>
