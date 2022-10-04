@@ -188,3 +188,13 @@ fn test_iter() {
         ]
     );
 }
+
+#[test]
+fn as_box_twice() {
+    let mut a = MutableUtf8Array::<i32>::new();
+    let _ = a.as_box();
+    let _ = a.as_box();
+    let mut a = MutableUtf8Array::<i32>::new();
+    let _ = a.as_arc();
+    let _ = a.as_arc();
+}
