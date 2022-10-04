@@ -21,8 +21,19 @@ pub(super) mod fmt;
 mod from;
 mod iterator;
 mod mutable;
+mod mutable_values;
 pub use iterator::*;
 pub use mutable::*;
+pub use mutable_values::MutableUtf8ValuesArray;
+
+// Auxiliary struct to allow presenting &str as [u8] to a generic function
+pub(super) struct StrAsBytes<P>(P);
+impl<T: AsRef<str>> AsRef<[u8]> for StrAsBytes<T> {
+    #[inline(always)]
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref().as_bytes()
+    }
+}
 
 /// A [`Utf8Array`] is arrow's semantic equivalent of an immutable `Vec<Option<String>>`.
 /// Cloning and slicing this struct is `O(1)`.

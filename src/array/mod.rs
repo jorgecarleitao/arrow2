@@ -377,7 +377,11 @@ mod equal;
 mod ffi;
 mod fmt;
 pub mod growable;
+mod iterator;
 pub mod ord;
+
+pub(crate) use iterator::ArrayAccessor;
+pub use iterator::ArrayValuesIter;
 
 pub use equal::equal;
 pub use fmt::{get_display, get_value_display};
@@ -394,7 +398,7 @@ pub use null::NullArray;
 pub use primitive::*;
 pub use struct_::{MutableStructArray, StructArray};
 pub use union::UnionArray;
-pub use utf8::{MutableUtf8Array, Utf8Array, Utf8ValuesIter};
+pub use utf8::{MutableUtf8Array, MutableUtf8ValuesArray, Utf8Array, Utf8ValuesIter};
 
 pub(crate) use self::ffi::offset_buffers_children_dictionary;
 pub(crate) use self::ffi::FromFfi;
