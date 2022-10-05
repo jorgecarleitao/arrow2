@@ -136,7 +136,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         }
     }
 
-    /// Reserves `additional` elements and `additional_values` on the values buffer.
+    /// Returns the capacity of this array
     pub fn capacity(&self) -> usize {
         self.values.capacity()
     }
@@ -195,9 +195,15 @@ impl<O: Offset> MutableUtf8Array<O> {
     }
 
     /// Converts itself into an [`Array`].
-    pub fn into_arc(self) -> Arc<dyn Array> {
+    pub fn into_arced(self) -> Arc<dyn Array> {
         let a: Utf8Array<O> = self.into();
         Arc::new(a)
+    }
+
+    /// Converts itself into an [`Box<dyn Array>`].
+    pub fn into_boxed(self) -> Box<dyn Array> {
+        let a: Utf8Array<O> = self.into();
+        Box::new(a)
     }
 
     /// Shrinks the capacity of the [`MutableUtf8Array`] to fit its current length.
@@ -214,91 +220,12 @@ impl<O: Offset> MutableUtf8Array<O> {
         (data_type, offsets, values, self.validity)
     }
 
-    /// Returns an iterator of `&str`
+    /// Returns an iterator of `&str` ignoring this array's validity
     pub fn values_iter(&self) -> MutableUtf8ValuesIter<O> {
         self.values.iter()
     }
-}
 
-impl<O: Offset> MutableArray for MutableUtf8Array<O> {
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    fn validity(&self) -> Option<&MutableBitmap> {
-        self.validity.as_ref()
-    }
-
-    fn as_box(&mut self) -> Box<dyn Array> {
-        // Safety:
-        // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
-        // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
-        let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
-        unsafe {
-            Utf8Array::new_unchecked(
-                data_type,
-                offsets.into(),
-                values.into(),
-                std::mem::take(&mut self.validity).map(|x| x.into()),
-            )
-        }
-        .boxed()
-    }
-
-    fn as_arc(&mut self) -> Arc<dyn Array> {
-        // Safety:
-        // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
-        // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
-        let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
-        unsafe {
-            Utf8Array::new_unchecked(
-                data_type,
-                offsets.into(),
-                values.into(),
-                std::mem::take(&mut self.validity).map(|x| x.into()),
-            )
-        }
-        .arced()
-    }
-
-    fn data_type(&self) -> &DataType {
-        if O::IS_LARGE {
-            &DataType::LargeUtf8
-        } else {
-            &DataType::Utf8
-        }
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn push_null(&mut self) {
-        self.push::<&str>(None)
-    }
-
-    fn reserve(&mut self, additional: usize) {
-        self.reserve(additional, 0)
-    }
-
-    fn shrink_to_fit(&mut self) {
-        self.shrink_to_fit()
-    }
-}
-
-impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for MutableUtf8Array<O> {
-    fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
-        Self::try_from_iter(iter).unwrap()
-    }
-}
-
-impl<O: Offset> MutableUtf8Array<O> {
-    /// Extends the [`MutableUtf8Array`] from an iterator of values of trusted len.
+    /// Extends the [`MutableUtf8Array`] from a [`TrustedLen`] of values.
     /// This differs from `extended_trusted_len` which accepts iterator of optional values.
     #[inline]
     pub fn extend_trusted_len_values<I, P>(&mut self, iterator: I)
@@ -310,7 +237,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     }
 
     /// Extends the [`MutableUtf8Array`] from an iterator of values.
-    /// This differs from `extended_trusted_len` which accepts iterator of optional values.
+    /// This differs from `extend_trusted_len_values` which requires the iterator to be trusted len
     #[inline]
     pub fn extend_values<I, P>(&mut self, iterator: I)
     where
@@ -477,6 +404,83 @@ impl<O: Offset> MutableUtf8Array<O> {
     /// Creates a new [`MutableUtf8Array`] from a [`Iterator`] of `&str`.
     pub fn from_iter_values<T: AsRef<str>, I: Iterator<Item = T>>(iterator: I) -> Self {
         MutableUtf8ValuesArray::from_iter(iterator).into()
+    }
+}
+
+impl<O: Offset> MutableArray for MutableUtf8Array<O> {
+    fn len(&self) -> usize {
+        self.len()
+    }
+
+    fn validity(&self) -> Option<&MutableBitmap> {
+        self.validity.as_ref()
+    }
+
+    fn as_box(&mut self) -> Box<dyn Array> {
+        // Safety:
+        // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
+        // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
+        let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
+        unsafe {
+            Utf8Array::new_unchecked(
+                data_type,
+                offsets.into(),
+                values.into(),
+                std::mem::take(&mut self.validity).map(|x| x.into()),
+            )
+        }
+        .boxed()
+    }
+
+    fn as_arc(&mut self) -> Arc<dyn Array> {
+        // Safety:
+        // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
+        // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
+        let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
+        unsafe {
+            Utf8Array::new_unchecked(
+                data_type,
+                offsets.into(),
+                values.into(),
+                std::mem::take(&mut self.validity).map(|x| x.into()),
+            )
+        }
+        .arced()
+    }
+
+    fn data_type(&self) -> &DataType {
+        if O::IS_LARGE {
+            &DataType::LargeUtf8
+        } else {
+            &DataType::Utf8
+        }
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_mut_any(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    #[inline]
+    fn push_null(&mut self) {
+        self.push::<&str>(None)
+    }
+
+    fn reserve(&mut self, additional: usize) {
+        self.reserve(additional, 0)
+    }
+
+    fn shrink_to_fit(&mut self) {
+        self.shrink_to_fit()
+    }
+}
+
+impl<O: Offset, P: AsRef<str>> FromIterator<Option<P>> for MutableUtf8Array<O> {
+    fn from_iter<I: IntoIterator<Item = Option<P>>>(iter: I) -> Self {
+        Self::try_from_iter(iter).unwrap()
     }
 }
 
