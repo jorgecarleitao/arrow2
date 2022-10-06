@@ -17,7 +17,7 @@ pub unsafe trait ArrayAccessor<'a>: private::Sealed {
     fn len(&self) -> usize;
 }
 
-/// Iterator of values of an `ArrayAccessor`.
+/// Iterator of values of an [`ArrayAccessor`].
 #[derive(Debug, Clone)]
 pub struct ArrayValuesIter<'a, A: ArrayAccessor<'a>> {
     array: &'a A,

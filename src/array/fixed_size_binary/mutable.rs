@@ -112,6 +112,12 @@ impl MutableFixedSizeBinaryArray {
         self.try_push(value).unwrap()
     }
 
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.len() / self.size as usize
+    }
+
     /// Pop the last entry from [`MutableFixedSizeBinaryArray`].
     /// This function returns `None` iff this array is empty
     pub fn pop(&mut self) -> Option<Vec<u8>> {
