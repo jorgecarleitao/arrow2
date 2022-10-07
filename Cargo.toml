@@ -50,7 +50,7 @@ regex-syntax = { version = "^0.6", optional = true }
 streaming-iterator = { version = "0.1", optional = true }
 fallible-streaming-iterator = { version = "0.1", optional = true }
 
-json-deserializer = { version = "0.4.1", optional = true, features = ["preserve_order"] }
+json-deserializer = { version = "0.4.2", optional = true, features = ["preserve_order"] }
 indexmap = { version = "^1.6", optional = true }
 
 # used to print columns in a nice columnar format
