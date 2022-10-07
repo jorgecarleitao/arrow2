@@ -4,7 +4,7 @@ use crate::array::physical_binary::*;
 use crate::{
     array::{Array, MutableArray, Offset, TryExtend, TryPush},
     bitmap::{
-        utils::{zip_validity, ZipValidity},
+        utils::{zip_validity, BitmapIter, ZipValidity},
         Bitmap, MutableBitmap,
     },
     datatypes::DataType,
@@ -205,7 +205,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     }
 
     /// Returns an iterator of `Option<&str>`
-    pub fn iter(&self) -> ZipValidity<&str, MutableUtf8ValuesIter<O>> {
+    pub fn iter(&self) -> ZipValidity<&str, MutableUtf8ValuesIter<O>, BitmapIter> {
         zip_validity(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
     }
 

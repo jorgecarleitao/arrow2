@@ -1,5 +1,5 @@
 use crate::array::Array;
-use crate::bitmap::utils::{zip_validity, ZipValidity};
+use crate::bitmap::utils::{zip_validity, BitmapIter, ZipValidity};
 use crate::trusted_len::TrustedLen;
 
 use super::MapArray;
@@ -62,7 +62,7 @@ impl<'a> DoubleEndedIterator for MapValuesIter<'a> {
 
 impl<'a> IntoIterator for &'a MapArray {
     type Item = Option<Box<dyn Array>>;
-    type IntoIter = ZipValidity<'a, Box<dyn Array>, MapValuesIter<'a>>;
+    type IntoIter = ZipValidity<Box<dyn Array>, MapValuesIter<'a>, BitmapIter<'a>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -71,7 +71,7 @@ impl<'a> IntoIterator for &'a MapArray {
 
 impl<'a> MapArray {
     /// Returns an iterator of `Option<Box<dyn Array>>`
-    pub fn iter(&'a self) -> ZipValidity<'a, Box<dyn Array>, MapValuesIter<'a>> {
+    pub fn iter(&'a self) -> ZipValidity<Box<dyn Array>, MapValuesIter<'a>, BitmapIter<'a>> {
         zip_validity(
             MapValuesIter::new(self),
             self.validity.as_ref().map(|x| x.iter()),

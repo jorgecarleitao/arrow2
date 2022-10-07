@@ -1,6 +1,6 @@
 use crate::{
     bitmap::{
-        utils::{zip_validity, ZipValidity},
+        utils::{zip_validity, BitmapIter, ZipValidity},
         Bitmap,
     },
     buffer::Buffer,
@@ -132,7 +132,7 @@ impl<O: Offset> Utf8Array<O> {
     }
 
     /// Returns an iterator of `Option<&str>`
-    pub fn iter(&self) -> ZipValidity<&str, Utf8ValuesIter<O>> {
+    pub fn iter(&self) -> ZipValidity<&str, Utf8ValuesIter<O>, BitmapIter> {
         zip_validity(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
     }
 

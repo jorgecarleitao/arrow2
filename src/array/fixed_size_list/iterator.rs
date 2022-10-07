@@ -1,6 +1,6 @@
 use crate::{
     array::{Array, ArrayAccessor, ArrayValuesIter},
-    bitmap::utils::{zip_validity, ZipValidity},
+    bitmap::utils::{zip_validity, BitmapIter, ZipValidity},
 };
 
 use super::FixedSizeListArray;
@@ -22,7 +22,7 @@ unsafe impl<'a> ArrayAccessor<'a> for FixedSizeListArray {
 /// Iterator of values of a [`FixedSizeListArray`].
 pub type FixedSizeListValuesIter<'a> = ArrayValuesIter<'a, FixedSizeListArray>;
 
-type ZipIter<'a> = ZipValidity<'a, Box<dyn Array>, FixedSizeListValuesIter<'a>>;
+type ZipIter<'a> = ZipValidity<Box<dyn Array>, FixedSizeListValuesIter<'a>, BitmapIter<'a>>;
 
 impl<'a> IntoIterator for &'a FixedSizeListArray {
     type Item = Option<Box<dyn Array>>;

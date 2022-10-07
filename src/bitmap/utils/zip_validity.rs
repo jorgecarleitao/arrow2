@@ -1,51 +1,44 @@
 use crate::trusted_len::TrustedLen;
 
-use super::BitmapIter;
-
-/// An iterator adapter that converts an iterator over `T` and a validity
-/// into an iterator over `Option<T>` based on the validity.
-pub struct ZipValidity<'a, T, I: Iterator<Item = T>> {
+/// An [`Iterator`] over validity and values.
+#[derive(Debug, Clone)]
+pub struct ZipValidityIter<T, I, V>
+where
+    I: Iterator<Item = T>,
+    V: Iterator<Item = bool>,
+{
     values: I,
-    validity_iter: BitmapIter<'a>,
-    has_validity: bool,
+    validity: V,
 }
 
-impl<'a, T, I: Iterator<Item = T> + Clone> Clone for ZipValidity<'a, T, I> {
-    fn clone(&self) -> Self {
-        Self {
-            values: self.values.clone(),
-            validity_iter: self.validity_iter.clone(),
-            has_validity: self.has_validity,
-        }
+impl<T, I, V> ZipValidityIter<T, I, V>
+where
+    I: Iterator<Item = T>,
+    V: Iterator<Item = bool>,
+{
+    /// Creates a new [`ZipValidityIter`].
+    /// # Panics
+    /// This function panics if the size_hints of the iterators are different
+    pub fn new(values: I, validity: V) -> Self {
+        assert_eq!(values.size_hint(), validity.size_hint());
+        Self { values, validity }
     }
 }
 
-impl<'a, T, I: Iterator<Item = T>> ZipValidity<'a, T, I> {
-    /// Creates a new [`ZipValidity`].
-    pub fn new(values: I, validity: Option<BitmapIter<'a>>) -> Self {
-        let has_validity = validity.as_ref().is_some();
-        let validity_iter = validity.unwrap_or_else(|| BitmapIter::new(&[], 0, 0));
-
-        Self {
-            values,
-            validity_iter,
-            has_validity,
-        }
-    }
-}
-
-impl<'a, T, I: Iterator<Item = T>> Iterator for ZipValidity<'a, T, I> {
+impl<T, I, V> Iterator for ZipValidityIter<T, I, V>
+where
+    I: Iterator<Item = T>,
+    V: Iterator<Item = bool>,
+{
     type Item = Option<T>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if !self.has_validity {
-            self.values.next().map(Some)
-        } else {
-            let is_valid = self.validity_iter.next();
-            let value = self.values.next();
-            is_valid.map(|x| if x { value } else { None })
-        }
+        let value = self.values.next();
+        let is_valid = self.validity.next();
+        is_valid
+            .zip(value)
+            .map(|(is_valid, value)| is_valid.then(|| value))
     }
 
     #[inline]
@@ -55,38 +48,116 @@ impl<'a, T, I: Iterator<Item = T>> Iterator for ZipValidity<'a, T, I> {
 
     #[inline]
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        if !self.has_validity {
-            self.values.nth(n).map(Some)
-        } else {
-            let is_valid = self.validity_iter.nth(n);
-            let value = self.values.nth(n);
-            is_valid.map(|x| if x { value } else { None })
-        }
+        let value = self.values.nth(n);
+        let is_valid = self.validity.nth(n);
+        is_valid
+            .zip(value)
+            .map(|(is_valid, value)| is_valid.then(|| value))
     }
 }
 
-impl<'a, T, I: DoubleEndedIterator<Item = T>> DoubleEndedIterator for ZipValidity<'a, T, I> {
+impl<T, I, V> DoubleEndedIterator for ZipValidityIter<T, I, V>
+where
+    I: DoubleEndedIterator<Item = T>,
+    V: DoubleEndedIterator<Item = bool>,
+{
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
-        if !self.has_validity {
-            self.values.next_back().map(Some)
-        } else {
-            let is_valid = self.validity_iter.next_back();
-            let value = self.values.next_back();
-            is_valid.map(|x| if x { value } else { None })
+        let value = self.values.next_back();
+        let is_valid = self.validity.next_back();
+        is_valid
+            .zip(value)
+            .map(|(is_valid, value)| is_valid.then(|| value))
+    }
+}
+
+unsafe impl<T, I, V> TrustedLen for ZipValidityIter<T, I, V>
+where
+    I: TrustedLen<Item = T>,
+    V: TrustedLen<Item = bool>,
+{
+}
+
+/// An [`Iterator`] over [`Option<T>`]
+/// This enum can be used in two distinct ways:
+/// * as an iterator, via `Iterator::next`
+/// * as an enum of two iterators, via `match self`
+/// The latter allows specializalizing to when there are no nulls
+#[derive(Debug, Clone)]
+pub enum ZipValidity<T, I, V>
+where
+    I: Iterator<Item = T>,
+    V: Iterator<Item = bool>,
+{
+    /// There are no null values
+    Required(I),
+    /// There are null values
+    Optional(ZipValidityIter<T, I, V>),
+}
+
+impl<T, I, V> ZipValidity<T, I, V>
+where
+    I: Iterator<Item = T>,
+    V: Iterator<Item = bool>,
+{
+    /// Returns a new [`ZipValidity`]
+    pub fn new(values: I, validity: Option<V>) -> Self {
+        match validity {
+            Some(validity) => Self::Optional(ZipValidityIter::new(values, validity)),
+            None => Self::Required(values),
         }
     }
 }
 
-/// all arrays have known size.
-impl<'a, T, I: Iterator<Item = T>> std::iter::ExactSizeIterator for ZipValidity<'a, T, I> {}
+impl<T, I, V> Iterator for ZipValidity<T, I, V>
+where
+    I: Iterator<Item = T>,
+    V: Iterator<Item = bool>,
+{
+    type Item = Option<T>;
 
-unsafe impl<T, I: TrustedLen<Item = T>> TrustedLen for ZipValidity<'_, T, I> {}
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Required(values) => values.next().map(Some),
+            Self::Optional(zipped) => zipped.next(),
+        }
+    }
 
-/// Returns an iterator adapter that returns Option<T> according to an optional validity.
-pub fn zip_validity<T, I: Iterator<Item = T>>(
-    values: I,
-    validity: Option<BitmapIter>,
-) -> ZipValidity<T, I> {
-    ZipValidity::new(values, validity)
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            Self::Required(values) => values.size_hint(),
+            Self::Optional(zipped) => zipped.size_hint(),
+        }
+    }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        match self {
+            Self::Required(values) => values.nth(n).map(Some),
+            Self::Optional(zipped) => zipped.nth(n),
+        }
+    }
+}
+
+impl<T, I, V> DoubleEndedIterator for ZipValidity<T, I, V>
+where
+    I: DoubleEndedIterator<Item = T>,
+    V: DoubleEndedIterator<Item = bool>,
+{
+    #[inline]
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Required(values) => values.next_back().map(Some),
+            Self::Optional(zipped) => zipped.next_back(),
+        }
+    }
+}
+
+unsafe impl<T, I, V> TrustedLen for ZipValidity<T, I, V>
+where
+    I: TrustedLen<Item = T>,
+    V: TrustedLen<Item = bool>,
+{
 }

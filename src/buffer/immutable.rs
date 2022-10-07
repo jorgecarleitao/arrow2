@@ -1,6 +1,7 @@
 use std::{iter::FromIterator, ops::Deref, sync::Arc, usize};
 
 use super::Bytes;
+use super::IntoIter;
 
 /// [`Buffer`] is a contiguous memory region that can be shared across
 /// thread boundaries.
@@ -104,6 +105,17 @@ impl<T> Buffer<T> {
         }
     }
 
+    /// Returns the byte slice stored in this buffer
+    /// # Safety
+    /// `index` must be smaller than `len`
+    #[inline]
+    pub(super) unsafe fn get_unchecked(&self, index: usize) -> &T {
+        // Safety:
+        // invariant of this function
+        debug_assert!(index < self.length);
+        unsafe { self.data.get_unchecked(self.offset + index) }
+    }
+
     /// Returns a new [`Buffer`] that is a slice of this buffer starting at `offset`.
     /// Doing so allows the same memory region to be shared between buffers.
     /// # Panics
@@ -191,5 +203,15 @@ impl<T> FromIterator<T> for Buffer<T> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         Vec::from_iter(iter).into()
+    }
+}
+
+impl<T: Copy> IntoIterator for Buffer<T> {
+    type Item = T;
+
+    type IntoIter = IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter::new(self)
     }
 }

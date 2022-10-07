@@ -14,7 +14,7 @@ pub use chunks_exact_mut::BitChunksExactMut;
 pub use fmt::fmt;
 pub use iterator::BitmapIter;
 pub use slice_iterator::SlicesIterator;
-pub use zip_validity::{zip_validity, ZipValidity};
+pub use zip_validity::{ZipValidity, ZipValidityIter};
 
 const BIT_MASK: [u8; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
 const UNSET_BIT_MASK: [u8; 8] = [
@@ -140,4 +140,12 @@ pub fn count_zeros(slice: &[u8], offset: usize, len: usize) -> usize {
         .sum::<usize>();
 
     len - set_count
+}
+
+/// Returns an iterator adapter that returns Option<T> according to an optional validity.
+pub fn zip_validity<T, I: Iterator<Item = T>>(
+    values: I,
+    validity: Option<BitmapIter>,
+) -> ZipValidity<T, I, BitmapIter> {
+    ZipValidity::new(values, validity)
 }

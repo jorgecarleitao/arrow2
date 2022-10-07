@@ -87,7 +87,7 @@ impl BooleanArray {
 
     /// Returns an iterator over the optional values of this [`BooleanArray`].
     #[inline]
-    pub fn iter(&self) -> ZipValidity<bool, BitmapIter> {
+    pub fn iter(&self) -> ZipValidity<bool, BitmapIter, BitmapIter> {
         zip_validity(
             self.values().iter(),
             self.validity.as_ref().map(|x| x.iter()),
@@ -359,6 +359,17 @@ impl BooleanArray {
     /// Boxes self into a [`std::sync::Arc<dyn Array>`].
     pub fn arced(self) -> std::sync::Arc<dyn Array> {
         std::sync::Arc::new(self)
+    }
+
+    /// Returns its internal representation
+    #[must_use]
+    pub fn into_inner(self) -> (DataType, Bitmap, Option<Bitmap>) {
+        let Self {
+            data_type,
+            values,
+            validity,
+        } = self;
+        (data_type, values, validity)
     }
 
     /// The canonical method to create a [`BooleanArray`]

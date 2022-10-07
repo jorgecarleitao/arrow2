@@ -1,5 +1,5 @@
 use crate::array::{ArrayAccessor, ArrayValuesIter, MutableArray};
-use crate::bitmap::utils::{zip_validity, ZipValidity};
+use crate::bitmap::utils::{zip_validity, BitmapIter, ZipValidity};
 
 use super::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
 
@@ -37,7 +37,7 @@ pub type MutableFixedSizeBinaryValuesIter<'a> = ArrayValuesIter<'a, MutableFixed
 
 impl<'a> IntoIterator for &'a FixedSizeBinaryArray {
     type Item = Option<&'a [u8]>;
-    type IntoIter = ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a>>;
+    type IntoIter = ZipValidity<&'a [u8], FixedSizeBinaryValuesIter<'a>, BitmapIter<'a>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -46,7 +46,7 @@ impl<'a> IntoIterator for &'a FixedSizeBinaryArray {
 
 impl<'a> FixedSizeBinaryArray {
     /// constructs a new iterator
-    pub fn iter(&'a self) -> ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a>> {
+    pub fn iter(&'a self) -> ZipValidity<&'a [u8], FixedSizeBinaryValuesIter<'a>, BitmapIter<'a>> {
         zip_validity(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
     }
 
@@ -58,7 +58,7 @@ impl<'a> FixedSizeBinaryArray {
 
 impl<'a> IntoIterator for &'a MutableFixedSizeBinaryArray {
     type Item = Option<&'a [u8]>;
-    type IntoIter = ZipValidity<'a, &'a [u8], MutableFixedSizeBinaryValuesIter<'a>>;
+    type IntoIter = ZipValidity<&'a [u8], MutableFixedSizeBinaryValuesIter<'a>, BitmapIter<'a>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -67,7 +67,9 @@ impl<'a> IntoIterator for &'a MutableFixedSizeBinaryArray {
 
 impl<'a> MutableFixedSizeBinaryArray {
     /// constructs a new iterator
-    pub fn iter(&'a self) -> ZipValidity<'a, &'a [u8], MutableFixedSizeBinaryValuesIter<'a>> {
+    pub fn iter(
+        &'a self,
+    ) -> ZipValidity<&'a [u8], MutableFixedSizeBinaryValuesIter<'a>, BitmapIter<'a>> {
         zip_validity(
             self.iter_values(),
             self.validity().as_ref().map(|x| x.iter()),

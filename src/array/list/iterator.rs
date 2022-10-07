@@ -1,6 +1,6 @@
 use crate::array::Offset;
 use crate::array::{Array, ArrayAccessor, ArrayValuesIter};
-use crate::bitmap::utils::{zip_validity, ZipValidity};
+use crate::bitmap::utils::{zip_validity, BitmapIter, ZipValidity};
 
 use super::ListArray;
 
@@ -21,7 +21,7 @@ unsafe impl<'a, O: Offset> ArrayAccessor<'a> for ListArray<O> {
 /// Iterator of values of a [`ListArray`].
 pub type ListValuesIter<'a, O> = ArrayValuesIter<'a, ListArray<O>>;
 
-type ZipIter<'a, O> = ZipValidity<'a, Box<dyn Array>, ListValuesIter<'a, O>>;
+type ZipIter<'a, O> = ZipValidity<Box<dyn Array>, ListValuesIter<'a, O>, BitmapIter<'a>>;
 
 impl<'a, O: Offset> IntoIterator for &'a ListArray<O> {
     type Item = Option<Box<dyn Array>>;

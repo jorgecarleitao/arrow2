@@ -1,14 +1,29 @@
 use crate::{
-    bitmap::utils::{zip_validity, ZipValidity},
+    array::MutableArray,
+    bitmap::utils::{zip_validity, BitmapIter, ZipValidity},
+    bitmap::IntoIter as BitmapIntoIter,
+    buffer::IntoIter,
     types::NativeType,
 };
 
-use super::super::MutableArray;
 use super::{MutablePrimitiveArray, PrimitiveArray};
+
+impl<T: NativeType> IntoIterator for PrimitiveArray<T> {
+    type Item = Option<T>;
+    type IntoIter = ZipValidity<T, IntoIter<T>, BitmapIntoIter>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        let (_, values, validity) = self.into_inner();
+        let values = values.into_iter();
+        let validity = validity.map(|x| x.into_iter());
+        ZipValidity::new(values, validity)
+    }
+}
 
 impl<'a, T: NativeType> IntoIterator for &'a PrimitiveArray<T> {
     type Item = Option<&'a T>;
-    type IntoIter = ZipValidity<'a, &'a T, std::slice::Iter<'a, T>>;
+    type IntoIter = ZipValidity<&'a T, std::slice::Iter<'a, T>, BitmapIter<'a>>;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
@@ -19,14 +34,14 @@ impl<'a, T: NativeType> IntoIterator for &'a PrimitiveArray<T> {
 impl<'a, T: NativeType> MutablePrimitiveArray<T> {
     /// Returns an iterator over `Option<T>`
     #[inline]
-    pub fn iter(&'a self) -> ZipValidity<'a, &'a T, std::slice::Iter<'a, T>> {
+    pub fn iter(&'a self) -> ZipValidity<&'a T, std::slice::Iter<'a, T>, BitmapIter<'a>> {
         zip_validity(
             self.values().iter(),
             self.validity().as_ref().map(|x| x.iter()),
         )
     }
 
-    /// Returns an iterator of `bool`
+    /// Returns an iterator of `T`
     #[inline]
     pub fn values_iter(&'a self) -> std::slice::Iter<'a, T> {
         self.values().iter()

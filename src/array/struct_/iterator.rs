@@ -1,5 +1,5 @@
 use crate::{
-    bitmap::utils::{zip_validity, ZipValidity},
+    bitmap::utils::{zip_validity, BitmapIter, ZipValidity},
     scalar::{new_scalar, Scalar},
     trusted_len::TrustedLen,
 };
@@ -75,7 +75,7 @@ impl<'a> DoubleEndedIterator for StructValueIter<'a> {
 }
 
 type ValuesIter<'a> = StructValueIter<'a>;
-type ZipIter<'a> = ZipValidity<'a, Vec<Box<dyn Scalar>>, ValuesIter<'a>>;
+type ZipIter<'a> = ZipValidity<Vec<Box<dyn Scalar>>, ValuesIter<'a>, BitmapIter<'a>>;
 
 impl<'a> IntoIterator for &'a StructArray {
     type Item = Option<Vec<Box<dyn Scalar>>>;

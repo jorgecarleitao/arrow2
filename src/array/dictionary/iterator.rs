@@ -1,4 +1,4 @@
-use crate::bitmap::utils::ZipValidity;
+use crate::bitmap::utils::{BitmapIter, ZipValidity};
 use crate::scalar::Scalar;
 use crate::trusted_len::TrustedLen;
 
@@ -56,7 +56,7 @@ impl<'a, K: DictionaryKey> DoubleEndedIterator for DictionaryValuesIter<'a, K> {
 }
 
 type ValuesIter<'a, K> = DictionaryValuesIter<'a, K>;
-type ZipIter<'a, K> = ZipValidity<'a, Box<dyn Scalar>, ValuesIter<'a, K>>;
+type ZipIter<'a, K> = ZipValidity<Box<dyn Scalar>, ValuesIter<'a, K>, BitmapIter<'a>>;
 
 impl<'a, K: DictionaryKey> IntoIterator for &'a DictionaryArray<K> {
     type Item = Option<Box<dyn Scalar>>;
