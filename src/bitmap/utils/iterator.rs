@@ -80,3 +80,4 @@ impl<'a> DoubleEndedIterator for BitmapIter<'a> {
 }
 
 unsafe impl TrustedLen for BitmapIter<'_> {}
+impl ExactSizeIterator for BitmapIter<'_> {}
