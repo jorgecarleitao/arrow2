@@ -81,3 +81,4 @@ impl<'a, A: ArrayAccessor<'a>> DoubleEndedIterator for ArrayValuesIter<'a, A> {
 }
 
 unsafe impl<'a, A: ArrayAccessor<'a>> TrustedLen for ArrayValuesIter<'a, A> {}
+impl<'a, A: ArrayAccessor> ExactSizeIterator for ArrayValuesIter<'a, A> {}
