@@ -30,8 +30,7 @@ ethnum = "1"
 hash_hasher = "^2.0.3"
 # For SIMD utf8 validation
 simdutf8 = "0.1.3"
-# faster hashing
-ahash = { version = "0.7" }
+
 # A Rust port of SwissTable
 hashbrown = { version = "0.12", default-features = false, optional = true }
 
@@ -100,6 +99,14 @@ multiversion = { version = "0.6.1", optional = true }
 
 # For support for odbc
 odbc-api = { version = "0.36", optional = true }
+
+# faster hashing
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+ahash = { version = "0.8", features=["compile-time-rng"] }
+getrandom = { version = "0.2", features = ["js"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ahash = { version = "0.8", features=["runtime-rng"] }
 
 [dev-dependencies]
 criterion = "0.3"
