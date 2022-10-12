@@ -1,7 +1,7 @@
 //! Contains the [`hash`] and typed (e.g. [`hash_primitive`]) operators.
 // multiversion does not copy documentation, causing a false positive
 #![allow(missing_docs)]
-use ahash::{CallHasher, RandomState};
+use ahash::RandomState;
 use multiversion::multiversion;
 use std::hash::Hash;
 
@@ -26,7 +26,7 @@ use super::arity::unary;
 pub fn hash_primitive<T: NativeType + Hash>(array: &PrimitiveArray<T>) -> PrimitiveArray<u64> {
     let state = new_state!();
 
-    unary(array, |x| T::get_hash(&x, &state), DataType::UInt64)
+    unary(array, |x| state.hash_one(x), DataType::UInt64)
 }
 
 #[multiversion]
@@ -37,7 +37,7 @@ pub fn hash_boolean(array: &BooleanArray) -> PrimitiveArray<u64> {
 
     let values = array
         .values_iter()
-        .map(|x| u8::get_hash(&x, &state))
+        .map(|x| state.hash_one(x))
         .collect::<Vec<_>>()
         .into();
 
@@ -52,7 +52,7 @@ pub fn hash_utf8<O: Offset>(array: &Utf8Array<O>) -> PrimitiveArray<u64> {
 
     let values = array
         .values_iter()
-        .map(|x| <[u8]>::get_hash(&x.as_bytes(), &state))
+        .map(|x| state.hash_one(x.as_bytes()))
         .collect::<Vec<_>>()
         .into();
 
@@ -64,7 +64,7 @@ pub fn hash_binary<O: Offset>(array: &BinaryArray<O>) -> PrimitiveArray<u64> {
     let state = new_state!();
     let values = array
         .values_iter()
-        .map(|x| <[u8]>::get_hash(&x, &state))
+        .map(|x| state.hash_one(x))
         .collect::<Vec<_>>()
         .into();
 
