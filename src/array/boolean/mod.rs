@@ -1,6 +1,6 @@
 use crate::{
     bitmap::{
-        utils::{zip_validity, BitmapIter, ZipValidity},
+        utils::{BitmapIter, ZipValidity},
         Bitmap, MutableBitmap,
     },
     datatypes::{DataType, PhysicalType},
@@ -88,7 +88,7 @@ impl BooleanArray {
     /// Returns an iterator over the optional values of this [`BooleanArray`].
     #[inline]
     pub fn iter(&self) -> ZipValidity<bool, BitmapIter, BitmapIter> {
-        zip_validity(
+        ZipValidity::new(
             self.values().iter(),
             self.validity.as_ref().map(|x| x.iter()),
         )

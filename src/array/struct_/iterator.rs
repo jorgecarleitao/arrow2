@@ -1,5 +1,5 @@
 use crate::{
-    bitmap::utils::{zip_validity, BitmapIter, ZipValidity},
+    bitmap::utils::{BitmapIter, ZipValidity},
     scalar::{new_scalar, Scalar},
     trusted_len::TrustedLen,
 };
@@ -89,7 +89,7 @@ impl<'a> IntoIterator for &'a StructArray {
 impl<'a> StructArray {
     /// Returns an iterator of `Option<Box<dyn Array>>`
     pub fn iter(&'a self) -> ZipIter<'a> {
-        zip_validity(
+        ZipValidity::new(
             StructValueIter::new(self),
             self.validity.as_ref().map(|x| x.iter()),
         )

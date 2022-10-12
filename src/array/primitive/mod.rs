@@ -1,6 +1,6 @@
 use crate::{
     bitmap::{
-        utils::{zip_validity, BitmapIter, ZipValidity},
+        utils::{BitmapIter, ZipValidity},
         Bitmap,
     },
     buffer::Buffer,
@@ -141,7 +141,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// Returns an iterator over the values and validity, `Option<&T>`.
     #[inline]
     pub fn iter(&self) -> ZipValidity<&T, std::slice::Iter<T>, BitmapIter> {
-        zip_validity(
+        ZipValidity::new(
             self.values().iter(),
             self.validity().as_ref().map(|x| x.iter()),
         )

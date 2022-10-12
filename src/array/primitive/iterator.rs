@@ -1,6 +1,6 @@
 use crate::{
     array::MutableArray,
-    bitmap::utils::{zip_validity, BitmapIter, ZipValidity},
+    bitmap::utils::{BitmapIter, ZipValidity},
     bitmap::IntoIter as BitmapIntoIter,
     buffer::IntoIter,
     types::NativeType,
@@ -35,7 +35,7 @@ impl<'a, T: NativeType> MutablePrimitiveArray<T> {
     /// Returns an iterator over `Option<T>`
     #[inline]
     pub fn iter(&'a self) -> ZipValidity<&'a T, std::slice::Iter<'a, T>, BitmapIter<'a>> {
-        zip_validity(
+        ZipValidity::new(
             self.values().iter(),
             self.validity().as_ref().map(|x| x.iter()),
         )

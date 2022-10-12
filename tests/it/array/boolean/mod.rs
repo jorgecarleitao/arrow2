@@ -131,3 +131,15 @@ fn from_iter() {
     let a: BooleanArray = iter.collect();
     assert_eq!(a.len(), 2);
 }
+
+#[test]
+fn into_iter() {
+    let data = vec![Some(true), None, Some(false)];
+    let rev = data.clone().into_iter().rev();
+
+    let array: BooleanArray = data.clone().into_iter().collect();
+
+    assert_eq!(array.clone().into_iter().collect::<Vec<_>>(), data);
+
+    assert!(array.into_iter().rev().eq(rev))
+}

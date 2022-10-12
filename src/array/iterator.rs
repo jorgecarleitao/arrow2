@@ -6,11 +6,10 @@ mod private {
     impl<'a, T: super::ArrayAccessor<'a>> Sealed for T {}
 }
 
-///
+/// Sealed trait representing assess to a value of an array.
 /// # Safety
 /// Implementers of this trait guarantee that
 /// `value_unchecked` is safe when called up to `len`
-/// Implementations must guarantee that
 pub unsafe trait ArrayAccessor<'a>: private::Sealed {
     type Item: 'a;
     unsafe fn value_unchecked(&'a self, index: usize) -> Self::Item;

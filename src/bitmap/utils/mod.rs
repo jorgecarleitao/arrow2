@@ -141,11 +141,3 @@ pub fn count_zeros(slice: &[u8], offset: usize, len: usize) -> usize {
 
     len - set_count
 }
-
-/// Returns an iterator adapter that returns Option<T> according to an optional validity.
-pub fn zip_validity<T, I: Iterator<Item = T>>(
-    values: I,
-    validity: Option<BitmapIter>,
-) -> ZipValidity<T, I, BitmapIter> {
-    ZipValidity::new(values, validity)
-}

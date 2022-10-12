@@ -3,7 +3,7 @@ use lexical_core::ToLexical;
 use std::io::Write;
 use streaming_iterator::StreamingIterator;
 
-use crate::bitmap::utils::zip_validity;
+use crate::bitmap::utils::ZipValidity;
 use crate::datatypes::TimeUnit;
 use crate::io::iterator::BufStreamingIterator;
 use crate::temporal_conversions::{
@@ -103,7 +103,7 @@ fn struct_serializer<'a>(
     let names = array.fields().iter().map(|f| f.name.as_str());
 
     Box::new(BufStreamingIterator::new(
-        zip_validity(0..array.len(), array.validity().map(|x| x.iter())),
+        ZipValidity::new(0..array.len(), array.validity().map(|x| x.iter())),
         move |maybe, buf| {
             if maybe.is_some() {
                 let names = names.clone();
@@ -140,7 +140,7 @@ fn list_serializer<'a, O: Offset>(
     let mut serializer = new_serializer(array.values().as_ref());
 
     Box::new(BufStreamingIterator::new(
-        zip_validity(
+        ZipValidity::new(
             array.offsets().windows(2),
             array.validity().map(|x| x.iter()),
         ),
