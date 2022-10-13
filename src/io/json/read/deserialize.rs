@@ -10,9 +10,9 @@ use crate::{
     array::*,
     bitmap::MutableBitmap,
     chunk::Chunk,
-    datatypes::{DataType, Field, IntervalUnit, PhysicalType, Schema},
+    datatypes::{DataType, Field, IntervalUnit, Schema},
     error::Error,
-    types::{f16, NativeType, PrimitiveType},
+    types::{f16, NativeType},
 };
 
 /// A function that converts a &Value into an optional tuple of a byte slice and a Value.
