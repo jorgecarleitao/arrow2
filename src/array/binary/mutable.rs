@@ -2,7 +2,7 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
     array::{
-        specification::check_offsets, Array, MutableArray, Offset, Preallocate, TryExtend, TryPush,
+        specification::check_offsets, Array, Container, MutableArray, Offset, TryExtend, TryPush,
     },
     bitmap::MutableBitmap,
     datatypes::DataType,
@@ -188,7 +188,7 @@ impl<O: Offset> MutableBinaryArray<O> {
     }
 }
 
-impl<O: Offset> Preallocate for MutableBinaryArray<O> {
+impl<O: Offset> Container for MutableBinaryArray<O> {
     fn with_capacity(capacity: usize) -> Self {
         MutableBinaryArray::with_capacity(capacity)
     }

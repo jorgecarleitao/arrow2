@@ -2,7 +2,7 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::array::physical_binary::*;
 use crate::{
-    array::{Array, MutableArray, Offset, Preallocate, TryExtend, TryPush},
+    array::{Array, Container, MutableArray, Offset, TryExtend, TryPush},
     bitmap::{
         utils::{BitmapIter, ZipValidity},
         Bitmap, MutableBitmap,
@@ -247,7 +247,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     }
 }
 
-impl<O: Offset> Preallocate for MutableUtf8Array<O> {
+impl<O: Offset> Container for MutableUtf8Array<O> {
     fn with_capacity(capacity: usize) -> Self {
         MutableUtf8Array::with_capacity(capacity)
     }

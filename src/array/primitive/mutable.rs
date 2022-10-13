@@ -2,7 +2,7 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::bitmap::Bitmap;
 use crate::{
-    array::{Array, MutableArray, Preallocate, TryExtend, TryPush},
+    array::{Array, Container, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{Error, Result},
@@ -378,7 +378,7 @@ impl<T: NativeType> TryPush<Option<T>> for MutablePrimitiveArray<T> {
     }
 }
 
-impl<T: NativeType> Preallocate for MutablePrimitiveArray<T> {
+impl<T: NativeType> Container for MutablePrimitiveArray<T> {
     fn with_capacity(capacity: usize) -> Self {
         MutablePrimitiveArray::with_capacity(capacity)
     }

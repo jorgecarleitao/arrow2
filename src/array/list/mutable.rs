@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     array::{
-        specification::try_check_offsets, Array, MutableArray, Offset, Preallocate, TryExtend,
+        specification::try_check_offsets, Array, Container, MutableArray, Offset, TryExtend,
         TryPush,
     },
     bitmap::MutableBitmap,
@@ -282,7 +282,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     }
 }
 
-impl<O: Offset, M: MutableArray + Default + 'static> Preallocate for MutableListArray<O, M> {
+impl<O: Offset, M: MutableArray + Default + 'static> Container for MutableListArray<O, M> {
     fn with_capacity(capacity: usize) -> Self {
         MutableListArray::with_capacity(capacity)
     }

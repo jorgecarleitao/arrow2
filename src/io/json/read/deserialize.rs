@@ -470,7 +470,7 @@ where
 
 fn fill_generic_array_from<B, M, A>(f: fn(&mut M, &[B]), rows: &[B]) -> Box<dyn Array>
 where
-    M: Preallocate,
+    M: Container,
     A: From<M> + Array,
 {
     let mut array = M::with_capacity(rows.len());

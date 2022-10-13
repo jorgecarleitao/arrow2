@@ -2,7 +2,7 @@ use std::iter::FromIterator;
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, MutableArray, Preallocate, TryExtend, TryPush},
+    array::{Array, Container, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::{DataType, PhysicalType},
     error::Result,
@@ -453,7 +453,7 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> FromIterator<Ptr> for MutableBoolea
     }
 }
 
-impl Preallocate for MutableBooleanArray {
+impl Container for MutableBooleanArray {
     fn with_capacity(capacity: usize) -> Self {
         MutableBooleanArray::with_capacity(capacity)
     }

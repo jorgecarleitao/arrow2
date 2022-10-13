@@ -116,7 +116,7 @@ dyn_clone::clone_trait_object!(Array);
 
 /// A trait describing an array with a backing store that can be preallocated to
 /// a given size.
-pub trait Preallocate {
+pub trait Container {
     /// Create this array with a given capacity.
     fn with_capacity(capacity: usize) -> Self
     where
