@@ -288,9 +288,9 @@ fn deserialize_list_into<'a, O: Offset, A: Borrow<Value<'a>>>(
         }
     });
 
-    // though this will always be safe, we cannot use unsafe_expand here due to
-    // `#![forbid(unsafe_code)]` on the io module
-    target.expand(arrays);
+    // though this will always be safe, we cannot use unsafe_extend_offsets here
+    // due to `#![forbid(unsafe_code)]` on the io module
+    target.extend_offsets(arrays);
 }
 
 fn deserialize_fixed_size_list_into<'a, A: Borrow<Value<'a>>>(

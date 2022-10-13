@@ -164,7 +164,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// - the new offsets are not in monotonic increasing order.
     /// - any new offset is not in bounds of the backing array.
     /// - the passed iterator has no upper bound.
-    pub fn expand<II>(&mut self, expansion: II)
+    pub fn extend_offsets<II>(&mut self, expansion: II)
     where
         II: IntoIterator<Item = Option<O>> + TrustedLen,
     {
@@ -175,7 +175,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
             self.offsets.push(O::zero());
         }
         // safety: checked below
-        unsafe { self.unsafe_expand(expansion) };
+        unsafe { self.unsafe_extend_offsets(expansion) };
         if self.offsets.len() > current_len {
             // check all inserted offsets
             try_check_offsets(&self.offsets[current_len..], self.values.len())
@@ -191,7 +191,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// zero if the array is currently empty.
     ///
     /// Panics if the passed iterator has no upper bound.
-    pub unsafe fn unsafe_expand<II>(&mut self, expansion: II)
+    pub unsafe fn unsafe_extend_offsets<II>(&mut self, expansion: II)
     where
         II: IntoIterator<Item = Option<O>> + TrustedLen,
     {
