@@ -73,13 +73,6 @@ pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Re
     }
 }
 
-/// # Panics iff:
-/// * the `offsets` is not monotonically increasing, or
-/// * any offset is larger or equal to `values_len`.
-pub fn check_offsets<O: Offset>(offsets: &[O], values_len: usize) {
-    try_check_offsets(offsets, values_len).unwrap()
-}
-
 /// Checks that `offsets` is monotonically increasing, and all offsets are less than or equal to
 /// `values_len`.
 pub fn try_check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> Result<()> {

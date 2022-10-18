@@ -3,7 +3,7 @@ use crate::{
     bitmap::utils::ZipValidity,
 };
 
-use super::BinaryArray;
+use super::{BinaryArray, MutableBinaryValuesArray};
 
 unsafe impl<'a, O: Offset> ArrayAccessor<'a> for BinaryArray<O> {
     type Item = &'a [u8];
@@ -25,6 +25,18 @@ pub type BinaryValueIter<'a, O> = ArrayValuesIter<'a, BinaryArray<O>>;
 impl<'a, O: Offset> IntoIterator for &'a BinaryArray<O> {
     type Item = Option<&'a [u8]>;
     type IntoIter = ZipValidity<'a, &'a [u8], BinaryValueIter<'a, O>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+/// Iterator of values of an [`MutableBinaryValuesArray`].
+pub type MutableBinaryValuesIter<'a, O> = ArrayValuesIter<'a, MutableBinaryValuesArray<O>>;
+
+impl<'a, O: Offset> IntoIterator for &'a MutableBinaryValuesArray<O> {
+    type Item = &'a [u8];
+    type IntoIter = MutableBinaryValuesIter<'a, O>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

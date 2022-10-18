@@ -6,6 +6,7 @@ use arrow2::{
 };
 
 mod mutable;
+mod mutable_values;
 mod to_mutable;
 
 #[test]

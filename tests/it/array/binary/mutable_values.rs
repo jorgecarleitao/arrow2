@@ -1,10 +1,10 @@
 use arrow2::array::MutableArray;
-use arrow2::array::MutableUtf8ValuesArray;
+use arrow2::array::MutableBinaryValuesArray;
 use arrow2::datatypes::DataType;
 
 #[test]
 fn capacity() {
-    let mut b = MutableUtf8ValuesArray::<i32>::with_capacity(100);
+    let mut b = MutableBinaryValuesArray::<i32>::with_capacity(100);
 
     assert_eq!(b.values().capacity(), 0);
     assert!(b.offsets().capacity() >= 101);
@@ -16,36 +16,29 @@ fn capacity() {
 fn offsets_must_be_monotonic_increasing() {
     let offsets = vec![0, 5, 4];
     let values = b"abbbbb".to_vec();
-    assert!(MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values).is_err());
+    assert!(MutableBinaryValuesArray::<i32>::try_new(DataType::Binary, offsets, values).is_err());
 }
 
 #[test]
 fn offsets_must_be_in_bounds() {
     let offsets = vec![0, 10];
     let values = b"abbbbb".to_vec();
-    assert!(MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values).is_err());
+    assert!(MutableBinaryValuesArray::<i32>::try_new(DataType::Binary, offsets, values).is_err());
 }
 
 #[test]
 fn data_type_must_be_consistent() {
     let offsets = vec![0, 4];
     let values = b"abbb".to_vec();
-    assert!(MutableUtf8ValuesArray::<i32>::try_new(DataType::Int32, offsets, values).is_err());
-}
-
-#[test]
-fn must_be_utf8() {
-    let offsets = vec![0, 4];
-    let values = vec![0, 159, 146, 150];
-    assert!(std::str::from_utf8(&values).is_err());
-    assert!(MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values).is_err());
+    assert!(MutableBinaryValuesArray::<i32>::try_new(DataType::Int32, offsets, values).is_err());
 }
 
 #[test]
 fn as_box() {
     let offsets = vec![0, 2];
     let values = b"ab".to_vec();
-    let mut b = MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values).unwrap();
+    let mut b =
+        MutableBinaryValuesArray::<i32>::try_new(DataType::Binary, offsets, values).unwrap();
     let _ = b.as_box();
 }
 
@@ -53,7 +46,8 @@ fn as_box() {
 fn as_arc() {
     let offsets = vec![0, 2];
     let values = b"ab".to_vec();
-    let mut b = MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values).unwrap();
+    let mut b =
+        MutableBinaryValuesArray::<i32>::try_new(DataType::Binary, offsets, values).unwrap();
     let _ = b.as_arc();
 }
 
@@ -61,14 +55,15 @@ fn as_arc() {
 fn extend_trusted_len() {
     let offsets = vec![0, 2];
     let values = b"ab".to_vec();
-    let mut b = MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values).unwrap();
+    let mut b =
+        MutableBinaryValuesArray::<i32>::try_new(DataType::Binary, offsets, values).unwrap();
     b.extend_trusted_len(vec!["a", "b"].into_iter());
 
     let offsets = vec![0, 2, 3, 4];
     let values = b"abab".to_vec();
     assert_eq!(
         b.as_box(),
-        MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values)
+        MutableBinaryValuesArray::<i32>::try_new(DataType::Binary, offsets, values)
             .unwrap()
             .as_box()
     )
@@ -76,13 +71,13 @@ fn extend_trusted_len() {
 
 #[test]
 fn from_trusted_len() {
-    let mut b = MutableUtf8ValuesArray::<i32>::from_trusted_len_iter(vec!["a", "b"].into_iter());
+    let mut b = MutableBinaryValuesArray::<i32>::from_trusted_len_iter(vec!["a", "b"].into_iter());
 
     let offsets = vec![0, 1, 2];
     let values = b"ab".to_vec();
     assert_eq!(
         b.as_box(),
-        MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values)
+        MutableBinaryValuesArray::<i32>::try_new(DataType::Binary, offsets, values)
             .unwrap()
             .as_box()
     )
@@ -92,7 +87,8 @@ fn from_trusted_len() {
 fn extend_from_iter() {
     let offsets = vec![0, 2];
     let values = b"ab".to_vec();
-    let mut b = MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values).unwrap();
+    let mut b =
+        MutableBinaryValuesArray::<i32>::try_new(DataType::Binary, offsets, values).unwrap();
     b.extend_trusted_len(vec!["a", "b"].into_iter());
 
     let a = b.clone();
@@ -102,7 +98,7 @@ fn extend_from_iter() {
     let values = b"abababab".to_vec();
     assert_eq!(
         b.as_box(),
-        MutableUtf8ValuesArray::<i32>::try_new(DataType::Utf8, offsets, values)
+        MutableBinaryValuesArray::<i32>::try_new(DataType::Binary, offsets, values)
             .unwrap()
             .as_box()
     )

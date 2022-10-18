@@ -1,14 +1,14 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{specification::check_offsets, Array, MutableArray, Offset, TryExtend, TryPush},
-    bitmap::MutableBitmap,
+    array::{Array, MutableArray, Offset, TryExtend, TryPush},
+    bitmap::{Bitmap, MutableBitmap},
     datatypes::DataType,
     error::{Error, Result},
     trusted_len::TrustedLen,
 };
 
-use super::BinaryArray;
+use super::{BinaryArray, MutableBinaryValuesArray};
 use crate::array::physical_binary::*;
 
 /// The Arrow's equivalent to `Vec<Option<Vec<u8>>>`.
@@ -17,20 +17,18 @@ use crate::array::physical_binary::*;
 /// This struct does not allocate a validity until one is required (i.e. push a null to it).
 #[derive(Debug)]
 pub struct MutableBinaryArray<O: Offset> {
-    data_type: DataType,
-    offsets: Vec<O>,
-    values: Vec<u8>,
+    values: MutableBinaryValuesArray<O>,
     validity: Option<MutableBitmap>,
 }
 
 impl<O: Offset> From<MutableBinaryArray<O>> for BinaryArray<O> {
     fn from(other: MutableBinaryArray<O>) -> Self {
-        BinaryArray::<O>::new(
-            other.data_type,
-            other.offsets.into(),
-            other.values.into(),
-            other.validity.map(|x| x.into()),
-        )
+        let validity = other.validity.and_then(|x| {
+            let validity: Option<Bitmap> = x.into();
+            validity
+        });
+        let array: BinaryArray<O> = other.values.into();
+        array.with_validity(validity)
     }
 }
 
@@ -48,74 +46,81 @@ impl<O: Offset> MutableBinaryArray<O> {
         Self::with_capacity(0)
     }
 
-    /// The canonical method to create a [`MutableBinaryArray`] out of low-end APIs.
+    /// Returns a [`MutableBinaryArray`] created from its internal representation.
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity is `O(N)`
+    pub fn try_new(
+        data_type: DataType,
+        offsets: Vec<O>,
+        values: Vec<u8>,
+        validity: Option<MutableBitmap>,
+    ) -> Result<Self> {
+        let values = MutableBinaryValuesArray::try_new(data_type, offsets, values)?;
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != values.len())
+        {
+            return Err(Error::oos(
+                "validity's length must be equal to the number of values",
+            ));
+        }
+
+        Ok(Self { values, validity })
+    }
+
+    /// Create a [`MutableBinaryArray`] out of its inner attributes.
+    /// # Safety
+    /// The caller must ensure that every value between offsets is a valid utf8.
     /// # Panics
     /// This function panics iff:
     /// * The `offsets` and `values` are inconsistent
     /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
-    pub fn from_data(
+    pub unsafe fn new_unchecked(
         data_type: DataType,
         offsets: Vec<O>,
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
-        check_offsets(&offsets, values.len());
+        let values = MutableBinaryValuesArray::new_unchecked(data_type, offsets, values);
         if let Some(ref validity) = validity {
-            assert_eq!(offsets.len() - 1, validity.len());
+            assert_eq!(values.len(), validity.len());
         }
-        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("MutableBinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary")
-        }
-        Self {
-            data_type,
-            offsets,
-            values,
-            validity,
-        }
+        Self { values, validity }
     }
 
     fn default_data_type() -> DataType {
         BinaryArray::<O>::default_data_type()
     }
 
-    /// Creates a new [`MutableBinaryArray`] with capacity for `capacity` values.
-    /// # Implementation
-    /// This does not allocate the validity.
+    /// Initializes a new [`MutableBinaryArray`] with a pre-allocated capacity of slots.
     pub fn with_capacity(capacity: usize) -> Self {
-        let mut offsets = Vec::<O>::with_capacity(capacity + 1);
-        offsets.push(O::default());
-        Self {
-            data_type: BinaryArray::<O>::default_data_type(),
-            offsets,
-            values: Vec::<u8>::new(),
-            validity: None,
-        }
+        Self::with_capacities(capacity, 0)
     }
 
     /// Initializes a new [`MutableBinaryArray`] with a pre-allocated capacity of slots and values.
+    /// # Implementation
+    /// This does not allocate the validity.
     pub fn with_capacities(capacity: usize, values: usize) -> Self {
-        let mut offsets = Vec::<O>::with_capacity(capacity + 1);
-        offsets.push(O::default());
-
         Self {
-            data_type: Self::default_data_type(),
-            offsets,
-            values: Vec::<u8>::with_capacity(values),
+            values: MutableBinaryValuesArray::with_capacities(capacity, values),
             validity: None,
         }
     }
 
-    /// Reserves `additional` slots.
-    pub fn reserve(&mut self, additional: usize) {
-        self.offsets.reserve(additional);
+    /// Reserves `additional` elements and `additional_values` on the values buffer.
+    pub fn reserve(&mut self, additional: usize, additional_values: usize) {
+        self.values.reserve(additional, additional_values);
         if let Some(x) = self.validity.as_mut() {
             x.reserve(additional)
         }
-    }
-
-    #[inline]
-    fn last_offset(&self) -> O {
-        *self.offsets.last().unwrap()
     }
 
     /// Pushes a new element to the array.
@@ -128,12 +133,7 @@ impl<O: Offset> MutableBinaryArray<O> {
     /// Pop the last entry from [`MutableBinaryArray`].
     /// This function returns `None` iff this array is empty
     pub fn pop(&mut self) -> Option<Vec<u8>> {
-        if self.offsets.len() < 2 {
-            return None;
-        }
-        self.offsets.pop()?;
-        let value_start = self.offsets.iter().last().cloned()?.to_usize();
-        let value = self.values.split_off(value_start);
+        let value = self.values.pop()?;
         self.validity
             .as_mut()
             .map(|x| x.pop()?.then(|| ()))
@@ -152,10 +152,10 @@ impl<O: Offset> MutableBinaryArray<O> {
     }
 
     fn init_validity(&mut self) {
-        let mut validity = MutableBitmap::with_capacity(self.offsets.capacity());
+        let mut validity = MutableBitmap::with_capacity(self.values.capacity());
         validity.extend_constant(self.len(), true);
         validity.set(self.len() - 1, false);
-        self.validity = Some(validity)
+        self.validity = Some(validity);
     }
 
     /// Converts itself into an [`Array`].
@@ -167,28 +167,37 @@ impl<O: Offset> MutableBinaryArray<O> {
     /// Shrinks the capacity of the [`MutableBinaryArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
         self.values.shrink_to_fit();
-        self.offsets.shrink_to_fit();
         if let Some(validity) = &mut self.validity {
             validity.shrink_to_fit()
         }
+    }
+
+    /// Equivalent to `Self::try_new(...).unwrap()`
+    pub fn from_data(
+        data_type: DataType,
+        offsets: Vec<O>,
+        values: Vec<u8>,
+        validity: Option<MutableBitmap>,
+    ) -> Self {
+        Self::try_new(data_type, offsets, values, validity).unwrap()
     }
 }
 
 impl<O: Offset> MutableBinaryArray<O> {
     /// returns its values.
     pub fn values(&self) -> &Vec<u8> {
-        &self.values
+        self.values.values()
     }
 
     /// returns its offsets.
     pub fn offsets(&self) -> &Vec<O> {
-        &self.offsets
+        self.values.offsets()
     }
 }
 
 impl<O: Offset> MutableArray for MutableBinaryArray<O> {
     fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.values.len()
     }
 
     fn validity(&self) -> Option<&MutableBitmap> {
@@ -196,25 +205,39 @@ impl<O: Offset> MutableArray for MutableBinaryArray<O> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(BinaryArray::new(
-            self.data_type.clone(),
-            std::mem::take(&mut self.offsets).into(),
-            std::mem::take(&mut self.values).into(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        // Safety:
+        // `MutableBinaryArray` has the same invariants as `BinaryArray` and thus
+        // `BinaryArray` can be safely created from `MutableBinaryArray` without checks.
+        let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
+        unsafe {
+            BinaryArray::new_unchecked(
+                data_type,
+                offsets.into(),
+                values.into(),
+                std::mem::take(&mut self.validity).map(|x| x.into()),
+            )
+        }
+        .boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(BinaryArray::new(
-            self.data_type.clone(),
-            std::mem::take(&mut self.offsets).into(),
-            std::mem::take(&mut self.values).into(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        // Safety:
+        // `MutableBinaryArray` has the same invariants as `BinaryArray` and thus
+        // `BinaryArray` can be safely created from `MutableBinaryArray` without checks.
+        let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
+        unsafe {
+            BinaryArray::new_unchecked(
+                data_type,
+                offsets.into(),
+                values.into(),
+                std::mem::take(&mut self.validity).map(|x| x.into()),
+            )
+        }
+        .arced()
     }
 
     fn data_type(&self) -> &DataType {
-        &self.data_type
+        self.values.data_type()
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
@@ -231,7 +254,7 @@ impl<O: Offset> MutableArray for MutableBinaryArray<O> {
     }
 
     fn reserve(&mut self, additional: usize) {
-        self.reserve(additional)
+        self.reserve(additional, 0)
     }
 
     fn shrink_to_fit(&mut self) {
@@ -353,7 +376,9 @@ impl<O: Offset> MutableBinaryArray<O> {
         P: AsRef<[u8]>,
         I: Iterator<Item = P>,
     {
-        let additional = extend_from_values_iter(&mut self.offsets, &mut self.values, iterator);
+        let length = self.values.len();
+        self.values.extend(iterator);
+        let additional = self.values.len() - length;
 
         if let Some(validity) = self.validity.as_mut() {
             validity.extend_constant(additional, true);
@@ -371,10 +396,9 @@ impl<O: Offset> MutableBinaryArray<O> {
         P: AsRef<[u8]>,
         I: Iterator<Item = P>,
     {
-        let (_, upper) = iterator.size_hint();
-        let additional = upper.expect("extend_trusted_len_values requires an upper limit");
-
-        extend_from_trusted_len_values_iter(&mut self.offsets, &mut self.values, iterator);
+        let length = self.values.len();
+        self.values.extend_trusted_len_unchecked(iterator);
+        let additional = self.values.len() - length;
 
         if let Some(validity) = self.validity.as_mut() {
             validity.extend_constant(additional, true);
@@ -407,16 +431,8 @@ impl<O: Offset> MutableBinaryArray<O> {
             self.validity = Some(validity);
         }
 
-        extend_from_trusted_len_iter(
-            &mut self.offsets,
-            &mut self.values,
-            self.validity.as_mut().unwrap(),
-            iterator,
-        );
-
-        if self.validity.as_mut().unwrap().unset_bits() == 0 {
-            self.validity = None;
-        }
+        self.values
+            .extend_from_trusted_len_iter(self.validity.as_mut().unwrap(), iterator);
     }
 
     /// Creates a new [`MutableBinaryArray`] from a [`Iterator`] of `&[u8]`.
@@ -435,7 +451,7 @@ impl<O: Offset, T: AsRef<[u8]>> Extend<Option<T>> for MutableBinaryArray<O> {
 impl<O: Offset, T: AsRef<[u8]>> TryExtend<Option<T>> for MutableBinaryArray<O> {
     fn try_extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) -> Result<()> {
         let mut iter = iter.into_iter();
-        self.reserve(iter.size_hint().0);
+        self.reserve(iter.size_hint().0, 0);
         iter.try_for_each(|x| self.try_push(x))
     }
 }
@@ -444,13 +460,7 @@ impl<O: Offset, T: AsRef<[u8]>> TryPush<Option<T>> for MutableBinaryArray<O> {
     fn try_push(&mut self, value: Option<T>) -> Result<()> {
         match value {
             Some(value) => {
-                let bytes = value.as_ref();
-
-                let size = O::from_usize(self.values.len() + bytes.len()).ok_or(Error::Overflow)?;
-
-                self.values.extend_from_slice(bytes);
-
-                self.offsets.push(size);
+                self.values.try_push(value.as_ref())?;
 
                 match &mut self.validity {
                     Some(validity) => validity.push(true),
@@ -458,7 +468,7 @@ impl<O: Offset, T: AsRef<[u8]>> TryPush<Option<T>> for MutableBinaryArray<O> {
                 }
             }
             None => {
-                self.offsets.push(self.last_offset());
+                self.values.push("");
                 match &mut self.validity {
                     Some(validity) => validity.push(false),
                     None => self.init_validity(),

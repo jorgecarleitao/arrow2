@@ -92,7 +92,11 @@ impl<O: Offset> MutableUtf8Array<O> {
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
-        Self::from_data_unchecked(data_type, offsets, values, validity)
+        let values = MutableUtf8ValuesArray::new_unchecked(data_type, offsets, values);
+        if let Some(ref validity) = validity {
+            assert_eq!(values.len(), validity.len());
+        }
+        Self { values, validity }
     }
 
     /// Alias of `new_unchecked`
@@ -104,11 +108,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
-        let values = MutableUtf8ValuesArray::new_unchecked(data_type, offsets, values);
-        if let Some(ref validity) = validity {
-            assert_eq!(values.len(), validity.len());
-        }
-        Self { values, validity }
+        Self::new_unchecked(data_type, offsets, values, validity)
     }
 
     /// The canonical method to create a [`MutableUtf8Array`] out of low-end APIs.
