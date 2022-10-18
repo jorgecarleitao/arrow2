@@ -2,6 +2,9 @@
 mod immutable;
 pub use immutable::*;
 
+mod iterator;
+pub use iterator::IntoIter;
+
 mod mutable;
 pub use mutable::MutableBitmap;
 

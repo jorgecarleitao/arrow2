@@ -7,7 +7,7 @@ use crate::{buffer::Bytes, error::Error, trusted_len::TrustedLen};
 use super::{
     chunk_iter_to_vec,
     utils::{count_zeros, fmt, get_bit, get_bit_unchecked, BitChunk, BitChunks, BitmapIter},
-    MutableBitmap,
+    IntoIter, MutableBitmap,
 };
 
 /// An immutable container semantically equivalent to `Arc<Vec<bool>>` but represented as `Arc<Vec<u8>>` where
@@ -363,5 +363,14 @@ impl<'a> IntoIterator for &'a Bitmap {
 
     fn into_iter(self) -> Self::IntoIter {
         BitmapIter::<'a>::new(&self.bytes, self.offset, self.length)
+    }
+}
+
+impl IntoIterator for Bitmap {
+    type Item = bool;
+    type IntoIter = IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter::new(self)
     }
 }

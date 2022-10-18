@@ -1,6 +1,6 @@
 use crate::{
     bitmap::{
-        utils::{zip_validity, ZipValidity},
+        utils::{BitmapIter, ZipValidity},
         Bitmap,
     },
     buffer::Buffer,
@@ -116,8 +116,8 @@ impl<O: Offset> BinaryArray<O> {
     }
 
     /// Returns an iterator of `Option<&[u8]>` over every element of this array.
-    pub fn iter(&self) -> ZipValidity<&[u8], BinaryValueIter<O>> {
-        zip_validity(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
+    pub fn iter(&self) -> ZipValidity<&[u8], BinaryValueIter<O>, BitmapIter> {
+        ZipValidity::new(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
     }
 
     /// Returns an iterator of `&[u8]` over every element of this array, ignoring the validity

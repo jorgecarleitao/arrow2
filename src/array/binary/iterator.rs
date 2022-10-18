@@ -1,6 +1,6 @@
 use crate::{
     array::{ArrayAccessor, ArrayValuesIter, Offset},
-    bitmap::utils::ZipValidity,
+    bitmap::utils::{BitmapIter, ZipValidity},
 };
 
 use super::BinaryArray;
@@ -24,7 +24,7 @@ pub type BinaryValueIter<'a, O> = ArrayValuesIter<'a, BinaryArray<O>>;
 
 impl<'a, O: Offset> IntoIterator for &'a BinaryArray<O> {
     type Item = Option<&'a [u8]>;
-    type IntoIter = ZipValidity<'a, &'a [u8], BinaryValueIter<'a, O>>;
+    type IntoIter = ZipValidity<&'a [u8], BinaryValueIter<'a, O>, BitmapIter<'a>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

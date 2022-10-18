@@ -159,7 +159,6 @@ pub(crate) unsafe fn extend_from_trusted_len_values_iter<I, P, O>(
 
 // Populates `offsets` and `values` [`Vec`]s with information extracted
 // from the incoming `iterator`.
-
 // the return value indicates how many items were added.
 #[inline]
 pub(crate) fn extend_from_values_iter<I, P, O>(

@@ -124,3 +124,15 @@ fn into_mut_3() {
     let array = PrimitiveArray::new(DataType::Int32, values, validity);
     assert!(array.into_mut().is_right());
 }
+
+#[test]
+fn into_iter() {
+    let data = vec![Some(1), None, Some(10)];
+    let rev = data.clone().into_iter().rev();
+
+    let array: Int32Array = data.clone().into_iter().collect();
+
+    assert_eq!(array.clone().into_iter().collect::<Vec<_>>(), data);
+
+    assert!(array.into_iter().rev().eq(rev))
+}

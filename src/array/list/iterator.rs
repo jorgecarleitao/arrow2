@@ -1,72 +1,27 @@
-use crate::array::{Array, IterableListArray};
-use crate::bitmap::utils::{zip_validity, ZipValidity};
-use crate::{array::Offset, trusted_len::TrustedLen};
+use crate::array::Offset;
+use crate::array::{Array, ArrayAccessor, ArrayValuesIter};
+use crate::bitmap::utils::{BitmapIter, ZipValidity};
 
 use super::ListArray;
 
-/// Iterator of values of an [`ListArray`].
-pub struct ListValuesIter<'a, A: IterableListArray> {
-    array: &'a A,
-    index: usize,
-    end: usize,
-}
-
-impl<'a, A: IterableListArray> ListValuesIter<'a, A> {
-    #[inline]
-    pub(crate) fn new(array: &'a A) -> Self {
-        Self {
-            array,
-            index: 0,
-            end: array.len(),
-        }
-    }
-}
-
-impl<'a, A: IterableListArray> Iterator for ListValuesIter<'a, A> {
+unsafe impl<'a, O: Offset> ArrayAccessor<'a> for ListArray<O> {
     type Item = Box<dyn Array>;
 
     #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index == self.end {
-            return None;
-        }
-        let old = self.index;
-        self.index += 1;
-        // Safety:
-        // self.end is maximized by the length of the array
-        Some(unsafe { self.array.value_unchecked(old) })
+    unsafe fn value_unchecked(&'a self, index: usize) -> Self::Item {
+        self.value_unchecked(index)
     }
 
     #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.end - self.index, Some(self.end - self.index))
+    fn len(&self) -> usize {
+        self.len()
     }
 }
 
-unsafe impl<'a, A: IterableListArray> TrustedLen for ListValuesIter<'a, A> {}
+/// Iterator of values of a [`ListArray`].
+pub type ListValuesIter<'a, O> = ArrayValuesIter<'a, ListArray<O>>;
 
-impl<'a, A: IterableListArray> DoubleEndedIterator for ListValuesIter<'a, A> {
-    #[inline]
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.index == self.end {
-            None
-        } else {
-            self.end -= 1;
-            // Safety:
-            // self.end is maximized by the length of the array
-            Some(unsafe { self.array.value_unchecked(self.end) })
-        }
-    }
-}
-
-impl<O: Offset> IterableListArray for ListArray<O> {
-    unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
-        ListArray::<O>::value_unchecked(self, i)
-    }
-}
-
-type ValuesIter<'a, O> = ListValuesIter<'a, ListArray<O>>;
-type ZipIter<'a, O> = ZipValidity<'a, Box<dyn Array>, ValuesIter<'a, O>>;
+type ZipIter<'a, O> = ZipValidity<Box<dyn Array>, ListValuesIter<'a, O>, BitmapIter<'a>>;
 
 impl<'a, O: Offset> IntoIterator for &'a ListArray<O> {
     type Item = Option<Box<dyn Array>>;
@@ -80,14 +35,14 @@ impl<'a, O: Offset> IntoIterator for &'a ListArray<O> {
 impl<'a, O: Offset> ListArray<O> {
     /// Returns an iterator of `Option<Box<dyn Array>>`
     pub fn iter(&'a self) -> ZipIter<'a, O> {
-        zip_validity(
+        ZipValidity::new(
             ListValuesIter::new(self),
             self.validity.as_ref().map(|x| x.iter()),
         )
     }
 
     /// Returns an iterator of `Box<dyn Array>`
-    pub fn values_iter(&'a self) -> ValuesIter<'a, O> {
+    pub fn values_iter(&'a self) -> ListValuesIter<'a, O> {
         ListValuesIter::new(self)
     }
 }

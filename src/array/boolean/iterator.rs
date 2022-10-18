@@ -1,11 +1,12 @@
-use crate::bitmap::utils::{zip_validity, BitmapIter, ZipValidity};
+use crate::bitmap::utils::{BitmapIter, ZipValidity};
+use crate::bitmap::IntoIter;
 
 use super::super::MutableArray;
 use super::{BooleanArray, MutableBooleanArray};
 
 impl<'a> IntoIterator for &'a BooleanArray {
     type Item = Option<bool>;
-    type IntoIter = ZipValidity<'a, bool, BitmapIter<'a>>;
+    type IntoIter = ZipValidity<bool, BitmapIter<'a>, BitmapIter<'a>>;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
@@ -13,9 +14,22 @@ impl<'a> IntoIterator for &'a BooleanArray {
     }
 }
 
+impl IntoIterator for BooleanArray {
+    type Item = Option<bool>;
+    type IntoIter = ZipValidity<bool, IntoIter, IntoIter>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        let (_, values, validity) = self.into_inner();
+        let values = values.into_iter();
+        let validity = validity.map(|x| x.into_iter());
+        ZipValidity::new(values, validity)
+    }
+}
+
 impl<'a> IntoIterator for &'a MutableBooleanArray {
     type Item = Option<bool>;
-    type IntoIter = ZipValidity<'a, bool, BitmapIter<'a>>;
+    type IntoIter = ZipValidity<bool, BitmapIter<'a>, BitmapIter<'a>>;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
@@ -26,8 +40,8 @@ impl<'a> IntoIterator for &'a MutableBooleanArray {
 impl<'a> MutableBooleanArray {
     /// Returns an iterator over the optional values of this [`MutableBooleanArray`].
     #[inline]
-    pub fn iter(&'a self) -> ZipValidity<'a, bool, BitmapIter<'a>> {
-        zip_validity(
+    pub fn iter(&'a self) -> ZipValidity<bool, BitmapIter<'a>, BitmapIter<'a>> {
+        ZipValidity::new(
             self.values().iter(),
             self.validity().as_ref().map(|x| x.iter()),
         )

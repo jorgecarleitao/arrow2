@@ -1,5 +1,5 @@
 use crate::array::{ArrayAccessor, ArrayValuesIter, Offset};
-use crate::bitmap::utils::ZipValidity;
+use crate::bitmap::utils::{BitmapIter, ZipValidity};
 
 use super::{MutableUtf8Array, MutableUtf8ValuesArray, Utf8Array};
 
@@ -22,7 +22,7 @@ pub type Utf8ValuesIter<'a, O> = ArrayValuesIter<'a, Utf8Array<O>>;
 
 impl<'a, O: Offset> IntoIterator for &'a Utf8Array<O> {
     type Item = Option<&'a str>;
-    type IntoIter = ZipValidity<'a, &'a str, Utf8ValuesIter<'a, O>>;
+    type IntoIter = ZipValidity<&'a str, Utf8ValuesIter<'a, O>, BitmapIter<'a>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -48,7 +48,7 @@ pub type MutableUtf8ValuesIter<'a, O> = ArrayValuesIter<'a, MutableUtf8ValuesArr
 
 impl<'a, O: Offset> IntoIterator for &'a MutableUtf8Array<O> {
     type Item = Option<&'a str>;
-    type IntoIter = ZipValidity<'a, &'a str, MutableUtf8ValuesIter<'a, O>>;
+    type IntoIter = ZipValidity<&'a str, MutableUtf8ValuesIter<'a, O>, BitmapIter<'a>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

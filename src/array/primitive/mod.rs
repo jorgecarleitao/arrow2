@@ -1,6 +1,6 @@
 use crate::{
     bitmap::{
-        utils::{zip_validity, ZipValidity},
+        utils::{BitmapIter, ZipValidity},
         Bitmap,
     },
     buffer::Buffer,
@@ -140,8 +140,8 @@ impl<T: NativeType> PrimitiveArray<T> {
 
     /// Returns an iterator over the values and validity, `Option<&T>`.
     #[inline]
-    pub fn iter(&self) -> ZipValidity<&T, std::slice::Iter<T>> {
-        zip_validity(
+    pub fn iter(&self) -> ZipValidity<&T, std::slice::Iter<T>, BitmapIter> {
+        ZipValidity::new(
             self.values().iter(),
             self.validity().as_ref().map(|x| x.iter()),
         )
@@ -295,6 +295,17 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// Returns an option of a mutable reference to the values of this [`PrimitiveArray`].
     pub fn get_mut_values(&mut self) -> Option<&mut [T]> {
         self.values.get_mut().map(|x| x.as_mut())
+    }
+
+    /// Returns its internal representation
+    #[must_use]
+    pub fn into_inner(self) -> (DataType, Buffer<T>, Option<Bitmap>) {
+        let Self {
+            data_type,
+            values,
+            validity,
+        } = self;
+        (data_type, values, validity)
     }
 
     /// Try to convert this [`PrimitiveArray`] to a [`MutablePrimitiveArray`] via copy-on-write semantics.

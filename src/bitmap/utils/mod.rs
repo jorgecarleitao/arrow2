@@ -14,7 +14,7 @@ pub use chunks_exact_mut::BitChunksExactMut;
 pub use fmt::fmt;
 pub use iterator::BitmapIter;
 pub use slice_iterator::SlicesIterator;
-pub use zip_validity::{zip_validity, ZipValidity};
+pub use zip_validity::{ZipValidity, ZipValidityIter};
 
 const BIT_MASK: [u8; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
 const UNSET_BIT_MASK: [u8; 8] = [

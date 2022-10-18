@@ -1,53 +1,13 @@
-use crate::bitmap::utils::{zip_validity, ZipValidity};
+use crate::{
+    array::MutableArray,
+    bitmap::utils::{BitmapIter, ZipValidity},
+};
 
-use super::super::MutableArray;
-use super::{FixedSizeBinaryArray, FixedSizeBinaryValues, MutableFixedSizeBinaryArray};
-
-/// # Safety
-/// This iterator is `TrustedLen`
-pub struct FixedSizeBinaryValuesIter<'a, T: FixedSizeBinaryValues> {
-    array: &'a T,
-    len: usize,
-    index: usize,
-}
-
-impl<'a, T: FixedSizeBinaryValues> FixedSizeBinaryValuesIter<'a, T> {
-    #[inline]
-    pub fn new(array: &'a T) -> Self {
-        Self {
-            array,
-            len: array.values().len() / array.size(),
-            index: 0,
-        }
-    }
-}
-
-impl<'a, T: FixedSizeBinaryValues> Iterator for FixedSizeBinaryValuesIter<'a, T> {
-    type Item = &'a [u8];
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.len {
-            return None;
-        }
-        let index = self.index;
-        let r = Some(unsafe {
-            self.array
-                .values()
-                .get_unchecked(index * self.array.size()..(index + 1) * self.array.size())
-        });
-        self.index += 1;
-        r
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len - self.index, Some(self.len - self.index))
-    }
-}
+use super::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
 
 impl<'a> IntoIterator for &'a FixedSizeBinaryArray {
     type Item = Option<&'a [u8]>;
-    type IntoIter = ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a, FixedSizeBinaryArray>>;
+    type IntoIter = ZipValidity<&'a [u8], std::slice::ChunksExact<'a, u8>, BitmapIter<'a>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -58,20 +18,19 @@ impl<'a> FixedSizeBinaryArray {
     /// constructs a new iterator
     pub fn iter(
         &'a self,
-    ) -> ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a, FixedSizeBinaryArray>> {
-        zip_validity(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
+    ) -> ZipValidity<&'a [u8], std::slice::ChunksExact<'a, u8>, BitmapIter<'a>> {
+        ZipValidity::new(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
     }
 
     /// Returns iterator over the values of [`FixedSizeBinaryArray`]
-    pub fn values_iter(&'a self) -> FixedSizeBinaryValuesIter<'a, FixedSizeBinaryArray> {
-        FixedSizeBinaryValuesIter::new(self)
+    pub fn values_iter(&'a self) -> std::slice::ChunksExact<'a, u8> {
+        self.values().chunks_exact(self.size)
     }
 }
 
 impl<'a> IntoIterator for &'a MutableFixedSizeBinaryArray {
     type Item = Option<&'a [u8]>;
-    type IntoIter =
-        ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a, MutableFixedSizeBinaryArray>>;
+    type IntoIter = ZipValidity<&'a [u8], std::slice::ChunksExact<'a, u8>, BitmapIter<'a>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -82,15 +41,15 @@ impl<'a> MutableFixedSizeBinaryArray {
     /// constructs a new iterator
     pub fn iter(
         &'a self,
-    ) -> ZipValidity<'a, &'a [u8], FixedSizeBinaryValuesIter<'a, MutableFixedSizeBinaryArray>> {
-        zip_validity(
+    ) -> ZipValidity<&'a [u8], std::slice::ChunksExact<'a, u8>, BitmapIter<'a>> {
+        ZipValidity::new(
             self.iter_values(),
             self.validity().as_ref().map(|x| x.iter()),
         )
     }
 
     /// Returns iterator over the values of [`MutableFixedSizeBinaryArray`]
-    pub fn iter_values(&'a self) -> FixedSizeBinaryValuesIter<'a, MutableFixedSizeBinaryArray> {
-        FixedSizeBinaryValuesIter::new(self)
+    pub fn iter_values(&'a self) -> std::slice::ChunksExact<'a, u8> {
+        self.values().chunks_exact(self.size())
     }
 }

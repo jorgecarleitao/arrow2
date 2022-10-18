@@ -417,13 +417,6 @@ pub trait TryPush<A> {
     fn try_push(&mut self, item: A) -> Result<()>;
 }
 
-/// Trait that list arrays implement for the purposes of DRY.
-pub trait IterableListArray: Array {
-    /// # Safety
-    /// The caller must ensure that `i < self.len()`
-    unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array>;
-}
-
 /// Trait that [`BinaryArray`] and [`Utf8Array`] implement for the purposes of DRY.
 /// # Safety
 /// The implementer must ensure that
