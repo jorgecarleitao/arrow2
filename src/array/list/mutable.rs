@@ -184,8 +184,14 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         // else expansion is empty, and this is trivially safe.
     }
 
-    /// Expand this array. Assumes that `offsets` are in order, and do not
-    /// overrun the underlying `values` backing array.
+    /// Expand this array, using elements from the underlying backing array.
+    /// Assumes the expansion begins at the highest previous offset, or zero if
+    /// this [MutableListArray] is currently empty.
+    ///
+    /// # Safety
+    ///
+    /// Assumes that `offsets` are in order, and do not overrun the underlying
+    /// `values` backing array.
     ///
     /// Also assumes the expansion begins at the highest previous offset, or
     /// zero if the array is currently empty.

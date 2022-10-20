@@ -173,7 +173,7 @@ fn fixed_size_list_serializer<'a>(
     Box::new(BufStreamingIterator::new(
         ZipValidity::new(0..array.len(), array.validity().map(|x| x.iter())),
         move |ix, buf| {
-            if let Some(_) = ix {
+            if ix.is_some() {
                 let length = array.size();
                 buf.push(b'[');
                 let mut is_first_row = true;

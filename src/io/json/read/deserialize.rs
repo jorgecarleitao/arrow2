@@ -282,7 +282,7 @@ fn deserialize_list_into<'a, O: Offset, A: Borrow<Value<'a>>>(
             Value::Array(value) => {
                 // todo make this an Err
                 position += O::from_usize(value.len()).expect("List offset is too large :/");
-                Some(position.clone())
+                Some(position)
             }
             _ => None,
         }
@@ -303,7 +303,7 @@ fn deserialize_fixed_size_list_into<'a, A: Borrow<Value<'a>>>(
                 if value.len() == target.size() {
                     {
                         let child = target.mut_values();
-                        deserialize_into(child, &value);
+                        deserialize_into(child, value);
                     }
                     // unless alignment is already off, the if above should
                     // prevent this from ever happening.
@@ -342,6 +342,7 @@ fn try_generic_deserialize_into<'a, A: Borrow<Value<'a>>, M: 'static>(
 fn deserialize_into<'a, A: Borrow<Value<'a>>>(target: &mut Box<dyn MutableArray>, rows: &[A]) {
     // It'd be nice to have something like pattern matching for downcasting from Any
     // I'm not aware of anything like that, which leads to this ... ugliness
+    #[allow(clippy::if_same_then_else)]
     if let Some(list_array) = target
         .as_mut_any()
         .downcast_mut::<MutableListArray<i32, Box<dyn MutableArray>>>()
@@ -622,7 +623,7 @@ pub fn deserialize_records(json: &Value, schema: &Schema) -> Result<Chunk<Box<dy
     let mut results = schema
         .fields
         .iter()
-        .map(|f| (&f.name, allocate_array(&f)))
+        .map(|f| (&f.name, allocate_array(f)))
         .collect::<HashMap<_, _>>();
 
     match json {
