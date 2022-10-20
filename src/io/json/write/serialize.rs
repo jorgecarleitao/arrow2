@@ -171,7 +171,7 @@ fn fixed_size_list_serializer<'a>(
     let mut serializer = new_serializer(array.values().as_ref());
 
     Box::new(BufStreamingIterator::new(
-        zip_validity(0..array.len(), array.validity().map(|x| x.iter())),
+        ZipValidity::new(0..array.len(), array.validity().map(|x| x.iter())),
         move |ix, buf| {
             if let Some(_) = ix {
                 let length = array.size();
