@@ -164,7 +164,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// - the new offsets are not in monotonic increasing order.
     /// - any new offset is not in bounds of the backing array.
     /// - the passed iterator has no upper bound.
-    pub fn extend_offsets<II>(&mut self, expansion: II)
+    pub(crate) fn extend_offsets<II>(&mut self, expansion: II)
     where
         II: TrustedLen<Item = Option<O>>,
     {
@@ -197,7 +197,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// zero if the array is currently empty.
     ///
     /// Panics if the passed iterator has no upper bound.
-    pub unsafe fn unsafe_extend_offsets<II>(&mut self, expansion: II)
+    pub(crate) unsafe fn unsafe_extend_offsets<II>(&mut self, expansion: II)
     where
         II: TrustedLen<Item = Option<O>>,
     {
