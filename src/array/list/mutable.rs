@@ -166,7 +166,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// - the passed iterator has no upper bound.
     pub fn extend_offsets<II>(&mut self, expansion: II)
     where
-        II: IntoIterator<Item = Option<O>> + TrustedLen,
+        II: TrustedLen<Item = Option<O>>,
     {
         let current_len = self.offsets.len();
         let (_, upper) = expansion.size_hint();
@@ -199,7 +199,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// Panics if the passed iterator has no upper bound.
     pub unsafe fn unsafe_extend_offsets<II>(&mut self, expansion: II)
     where
-        II: IntoIterator<Item = Option<O>> + TrustedLen,
+        II: TrustedLen<Item = Option<O>>,
     {
         let (_, upper) = expansion.size_hint();
         let upper = upper.expect("iterator must have upper bound");
