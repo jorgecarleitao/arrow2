@@ -10,7 +10,7 @@ use std::iter::FromIterator;
 fn from_and_into_data() {
     let a = MutablePrimitiveArray::from_data(
         DataType::Int32,
-        Vec::from([1i32, 0]),
+        vec![1i32, 0],
         Some(MutableBitmap::from([true, false])),
     );
     assert_eq!(a.len(), 2);
@@ -30,7 +30,7 @@ fn from_vec() {
 fn to() {
     let a = MutablePrimitiveArray::from_data(
         DataType::Int32,
-        Vec::from([1i32, 0]),
+        vec![1i32, 0],
         Some(MutableBitmap::from([true, false])),
     );
     let a = a.to(DataType::Date32);
@@ -41,7 +41,7 @@ fn to() {
 fn values_mut_slice() {
     let mut a = MutablePrimitiveArray::from_data(
         DataType::Int32,
-        Vec::from([1i32, 0]),
+        vec![1i32, 0],
         Some(MutableBitmap::from([true, false])),
     );
     let values = a.values_mut_slice();
@@ -315,4 +315,16 @@ fn try_from_trusted_len_iter() {
 fn wrong_data_type() {
     let values = vec![1u8];
     MutablePrimitiveArray::from_data(DataType::Utf8, values, None);
+}
+
+#[test]
+fn extend_from_self() {
+    let mut a = MutablePrimitiveArray::from([Some(1), None]);
+
+    a.try_extend_from_self(&a.clone()).unwrap();
+
+    assert_eq!(
+        a,
+        MutablePrimitiveArray::from([Some(1), None, Some(1), None])
+    );
 }

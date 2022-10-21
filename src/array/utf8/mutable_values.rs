@@ -3,7 +3,7 @@ use std::{iter::FromIterator, sync::Arc};
 use crate::{
     array::{
         specification::{check_offsets_minimal, try_check_offsets_and_utf8},
-        Array, ArrayValuesIter, MutableArray, Offset, TryExtend, TryPush,
+        Array, ArrayValuesIter, MutableArray, Offset, TryExtend, TryExtendFromSelf, TryPush,
     },
     bitmap::MutableBitmap,
     datatypes::DataType,
@@ -405,5 +405,12 @@ impl<O: Offset, T: AsRef<str>> TryPush<T> for MutableUtf8ValuesArray<O> {
 
         self.offsets.push(size);
         Ok(())
+    }
+}
+
+impl<O: Offset> TryExtendFromSelf for MutableUtf8ValuesArray<O> {
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
+        self.values.extend_from_slice(&other.values);
+        try_extend_offsets(&mut self.offsets, &other.offsets)
     }
 }

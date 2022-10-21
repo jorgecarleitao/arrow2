@@ -63,3 +63,26 @@ fn new_with_field() {
     let expected = Int32Array::from(vec![None, None, None]);
     assert_eq!(a, &expected)
 }
+
+#[test]
+fn extend_from_self() {
+    let data = vec![
+        Some(vec![Some(1i32), Some(2), Some(3)]),
+        None,
+        Some(vec![Some(4), None, Some(6)]),
+    ];
+    let mut a = MutableFixedSizeListArray::new(MutablePrimitiveArray::<i32>::new(), 3);
+    a.try_extend(data.clone()).unwrap();
+
+    a.try_extend_from_self(&a.clone()).unwrap();
+    let a: FixedSizeListArray = a.into();
+
+    let mut expected = data.clone();
+    expected.extend(data);
+
+    let mut b = MutableFixedSizeListArray::new(MutablePrimitiveArray::<i32>::new(), 3);
+    b.try_extend(expected).unwrap();
+    let b: FixedSizeListArray = b.into();
+
+    assert_eq!(a, b);
+}

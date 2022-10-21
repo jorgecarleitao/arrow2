@@ -3,7 +3,8 @@ use std::{iter::FromIterator, sync::Arc};
 use crate::{
     array::{
         specification::{check_offsets_minimal, try_check_offsets},
-        Array, ArrayAccessor, ArrayValuesIter, MutableArray, Offset, TryExtend, TryPush,
+        Array, ArrayAccessor, ArrayValuesIter, MutableArray, Offset, TryExtend, TryExtendFromSelf,
+        TryPush,
     },
     bitmap::MutableBitmap,
     datatypes::DataType,
@@ -406,5 +407,12 @@ unsafe impl<'a, O: Offset> ArrayAccessor<'a> for MutableBinaryValuesArray<O> {
     #[inline]
     fn len(&self) -> usize {
         self.len()
+    }
+}
+
+impl<O: Offset> TryExtendFromSelf for MutableBinaryValuesArray<O> {
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
+        self.values.extend_from_slice(&other.values);
+        try_extend_offsets(&mut self.offsets, &other.offsets)
     }
 }

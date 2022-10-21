@@ -114,7 +114,7 @@ impl<O: Offset> BinaryArray<O> {
     /// Creates a new [`BinaryArray`] from a slice of optional `&[u8]`.
     // Note: this can't be `impl From` because Rust does not allow double `AsRef` on it.
     pub fn from<T: AsRef<[u8]>, P: AsRef<[Option<T>]>>(slice: P) -> Self {
-        Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
+        MutableBinaryArray::<O>::from(slice).into()
     }
 
     /// Returns an iterator of `Option<&[u8]>` over every element of this array.

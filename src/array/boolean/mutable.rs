@@ -2,7 +2,10 @@ use std::iter::FromIterator;
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, MutableArray, TryExtend, TryPush},
+    array::{
+        physical_binary::extend_validity, Array, MutableArray, TryExtend, TryExtendFromSelf,
+        TryPush,
+    },
     bitmap::MutableBitmap,
     datatypes::{DataType, PhysicalType},
     error::Result,
@@ -15,7 +18,7 @@ use super::BooleanArray;
 /// Converting a [`MutableBooleanArray`] into a [`BooleanArray`] is `O(1)`.
 /// # Implementation
 /// This struct does not allocate a validity until one is required (i.e. push a null to it).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MutableBooleanArray {
     data_type: DataType,
     values: MutableBitmap,
@@ -531,5 +534,15 @@ impl TryPush<Option<bool>> for MutableBooleanArray {
 impl PartialEq for MutableBooleanArray {
     fn eq(&self, other: &Self) -> bool {
         self.iter().eq(other.iter())
+    }
+}
+
+impl TryExtendFromSelf for MutableBooleanArray {
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
+        extend_validity(self.len(), &mut self.validity, &other.validity);
+
+        let slice = other.values.as_slice();
+        self.values.extend_from_slice(slice, 0, other.values.len());
+        Ok(())
     }
 }

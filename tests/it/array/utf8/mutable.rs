@@ -1,4 +1,4 @@
-use arrow2::array::{MutableArray, MutableUtf8Array, Utf8Array};
+use arrow2::array::{MutableArray, MutableUtf8Array, TryExtendFromSelf, Utf8Array};
 use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::DataType;
 
@@ -197,4 +197,16 @@ fn as_box_twice() {
     let mut a = MutableUtf8Array::<i32>::new();
     let _ = a.as_arc();
     let _ = a.as_arc();
+}
+
+#[test]
+fn extend_from_self() {
+    let mut a = MutableUtf8Array::<i32>::from(&[Some("aa"), None]);
+
+    a.try_extend_from_self(&a.clone()).unwrap();
+
+    assert_eq!(
+        a,
+        MutableUtf8Array::<i32>::from([Some("aa"), None, Some("aa"), None])
+    );
 }
