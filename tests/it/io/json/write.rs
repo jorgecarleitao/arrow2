@@ -235,13 +235,10 @@ fn nested_list_records() -> Result<()> {
 
     let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None]);
 
-    let schema = Schema {
-        fields: vec![
+    let schema: Schema = vec![
             Field::new("c1", c1.data_type().clone(), true),
             Field::new("c2", c2.data_type().clone(), true),
-        ],
-        metadata: Metadata::default(),
-    };
+        ].into();
 
     let arrays: Vec<Box<dyn Array>> = vec![Box::new(c1), Box::new(c2)];
     let chunk = Chunk::new(arrays);

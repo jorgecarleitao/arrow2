@@ -149,10 +149,7 @@ fn read_json_fixed_size_records() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let schema = Schema {
-        fields: vec![Field::new("a", a_expected.data_type().clone(), true)],
-        metadata: Metadata::default(),
-    };
+    let schema: Schema = vec![Field::new("a", a_expected.data_type().clone(), true)].into();
     let actual = read::deserialize_records(&json, &schema)?;
 
     for (f, arr) in schema.fields.iter().zip(actual.arrays().iter()) {
