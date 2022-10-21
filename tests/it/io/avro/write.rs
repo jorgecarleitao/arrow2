@@ -6,6 +6,7 @@ use arrow2::io::avro::avro_schema::file::{Block, CompressedBlock, Compression};
 use arrow2::io::avro::avro_schema::write::{compress, write_block, write_metadata};
 use arrow2::io::avro::write;
 use arrow2::types::months_days_ns;
+use avro_schema::schema::{Field as AvroField, Record, Schema as AvroSchema};
 
 use super::read::read_avro;
 
@@ -282,6 +283,96 @@ fn struct_data() -> Chunk<Box<dyn Array>> {
             Some([true, false].into()),
         )),
     ])
+}
+
+fn avro_record() -> Record {
+    Record {
+        name: "".to_string(),
+        namespace: None,
+        doc: None,
+        aliases: vec![],
+        fields: vec![
+            AvroField {
+                name: "struct".to_string(),
+                doc: None,
+                schema: AvroSchema::Record(Record {
+                    name: "r1".to_string(),
+                    namespace: None,
+                    doc: None,
+                    aliases: vec![],
+                    fields: vec![
+                        AvroField {
+                            name: "item1".to_string(),
+                            doc: None,
+                            schema: AvroSchema::Int(None),
+                            default: None,
+                            order: None,
+                            aliases: vec![],
+                        },
+                        AvroField {
+                            name: "item2".to_string(),
+                            doc: None,
+                            schema: AvroSchema::Union(vec![
+                                AvroSchema::Null,
+                                AvroSchema::Int(None),
+                            ]),
+                            default: None,
+                            order: None,
+                            aliases: vec![],
+                        },
+                    ],
+                }),
+                default: None,
+                order: None,
+                aliases: vec![],
+            },
+            AvroField {
+                name: "struct nullable".to_string(),
+                doc: None,
+                schema: AvroSchema::Union(vec![
+                    AvroSchema::Null,
+                    AvroSchema::Record(Record {
+                        name: "r2".to_string(),
+                        namespace: None,
+                        doc: None,
+                        aliases: vec![],
+                        fields: vec![
+                            AvroField {
+                                name: "item1".to_string(),
+                                doc: None,
+                                schema: AvroSchema::Int(None),
+                                default: None,
+                                order: None,
+                                aliases: vec![],
+                            },
+                            AvroField {
+                                name: "item2".to_string(),
+                                doc: None,
+                                schema: AvroSchema::Union(vec![
+                                    AvroSchema::Null,
+                                    AvroSchema::Int(None),
+                                ]),
+                                default: None,
+                                order: None,
+                                aliases: vec![],
+                            },
+                        ],
+                    }),
+                ]),
+                default: None,
+                order: None,
+                aliases: vec![],
+            },
+        ],
+    }
+}
+
+#[test]
+fn avro_record_schema() -> Result<()> {
+    let arrow_schema = struct_schema();
+    let record = write::to_record(&arrow_schema)?;
+    assert_eq!(record, avro_record());
+    Ok(())
 }
 
 #[test]
