@@ -82,6 +82,12 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Null, _) | (_, Null) => true,
         (Struct(_), _) => false,
         (_, Struct(_)) => false,
+        (FixedSizeList(list_from, _), List(list_to)) => {
+            can_cast_types(&list_from.data_type, &list_to.data_type)
+        }
+        (List(list_from), FixedSizeList(list_to, _)) => {
+            can_cast_types(&list_from.data_type, &list_to.data_type)
+        }
         (List(list_from), List(list_to)) => {
             can_cast_types(&list_from.data_type, &list_to.data_type)
         }
@@ -348,6 +354,57 @@ fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i
     )
 }
 
+fn cast_fixed_size_list_to_list(
+    fixed: &FixedSizeListArray,
+    to_type: &DataType,
+    options: CastOptions,
+) -> Result<ListArray<i32>> {
+    let new_values = cast(
+        fixed.values().as_ref(),
+        ListArray::<i32>::get_child_type(to_type),
+        options,
+    )?;
+
+    let offsets = (0..(fixed.len() + 1))
+        .map(|ix| (ix * fixed.size()) as i32)
+        .collect::<Vec<_>>()
+        .into();
+
+    Ok(ListArray::<i32>::new(
+        to_type.clone(),
+        offsets,
+        new_values,
+        fixed.validity().cloned(),
+    ))
+}
+
+fn cast_list_to_fixed_size_list(
+    list: &ListArray<i32>,
+    inner: &Field,
+    size: usize,
+    options: CastOptions,
+) -> Result<FixedSizeListArray> {
+    let offsets = list.offsets().iter();
+    let expected = (0..list.len()).map(|ix| (ix * size) as i32);
+
+    match offsets
+        .zip(expected)
+        .find(|(actual, expected)| *actual != expected)
+    {
+        Some(_) => Err(Error::NotYetImplemented(
+            "incompatible offsets in source list".to_string(),
+        )),
+        None => {
+            let new_values = cast(list.values().as_ref(), inner.data_type(), options)?;
+            Ok(FixedSizeListArray::new(
+                DataType::FixedSizeList(Box::new(inner.clone()), size),
+                new_values,
+                list.validity().cloned(),
+            ))
+        }
+    }
+}
+
 /// Cast `array` to the provided data type and return a new [`Array`] with
 /// type `to_type`, if possible.
 ///
@@ -358,6 +415,9 @@ fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i
 ///   in integer casts return null
 /// * Numeric to boolean: 0 returns `false`, any other value returns `true`
 /// * List to List: the underlying data type is cast
+/// * Fixed Size List to List: the underlying data type is cast
+/// * List to Fixed Size List: the offsets are checked for valid order, then the
+///   underlying type is cast.
 /// * PrimitiveArray to List: a list array with 1 value per slot is created
 /// * Date32 and Date64: precision lost when going to higher interval
 /// * Time32 and Time64: precision lost when going to higher interval
@@ -386,6 +446,17 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (_, Struct(_)) => Err(Error::NotYetImplemented(
             "Cannot cast to struct from other types".to_string(),
         )),
+        (List(_), FixedSizeList(inner, size)) => cast_list_to_fixed_size_list(
+            array.as_any().downcast_ref().unwrap(),
+            inner.as_ref(),
+            *size,
+            options,
+        )
+        .map(|x| x.boxed()),
+        (FixedSizeList(_, _), List(_)) => {
+            cast_fixed_size_list_to_list(array.as_any().downcast_ref().unwrap(), to_type, options)
+                .map(|x| x.boxed())
+        }
         (List(_), List(_)) => {
             cast_list::<i32>(array.as_any().downcast_ref().unwrap(), to_type, options)
                 .map(|x| x.boxed())

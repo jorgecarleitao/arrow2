@@ -701,6 +701,34 @@ fn list_to_list() {
 }
 
 #[test]
+fn list_to_from_fixed_size_list() {
+    let data = vec![
+        Some(vec![Some(1i32), Some(2), Some(3)]),
+        Some(vec![Some(4), Some(5), None]),
+        Some(vec![Some(6), None, Some(7)]),
+    ];
+
+    let fixed_data = data
+        .iter()
+        .map(|x| x.as_ref().map(|x| x.iter().map(|x| x.map(|x| x as u16))));
+
+    let mut list = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+    list.try_extend(data.clone()).unwrap();
+    let list: ListArray<i32> = list.into();
+
+    let inner = MutablePrimitiveArray::<u16>::new();
+    let mut fixed = MutableFixedSizeListArray::<MutablePrimitiveArray<u16>>::new(inner, 3);
+    fixed.try_extend(fixed_data).unwrap();
+    let fixed: FixedSizeListArray = fixed.into();
+
+    let result = cast(&list, fixed.data_type(), CastOptions::default()).unwrap();
+    assert_eq!(fixed, result.as_ref());
+
+    let result = cast(&fixed, list.data_type(), CastOptions::default()).unwrap();
+    assert_eq!(list, result.as_ref());
+}
+
+#[test]
 fn timestamp_with_tz_to_utf8() {
     let tz = "-02:00".to_string();
     let expected =
