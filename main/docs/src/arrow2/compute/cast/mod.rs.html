@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/compute/cast/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../../../arrow2/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../arrow2/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/compute/cast/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../arrow2/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -890,6 +890,77 @@
 <span id="890">890</span>
 <span id="891">891</span>
 <span id="892">892</span>
+<span id="893">893</span>
+<span id="894">894</span>
+<span id="895">895</span>
+<span id="896">896</span>
+<span id="897">897</span>
+<span id="898">898</span>
+<span id="899">899</span>
+<span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
+<span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
+<span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
+<span id="921">921</span>
+<span id="922">922</span>
+<span id="923">923</span>
+<span id="924">924</span>
+<span id="925">925</span>
+<span id="926">926</span>
+<span id="927">927</span>
+<span id="928">928</span>
+<span id="929">929</span>
+<span id="930">930</span>
+<span id="931">931</span>
+<span id="932">932</span>
+<span id="933">933</span>
+<span id="934">934</span>
+<span id="935">935</span>
+<span id="936">936</span>
+<span id="937">937</span>
+<span id="938">938</span>
+<span id="939">939</span>
+<span id="940">940</span>
+<span id="941">941</span>
+<span id="942">942</span>
+<span id="943">943</span>
+<span id="944">944</span>
+<span id="945">945</span>
+<span id="946">946</span>
+<span id="947">947</span>
+<span id="948">948</span>
+<span id="949">949</span>
+<span id="950">950</span>
+<span id="951">951</span>
+<span id="952">952</span>
+<span id="953">953</span>
+<span id="954">954</span>
+<span id="955">955</span>
+<span id="956">956</span>
+<span id="957">957</span>
+<span id="958">958</span>
+<span id="959">959</span>
+<span id="960">960</span>
+<span id="961">961</span>
+<span id="962">962</span>
+<span id="963">963</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Defines different casting operators such as [`cast`] or [`primitive_to_binary`].
 
 </span><span class="kw">mod </span>binary_to;
@@ -974,6 +1045,12 @@
         (Null, <span class="kw">_</span>) | (<span class="kw">_</span>, Null) =&gt; <span class="bool-val">true</span>,
         (Struct(<span class="kw">_</span>), <span class="kw">_</span>) =&gt; <span class="bool-val">false</span>,
         (<span class="kw">_</span>, Struct(<span class="kw">_</span>)) =&gt; <span class="bool-val">false</span>,
+        (FixedSizeList(list_from, <span class="kw">_</span>), List(list_to)) =&gt; {
+            can_cast_types(<span class="kw-2">&amp;</span>list_from.data_type, <span class="kw-2">&amp;</span>list_to.data_type)
+        }
+        (List(list_from), FixedSizeList(list_to, <span class="kw">_</span>)) =&gt; {
+            can_cast_types(<span class="kw-2">&amp;</span>list_from.data_type, <span class="kw-2">&amp;</span>list_to.data_type)
+        }
         (List(list_from), List(list_to)) =&gt; {
             can_cast_types(<span class="kw-2">&amp;</span>list_from.data_type, <span class="kw-2">&amp;</span>list_to.data_type)
         }
@@ -1240,6 +1317,57 @@
     )
 }
 
+<span class="kw">fn </span>cast_fixed_size_list_to_list(
+    fixed: <span class="kw-2">&amp;</span>FixedSizeListArray,
+    to_type: <span class="kw-2">&amp;</span>DataType,
+    options: CastOptions,
+) -&gt; <span class="prelude-ty">Result</span>&lt;ListArray&lt;i32&gt;&gt; {
+    <span class="kw">let </span>new_values = cast(
+        fixed.values().as_ref(),
+        ListArray::&lt;i32&gt;::get_child_type(to_type),
+        options,
+    )<span class="question-mark">?</span>;
+
+    <span class="kw">let </span>offsets = (<span class="number">0</span>..(fixed.len() + <span class="number">1</span>))
+        .map(|ix| (ix * fixed.size()) <span class="kw">as </span>i32)
+        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+        .into();
+
+    <span class="prelude-val">Ok</span>(ListArray::&lt;i32&gt;::new(
+        to_type.clone(),
+        offsets,
+        new_values,
+        fixed.validity().cloned(),
+    ))
+}
+
+<span class="kw">fn </span>cast_list_to_fixed_size_list(
+    list: <span class="kw-2">&amp;</span>ListArray&lt;i32&gt;,
+    inner: <span class="kw-2">&amp;</span>Field,
+    size: usize,
+    options: CastOptions,
+) -&gt; <span class="prelude-ty">Result</span>&lt;FixedSizeListArray&gt; {
+    <span class="kw">let </span>offsets = list.offsets().iter();
+    <span class="kw">let </span>expected = (<span class="number">0</span>..list.len()).map(|ix| (ix * size) <span class="kw">as </span>i32);
+
+    <span class="kw">match </span>offsets
+        .zip(expected)
+        .find(|(actual, expected)| <span class="kw-2">*</span>actual != expected)
+    {
+        <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(
+            <span class="string">&quot;incompatible offsets in source list&quot;</span>.to_string(),
+        )),
+        <span class="prelude-val">None </span>=&gt; {
+            <span class="kw">let </span>new_values = cast(list.values().as_ref(), inner.data_type(), options)<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(FixedSizeListArray::new(
+                DataType::FixedSizeList(Box::new(inner.clone()), size),
+                new_values,
+                list.validity().cloned(),
+            ))
+        }
+    }
+}
+
 <span class="doccomment">/// Cast `array` to the provided data type and return a new [`Array`] with
 /// type `to_type`, if possible.
 ///
@@ -1250,6 +1378,9 @@
 ///   in integer casts return null
 /// * Numeric to boolean: 0 returns `false`, any other value returns `true`
 /// * List to List: the underlying data type is cast
+/// * Fixed Size List to List: the underlying data type is cast
+/// * List to Fixed Size List: the offsets are checked for valid order, then the
+///   underlying type is cast.
 /// * PrimitiveArray to List: a list array with 1 value per slot is created
 /// * Date32 and Date64: precision lost when going to higher interval
 /// * Time32 and Time64: precision lost when going to higher interval
@@ -1278,6 +1409,17 @@
         (<span class="kw">_</span>, Struct(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(
             <span class="string">&quot;Cannot cast to struct from other types&quot;</span>.to_string(),
         )),
+        (List(<span class="kw">_</span>), FixedSizeList(inner, size)) =&gt; cast_list_to_fixed_size_list(
+            array.as_any().downcast_ref().unwrap(),
+            inner.as_ref(),
+            <span class="kw-2">*</span>size,
+            options,
+        )
+        .map(|x| x.boxed()),
+        (FixedSizeList(<span class="kw">_</span>, <span class="kw">_</span>), List(<span class="kw">_</span>)) =&gt; {
+            cast_fixed_size_list_to_list(array.as_any().downcast_ref().unwrap(), to_type, options)
+                .map(|x| x.boxed())
+        }
         (List(<span class="kw">_</span>), List(<span class="kw">_</span>)) =&gt; {
             cast_list::&lt;i32&gt;(array.as_any().downcast_ref().unwrap(), to_type, options)
                 .map(|x| x.boxed())
@@ -1783,4 +1925,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (06f049a35 2022-10-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (bed4ad65b 2022-10-25)" ></div></body></html>
