@@ -73,12 +73,12 @@ fn read_json_records() -> Result<()> {
     let a_iter = a_iter.into_iter().map(Some);
     let a_inner = MutableListArray::<i32, MutablePrimitiveArray<f64>>::new_with_field(
         MutablePrimitiveArray::<f64>::new(),
-        "inner",
-        false,
+        "item",
+        true,
     );
     let mut a_outer =
         MutableListArray::<i32, MutableListArray<i32, MutablePrimitiveArray<f64>>>::new_with_field(
-            a_inner, "a", false,
+            a_inner, "item", true,
         );
     a_outer.try_extend(a_iter).unwrap();
     let a_expected: ListArray<i32> = a_outer.into();
@@ -90,8 +90,8 @@ fn read_json_records() -> Result<()> {
     let b_iter = b_iter.into_iter().map(Some);
     let mut b = MutableListArray::<i32, MutablePrimitiveArray<i64>>::new_with_field(
         MutablePrimitiveArray::<i64>::new(),
-        "b",
-        false,
+        "item",
+        true,
     );
     b.try_extend(b_iter).unwrap();
     let b_expected: ListArray<i32> = b.into();
@@ -110,8 +110,7 @@ fn read_json_records() -> Result<()> {
             panic!("unexpected field found: {}", f.name);
         };
 
-        // No idea why assert_eq! doesn't work here, but this does.
-        assert_eq!(format!("{:?}", expected), format!("{:?}", actual));
+        assert_eq!(expected.to_boxed().as_ref(), actual);
     }
 
     Ok(())
@@ -141,7 +140,7 @@ fn read_json_fixed_size_records() -> Result<()> {
     let mut a = MutableFixedSizeListArray::<MutablePrimitiveArray<f64>>::new_with_field(
         MutablePrimitiveArray::<f64>::new(),
         "inner",
-        false,
+        true,
         4,
     );
     a.try_extend(a_iter).unwrap();
@@ -159,8 +158,7 @@ fn read_json_fixed_size_records() -> Result<()> {
             panic!("unexpected field found: {}", f.name);
         };
 
-        // No idea why assert_eq! doesn't work here, but this does.
-        assert_eq!(format!("{:?}", expected), format!("{:?}", actual));
+        assert_eq!(expected.to_boxed().as_ref(), actual);
     }
 
     Ok(())
