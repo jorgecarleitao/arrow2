@@ -317,69 +317,69 @@ fn deserialize_fixed_size_list_into<'a, A: Borrow<Value<'a>>>(
     }
 }
 
-fn try_deserialize_into<'a, A: Borrow<Value<'a>>, T: NativeType>(
+fn deserialize_primitive_into<'a, A: Borrow<Value<'a>>, T: NativeType>(
     target: &mut Box<dyn MutableArray>,
     rows: &[A],
     deserialize_into: fn(&mut MutablePrimitiveArray<T>, &[A]) -> (),
-) -> bool {
-    try_generic_deserialize_into(target, rows, deserialize_into)
+) {
+    generic_deserialize_into(target, rows, deserialize_into)
 }
 
-fn try_generic_deserialize_into<'a, A: Borrow<Value<'a>>, M: 'static>(
+fn generic_deserialize_into<'a, A: Borrow<Value<'a>>, M: 'static>(
     target: &mut Box<dyn MutableArray>,
     rows: &[A],
     deserialize_into: fn(&mut M, &[A]) -> (),
-) -> bool {
-    if let Some(array) = target.as_mut_any().downcast_mut::<M>() {
-        deserialize_into(array, rows);
-        true
-    } else {
-        false
-    }
+) {
+    deserialize_into(target.as_mut_any().downcast_mut::<M>().unwrap(), rows);
 }
 
 /// Deserialize `rows` by extending them into the given `target`
 fn deserialize_into<'a, A: Borrow<Value<'a>>>(target: &mut Box<dyn MutableArray>, rows: &[A]) {
-    // It'd be nice to have something like pattern matching for downcasting from Any
-    // I'm not aware of anything like that, which leads to this ... ugliness
-    #[allow(clippy::if_same_then_else)]
-    if let Some(list_array) = target
-        .as_mut_any()
-        .downcast_mut::<MutableListArray<i32, Box<dyn MutableArray>>>()
-    {
-        deserialize_list_into(list_array, rows);
-    } else if let Some(fixed_size_list_array) = target
-        .as_mut_any()
-        .downcast_mut::<MutableFixedSizeListArray<Box<dyn MutableArray>>>()
-    {
-        deserialize_fixed_size_list_into(fixed_size_list_array, rows);
-    } else if try_generic_deserialize_into::<_, MutableBooleanArray>(
-        target,
-        rows,
-        deserialize_boolean_into,
-    ) {
-    } else if try_deserialize_into::<_, f32>(target, rows, deserialize_float_into) {
-    } else if try_deserialize_into::<_, f64>(target, rows, deserialize_float_into) {
-    } else if try_deserialize_into::<_, i8>(target, rows, deserialize_int_into) {
-    } else if try_deserialize_into::<_, i16>(target, rows, deserialize_int_into) {
-    } else if try_deserialize_into::<_, i32>(target, rows, deserialize_int_into) {
-    } else if try_deserialize_into::<_, i64>(target, rows, deserialize_int_into) {
-    } else if try_deserialize_into::<_, u8>(target, rows, deserialize_int_into) {
-    } else if try_deserialize_into::<_, u16>(target, rows, deserialize_int_into) {
-    } else if try_deserialize_into::<_, u32>(target, rows, deserialize_int_into) {
-    } else if try_deserialize_into::<_, u64>(target, rows, deserialize_int_into) {
-    } else if try_generic_deserialize_into::<_, MutableUtf8Array<i32>>(
-        target,
-        rows,
-        deserialize_utf8_into,
-    ) {
-    } else if try_generic_deserialize_into::<_, MutableUtf8Array<i64>>(
-        target,
-        rows,
-        deserialize_utf8_into,
-    ) {
-    } else {
-        todo!();
+    match target.data_type() {
+        DataType::Boolean => generic_deserialize_into(target, rows, deserialize_boolean_into),
+        DataType::Float32 => {
+            deserialize_primitive_into::<_, f32>(target, rows, deserialize_float_into)
+        }
+        DataType::Float64 => {
+            deserialize_primitive_into::<_, f64>(target, rows, deserialize_float_into)
+        }
+        DataType::Int8 => deserialize_primitive_into::<_, i8>(target, rows, deserialize_int_into),
+        DataType::Int16 => deserialize_primitive_into::<_, i16>(target, rows, deserialize_int_into),
+        DataType::Int32 => deserialize_primitive_into::<_, i32>(target, rows, deserialize_int_into),
+        DataType::Int64 => deserialize_primitive_into::<_, i64>(target, rows, deserialize_int_into),
+        DataType::UInt8 => deserialize_primitive_into::<_, u8>(target, rows, deserialize_int_into),
+        DataType::UInt16 => {
+            deserialize_primitive_into::<_, u16>(target, rows, deserialize_int_into)
+        }
+        DataType::UInt32 => {
+            deserialize_primitive_into::<_, u32>(target, rows, deserialize_int_into)
+        }
+        DataType::UInt64 => {
+            deserialize_primitive_into::<_, u64>(target, rows, deserialize_int_into)
+        }
+        DataType::Utf8 => generic_deserialize_into::<_, MutableUtf8Array<i32>>(
+            target,
+            rows,
+            deserialize_utf8_into,
+        ),
+        DataType::LargeUtf8 => generic_deserialize_into::<_, MutableUtf8Array<i64>>(
+            target,
+            rows,
+            deserialize_utf8_into,
+        ),
+        DataType::FixedSizeList(_, _) => {
+            generic_deserialize_into(target, rows, deserialize_fixed_size_list_into)
+        }
+        DataType::List(_) => deserialize_list_into(
+            target
+                .as_mut_any()
+                .downcast_mut::<MutableListArray<i32, Box<dyn MutableArray>>>()
+                .unwrap(),
+            rows,
+        ),
+        _ => {
+            todo!()
+        }
     }
 }
 
