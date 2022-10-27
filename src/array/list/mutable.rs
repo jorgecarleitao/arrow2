@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{
-        specification::try_check_offsets, Array, Container, MutableArray, Offset, TryExtend,
-        TryPush,
-    },
+    array::{specification::try_check_offsets, Array, MutableArray, Offset, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::{DataType, Field},
     error::{Error, Result},
@@ -285,12 +282,6 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
 
     fn len(&self) -> usize {
         self.offsets.len() - 1
-    }
-}
-
-impl<O: Offset, M: MutableArray + Default + 'static> Container for MutableListArray<O, M> {
-    fn with_capacity(capacity: usize) -> Self {
-        MutableListArray::with_capacity(capacity)
     }
 }
 

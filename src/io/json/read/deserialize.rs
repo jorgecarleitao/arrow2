@@ -469,6 +469,51 @@ where
     Box::new(A::from(array))
 }
 
+/// A trait describing an array with a backing store that can be preallocated to
+/// a given size.
+pub(crate) trait Container {
+    /// Create this array with a given capacity.
+    fn with_capacity(capacity: usize) -> Self
+    where
+        Self: Sized;
+}
+
+impl<O: Offset> Container for MutableBinaryArray<O> {
+    fn with_capacity(capacity: usize) -> Self {
+        MutableBinaryArray::with_capacity(capacity)
+    }
+}
+
+impl Container for MutableBooleanArray {
+    fn with_capacity(capacity: usize) -> Self {
+        MutableBooleanArray::with_capacity(capacity)
+    }
+}
+
+impl Container for MutableFixedSizeBinaryArray {
+    fn with_capacity(capacity: usize) -> Self {
+        MutableFixedSizeBinaryArray::with_capacity(capacity, 0)
+    }
+}
+
+impl<O: Offset, M: MutableArray + Default + 'static> Container for MutableListArray<O, M> {
+    fn with_capacity(capacity: usize) -> Self {
+        MutableListArray::with_capacity(capacity)
+    }
+}
+
+impl<T: NativeType> Container for MutablePrimitiveArray<T> {
+    fn with_capacity(capacity: usize) -> Self {
+        MutablePrimitiveArray::with_capacity(capacity)
+    }
+}
+
+impl<O: Offset> Container for MutableUtf8Array<O> {
+    fn with_capacity(capacity: usize) -> Self {
+        MutableUtf8Array::with_capacity(capacity)
+    }
+}
+
 fn fill_generic_array_from<B, M, A>(f: fn(&mut M, &[B]), rows: &[B]) -> Box<dyn Array>
 where
     M: Container,
