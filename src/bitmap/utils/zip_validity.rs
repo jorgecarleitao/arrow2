@@ -101,10 +101,13 @@ where
     V: Iterator<Item = bool>,
 {
     /// Returns a new [`ZipValidity`]
-    pub fn new(values: I, validity: Option<V>) -> Self {
+    pub fn new(values: I, validity: Option<V>, null_count: Option<usize>) -> Self {
         match validity {
-            Some(validity) => Self::Optional(ZipValidityIter::new(values, validity)),
-            None => Self::Required(values),
+            // only if we have a validity and there are nulls we will iterate them
+            Some(validity) if null_count != Some(0) => {
+                Self::Optional(ZipValidityIter::new(values, validity))
+            }
+            _ => Self::Required(values),
         }
     }
 }

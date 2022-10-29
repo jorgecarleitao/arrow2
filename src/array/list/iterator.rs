@@ -38,6 +38,9 @@ impl<'a, O: Offset> ListArray<O> {
         ZipValidity::new(
             ListValuesIter::new(self),
             self.validity.as_ref().map(|x| x.iter()),
+            self.validity()
+                .as_ref()
+                .map(|validity| validity.unset_bits()),
         )
     }
 

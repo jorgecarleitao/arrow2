@@ -75,6 +75,7 @@ impl<'a> MapArray {
         ZipValidity::new(
             MapValuesIter::new(self),
             self.validity.as_ref().map(|x| x.iter()),
+            self.validity.as_ref().map(|x| x.unset_bits()),
         )
     }
 

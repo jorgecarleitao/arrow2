@@ -194,6 +194,10 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         ZipValidity::new(
             DictionaryValuesIter::new(self),
             self.keys.validity().as_ref().map(|x| x.iter()),
+            self.keys
+                .validity()
+                .as_ref()
+                .map(|validity| validity.unset_bits()),
         )
     }
 

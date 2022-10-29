@@ -144,6 +144,7 @@ impl<T: NativeType> PrimitiveArray<T> {
         ZipValidity::new(
             self.values().iter(),
             self.validity().as_ref().map(|x| x.iter()),
+            self.validity.as_ref().map(|validity| validity.unset_bits()),
         )
     }
 
