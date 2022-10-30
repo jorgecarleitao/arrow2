@@ -205,6 +205,11 @@
 <span id="205">205</span>
 <span id="206">206</span>
 <span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use crate</span>::{
@@ -264,6 +269,11 @@
             values,
             validity: <span class="prelude-val">None</span>,
         }
+    }
+
+    <span class="doccomment">/// Returns the size (number of elements per slot) of this [`FixedSizeListArray`].
+    </span><span class="kw">pub const fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.size
     }
 
     <span class="doccomment">/// The inner values

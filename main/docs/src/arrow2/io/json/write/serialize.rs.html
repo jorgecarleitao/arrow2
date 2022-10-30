@@ -278,6 +278,37 @@
 <span id="278">278</span>
 <span id="279">279</span>
 <span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
 </pre><pre class="rust"><code><span class="kw">use </span>chrono::{NaiveDate, NaiveDateTime};
 <span class="kw">use </span>lexical_core::ToLexical;
 <span class="kw">use </span>std::io::Write;
@@ -445,6 +476,34 @@
     ))
 }
 
+<span class="kw">fn </span>fixed_size_list_serializer&lt;<span class="lifetime">&#39;a</span>&gt;(
+    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>FixedSizeListArray,
+) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>serializer = new_serializer(array.values().as_ref());
+
+    Box::new(BufStreamingIterator::new(
+        ZipValidity::new(<span class="number">0</span>..array.len(), array.validity().map(|x| x.iter())),
+        <span class="kw">move </span>|ix, buf| {
+            <span class="kw">if </span>ix.is_some() {
+                <span class="kw">let </span>length = array.size();
+                buf.push(<span class="string">b&#39;[&#39;</span>);
+                <span class="kw">let </span><span class="kw-2">mut </span>is_first_row = <span class="bool-val">true</span>;
+                <span class="kw">for _ in </span><span class="number">0</span>..length {
+                    <span class="kw">if </span>!is_first_row {
+                        buf.push(<span class="string">b&#39;,&#39;</span>);
+                    }
+                    is_first_row = <span class="bool-val">false</span>;
+                    buf.extend(serializer.next().unwrap());
+                }
+                buf.push(<span class="string">b&#39;]&#39;</span>);
+            } <span class="kw">else </span>{
+                buf.extend(<span class="string">b&quot;null&quot;</span>);
+            }
+        },
+        <span class="macro">vec!</span>[],
+    ))
+}
+
 <span class="kw">fn </span>date_serializer&lt;<span class="lifetime">&#39;a</span>, T, F&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PrimitiveArray&lt;T&gt;,
     convert: F,
@@ -506,6 +565,9 @@
         DataType::Utf8 =&gt; utf8_serializer::&lt;i32&gt;(array.as_any().downcast_ref().unwrap()),
         DataType::LargeUtf8 =&gt; utf8_serializer::&lt;i64&gt;(array.as_any().downcast_ref().unwrap()),
         DataType::Struct(<span class="kw">_</span>) =&gt; struct_serializer(array.as_any().downcast_ref().unwrap()),
+        DataType::FixedSizeList(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+            fixed_size_list_serializer(array.as_any().downcast_ref().unwrap())
+        }
         DataType::List(<span class="kw">_</span>) =&gt; list_serializer::&lt;i32&gt;(array.as_any().downcast_ref().unwrap()),
         DataType::LargeList(<span class="kw">_</span>) =&gt; list_serializer::&lt;i64&gt;(array.as_any().downcast_ref().unwrap()),
         DataType::Date32 =&gt; date_serializer(array.as_any().downcast_ref().unwrap(), date32_to_date),

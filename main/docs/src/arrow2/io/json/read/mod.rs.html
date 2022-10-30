@@ -13,9 +13,9 @@
 <span class="kw">mod </span>infer_schema;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use </span>deserialize::_deserialize;
-<span class="kw">pub use </span>deserialize::deserialize;
+<span class="kw">pub use </span>deserialize::{deserialize, deserialize_records};
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use </span>infer_schema::coerce_data_type;
-<span class="kw">pub use </span>infer_schema::infer;
+<span class="kw">pub use </span>infer_schema::{infer, infer_records_schema};
 
 <span class="kw">pub use </span>json_deserializer;
 </code></pre></div>
