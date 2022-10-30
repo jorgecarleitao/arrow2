@@ -183,6 +183,20 @@
 <span id="183">183</span>
 <span id="184">184</span>
 <span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::trusted_len::TrustedLen;
 
 <span class="doccomment">/// An [`Iterator`] over validity and values.
@@ -263,6 +277,13 @@
 {
 }
 
+<span class="kw">impl</span>&lt;T, I, V&gt; ExactSizeIterator <span class="kw">for </span>ZipValidityIter&lt;T, I, V&gt;
+<span class="kw">where
+    </span>I: ExactSizeIterator&lt;Item = T&gt;,
+    V: ExactSizeIterator&lt;Item = bool&gt;,
+{
+}
+
 <span class="doccomment">/// An [`Iterator`] over [`Option&lt;T&gt;`]
 /// This enum can be used in two distinct ways:
 /// * as an iterator, via `Iterator::next`
@@ -338,6 +359,13 @@
             <span class="self">Self</span>::Optional(zipped) =&gt; zipped.next_back(),
         }
     }
+}
+
+<span class="kw">impl</span>&lt;T, I, V&gt; ExactSizeIterator <span class="kw">for </span>ZipValidity&lt;T, I, V&gt;
+<span class="kw">where
+    </span>I: ExactSizeIterator&lt;Item = T&gt;,
+    V: ExactSizeIterator&lt;Item = bool&gt;,
+{
 }
 
 <span class="kw">unsafe impl</span>&lt;T, I, V&gt; TrustedLen <span class="kw">for </span>ZipValidity&lt;T, I, V&gt;
