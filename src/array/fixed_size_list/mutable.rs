@@ -59,6 +59,11 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
         }
     }
 
+    /// Returns the size (number of elements per slot) of this [`FixedSizeListArray`].
+    pub const fn size(&self) -> usize {
+        self.size
+    }
+
     /// The inner values
     pub fn values(&self) -> &M {
         &self.values

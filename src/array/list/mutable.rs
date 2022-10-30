@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, MutableArray, Offset, TryExtend, TryPush},
+    array::{specification::try_check_offsets, Array, MutableArray, Offset, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::{DataType, Field},
     error::{Error, Result},
+    trusted_len::TrustedLen,
 };
 
 use super::ListArray;
@@ -152,6 +153,75 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         }
     }
 
+    /// Expand this array, using elements from the underlying backing array.
+    /// Assumes the expansion begins at the highest previous offset, or zero if
+    /// this [MutableListArray] is currently empty.
+    ///
+    /// Panics if:
+    /// - the new offsets are not in monotonic increasing order.
+    /// - any new offset is not in bounds of the backing array.
+    /// - the passed iterator has no upper bound.
+    pub(crate) fn extend_offsets<II>(&mut self, expansion: II)
+    where
+        II: TrustedLen<Item = Option<O>>,
+    {
+        let current_len = self.offsets.len();
+        let (_, upper) = expansion.size_hint();
+        let upper = upper.expect("iterator must have upper bound");
+        if current_len == 0 && upper > 0 {
+            self.offsets.push(O::zero());
+        }
+        // safety: checked below
+        unsafe { self.unsafe_extend_offsets(expansion) };
+        if self.offsets.len() > current_len {
+            // check all inserted offsets
+            try_check_offsets(&self.offsets[current_len..], self.values.len())
+                .expect("invalid offsets");
+        }
+        // else expansion is empty, and this is trivially safe.
+    }
+
+    /// Expand this array, using elements from the underlying backing array.
+    /// Assumes the expansion begins at the highest previous offset, or zero if
+    /// this [MutableListArray] is currently empty.
+    ///
+    /// # Safety
+    ///
+    /// Assumes that `offsets` are in order, and do not overrun the underlying
+    /// `values` backing array.
+    ///
+    /// Also assumes the expansion begins at the highest previous offset, or
+    /// zero if the array is currently empty.
+    ///
+    /// Panics if the passed iterator has no upper bound.
+    pub(crate) unsafe fn unsafe_extend_offsets<II>(&mut self, expansion: II)
+    where
+        II: TrustedLen<Item = Option<O>>,
+    {
+        let (_, upper) = expansion.size_hint();
+        let upper = upper.expect("iterator must have upper bound");
+        let final_size = self.len() + upper;
+        self.offsets.reserve(upper);
+
+        for item in expansion {
+            match item {
+                Some(offset) => {
+                    self.offsets.push(offset);
+                    if let Some(validity) = &mut self.validity {
+                        validity.push(true);
+                    }
+                }
+                None => self.push_null(),
+            }
+
+            if let Some(validity) = &mut self.validity {
+                if validity.capacity() < final_size {
+                    validity.reserve(final_size - validity.capacity());
+                }
+            }
+        }
+    }
+
     /// The values
     pub fn mut_values(&mut self) -> &mut M {
         &mut self.values
@@ -209,11 +279,15 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
             validity.shrink_to_fit()
         }
     }
+
+    fn len(&self) -> usize {
+        self.offsets.len() - 1
+    }
 }
 
 impl<O: Offset, M: MutableArray + 'static> MutableArray for MutableListArray<O, M> {
     fn len(&self) -> usize {
-        self.offsets.len() - 1
+        MutableListArray::len(self)
     }
 
     fn validity(&self) -> Option<&MutableBitmap> {
