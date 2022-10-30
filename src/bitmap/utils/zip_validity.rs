@@ -78,6 +78,13 @@ where
 {
 }
 
+impl<T, I, V> ExactSizeIterator for ZipValidityIter<T, I, V>
+where
+    I: ExactSizeIterator<Item = T>,
+    V: ExactSizeIterator<Item = bool>,
+{
+}
+
 /// An [`Iterator`] over [`Option<T>`]
 /// This enum can be used in two distinct ways:
 /// * as an iterator, via `Iterator::next`
@@ -153,6 +160,13 @@ where
             Self::Optional(zipped) => zipped.next_back(),
         }
     }
+}
+
+impl<T, I, V> ExactSizeIterator for ZipValidity<T, I, V>
+where
+    I: ExactSizeIterator<Item = T>,
+    V: ExactSizeIterator<Item = bool>,
+{
 }
 
 unsafe impl<T, I, V> TrustedLen for ZipValidity<T, I, V>
