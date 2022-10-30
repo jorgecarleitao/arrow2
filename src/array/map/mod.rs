@@ -167,7 +167,8 @@ impl MapArray {
         let validity = self
             .validity
             .clone()
-            .map(|x| x.slice_unchecked(offset, length));
+            .map(|bitmap| bitmap.slice_unchecked(offset, length))
+            .and_then(|bitmap| (bitmap.unset_bits() > 0).then(|| bitmap));
         Self {
             data_type: self.data_type.clone(),
             offsets,

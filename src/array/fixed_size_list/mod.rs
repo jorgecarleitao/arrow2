@@ -150,7 +150,8 @@ impl FixedSizeListArray {
         let validity = self
             .validity
             .clone()
-            .map(|x| x.slice_unchecked(offset, length));
+            .map(|bitmap| bitmap.slice_unchecked(offset, length))
+            .and_then(|bitmap| (bitmap.unset_bits() > 0).then(|| bitmap));
         let values = self
             .values
             .clone()
