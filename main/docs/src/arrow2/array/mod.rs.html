@@ -482,6 +482,13 @@
 <span id="482">482</span>
 <span id="483">483</span>
 <span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains the [`Array`] and [`MutableArray`] trait objects declaring arrays,
 //! as well as concrete arrays (such as [`Utf8Array`] and [`MutableUtf8Array`]).
 //!
@@ -952,6 +959,13 @@
 </span><span class="kw">pub trait </span>TryPush&lt;A&gt; {
     <span class="doccomment">/// Tries to push a new element.
     </span><span class="kw">fn </span>try_push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: A) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;;
+}
+
+<span class="doccomment">/// A trait describing the ability of a struct to extend from a reference of itself.
+/// Specialization of [`TryExtend`].
+</span><span class="kw">pub trait </span>TryExtendFromSelf {
+    <span class="doccomment">/// Tries to extend itself with elements from `other`, failing only on overflow.
+    </span><span class="kw">fn </span>try_extend_from_self(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;;
 }
 
 <span class="doccomment">/// Trait that [`BinaryArray`] and [`Utf8Array`] implement for the purposes of DRY.

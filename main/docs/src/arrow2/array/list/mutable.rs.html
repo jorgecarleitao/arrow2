@@ -345,10 +345,36 @@
 <span id="345">345</span>
 <span id="346">346</span>
 <span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use crate</span>::{
-    array::{specification::try_check_offsets, Array, MutableArray, Offset, TryExtend, TryPush},
+    array::{
+        physical_binary::{extend_validity, try_extend_offsets},
+        specification::try_check_offsets,
+        Array, MutableArray, Offset, TryExtend, TryExtendFromSelf, TryPush,
+    },
     bitmap::MutableBitmap,
     datatypes::{DataType, Field},
     error::{Error, <span class="prelude-ty">Result</span>},
@@ -358,7 +384,7 @@
 <span class="kw">use </span><span class="kw">super</span>::ListArray;
 
 <span class="doccomment">/// The mutable version of [`ListArray`].
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attribute">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableListArray&lt;O: Offset, M: MutableArray&gt; {
     data_type: DataType,
     offsets: Vec&lt;O&gt;,
@@ -418,6 +444,8 @@
     I: IntoIterator&lt;Item = <span class="prelude-ty">Option</span>&lt;T&gt;&gt;,
 {
     <span class="kw">fn </span>try_extend&lt;II: IntoIterator&lt;Item = <span class="prelude-ty">Option</span>&lt;I&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iter: II) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="kw">let </span>iter = iter.into_iter();
+        <span class="self">self</span>.reserve(iter.size_hint().<span class="number">0</span>);
         <span class="kw">for </span>items <span class="kw">in </span>iter {
             <span class="self">self</span>.try_push(items)<span class="question-mark">?</span>;
         }
@@ -441,6 +469,20 @@
             <span class="self">self</span>.push_null();
         }
         <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">impl</span>&lt;O, M&gt; TryExtendFromSelf <span class="kw">for </span>MutableListArray&lt;O, M&gt;
+<span class="kw">where
+    </span>O: Offset,
+    M: MutableArray + TryExtendFromSelf,
+{
+    <span class="kw">fn </span>try_extend_from_self(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        extend_validity(<span class="self">self</span>.len(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.validity, <span class="kw-2">&amp;</span>other.validity);
+
+        <span class="self">self</span>.values.try_extend_from_self(<span class="kw-2">&amp;</span>other.values)<span class="question-mark">?</span>;
+
+        try_extend_offsets(<span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets, <span class="kw-2">&amp;</span>other.offsets)
     }
 }
 
@@ -569,6 +611,12 @@
         }
     }
 
+    <span class="doccomment">/// Returns the length of this array
+    </span><span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.offsets.len() - <span class="number">1
+    </span>}
+
     <span class="doccomment">/// The values
     </span><span class="kw">pub fn </span>mut_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>M {
         <span class="kw-2">&amp;mut </span><span class="self">self</span>.values
@@ -626,10 +674,6 @@
             validity.shrink_to_fit()
         }
     }
-
-    <span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.offsets.len() - <span class="number">1
-    </span>}
 }
 
 <span class="kw">impl</span>&lt;O: Offset, M: MutableArray + <span class="lifetime">&#39;static</span>&gt; MutableArray <span class="kw">for </span>MutableListArray&lt;O, M&gt; {

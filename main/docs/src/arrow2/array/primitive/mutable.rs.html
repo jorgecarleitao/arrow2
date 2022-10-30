@@ -655,8 +655,22 @@
 <span id="655">655</span>
 <span id="656">656</span>
 <span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
+<span id="666">666</span>
+<span id="667">667</span>
+<span id="668">668</span>
+<span id="669">669</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, sync::Arc};
 
+<span class="kw">use </span><span class="kw">crate</span>::array::physical_binary::extend_validity;
+<span class="kw">use </span><span class="kw">crate</span>::array::TryExtendFromSelf;
 <span class="kw">use </span><span class="kw">crate</span>::bitmap::Bitmap;
 <span class="kw">use crate</span>::{
     array::{Array, MutableArray, TryExtend, TryPush},
@@ -1310,6 +1324,16 @@
 <span class="kw">impl</span>&lt;T: NativeType&gt; PartialEq <span class="kw">for </span>MutablePrimitiveArray&lt;T&gt; {
     <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
         <span class="self">self</span>.iter().eq(other.iter())
+    }
+}
+
+<span class="kw">impl</span>&lt;T: NativeType&gt; TryExtendFromSelf <span class="kw">for </span>MutablePrimitiveArray&lt;T&gt; {
+    <span class="kw">fn </span>try_extend_from_self(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        extend_validity(<span class="self">self</span>.len(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.validity, <span class="kw-2">&amp;</span>other.validity);
+
+        <span class="kw">let </span>slice = other.values.as_slice();
+        <span class="self">self</span>.values.extend_from_slice(slice);
+        <span class="prelude-val">Ok</span>(())
     }
 }
 </code></pre></div>

@@ -280,8 +280,46 @@
 <span id="280">280</span>
 <span id="281">281</span>
 <span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::array::Offset;
 <span class="kw">use </span><span class="kw">crate</span>::bitmap::MutableBitmap;
+<span class="kw">use </span><span class="kw">crate</span>::error::Error;
 
 <span class="doccomment">/// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
@@ -561,6 +599,42 @@
         offsets.push(length)
     }
     (offsets, values)
+}
+
+<span class="doccomment">/// Extends `offsets` with all offsets from `other`
+</span><span class="attribute">#[inline]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>try_extend_offsets&lt;O&gt;(offsets: <span class="kw-2">&amp;mut </span>Vec&lt;O&gt;, other: <span class="kw-2">&amp;</span>[O]) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+<span class="kw">where
+    </span>O: Offset,
+{
+    <span class="kw">let </span>lengths = other.windows(<span class="number">2</span>).map(|w| w[<span class="number">1</span>] - w[<span class="number">0</span>]);
+    <span class="kw">let </span><span class="kw-2">mut </span>last = <span class="kw-2">*</span>offsets.last().unwrap();
+
+    offsets.reserve(other.len() - <span class="number">1</span>);
+    <span class="kw">for </span>length <span class="kw">in </span>lengths {
+        <span class="kw">let </span>r = last.checked_add(<span class="kw-2">&amp;</span>length).ok_or(Error::Overflow)<span class="question-mark">?</span>;
+        last += length;
+        offsets.push(r)
+    }
+    <span class="prelude-val">Ok</span>(())
+}
+
+<span class="doccomment">/// Extends `validity` with all items from `other`
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>extend_validity(
+    length: usize,
+    validity: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
+    other: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
+) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(other) = other {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = validity {
+            <span class="kw">let </span>slice = other.as_slice();
+            validity.extend_from_slice(slice, <span class="number">0</span>, other.len())
+        } <span class="kw">else </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>new_validity = MutableBitmap::from_len_set(length);
+            new_validity.extend_from_slice(other.as_slice(), <span class="number">0</span>, other.len());
+            <span class="kw-2">*</span>validity = <span class="prelude-val">Some</span>(new_validity);
+        }
+    }
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>

@@ -478,24 +478,60 @@
 <span id="478">478</span>
 <span id="479">479</span>
 <span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, sync::Arc};
 
 <span class="kw">use crate</span>::{
-    array::{Array, MutableArray, Offset, TryExtend, TryPush},
-    bitmap::{Bitmap, MutableBitmap},
+    array::{Array, MutableArray, Offset, TryExtend, TryExtendFromSelf, TryPush},
+    bitmap::{
+        utils::{BitmapIter, ZipValidity},
+        Bitmap, MutableBitmap,
+    },
     datatypes::DataType,
     error::{Error, <span class="prelude-ty">Result</span>},
     trusted_len::TrustedLen,
 };
 
-<span class="kw">use super</span>::{BinaryArray, MutableBinaryValuesArray};
+<span class="kw">use super</span>::{BinaryArray, MutableBinaryValuesArray, MutableBinaryValuesIter};
 <span class="kw">use </span><span class="kw">crate</span>::array::physical_binary::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// The Arrow&#39;s equivalent to `Vec&lt;Option&lt;Vec&lt;u8&gt;&gt;&gt;`.
 /// Converting a [`MutableBinaryArray`] into a [`BinaryArray`] is `O(1)`.
 /// # Implementation
 /// This struct does not allocate a validity until one is required (i.e. push a null to it).
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attribute">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableBinaryArray&lt;O: Offset&gt; {
     values: MutableBinaryValuesArray&lt;O&gt;,
     validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
@@ -574,6 +610,12 @@
             <span class="macro">assert_eq!</span>(values.len(), validity.len());
         }
         <span class="self">Self </span>{ values, validity }
+    }
+
+    <span class="doccomment">/// Creates a new [`MutableBinaryArray`] from a slice of optional `&amp;[u8]`.
+    </span><span class="comment">// Note: this can&#39;t be `impl From` because Rust does not allow double `AsRef` on it.
+    </span><span class="kw">pub fn </span>from&lt;T: AsRef&lt;[u8]&gt;, P: AsRef&lt;[<span class="prelude-ty">Option</span>&lt;T&gt;]&gt;&gt;(slice: P) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
     }
 
     <span class="kw">fn </span>default_data_type() -&gt; DataType {
@@ -672,6 +714,16 @@
     <span class="doccomment">/// returns its offsets.
     </span><span class="kw">pub fn </span>offsets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;O&gt; {
         <span class="self">self</span>.values.offsets()
+    }
+
+    <span class="doccomment">/// Returns an iterator of `Option&lt;&amp;[u8]&gt;`
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ZipValidity&lt;<span class="kw-2">&amp;</span>[u8], MutableBinaryValuesIter&lt;O&gt;, BitmapIter&gt; {
+        ZipValidity::new(<span class="self">self</span>.values_iter(), <span class="self">self</span>.validity.as_ref().map(|x| x.iter()))
+    }
+
+    <span class="doccomment">/// Returns an iterator over the values of this array
+    </span><span class="kw">pub fn </span>values_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MutableBinaryValuesIter&lt;O&gt; {
+        <span class="self">self</span>.values.iter()
     }
 }
 
@@ -956,6 +1008,20 @@
             }
         }
         <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">impl</span>&lt;O: Offset&gt; PartialEq <span class="kw">for </span>MutableBinaryArray&lt;O&gt; {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="self">self</span>.iter().eq(other.iter())
+    }
+}
+
+<span class="kw">impl</span>&lt;O: Offset&gt; TryExtendFromSelf <span class="kw">for </span>MutableBinaryArray&lt;O&gt; {
+    <span class="kw">fn </span>try_extend_from_self(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        extend_validity(<span class="self">self</span>.len(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.validity, <span class="kw-2">&amp;</span>other.validity);
+
+        <span class="self">self</span>.values.try_extend_from_self(<span class="kw-2">&amp;</span>other.values)
     }
 }
 </code></pre></div>

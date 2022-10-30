@@ -278,10 +278,37 @@
 <span id="278">278</span>
 <span id="279">279</span>
 <span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use crate</span>::{
-    array::{Array, MutableArray},
+    array::{physical_binary::extend_validity, Array, MutableArray, TryExtendFromSelf},
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{Error, <span class="prelude-ty">Result</span>},
@@ -293,7 +320,7 @@
 /// Converting a [`MutableFixedSizeBinaryArray`] into a [`FixedSizeBinaryArray`] is `O(1)`.
 /// # Implementation
 /// This struct does not allocate a validity until one is required (i.e. push a null to it).
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attribute">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableFixedSizeBinaryArray {
     data_type: DataType,
     size: usize,
@@ -351,6 +378,23 @@
             Vec::&lt;u8&gt;::with_capacity(capacity * size),
             <span class="prelude-val">None</span>,
         )
+    }
+
+    <span class="doccomment">/// Creates a new [`MutableFixedSizeBinaryArray`] from a slice of optional `[u8]`.
+    </span><span class="comment">// Note: this can&#39;t be `impl From` because Rust does not allow double `AsRef` on it.
+    </span><span class="kw">pub fn </span>from&lt;<span class="kw">const </span>N: usize, P: AsRef&lt;[<span class="prelude-ty">Option</span>&lt;[u8; N]&gt;]&gt;&gt;(slice: P) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>values = slice
+            .as_ref()
+            .iter()
+            .copied()
+            .flat_map(|x| x.unwrap_or([<span class="number">0</span>; N]))
+            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+        <span class="kw">let </span>validity = slice
+            .as_ref()
+            .iter()
+            .map(|x| x.is_some())
+            .collect::&lt;MutableBitmap&gt;();
+        <span class="self">Self</span>::from_data(DataType::FixedSizeBinary(N), values, validity.into())
     }
 
     <span class="doccomment">/// tries to push a new entry to [`MutableFixedSizeBinaryArray`].
@@ -556,6 +600,16 @@
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>MutableFixedSizeBinaryArray {
     <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
         <span class="self">self</span>.iter().eq(other.iter())
+    }
+}
+
+<span class="kw">impl </span>TryExtendFromSelf <span class="kw">for </span>MutableFixedSizeBinaryArray {
+    <span class="kw">fn </span>try_extend_from_self(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        extend_validity(<span class="self">self</span>.len(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.validity, <span class="kw-2">&amp;</span>other.validity);
+
+        <span class="kw">let </span>slice = other.values.as_slice();
+        <span class="self">self</span>.values.extend_from_slice(slice);
+        <span class="prelude-val">Ok</span>(())
     }
 }
 </code></pre></div>

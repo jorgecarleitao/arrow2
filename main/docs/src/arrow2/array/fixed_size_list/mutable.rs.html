@@ -210,10 +210,32 @@
 <span id="210">210</span>
 <span id="211">211</span>
 <span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use crate</span>::{
-    array::{Array, MutableArray, TryExtend, TryPush},
+    array::{
+        physical_binary::extend_validity, Array, MutableArray, TryExtend, TryExtendFromSelf,
+        TryPush,
+    },
     bitmap::MutableBitmap,
     datatypes::{DataType, Field},
     error::{Error, <span class="prelude-ty">Result</span>},
@@ -222,7 +244,7 @@
 <span class="kw">use </span><span class="kw">super</span>::FixedSizeListArray;
 
 <span class="doccomment">/// The mutable version of [`FixedSizeListArray`].
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attribute">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableFixedSizeListArray&lt;M: MutableArray&gt; {
     data_type: DataType,
     size: usize,
@@ -274,6 +296,11 @@
     <span class="doccomment">/// Returns the size (number of elements per slot) of this [`FixedSizeListArray`].
     </span><span class="kw">pub const fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.size
+    }
+
+    <span class="doccomment">/// The length of this array
+    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.values.len() / <span class="self">self</span>.size
     }
 
     <span class="doccomment">/// The inner values
@@ -420,6 +447,17 @@
             <span class="self">self</span>.push_null();
         }
         <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">impl</span>&lt;M&gt; TryExtendFromSelf <span class="kw">for </span>MutableFixedSizeListArray&lt;M&gt;
+<span class="kw">where
+    </span>M: MutableArray + TryExtendFromSelf,
+{
+    <span class="kw">fn </span>try_extend_from_self(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        extend_validity(<span class="self">self</span>.len(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.validity, <span class="kw-2">&amp;</span>other.validity);
+
+        <span class="self">self</span>.values.try_extend_from_self(<span class="kw-2">&amp;</span>other.values)
     }
 }
 </code></pre></div>

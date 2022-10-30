@@ -544,9 +544,29 @@
 <span id="544">544</span>
 <span id="545">545</span>
 <span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, sync::Arc};
 
-<span class="kw">use </span><span class="kw">crate</span>::array::physical_binary::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::array::{physical_binary::<span class="kw-2">*</span>, TryExtendFromSelf};
 <span class="kw">use crate</span>::{
     array::{Array, MutableArray, Offset, TryExtend, TryPush},
     bitmap::{
@@ -562,7 +582,7 @@
 
 <span class="doccomment">/// A [`MutableArray`] that builds a [`Utf8Array`]. It differs
 /// from [`MutableUtf8ValuesArray`] in that it can build nullable [`Utf8Array`]s.
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attribute">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableUtf8Array&lt;O: Offset&gt; {
     values: MutableUtf8ValuesArray&lt;O&gt;,
     validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
@@ -670,6 +690,12 @@
         validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::try_new(data_type, offsets, values, validity).unwrap()
+    }
+
+    <span class="doccomment">/// Creates a new [`MutableUtf8Array`] from a slice of optional `&amp;[u8]`.
+    </span><span class="comment">// Note: this can&#39;t be `impl From` because Rust does not allow double `AsRef` on it.
+    </span><span class="kw">pub fn </span>from&lt;T: AsRef&lt;str&gt;, P: AsRef&lt;[<span class="prelude-ty">Option</span>&lt;T&gt;]&gt;&gt;(slice: P) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
     }
 
     <span class="kw">fn </span>default_data_type() -&gt; DataType {
@@ -1088,6 +1114,20 @@
             }
         }
         <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">impl</span>&lt;O: Offset&gt; PartialEq <span class="kw">for </span>MutableUtf8Array&lt;O&gt; {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="self">self</span>.iter().eq(other.iter())
+    }
+}
+
+<span class="kw">impl</span>&lt;O: Offset&gt; TryExtendFromSelf <span class="kw">for </span>MutableUtf8Array&lt;O&gt; {
+    <span class="kw">fn </span>try_extend_from_self(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        extend_validity(<span class="self">self</span>.len(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.validity, <span class="kw-2">&amp;</span>other.validity);
+
+        <span class="self">self</span>.values.try_extend_from_self(<span class="kw-2">&amp;</span>other.values)
     }
 }
 </code></pre></div>

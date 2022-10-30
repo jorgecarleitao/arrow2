@@ -337,28 +337,7 @@
 <span id="337">337</span>
 <span id="338">338</span>
 <span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
-<span id="346">346</span>
-<span id="347">347</span>
-<span id="348">348</span>
-<span id="349">349</span>
-<span id="350">350</span>
-<span id="351">351</span>
-<span id="352">352</span>
-<span id="353">353</span>
-<span id="354">354</span>
-<span id="355">355</span>
-</pre><pre class="rust"><code><span class="kw">use crate</span>::{
-    bitmap::{Bitmap, MutableBitmap},
-    buffer::Buffer,
-    datatypes::DataType,
-    error::Error,
-};
+</pre><pre class="rust"><code><span class="kw">use crate</span>::{bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::Error};
 
 <span class="kw">use </span><span class="kw">super</span>::Array;
 
@@ -677,18 +656,7 @@
     <span class="doccomment">/// Creates a new [`FixedSizeBinaryArray`] from a slice of optional `[u8]`.
     </span><span class="comment">// Note: this can&#39;t be `impl From` because Rust does not allow double `AsRef` on it.
     </span><span class="kw">pub fn </span>from&lt;<span class="kw">const </span>N: usize, P: AsRef&lt;[<span class="prelude-ty">Option</span>&lt;[u8; N]&gt;]&gt;&gt;(slice: P) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>values = slice
-            .as_ref()
-            .iter()
-            .copied()
-            .flat_map(|x| x.unwrap_or([<span class="number">0</span>; N]))
-            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-        <span class="kw">let </span>validity = slice
-            .as_ref()
-            .iter()
-            .map(|x| x.is_some())
-            .collect::&lt;MutableBitmap&gt;();
-        <span class="self">Self</span>::new(DataType::FixedSizeBinary(N), values.into(), validity.into())
+        MutableFixedSizeBinaryArray::from(slice).into()
     }
 }
 

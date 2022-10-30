@@ -676,7 +676,7 @@
     <span class="doccomment">/// Creates a new [`BinaryArray`] from a slice of optional `&amp;[u8]`.
     </span><span class="comment">// Note: this can&#39;t be `impl From` because Rust does not allow double `AsRef` on it.
     </span><span class="kw">pub fn </span>from&lt;T: AsRef&lt;[u8]&gt;, P: AsRef&lt;[<span class="prelude-ty">Option</span>&lt;T&gt;]&gt;&gt;(slice: P) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
+        MutableBinaryArray::&lt;O&gt;::from(slice).into()
     }
 
     <span class="doccomment">/// Returns an iterator of `Option&lt;&amp;[u8]&gt;` over every element of this array.
