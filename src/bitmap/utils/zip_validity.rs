@@ -161,3 +161,25 @@ where
     V: TrustedLen<Item = bool>,
 {
 }
+
+impl<T, I, V> ZipValidity<T, I, V>
+where
+    I: Iterator<Item = T>,
+    V: Iterator<Item = bool>,
+{
+    /// Unwrap into an iterator that has no null values.
+    pub fn unwrap_required(self) -> I {
+        match self {
+            ZipValidity::Required(i) => i,
+            _ => panic!("Could not 'unwrap_required'. 'ZipValidity' iterator has nulls."),
+        }
+    }
+
+    /// Unwrap into an iterator that has null values.
+    pub fn unwrap_optional(self) -> ZipValidityIter<T, I, V> {
+        match self {
+            ZipValidity::Optional(i) => i,
+            _ => panic!("Could not 'unwrap_optional'. 'ZipValidity' iterator has no nulls."),
+        }
+    }
+}
