@@ -220,7 +220,8 @@ impl<O: Offset> Utf8Array<O> {
         let validity = self
             .validity
             .clone()
-            .map(|x| x.slice_unchecked(offset, length));
+            .map(|bitmap| bitmap.slice_unchecked(offset, length))
+            .and_then(|bitmap| (bitmap.unset_bits() > 0).then(|| bitmap));
         // + 1: `length == 0` implies that we take the first offset.
         let offsets = self.offsets.clone().slice_unchecked(offset, length + 1);
         Self {
