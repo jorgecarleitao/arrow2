@@ -134,13 +134,6 @@
 <span id="134">134</span>
 <span id="135">135</span>
 <span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::error::{Error, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span><span class="kw">crate</span>::types::Offset;
 
@@ -214,13 +207,6 @@
 
         <span class="prelude-val">Ok</span>(())
     }
-}
-
-<span class="doccomment">/// # Panics iff:
-/// * the `offsets` is not monotonically increasing, or
-/// * any offset is larger or equal to `values_len`.
-</span><span class="kw">pub fn </span>check_offsets&lt;O: Offset&gt;(offsets: <span class="kw-2">&amp;</span>[O], values_len: usize) {
-    try_check_offsets(offsets, values_len).unwrap()
 }
 
 <span class="doccomment">/// Checks that `offsets` is monotonically increasing, and all offsets are less than or equal to

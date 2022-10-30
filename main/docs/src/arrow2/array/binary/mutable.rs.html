@@ -468,17 +468,27 @@
 <span id="468">468</span>
 <span id="469">469</span>
 <span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, sync::Arc};
 
 <span class="kw">use crate</span>::{
-    array::{specification::check_offsets, Array, MutableArray, Offset, TryExtend, TryPush},
-    bitmap::MutableBitmap,
+    array::{Array, MutableArray, Offset, TryExtend, TryPush},
+    bitmap::{Bitmap, MutableBitmap},
     datatypes::DataType,
     error::{Error, <span class="prelude-ty">Result</span>},
     trusted_len::TrustedLen,
 };
 
-<span class="kw">use </span><span class="kw">super</span>::BinaryArray;
+<span class="kw">use super</span>::{BinaryArray, MutableBinaryValuesArray};
 <span class="kw">use </span><span class="kw">crate</span>::array::physical_binary::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// The Arrow&#39;s equivalent to `Vec&lt;Option&lt;Vec&lt;u8&gt;&gt;&gt;`.
@@ -487,20 +497,18 @@
 /// This struct does not allocate a validity until one is required (i.e. push a null to it).
 </span><span class="attribute">#[derive(Debug)]
 </span><span class="kw">pub struct </span>MutableBinaryArray&lt;O: Offset&gt; {
-    data_type: DataType,
-    offsets: Vec&lt;O&gt;,
-    values: Vec&lt;u8&gt;,
+    values: MutableBinaryValuesArray&lt;O&gt;,
     validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; From&lt;MutableBinaryArray&lt;O&gt;&gt; <span class="kw">for </span>BinaryArray&lt;O&gt; {
     <span class="kw">fn </span>from(other: MutableBinaryArray&lt;O&gt;) -&gt; <span class="self">Self </span>{
-        BinaryArray::&lt;O&gt;::new(
-            other.data_type,
-            other.offsets.into(),
-            other.values.into(),
-            other.validity.map(|x| x.into()),
-        )
+        <span class="kw">let </span>validity = other.validity.and_then(|x| {
+            <span class="kw">let </span>validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt; = x.into();
+            validity
+        });
+        <span class="kw">let </span>array: BinaryArray&lt;O&gt; = other.values.into();
+        array.with_validity(validity)
     }
 }
 
@@ -518,74 +526,81 @@
         <span class="self">Self</span>::with_capacity(<span class="number">0</span>)
     }
 
-    <span class="doccomment">/// The canonical method to create a [`MutableBinaryArray`] out of low-end APIs.
+    <span class="doccomment">/// Returns a [`MutableBinaryArray`] created from its internal representation.
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * the offsets are not monotonically increasing
+    /// * The last offset is not equal to the values&#39; length.
+    /// * the validity&#39;s length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`&#39;s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity is `O(N)`
+    </span><span class="kw">pub fn </span>try_new(
+        data_type: DataType,
+        offsets: Vec&lt;O&gt;,
+        values: Vec&lt;u8&gt;,
+        validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>values = MutableBinaryValuesArray::try_new(data_type, offsets, values)<span class="question-mark">?</span>;
+
+        <span class="kw">if </span>validity
+            .as_ref()
+            .map_or(<span class="bool-val">false</span>, |validity| validity.len() != values.len())
+        {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
+                <span class="string">&quot;validity&#39;s length must be equal to the number of values&quot;</span>,
+            ));
+        }
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ values, validity })
+    }
+
+    <span class="doccomment">/// Create a [`MutableBinaryArray`] out of its inner attributes.
+    /// # Safety
+    /// The caller must ensure that every value between offsets is a valid utf8.
     /// # Panics
     /// This function panics iff:
     /// * The `offsets` and `values` are inconsistent
     /// * The validity is not `None` and its length is different from `offsets`&#39;s length minus one.
-    </span><span class="kw">pub fn </span>from_data(
+    </span><span class="kw">pub unsafe fn </span>new_unchecked(
         data_type: DataType,
         offsets: Vec&lt;O&gt;,
         values: Vec&lt;u8&gt;,
         validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
     ) -&gt; <span class="self">Self </span>{
-        check_offsets(<span class="kw-2">&amp;</span>offsets, values.len());
+        <span class="kw">let </span>values = MutableBinaryValuesArray::new_unchecked(data_type, offsets, values);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>validity) = validity {
-            <span class="macro">assert_eq!</span>(offsets.len() - <span class="number">1</span>, validity.len());
+            <span class="macro">assert_eq!</span>(values.len(), validity.len());
         }
-        <span class="kw">if </span>data_type.to_physical_type() != <span class="self">Self</span>::default_data_type().to_physical_type() {
-            <span class="macro">panic!</span>(<span class="string">&quot;MutableBinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary&quot;</span>)
-        }
-        <span class="self">Self </span>{
-            data_type,
-            offsets,
-            values,
-            validity,
-        }
+        <span class="self">Self </span>{ values, validity }
     }
 
     <span class="kw">fn </span>default_data_type() -&gt; DataType {
         BinaryArray::&lt;O&gt;::default_data_type()
     }
 
-    <span class="doccomment">/// Creates a new [`MutableBinaryArray`] with capacity for `capacity` values.
-    /// # Implementation
-    /// This does not allocate the validity.
+    <span class="doccomment">/// Initializes a new [`MutableBinaryArray`] with a pre-allocated capacity of slots.
     </span><span class="kw">pub fn </span>with_capacity(capacity: usize) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>offsets = Vec::&lt;O&gt;::with_capacity(capacity + <span class="number">1</span>);
-        offsets.push(O::default());
-        <span class="self">Self </span>{
-            data_type: BinaryArray::&lt;O&gt;::default_data_type(),
-            offsets,
-            values: Vec::&lt;u8&gt;::new(),
-            validity: <span class="prelude-val">None</span>,
-        }
+        <span class="self">Self</span>::with_capacities(capacity, <span class="number">0</span>)
     }
 
     <span class="doccomment">/// Initializes a new [`MutableBinaryArray`] with a pre-allocated capacity of slots and values.
+    /// # Implementation
+    /// This does not allocate the validity.
     </span><span class="kw">pub fn </span>with_capacities(capacity: usize, values: usize) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>offsets = Vec::&lt;O&gt;::with_capacity(capacity + <span class="number">1</span>);
-        offsets.push(O::default());
-
         <span class="self">Self </span>{
-            data_type: <span class="self">Self</span>::default_data_type(),
-            offsets,
-            values: Vec::&lt;u8&gt;::with_capacity(values),
+            values: MutableBinaryValuesArray::with_capacities(capacity, values),
             validity: <span class="prelude-val">None</span>,
         }
     }
 
-    <span class="doccomment">/// Reserves `additional` slots.
-    </span><span class="kw">pub fn </span>reserve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize) {
-        <span class="self">self</span>.offsets.reserve(additional);
+    <span class="doccomment">/// Reserves `additional` elements and `additional_values` on the values buffer.
+    </span><span class="kw">pub fn </span>reserve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize, additional_values: usize) {
+        <span class="self">self</span>.values.reserve(additional, additional_values);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = <span class="self">self</span>.validity.as_mut() {
             x.reserve(additional)
         }
-    }
-
-    <span class="attribute">#[inline]
-    </span><span class="kw">fn </span>last_offset(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; O {
-        <span class="kw-2">*</span><span class="self">self</span>.offsets.last().unwrap()
     }
 
     <span class="doccomment">/// Pushes a new element to the array.
@@ -598,12 +613,7 @@
     <span class="doccomment">/// Pop the last entry from [`MutableBinaryArray`].
     /// This function returns `None` iff this array is empty
     </span><span class="kw">pub fn </span>pop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-        <span class="kw">if </span><span class="self">self</span>.offsets.len() &lt; <span class="number">2 </span>{
-            <span class="kw">return </span><span class="prelude-val">None</span>;
-        }
-        <span class="self">self</span>.offsets.pop()<span class="question-mark">?</span>;
-        <span class="kw">let </span>value_start = <span class="self">self</span>.offsets.iter().last().cloned()<span class="question-mark">?</span>.to_usize();
-        <span class="kw">let </span>value = <span class="self">self</span>.values.split_off(value_start);
+        <span class="kw">let </span>value = <span class="self">self</span>.values.pop()<span class="question-mark">?</span>;
         <span class="self">self</span>.validity
             .as_mut()
             .map(|x| x.pop()<span class="question-mark">?</span>.then(|| ()))
@@ -622,10 +632,10 @@
     }
 
     <span class="kw">fn </span>init_validity(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">let </span><span class="kw-2">mut </span>validity = MutableBitmap::with_capacity(<span class="self">self</span>.offsets.capacity());
+        <span class="kw">let </span><span class="kw-2">mut </span>validity = MutableBitmap::with_capacity(<span class="self">self</span>.values.capacity());
         validity.extend_constant(<span class="self">self</span>.len(), <span class="bool-val">true</span>);
         validity.set(<span class="self">self</span>.len() - <span class="number">1</span>, <span class="bool-val">false</span>);
-        <span class="self">self</span>.validity = <span class="prelude-val">Some</span>(validity)
+        <span class="self">self</span>.validity = <span class="prelude-val">Some</span>(validity);
     }
 
     <span class="doccomment">/// Converts itself into an [`Array`].
@@ -637,54 +647,77 @@
     <span class="doccomment">/// Shrinks the capacity of the [`MutableBinaryArray`] to fit its current length.
     </span><span class="kw">pub fn </span>shrink_to_fit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.values.shrink_to_fit();
-        <span class="self">self</span>.offsets.shrink_to_fit();
         <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.validity {
             validity.shrink_to_fit()
         }
+    }
+
+    <span class="doccomment">/// Equivalent to `Self::try_new(...).unwrap()`
+    </span><span class="kw">pub fn </span>from_data(
+        data_type: DataType,
+        offsets: Vec&lt;O&gt;,
+        values: Vec&lt;u8&gt;,
+        validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::try_new(data_type, offsets, values, validity).unwrap()
     }
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; MutableBinaryArray&lt;O&gt; {
     <span class="doccomment">/// returns its values.
     </span><span class="kw">pub fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;u8&gt; {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.values
+        <span class="self">self</span>.values.values()
     }
 
     <span class="doccomment">/// returns its offsets.
     </span><span class="kw">pub fn </span>offsets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;O&gt; {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.offsets
+        <span class="self">self</span>.values.offsets()
     }
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; MutableArray <span class="kw">for </span>MutableBinaryArray&lt;O&gt; {
     <span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.offsets.len() - <span class="number">1
-    </span>}
+        <span class="self">self</span>.values.len()
+    }
 
     <span class="kw">fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>MutableBitmap&gt; {
         <span class="self">self</span>.validity.as_ref()
     }
 
     <span class="kw">fn </span>as_box(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        Box::new(BinaryArray::new(
-            <span class="self">self</span>.data_type.clone(),
-            std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets).into(),
-            std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into(),
-            std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity).map(|x| x.into()),
-        ))
+        <span class="comment">// Safety:
+        // `MutableBinaryArray` has the same invariants as `BinaryArray` and thus
+        // `BinaryArray` can be safely created from `MutableBinaryArray` without checks.
+        </span><span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into_inner();
+        <span class="kw">unsafe </span>{
+            BinaryArray::new_unchecked(
+                data_type,
+                offsets.into(),
+                values.into(),
+                std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity).map(|x| x.into()),
+            )
+        }
+        .boxed()
     }
 
     <span class="kw">fn </span>as_arc(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Array&gt; {
-        Arc::new(BinaryArray::new(
-            <span class="self">self</span>.data_type.clone(),
-            std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets).into(),
-            std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into(),
-            std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity).map(|x| x.into()),
-        ))
+        <span class="comment">// Safety:
+        // `MutableBinaryArray` has the same invariants as `BinaryArray` and thus
+        // `BinaryArray` can be safely created from `MutableBinaryArray` without checks.
+        </span><span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into_inner();
+        <span class="kw">unsafe </span>{
+            BinaryArray::new_unchecked(
+                data_type,
+                offsets.into(),
+                values.into(),
+                std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity).map(|x| x.into()),
+            )
+        }
+        .arced()
     }
 
     <span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
+        <span class="self">self</span>.values.data_type()
     }
 
     <span class="kw">fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any {
@@ -701,7 +734,7 @@
     }
 
     <span class="kw">fn </span>reserve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize) {
-        <span class="self">self</span>.reserve(additional)
+        <span class="self">self</span>.reserve(additional, <span class="number">0</span>)
     }
 
     <span class="kw">fn </span>shrink_to_fit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
@@ -823,7 +856,9 @@
         </span>P: AsRef&lt;[u8]&gt;,
         I: Iterator&lt;Item = P&gt;,
     {
-        <span class="kw">let </span>additional = extend_from_values_iter(<span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets, <span class="kw-2">&amp;mut </span><span class="self">self</span>.values, iterator);
+        <span class="kw">let </span>length = <span class="self">self</span>.values.len();
+        <span class="self">self</span>.values.extend(iterator);
+        <span class="kw">let </span>additional = <span class="self">self</span>.values.len() - length;
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="self">self</span>.validity.as_mut() {
             validity.extend_constant(additional, <span class="bool-val">true</span>);
@@ -841,10 +876,9 @@
         </span>P: AsRef&lt;[u8]&gt;,
         I: Iterator&lt;Item = P&gt;,
     {
-        <span class="kw">let </span>(<span class="kw">_</span>, upper) = iterator.size_hint();
-        <span class="kw">let </span>additional = upper.expect(<span class="string">&quot;extend_trusted_len_values requires an upper limit&quot;</span>);
-
-        extend_from_trusted_len_values_iter(<span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets, <span class="kw-2">&amp;mut </span><span class="self">self</span>.values, iterator);
+        <span class="kw">let </span>length = <span class="self">self</span>.values.len();
+        <span class="self">self</span>.values.extend_trusted_len_unchecked(iterator);
+        <span class="kw">let </span>additional = <span class="self">self</span>.values.len() - length;
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="self">self</span>.validity.as_mut() {
             validity.extend_constant(additional, <span class="bool-val">true</span>);
@@ -877,16 +911,8 @@
             <span class="self">self</span>.validity = <span class="prelude-val">Some</span>(validity);
         }
 
-        extend_from_trusted_len_iter(
-            <span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets,
-            <span class="kw-2">&amp;mut </span><span class="self">self</span>.values,
-            <span class="self">self</span>.validity.as_mut().unwrap(),
-            iterator,
-        );
-
-        <span class="kw">if </span><span class="self">self</span>.validity.as_mut().unwrap().unset_bits() == <span class="number">0 </span>{
-            <span class="self">self</span>.validity = <span class="prelude-val">None</span>;
-        }
+        <span class="self">self</span>.values
+            .extend_from_trusted_len_iter(<span class="self">self</span>.validity.as_mut().unwrap(), iterator);
     }
 
     <span class="doccomment">/// Creates a new [`MutableBinaryArray`] from a [`Iterator`] of `&amp;[u8]`.
@@ -905,7 +931,7 @@
 <span class="kw">impl</span>&lt;O: Offset, T: AsRef&lt;[u8]&gt;&gt; TryExtend&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>MutableBinaryArray&lt;O&gt; {
     <span class="kw">fn </span>try_extend&lt;I: IntoIterator&lt;Item = <span class="prelude-ty">Option</span>&lt;T&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iter: I) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>iter = iter.into_iter();
-        <span class="self">self</span>.reserve(iter.size_hint().<span class="number">0</span>);
+        <span class="self">self</span>.reserve(iter.size_hint().<span class="number">0</span>, <span class="number">0</span>);
         iter.try_for_each(|x| <span class="self">self</span>.try_push(x))
     }
 }
@@ -914,13 +940,7 @@
     <span class="kw">fn </span>try_push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: <span class="prelude-ty">Option</span>&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">match </span>value {
             <span class="prelude-val">Some</span>(value) =&gt; {
-                <span class="kw">let </span>bytes = value.as_ref();
-
-                <span class="kw">let </span>size = O::from_usize(<span class="self">self</span>.values.len() + bytes.len()).ok_or(Error::Overflow)<span class="question-mark">?</span>;
-
-                <span class="self">self</span>.values.extend_from_slice(bytes);
-
-                <span class="self">self</span>.offsets.push(size);
+                <span class="self">self</span>.values.try_push(value.as_ref())<span class="question-mark">?</span>;
 
                 <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.validity {
                     <span class="prelude-val">Some</span>(validity) =&gt; validity.push(<span class="bool-val">true</span>),
@@ -928,7 +948,7 @@
                 }
             }
             <span class="prelude-val">None </span>=&gt; {
-                <span class="self">self</span>.offsets.push(<span class="self">self</span>.last_offset());
+                <span class="self">self</span>.values.push(<span class="string">&quot;&quot;</span>);
                 <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.validity {
                     <span class="prelude-val">Some</span>(validity) =&gt; validity.push(<span class="bool-val">false</span>),
                     <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.init_validity(),

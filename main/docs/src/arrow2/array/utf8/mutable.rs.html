@@ -638,7 +638,11 @@
         values: Vec&lt;u8&gt;,
         validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
     ) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>::from_data_unchecked(data_type, offsets, values, validity)
+        <span class="kw">let </span>values = MutableUtf8ValuesArray::new_unchecked(data_type, offsets, values);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>validity) = validity {
+            <span class="macro">assert_eq!</span>(values.len(), validity.len());
+        }
+        <span class="self">Self </span>{ values, validity }
     }
 
     <span class="doccomment">/// Alias of `new_unchecked`
@@ -650,11 +654,7 @@
         values: Vec&lt;u8&gt;,
         validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
     ) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>values = MutableUtf8ValuesArray::new_unchecked(data_type, offsets, values);
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>validity) = validity {
-            <span class="macro">assert_eq!</span>(values.len(), validity.len());
-        }
-        <span class="self">Self </span>{ values, validity }
+        <span class="self">Self</span>::new_unchecked(data_type, offsets, values, validity)
     }
 
     <span class="doccomment">/// The canonical method to create a [`MutableUtf8Array`] out of low-end APIs.
