@@ -387,7 +387,7 @@ pub use equal::equal;
 pub use fmt::{get_display, get_value_display};
 
 pub use crate::types::Offset;
-pub use binary::{BinaryArray, BinaryValueIter, MutableBinaryArray};
+pub use binary::{BinaryArray, BinaryValueIter, MutableBinaryArray, MutableBinaryValuesArray};
 pub use boolean::{BooleanArray, MutableBooleanArray};
 pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
 pub use fixed_size_binary::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};

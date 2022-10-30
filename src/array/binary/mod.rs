@@ -21,6 +21,8 @@ pub(super) mod fmt;
 mod iterator;
 pub use iterator::*;
 mod from;
+mod mutable_values;
+pub use mutable_values::*;
 mod mutable;
 pub use mutable::*;
 
