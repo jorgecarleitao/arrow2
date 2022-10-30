@@ -617,6 +617,7 @@
 <span id="617">617</span>
 <span id="618">618</span>
 <span id="619">619</span>
+<span id="620">620</span>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::{
         utils::{BitmapIter, ZipValidity},
@@ -839,7 +840,8 @@
         <span class="kw">let </span>validity = <span class="self">self
             </span>.validity
             .clone()
-            .map(|x| x.slice_unchecked(offset, length));
+            .map(|bitmap| bitmap.slice_unchecked(offset, length))
+            .and_then(|bitmap| (bitmap.unset_bits() &gt; <span class="number">0</span>).then(|| bitmap));
         <span class="comment">// + 1: `length == 0` implies that we take the first offset.
         </span><span class="kw">let </span>offsets = <span class="self">self</span>.offsets.clone().slice_unchecked(offset, length + <span class="number">1</span>);
         <span class="self">Self </span>{
