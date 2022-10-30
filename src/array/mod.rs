@@ -470,6 +470,13 @@ pub trait TryPush<A> {
     fn try_push(&mut self, item: A) -> Result<()>;
 }
 
+/// A trait describing the ability of a struct to extend from a reference of itself.
+/// Specialization of [`TryExtend`].
+pub trait TryExtendFromSelf {
+    /// Tries to extend itself with elements from `other`, failing only on overflow.
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<()>;
+}
+
 /// Trait that [`BinaryArray`] and [`Utf8Array`] implement for the purposes of DRY.
 /// # Safety
 /// The implementer must ensure that

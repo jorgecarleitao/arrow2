@@ -48,3 +48,26 @@ fn push() {
     assert_eq!(array.offsets().as_ref(), [0, 3]);
     assert_eq!(array.validity(), None);
 }
+
+#[test]
+fn extend_from_self() {
+    let data = vec![
+        Some(vec![Some(1i32), Some(2), Some(3)]),
+        None,
+        Some(vec![Some(4), None, Some(6)]),
+    ];
+    let mut a = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+    a.try_extend(data.clone()).unwrap();
+
+    a.try_extend_from_self(&a.clone()).unwrap();
+    let a: ListArray<i32> = a.into();
+
+    let mut expected = data.clone();
+    expected.extend(data);
+
+    let mut b = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
+    b.try_extend(expected).unwrap();
+    let b: ListArray<i32> = b.into();
+
+    assert_eq!(a, b);
+}

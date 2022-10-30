@@ -1,5 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
+use crate::array::physical_binary::extend_validity;
+use crate::array::TryExtendFromSelf;
 use crate::bitmap::Bitmap;
 use crate::{
     array::{Array, MutableArray, TryExtend, TryPush},
@@ -653,5 +655,15 @@ where
 impl<T: NativeType> PartialEq for MutablePrimitiveArray<T> {
     fn eq(&self, other: &Self) -> bool {
         self.iter().eq(other.iter())
+    }
+}
+
+impl<T: NativeType> TryExtendFromSelf for MutablePrimitiveArray<T> {
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
+        extend_validity(self.len(), &mut self.validity, &other.validity);
+
+        let slice = other.values.as_slice();
+        self.values.extend_from_slice(slice);
+        Ok(())
     }
 }

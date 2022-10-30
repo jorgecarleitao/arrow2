@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{specification::try_check_offsets, Array, MutableArray, Offset, TryExtend, TryPush},
+    array::{
+        physical_binary::{extend_validity, try_extend_offsets},
+        specification::try_check_offsets,
+        Array, MutableArray, Offset, TryExtend, TryExtendFromSelf, TryPush,
+    },
     bitmap::MutableBitmap,
     datatypes::{DataType, Field},
     error::{Error, Result},
@@ -11,7 +15,7 @@ use crate::{
 use super::ListArray;
 
 /// The mutable version of [`ListArray`].
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MutableListArray<O: Offset, M: MutableArray> {
     data_type: DataType,
     offsets: Vec<O>,
@@ -71,6 +75,8 @@ where
     I: IntoIterator<Item = Option<T>>,
 {
     fn try_extend<II: IntoIterator<Item = Option<I>>>(&mut self, iter: II) -> Result<()> {
+        let iter = iter.into_iter();
+        self.reserve(iter.size_hint().0);
         for items in iter {
             self.try_push(items)?;
         }
@@ -94,6 +100,20 @@ where
             self.push_null();
         }
         Ok(())
+    }
+}
+
+impl<O, M> TryExtendFromSelf for MutableListArray<O, M>
+where
+    O: Offset,
+    M: MutableArray + TryExtendFromSelf,
+{
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
+        extend_validity(self.len(), &mut self.validity, &other.validity);
+
+        self.values.try_extend_from_self(&other.values)?;
+
+        try_extend_offsets(&mut self.offsets, &other.offsets)
     }
 }
 
@@ -222,6 +242,12 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         }
     }
 
+    /// Returns the length of this array
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.offsets.len() - 1
+    }
+
     /// The values
     pub fn mut_values(&mut self) -> &mut M {
         &mut self.values
@@ -278,10 +304,6 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         if let Some(validity) = &mut self.validity {
             validity.shrink_to_fit()
         }
-    }
-
-    fn len(&self) -> usize {
-        self.offsets.len() - 1
     }
 }
 

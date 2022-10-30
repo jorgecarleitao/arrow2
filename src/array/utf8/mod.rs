@@ -128,7 +128,7 @@ impl<O: Offset> Utf8Array<O> {
     /// A convenience method that uses [`Self::from_trusted_len_iter`].
     // Note: this can't be `impl From` because Rust does not allow double `AsRef` on it.
     pub fn from<T: AsRef<str>, P: AsRef<[Option<T>]>>(slice: P) -> Self {
-        Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
+        MutableUtf8Array::<O>::from(slice).into()
     }
 
     /// Returns an iterator of `Option<&str>`

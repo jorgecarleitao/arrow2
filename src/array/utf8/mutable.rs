@@ -1,6 +1,6 @@
 use std::{iter::FromIterator, sync::Arc};
 
-use crate::array::physical_binary::*;
+use crate::array::{physical_binary::*, TryExtendFromSelf};
 use crate::{
     array::{Array, MutableArray, Offset, TryExtend, TryPush},
     bitmap::{
@@ -16,7 +16,7 @@ use super::{MutableUtf8ValuesArray, MutableUtf8ValuesIter, StrAsBytes, Utf8Array
 
 /// A [`MutableArray`] that builds a [`Utf8Array`]. It differs
 /// from [`MutableUtf8ValuesArray`] in that it can build nullable [`Utf8Array`]s.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MutableUtf8Array<O: Offset> {
     values: MutableUtf8ValuesArray<O>,
     validity: Option<MutableBitmap>,
@@ -124,6 +124,12 @@ impl<O: Offset> MutableUtf8Array<O> {
         validity: Option<MutableBitmap>,
     ) -> Self {
         Self::try_new(data_type, offsets, values, validity).unwrap()
+    }
+
+    /// Creates a new [`MutableUtf8Array`] from a slice of optional `&[u8]`.
+    // Note: this can't be `impl From` because Rust does not allow double `AsRef` on it.
+    pub fn from<T: AsRef<str>, P: AsRef<[Option<T>]>>(slice: P) -> Self {
+        Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
     }
 
     fn default_data_type() -> DataType {
@@ -542,5 +548,19 @@ impl<O: Offset, T: AsRef<str>> TryPush<Option<T>> for MutableUtf8Array<O> {
             }
         }
         Ok(())
+    }
+}
+
+impl<O: Offset> PartialEq for MutableUtf8Array<O> {
+    fn eq(&self, other: &Self) -> bool {
+        self.iter().eq(other.iter())
+    }
+}
+
+impl<O: Offset> TryExtendFromSelf for MutableUtf8Array<O> {
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
+        extend_validity(self.len(), &mut self.validity, &other.validity);
+
+        self.values.try_extend_from_self(&other.values)
     }
 }

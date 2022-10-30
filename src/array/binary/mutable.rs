@@ -1,21 +1,24 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, MutableArray, Offset, TryExtend, TryPush},
-    bitmap::{Bitmap, MutableBitmap},
+    array::{Array, MutableArray, Offset, TryExtend, TryExtendFromSelf, TryPush},
+    bitmap::{
+        utils::{BitmapIter, ZipValidity},
+        Bitmap, MutableBitmap,
+    },
     datatypes::DataType,
     error::{Error, Result},
     trusted_len::TrustedLen,
 };
 
-use super::{BinaryArray, MutableBinaryValuesArray};
+use super::{BinaryArray, MutableBinaryValuesArray, MutableBinaryValuesIter};
 use crate::array::physical_binary::*;
 
 /// The Arrow's equivalent to `Vec<Option<Vec<u8>>>`.
 /// Converting a [`MutableBinaryArray`] into a [`BinaryArray`] is `O(1)`.
 /// # Implementation
 /// This struct does not allocate a validity until one is required (i.e. push a null to it).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MutableBinaryArray<O: Offset> {
     values: MutableBinaryValuesArray<O>,
     validity: Option<MutableBitmap>,
@@ -94,6 +97,12 @@ impl<O: Offset> MutableBinaryArray<O> {
             assert_eq!(values.len(), validity.len());
         }
         Self { values, validity }
+    }
+
+    /// Creates a new [`MutableBinaryArray`] from a slice of optional `&[u8]`.
+    // Note: this can't be `impl From` because Rust does not allow double `AsRef` on it.
+    pub fn from<T: AsRef<[u8]>, P: AsRef<[Option<T>]>>(slice: P) -> Self {
+        Self::from_trusted_len_iter(slice.as_ref().iter().map(|x| x.as_ref()))
     }
 
     fn default_data_type() -> DataType {
@@ -192,6 +201,16 @@ impl<O: Offset> MutableBinaryArray<O> {
     /// returns its offsets.
     pub fn offsets(&self) -> &Vec<O> {
         self.values.offsets()
+    }
+
+    /// Returns an iterator of `Option<&[u8]>`
+    pub fn iter(&self) -> ZipValidity<&[u8], MutableBinaryValuesIter<O>, BitmapIter> {
+        ZipValidity::new(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
+    }
+
+    /// Returns an iterator over the values of this array
+    pub fn values_iter(&self) -> MutableBinaryValuesIter<O> {
+        self.values.iter()
     }
 }
 
@@ -476,5 +495,19 @@ impl<O: Offset, T: AsRef<[u8]>> TryPush<Option<T>> for MutableBinaryArray<O> {
             }
         }
         Ok(())
+    }
+}
+
+impl<O: Offset> PartialEq for MutableBinaryArray<O> {
+    fn eq(&self, other: &Self) -> bool {
+        self.iter().eq(other.iter())
+    }
+}
+
+impl<O: Offset> TryExtendFromSelf for MutableBinaryArray<O> {
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
+        extend_validity(self.len(), &mut self.validity, &other.validity);
+
+        self.values.try_extend_from_self(&other.values)
     }
 }

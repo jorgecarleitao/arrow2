@@ -154,3 +154,15 @@ fn shrink_to_fit_and_capacity() {
     array.shrink_to_fit();
     assert_eq!(array.capacity(), 1);
 }
+
+#[test]
+fn extend_from_self() {
+    let mut a = MutableFixedSizeBinaryArray::from([Some([1u8, 2u8]), None]);
+
+    a.try_extend_from_self(&a.clone()).unwrap();
+
+    assert_eq!(
+        a,
+        MutableFixedSizeBinaryArray::from([Some([1u8, 2u8]), None, Some([1u8, 2u8]), None])
+    );
+}

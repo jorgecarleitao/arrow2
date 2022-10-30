@@ -1,4 +1,4 @@
-use arrow2::array::{MutableArray, MutableBooleanArray};
+use arrow2::array::{MutableArray, MutableBooleanArray, TryExtendFromSelf};
 use arrow2::bitmap::MutableBitmap;
 use arrow2::datatypes::DataType;
 use arrow2::error::Result;
@@ -161,4 +161,16 @@ fn shrink_to_fit() {
     a.push(true);
     a.shrink_to_fit();
     assert_eq!(a.capacity(), 8);
+}
+
+#[test]
+fn extend_from_self() {
+    let mut a = MutableBooleanArray::from([Some(true), None]);
+
+    a.try_extend_from_self(&a.clone()).unwrap();
+
+    assert_eq!(
+        a,
+        MutableBooleanArray::from([Some(true), None, Some(true), None])
+    );
 }

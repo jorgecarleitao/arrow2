@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, MutableArray, TryExtend, TryPush},
+    array::{
+        physical_binary::extend_validity, Array, MutableArray, TryExtend, TryExtendFromSelf,
+        TryPush,
+    },
     bitmap::MutableBitmap,
     datatypes::{DataType, Field},
     error::{Error, Result},
@@ -10,7 +13,7 @@ use crate::{
 use super::FixedSizeListArray;
 
 /// The mutable version of [`FixedSizeListArray`].
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MutableFixedSizeListArray<M: MutableArray> {
     data_type: DataType,
     size: usize,
@@ -62,6 +65,11 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
     /// Returns the size (number of elements per slot) of this [`FixedSizeListArray`].
     pub const fn size(&self) -> usize {
         self.size
+    }
+
+    /// The length of this array
+    pub fn len(&self) -> usize {
+        self.values.len() / self.size
     }
 
     /// The inner values
@@ -208,5 +216,16 @@ where
             self.push_null();
         }
         Ok(())
+    }
+}
+
+impl<M> TryExtendFromSelf for MutableFixedSizeListArray<M>
+where
+    M: MutableArray + TryExtendFromSelf,
+{
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
+        extend_validity(self.len(), &mut self.validity, &other.validity);
+
+        self.values.try_extend_from_self(&other.values)
     }
 }
