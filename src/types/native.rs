@@ -357,6 +357,18 @@ impl f16 {
         self.0 & 0x7FFFu16 > 0x7C00u16
     }
 
+    /// Casts from u16.
+    #[inline]
+    pub const fn from_bits(bits: u16) -> f16 {
+        f16(bits)
+    }
+
+    /// Casts to u16.
+    #[inline]
+    pub const fn to_bits(self) -> u16 {
+        self.0
+    }
+
     /// Casts this `f16` to `f32`
     pub fn to_f32(self) -> f32 {
         let i = self.0;
