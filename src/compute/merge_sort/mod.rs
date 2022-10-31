@@ -509,8 +509,14 @@ pub fn build_comparator_impl<'a>(
             let descending = pairs[c].1.descending;
             let null_first = pairs[c].1.nulls_first;
             let (l_is_valid, r_is_valid, value_comparator) = &data[c];
-            let mut result = match ((l_is_valid)(left_row), (r_is_valid)(right_row)) {
-                (true, true) => (value_comparator)(left_row, right_row),
+            let result = match ((l_is_valid)(left_row), (r_is_valid)(right_row)) {
+                (true, true) => {
+                    let result = (value_comparator)(left_row, right_row);
+                    match descending {
+                        true => result.reverse(),
+                        false => result,
+                    }
+                }
                 (false, true) => {
                     if null_first {
                         Ordering::Less
@@ -526,9 +532,6 @@ pub fn build_comparator_impl<'a>(
                     }
                 }
                 (false, false) => Ordering::Equal,
-            };
-            if descending {
-                result = result.reverse();
             };
             if result != Ordering::Equal {
                 // we found a relevant comparison => short-circuit and return it
