@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::hash::BuildHasher;
+use std::hash::{BuildHasher, Hash, Hasher};
 use std::num::NonZeroU32;
 use std::ops::Index;
 
@@ -41,6 +41,16 @@ pub struct OrderPreservingInterner {
     hasher: ahash::RandomState,
     // A SwissTable hashmap.
     lookup: HashMap<Interned, (), ()>,
+}
+
+/// Calculates the hash of a single value.
+#[inline]
+fn hash_one<T: Hash>(hasher: &ahash::RandomState, x: T) -> u64 {
+    // Rewrite as `hasher.hash——one(&divisor)` after
+    // https://github.com/rust-lang/rust/issues/86161 is merged.
+    let mut hasher = hasher.build_hasher();
+    x.hash(&mut hasher);
+    hasher.finish()
 }
 
 impl OrderPreservingInterner {
@@ -70,7 +80,7 @@ impl OrderPreservingInterner {
             };
 
             let v = value.as_ref();
-            let hash = self.hasher.hash_one(v);
+            let hash = hash_one(&self.hasher, v);
             let entry = self
                 .lookup
                 .raw_entry_mut()
@@ -113,9 +123,10 @@ impl OrderPreservingInterner {
                     self.keys.values.push(0);
                     let interned = self.keys.append();
 
-                    let hasher = &mut self.hasher;
                     let values = &self.values;
-                    v.insert_with_hasher(hash, interned, (), |key| hasher.hash_one(&values[*key]));
+                    v.insert_with_hasher(hash, interned, (), |key| {
+                        hash_one(&self.hasher, &values[*key])
+                    });
                     out[idx] = Some(interned);
                 }
             }
@@ -154,6 +165,12 @@ impl OrderPreservingInterner {
 
         let slot_idx = normalized_key[len - 2].checked_sub(2)?;
         Some(bucket.slots.get(slot_idx as usize)?.value)
+    }
+
+    #[cfg(test)]
+    /// Returns the interned value for a given [`Interned`]
+    pub fn value(&self, key: Interned) -> &[u8] {
+        self.values.index(key)
     }
 }
 

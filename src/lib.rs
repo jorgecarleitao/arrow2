@@ -12,8 +12,6 @@
 #![allow(clippy::type_complexity)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "simd", feature(portable_simd))]
-#![feature(build_hasher_simple_hash_one)]
-#![feature(int_roundings)]
 
 #[macro_use]
 pub mod array;

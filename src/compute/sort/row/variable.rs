@@ -31,10 +31,18 @@ pub const EMPTY_SENTINEL: u8 = 1;
 /// Indicates a non-empty string
 pub const NON_EMPTY_SENTINEL: u8 = 2;
 
+/// Returns the ceil of `value`/`divisor`
+#[inline]
+fn div_ceil(value: usize, divisor: usize) -> usize {
+    // Rewrite as `value.div_ceil(&divisor)` after
+    // https://github.com/rust-lang/rust/issues/88581 is merged.
+    value / divisor + (0 != value % divisor) as usize
+}
+
 /// Returns the length of the encoded representation of a byte array, including the null byte
 pub fn encoded_len(a: Option<&[u8]>) -> usize {
     match a {
-        Some(a) => 1 + a.len().div_ceil(BLOCK_SIZE) * (BLOCK_SIZE + 1),
+        Some(a) => 1 + div_ceil(a.len(), BLOCK_SIZE) * (BLOCK_SIZE + 1),
         None => 1,
     }
 }
@@ -61,7 +69,7 @@ pub fn encode<'a, I: Iterator<Item = Option<&'a [u8]>>>(out: &mut Rows, i: I, op
                 *offset += 1;
             }
             Some(val) => {
-                let block_count = val.len().div_ceil(BLOCK_SIZE);
+                let block_count = div_ceil(val.len(), BLOCK_SIZE);
                 let end_offset = *offset + 1 + block_count * (BLOCK_SIZE + 1);
                 let to_write = &mut out.buffer[*offset..end_offset];
 
