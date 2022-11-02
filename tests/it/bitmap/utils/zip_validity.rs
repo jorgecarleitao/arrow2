@@ -8,7 +8,7 @@ fn basic() {
     let a = Bitmap::from([true, false]);
     let a = Some(a.iter());
     let values = vec![0, 1];
-    let zip = ZipValidity::new(values.into_iter(), a, None);
+    let zip = ZipValidity::new(values.into_iter(), a);
 
     let a = zip.collect::<Vec<_>>();
     assert_eq!(a, vec![Some(0), None]);
@@ -19,7 +19,7 @@ fn complete() {
     let a = Bitmap::from([true, false, true, false, true, false, true, false]);
     let a = Some(a.iter());
     let values = vec![0, 1, 2, 3, 4, 5, 6, 7];
-    let zip = ZipValidity::new(values.into_iter(), a, None);
+    let zip = ZipValidity::new(values.into_iter(), a);
 
     let a = zip.collect::<Vec<_>>();
     assert_eq!(
@@ -31,7 +31,6 @@ fn complete() {
 #[test]
 fn slices() {
     let a = Bitmap::from([true, false]);
-    let null_count = Some(a.unset_bits());
     let a = Some(a.iter());
     let offsets = vec![0, 2, 3];
     let values = vec![1, 2, 3];
@@ -40,7 +39,7 @@ fn slices() {
         let end = x[1];
         &values[start..end]
     });
-    let zip = ZipValidity::new(iter, a, null_count);
+    let zip = ZipValidity::new(iter, a);
 
     let a = zip.collect::<Vec<_>>();
     assert_eq!(a, vec![Some([1, 2].as_ref()), None]);
@@ -51,7 +50,7 @@ fn byte() {
     let a = Bitmap::from([true, false, true, false, false, true, true, false, true]);
     let a = Some(a.iter());
     let values = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
-    let zip = ZipValidity::new(values.into_iter(), a, None);
+    let zip = ZipValidity::new(values.into_iter(), a);
 
     let a = zip.collect::<Vec<_>>();
     assert_eq!(
@@ -75,7 +74,7 @@ fn offset() {
     let a = Bitmap::from([true, false, true, false, false, true, true, false, true]).slice(1, 8);
     let a = Some(a.iter());
     let values = vec![0, 1, 2, 3, 4, 5, 6, 7];
-    let zip = ZipValidity::new(values.into_iter(), a, None);
+    let zip = ZipValidity::new(values.into_iter(), a);
 
     let a = zip.collect::<Vec<_>>();
     assert_eq!(
@@ -87,7 +86,7 @@ fn offset() {
 #[test]
 fn none() {
     let values = vec![0, 1, 2];
-    let zip = ZipValidity::new(values.into_iter(), None::<BitmapIter>, None);
+    let zip = ZipValidity::new(values.into_iter(), None::<BitmapIter>);
 
     let a = zip.collect::<Vec<_>>();
     assert_eq!(a, vec![Some(0), Some(1), Some(2)]);
@@ -96,10 +95,9 @@ fn none() {
 #[test]
 fn rev() {
     let a = Bitmap::from([true, false, true, false, false, true, true, false, true]).slice(1, 8);
-    let null_count = Some(a.unset_bits());
     let a = Some(a.iter());
     let values = vec![0, 1, 2, 3, 4, 5, 6, 7];
-    let zip = ZipValidity::new(values.into_iter(), a, null_count);
+    let zip = ZipValidity::new(values.into_iter(), a);
 
     let result = zip.rev().collect::<Vec<_>>();
     let expected = vec![None, Some(1), None, None, Some(4), Some(5), None, Some(7)]

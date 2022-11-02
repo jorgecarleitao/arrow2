@@ -35,13 +35,7 @@ impl<'a, O: Offset> IntoIterator for &'a ListArray<O> {
 impl<'a, O: Offset> ListArray<O> {
     /// Returns an iterator of `Option<Box<dyn Array>>`
     pub fn iter(&'a self) -> ZipIter<'a, O> {
-        ZipValidity::new(
-            ListValuesIter::new(self),
-            self.validity.as_ref().map(|x| x.iter()),
-            self.validity()
-                .as_ref()
-                .map(|validity| validity.unset_bits()),
-        )
+        ZipValidity::new_with_validity(ListValuesIter::new(self), self.validity.as_ref())
     }
 
     /// Returns an iterator of `Box<dyn Array>`

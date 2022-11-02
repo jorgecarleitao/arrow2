@@ -16,9 +16,9 @@ impl<T: NativeType> IntoIterator for PrimitiveArray<T> {
     fn into_iter(self) -> Self::IntoIter {
         let (_, values, validity) = self.into_inner();
         let values = values.into_iter();
-        let null_count = validity.as_ref().map(|x| x.unset_bits());
-        let validity = validity.map(|x| x.into_iter());
-        ZipValidity::new(values, validity, null_count)
+        let validity =
+            validity.and_then(|validity| (validity.unset_bits() > 0).then(|| validity.into_iter()));
+        ZipValidity::new(values, validity)
     }
 }
 
@@ -39,9 +39,6 @@ impl<'a, T: NativeType> MutablePrimitiveArray<T> {
         ZipValidity::new(
             self.values().iter(),
             self.validity().as_ref().map(|x| x.iter()),
-            self.validity()
-                .as_ref()
-                .map(|validity| validity.unset_bits()),
         )
     }
 

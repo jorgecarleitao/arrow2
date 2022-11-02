@@ -88,13 +88,7 @@ impl BooleanArray {
     /// Returns an iterator over the optional values of this [`BooleanArray`].
     #[inline]
     pub fn iter(&self) -> ZipValidity<bool, BitmapIter, BitmapIter> {
-        ZipValidity::new(
-            self.values().iter(),
-            self.validity.as_ref().map(|x| x.iter()),
-            self.validity()
-                .as_ref()
-                .map(|validity| validity.unset_bits()),
-        )
+        ZipValidity::new_with_validity(self.values().iter(), self.validity())
     }
 
     /// Returns an iterator over the values of this [`BooleanArray`].

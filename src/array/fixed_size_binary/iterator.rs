@@ -19,11 +19,7 @@ impl<'a> FixedSizeBinaryArray {
     pub fn iter(
         &'a self,
     ) -> ZipValidity<&'a [u8], std::slice::ChunksExact<'a, u8>, BitmapIter<'a>> {
-        ZipValidity::new(
-            self.values_iter(),
-            self.validity.as_ref().map(|x| x.iter()),
-            self.validity.as_ref().map(|validity| validity.unset_bits()),
-        )
+        ZipValidity::new_with_validity(self.values_iter(), self.validity())
     }
 
     /// Returns iterator over the values of [`FixedSizeBinaryArray`]
@@ -46,13 +42,7 @@ impl<'a> MutableFixedSizeBinaryArray {
     pub fn iter(
         &'a self,
     ) -> ZipValidity<&'a [u8], std::slice::ChunksExact<'a, u8>, BitmapIter<'a>> {
-        ZipValidity::new(
-            self.iter_values(),
-            self.validity().as_ref().map(|x| x.iter()),
-            self.validity()
-                .as_ref()
-                .map(|validity| validity.unset_bits()),
-        )
+        ZipValidity::new(self.iter_values(), self.validity().map(|x| x.iter()))
     }
 
     /// Returns iterator over the values of [`MutableFixedSizeBinaryArray`]

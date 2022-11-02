@@ -206,11 +206,7 @@ impl<O: Offset> MutableUtf8Array<O> {
 
     /// Returns an iterator of `Option<&str>`
     pub fn iter(&self) -> ZipValidity<&str, MutableUtf8ValuesIter<O>, BitmapIter> {
-        ZipValidity::new(
-            self.values_iter(),
-            self.validity.as_ref().map(|x| x.iter()),
-            self.validity.as_ref().map(|validity| validity.unset_bits()),
-        )
+        ZipValidity::new(self.values_iter(), self.validity.as_ref().map(|x| x.iter()))
     }
 
     /// Converts itself into an [`Array`].

@@ -126,11 +126,7 @@ fn list_optional<'a, O: Offset>(array: &'a ListArray<O>, schema: &AvroSchema) ->
         .offsets()
         .windows(2)
         .map(|w| (w[1] - w[0]).to_usize() as i64);
-    let lengths = ZipValidity::new(
-        lengths,
-        array.validity().as_ref().map(|x| x.iter()),
-        array.validity().as_ref().map(|x| x.unset_bits()),
-    );
+    let lengths = ZipValidity::new_with_validity(lengths, array.validity());
 
     Box::new(BufStreamingIterator::new(
         lengths,
@@ -184,11 +180,7 @@ fn struct_optional<'a>(array: &'a StructArray, schema: &Record) -> BoxSerializer
         .map(|(x, schema)| new_serializer(x.as_ref(), schema))
         .collect::<Vec<_>>();
 
-    let iterator = ZipValidity::new(
-        0..array.len(),
-        array.validity().as_ref().map(|x| x.iter()),
-        array.validity().as_ref().map(|x| x.unset_bits()),
-    );
+    let iterator = ZipValidity::new_with_validity(0..array.len(), array.validity());
 
     Box::new(BufStreamingIterator::new(
         iterator,
