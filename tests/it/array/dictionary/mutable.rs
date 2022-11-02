@@ -74,3 +74,13 @@ fn push_utf8() {
         .collect::<HashedMap<_, _>>();
     assert_eq!(*new.map(), expected_map);
 }
+
+#[test]
+fn iter() {
+    let values = Utf8Array::<i32>::from_slice(&["a", "aa"]);
+    let array =
+        DictionaryArray::try_from_keys(PrimitiveArray::from_vec(vec![1, 0]), values.boxed())
+            .unwrap();
+
+    assert!(array.iter().eq(array.iter()))
+}

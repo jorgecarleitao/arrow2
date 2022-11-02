@@ -3,6 +3,7 @@ use std::{collections::hash_map::DefaultHasher, sync::Arc};
 
 use hash_hasher::HashedMap;
 
+use crate::array::ArrayAccessor;
 use crate::{
     array::{primitive::MutablePrimitiveArray, Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
@@ -109,8 +110,14 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
     }
 
     /// pushes a null value
+    #[inline]
     pub fn push_null(&mut self) {
-        self.keys.push(None)
+        if self.values.is_empty() {
+            // keys's default value is 0. If self.values is empty, the 0th index
+            // would be out of bound.
+            self.values.push_null()
+        }
+        self.keys.push(None);
     }
 
     /// returns a mutable reference to the inner values.
@@ -198,8 +205,9 @@ impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictio
         self
     }
 
+    #[inline]
     fn push_null(&mut self) {
-        self.keys.push(None)
+        self.push_null()
     }
 
     fn reserve(&mut self, additional: usize) {
@@ -247,5 +255,28 @@ where
             self.push_null();
             Ok(())
         }
+    }
+}
+
+unsafe impl<'a, K, M, T: 'a> ArrayAccessor<'a> for MutableDictionaryArray<K, M>
+where
+    K: DictionaryKey,
+    M: MutableArray + ArrayAccessor<'a, Item = T>,
+{
+    type Item = T;
+
+    #[inline]
+    unsafe fn value_unchecked(&'a self, index: usize) -> Self::Item {
+        // safety: invariant of the trait
+        let index = self.keys.value_unchecked(index);
+        // safety: invariant of the struct
+        let index = index.as_usize();
+        // safety: invariant of the struct
+        self.values.value_unchecked(index)
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.keys.len()
     }
 }

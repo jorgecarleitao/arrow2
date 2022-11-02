@@ -1,59 +1,29 @@
+use crate::array::{ArrayAccessor, ArrayValuesIter};
 use crate::bitmap::utils::{BitmapIter, ZipValidity};
 use crate::scalar::Scalar;
-use crate::trusted_len::TrustedLen;
 
 use super::{DictionaryArray, DictionaryKey};
 
-/// Iterator of values of an `ListArray`.
-pub struct DictionaryValuesIter<'a, K: DictionaryKey> {
-    array: &'a DictionaryArray<K>,
-    index: usize,
-    end: usize,
-}
-
-impl<'a, K: DictionaryKey> DictionaryValuesIter<'a, K> {
-    #[inline]
-    pub fn new(array: &'a DictionaryArray<K>) -> Self {
-        Self {
-            array,
-            index: 0,
-            end: array.len(),
-        }
-    }
-}
-
-impl<'a, K: DictionaryKey> Iterator for DictionaryValuesIter<'a, K> {
+unsafe impl<'a, K> ArrayAccessor<'a> for DictionaryArray<K>
+where
+    K: DictionaryKey,
+{
     type Item = Box<dyn Scalar>;
 
     #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index == self.end {
-            return None;
-        }
-        let old = self.index;
-        self.index += 1;
-        Some(self.array.value(old))
+    unsafe fn value_unchecked(&'a self, index: usize) -> Self::Item {
+        // safety: invariant of the trait
+        self.value_unchecked(index)
     }
 
     #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.end - self.index, Some(self.end - self.index))
+    fn len(&self) -> usize {
+        self.keys.len()
     }
 }
 
-unsafe impl<'a, K: DictionaryKey> TrustedLen for DictionaryValuesIter<'a, K> {}
-
-impl<'a, K: DictionaryKey> DoubleEndedIterator for DictionaryValuesIter<'a, K> {
-    #[inline]
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.index == self.end {
-            None
-        } else {
-            self.end -= 1;
-            Some(self.array.value(self.end))
-        }
-    }
-}
+/// Iterator of values of a [`DictionaryArray`].
+pub type DictionaryValuesIter<'a, K> = ArrayValuesIter<'a, DictionaryArray<K>>;
 
 type ValuesIter<'a, K> = DictionaryValuesIter<'a, K>;
 type ZipIter<'a, K> = ZipValidity<Box<dyn Scalar>, ValuesIter<'a, K>, BitmapIter<'a>>;
