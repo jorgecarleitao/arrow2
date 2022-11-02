@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::hash::{BuildHasher, Hash, Hasher};
+use std::hash::{BuildHasher, Hash};
 use std::num::NonZeroU32;
 use std::ops::Index;
 
@@ -43,15 +43,30 @@ pub struct OrderPreservingInterner {
     lookup: HashMap<Interned, (), ()>,
 }
 
-/// Calculates the hash of a single value.
-#[inline]
-fn hash_one<T: Hash>(hasher: &ahash::RandomState, x: T) -> u64 {
-    // Rewrite as `hasher.hash——one(&divisor)` after
-    // https://github.com/rust-lang/rust/issues/86161 is merged.
-    let mut hasher = hasher.build_hasher();
-    x.hash(&mut hasher);
-    hasher.finish()
+trait HashSingle: BuildHasher {
+    /// Calculates the hash of a single value.
+    #[inline]
+    fn hash_single<T: Hash>(&self, x: T) -> u64
+    where
+        Self: Sized,
+    {
+        // Rewrite as `hasher.hash_one(&x)` after
+        // https://github.com/rust-lang/rust/issues/86161 is merged.
+        #[cfg(feature = "nightly_build")]
+        {
+            self.hash_one(x)
+        }
+        #[cfg(not(feature = "nightly_build"))]
+        {
+            use std::hash::Hasher;
+            let mut hasher = self.build_hasher();
+            x.hash(&mut hasher);
+            hasher.finish()
+        }
+    }
 }
+
+impl HashSingle for ahash::RandomState {}
 
 impl OrderPreservingInterner {
     /// Interns an iterator of values returning a list of [`Interned`] which can be
@@ -80,7 +95,7 @@ impl OrderPreservingInterner {
             };
 
             let v = value.as_ref();
-            let hash = hash_one(&self.hasher, v);
+            let hash = self.hasher.hash_single(v);
             let entry = self
                 .lookup
                 .raw_entry_mut()
@@ -125,7 +140,7 @@ impl OrderPreservingInterner {
 
                     let values = &self.values;
                     v.insert_with_hasher(hash, interned, (), |key| {
-                        hash_one(&self.hasher, &values[*key])
+                        self.hasher.hash_single(&values[*key])
                     });
                     out[idx] = Some(interned);
                 }
