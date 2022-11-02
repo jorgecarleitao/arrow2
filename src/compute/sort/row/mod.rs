@@ -168,14 +168,14 @@ impl SortField {
 impl RowConverter {
     /// Create a new [`RowConverter`] with the provided schema
     pub fn new(fields: Vec<SortField>) -> Self {
-        let interners = (0..fields.len()).map(|_| None).collect();
+        let interners = vec![None; fields.len()];
         Self {
             fields: fields.into(),
             interners,
         }
     }
 
-    /// Convert [`ArrayRef`] columns into [`Rows`]
+    /// Convert a slice of [`Box<dyn Array>`] columns into [`Rows`]
     ///
     /// See [`Row`] for information on when [`Row`] can be compared
     ///
@@ -204,7 +204,7 @@ impl RowConverter {
                     )));
                 }
 
-                let values = match column.data_type() {
+                let values = match column.data_type().to_logical_type() {
                     DataType::Dictionary(k, _, _) => match_integer_type!(k, |$T| {
                         let column = column
                             .as_any()
@@ -228,8 +228,14 @@ impl RowConverter {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let mut rows = new_empty_rows(columns, &dictionaries, Arc::clone(&self.fields))?;
+        let mut rows = new_empty_rows(columns, &dictionaries)?;
 
+        // jorgecarleitao's comments in PR#1287:
+        // This seems to be embarassibly parallel.
+        // Given that this is a transpose of O(N x C) where N is length and C number of columns, I wonder if we could split this so users can parallelize.
+        // This is almost parallelizable - it is changing rows.
+        // However, there is still an optimization since modifying rows is O(1) but encoding is O(C).
+        // Will continue to think about this.
         for ((column, field), dictionary) in
             columns.iter().zip(self.fields.iter()).zip(dictionaries)
         {
@@ -250,8 +256,6 @@ pub struct Rows {
     buffer: Box<[u8]>,
     /// Row `i` has data `&buffer[offsets[i]..offsets[i+1]]`
     offsets: Box<[usize]>,
-    /// The schema for these rows
-    fields: Arc<[SortField]>,
 }
 
 impl Rows {
@@ -260,16 +264,27 @@ impl Rows {
         let end = self.offsets[row + 1];
         let start = self.offsets[row];
         Row {
-            data: &self.buffer[start..end],
-            _fields: &self.fields,
+            data: unsafe { self.buffer.get_unchecked(start..end) },
         }
     }
 
+    /// Get a reference to a certain row but not check the bounds.
+    pub fn row_unchecked(&self, row: usize) -> Row<'_> {
+        let data = unsafe {
+            let end = *self.offsets.get_unchecked(row + 1);
+            let start = *self.offsets.get_unchecked(row);
+            self.buffer.get_unchecked(start..end)
+        };
+        Row { data }
+    }
+
     /// Returns the number of rows
-    pub fn num_rows(&self) -> usize {
+    #[inline]
+    pub fn len(&self) -> usize {
         self.offsets.len() - 1
     }
 
+    #[inline]
     /// Returns the iterator
     pub fn iter(&self) -> RowsIter<'_> {
         self.into_iter()
@@ -280,11 +295,12 @@ impl<'a> IntoIterator for &'a Rows {
     type Item = Row<'a>;
     type IntoIter = RowsIter<'a>;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         RowsIter {
             rows: self,
             start: 0,
-            end: self.num_rows(),
+            end: self.len(),
         }
     }
 }
@@ -300,15 +316,18 @@ pub struct RowsIter<'a> {
 impl<'a> Iterator for RowsIter<'a> {
     type Item = Row<'a>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.end == self.start {
-            return None;
+        if self.start < self.end {
+            let row = self.rows.row_unchecked(self.start);
+            self.start += 1;
+            Some(row)
+        } else {
+            None
         }
-        let row = self.rows.row(self.start);
-        self.start += 1;
-        Some(row)
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         let len = self.len();
         (len, Some(len))
@@ -316,6 +335,7 @@ impl<'a> Iterator for RowsIter<'a> {
 }
 
 impl<'a> ExactSizeIterator for RowsIter<'a> {
+    #[inline]
     fn len(&self) -> usize {
         self.end - self.start
     }
@@ -332,6 +352,8 @@ impl<'a> DoubleEndedIterator for RowsIter<'a> {
     }
 }
 
+unsafe impl<'a> crate::trusted_len::TrustedLen for RowsIter<'a> {}
+
 /// A comparable representation of a row
 ///
 /// Two [`Row`] can be compared if they both belong to [`Rows`] returned by calls to
@@ -341,7 +363,6 @@ impl<'a> DoubleEndedIterator for RowsIter<'a> {
 #[derive(Debug, Copy, Clone)]
 pub struct Row<'a> {
     data: &'a [u8],
-    _fields: &'a Arc<[SortField]>, // currently not used.
 }
 
 // Manually derive these as don't wish to include `fields`
@@ -398,8 +419,8 @@ macro_rules! with_match_primitive_without_interval_type {(
     $key_type:expr, | $_:tt $T:ident | $($body:tt)*
 ) => ({
     macro_rules! __with_ty__ {( $_ $T:ident ) => ( $($body)* )}
-    use crate::datatypes::PrimitiveType::*;
-    use crate::types::{f16, i256};
+    use $crate::datatypes::PrimitiveType::*;
+    use $crate::types::{f16, i256};
     match $key_type {
         Int8 => __with_ty__! { i8 },
         Int16 => __with_ty__! { i16 },
@@ -422,7 +443,6 @@ macro_rules! with_match_primitive_without_interval_type {(
 fn new_empty_rows(
     cols: &[Box<dyn Array>],
     dictionaries: &[Option<Vec<Option<&[u8]>>>],
-    fields: Arc<[SortField]>,
 ) -> Result<Rows> {
     use fixed::FixedLengthEncoding;
 
@@ -525,7 +545,6 @@ fn new_empty_rows(
     Ok(Rows {
         buffer: buffer.into(),
         offsets: offsets.into(),
-        fields,
     })
 }
 
@@ -618,14 +637,10 @@ mod tests {
 
     use super::*;
     use crate::{
-        array::{
-            Array, DictionaryKey, Float32Array, Int128Array, Int16Array, Int256Array, Int32Array,
-            MutableDictionaryArray, MutablePrimitiveArray, MutableUtf8Array, NullArray, Offset,
-            TryExtend, TryPush,
-        },
+        array::{Array, DictionaryKey, Float32Array, Int16Array, NullArray, Offset},
         compute::sort::build_compare,
-        datatypes::{DataType, IntegerType},
-        types::{i256, NativeType},
+        datatypes::DataType,
+        types::NativeType,
     };
 
     #[test]
@@ -680,239 +695,12 @@ mod tests {
     }
 
     #[test]
-    fn test_decimal128() {
-        let mut converter = RowConverter::new(vec![SortField::new(DataType::Decimal(38, 7))]);
-        let col = Int128Array::from_iter([
-            None,
-            Some(i128::MIN),
-            Some(-13),
-            Some(46_i128),
-            Some(5456_i128),
-            Some(i128::MAX),
-        ])
-        .to(DataType::Decimal(38, 7))
-        .to_boxed();
-
-        let rows = converter.convert_columns(&[col]).unwrap();
-        for i in 0..rows.num_rows() - 1 {
-            assert!(rows.row(i) < rows.row(i + 1));
-        }
-    }
-
-    #[test]
-    fn test_decimal256() {
-        let mut converter = RowConverter::new(vec![SortField::new(DataType::Decimal256(76, 7))]);
-        let col = Int256Array::from_iter([
-            None,
-            Some(i256::from_words(i128::MIN, i128::MIN)),
-            Some(i256::from_words(0, -1)),
-            Some(i256::from_words(i128::MAX, -1)),
-            Some(i256::from_words(i128::MAX, 0)),
-            Some(i256::from_words(0, 46_i128)),
-            Some(i256::from_words(5, 46_i128)),
-            Some(i256::from_words(i128::MAX, i128::MAX)),
-        ])
-        .to(DataType::Decimal256(76, 7))
-        .to_boxed();
-
-        let rows = converter.convert_columns(&[col]).unwrap();
-        for i in 0..rows.num_rows() - 1 {
-            assert!(rows.row(i) < rows.row(i + 1));
-        }
-    }
-
-    #[test]
-    fn test_bool() {
-        let mut converter = RowConverter::new(vec![SortField::new(DataType::Boolean)]);
-
-        let col = BooleanArray::from_iter([None, Some(false), Some(true)]).to_boxed();
-
-        let rows = converter.convert_columns(&[Box::clone(&col)]).unwrap();
-        assert!(rows.row(2) > rows.row(1));
-        assert!(rows.row(2) > rows.row(0));
-        assert!(rows.row(1) > rows.row(0));
-
-        let mut converter = RowConverter::new(vec![SortField::new_with_options(
-            DataType::Boolean,
-            SortOptions {
-                descending: true,
-                nulls_first: false,
-            },
-        )]);
-
-        let rows = converter.convert_columns(&[Box::clone(&col)]).unwrap();
-        assert!(rows.row(2) < rows.row(1));
-        assert!(rows.row(2) < rows.row(0));
-        assert!(rows.row(1) < rows.row(0));
-    }
-
-    #[test]
     fn test_null_encoding() {
         let col = NullArray::new(DataType::Null, 10).to_boxed();
         let mut converter = RowConverter::new(vec![SortField::new(DataType::Null)]);
         let rows = converter.convert_columns(&[col]).unwrap();
-        assert_eq!(rows.num_rows(), 10);
+        assert_eq!(rows.len(), 10);
         assert_eq!(rows.row(1).data.len(), 0);
-    }
-
-    #[test]
-    fn test_variable_width() {
-        let col = Utf8Array::<i32>::from([Some("hello"), Some("he"), None, Some("foo"), Some("")])
-            .to_boxed();
-
-        let mut converter = RowConverter::new(vec![SortField::new(DataType::Utf8)]);
-        let rows = converter.convert_columns(&[Box::clone(&col)]).unwrap();
-
-        assert!(rows.row(1) < rows.row(0));
-        assert!(rows.row(2) < rows.row(4));
-        assert!(rows.row(3) < rows.row(0));
-        assert!(rows.row(3) < rows.row(1));
-
-        let col = BinaryArray::<i32>::from_iter([
-            None,
-            Some(vec![0_u8; 0]),
-            Some(vec![0_u8; 6]),
-            Some(vec![0_u8; variable::BLOCK_SIZE]),
-            Some(vec![0_u8; variable::BLOCK_SIZE + 1]),
-            Some(vec![1_u8; 6]),
-            Some(vec![1_u8; variable::BLOCK_SIZE]),
-            Some(vec![1_u8; variable::BLOCK_SIZE + 1]),
-            Some(vec![0xFF_u8; 6]),
-            Some(vec![0xFF_u8; variable::BLOCK_SIZE]),
-            Some(vec![0xFF_u8; variable::BLOCK_SIZE + 1]),
-        ])
-        .to_boxed();
-
-        let mut converter = RowConverter::new(vec![SortField::new(DataType::Binary)]);
-        let rows = converter.convert_columns(&[Box::clone(&col)]).unwrap();
-
-        for i in 0..rows.num_rows() {
-            for j in i + 1..rows.num_rows() {
-                assert!(
-                    rows.row(i) < rows.row(j),
-                    "{} < {} - {:?} < {:?}",
-                    i,
-                    j,
-                    rows.row(i),
-                    rows.row(j)
-                );
-            }
-        }
-
-        let mut converter = RowConverter::new(vec![SortField::new_with_options(
-            DataType::Binary,
-            SortOptions {
-                descending: true,
-                nulls_first: false,
-            },
-        )]);
-        let rows = converter.convert_columns(&[Box::clone(&col)]).unwrap();
-
-        for i in 0..rows.num_rows() {
-            for j in i + 1..rows.num_rows() {
-                assert!(
-                    rows.row(i) > rows.row(j),
-                    "{} > {} - {:?} > {:?}",
-                    i,
-                    j,
-                    rows.row(i),
-                    rows.row(j)
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_string_dictionary() {
-        let data = vec![
-            Some("foo"),
-            Some("hello"),
-            Some("he"),
-            None,
-            Some("hello"),
-            Some(""),
-            Some("hello"),
-            Some("hello"),
-        ];
-        let mut array = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
-        array.try_extend(data).unwrap();
-        let a: DictionaryArray<i32> = array.into();
-        let a = a.to_boxed();
-
-        let mut converter = RowConverter::new(vec![SortField::new(a.data_type().clone())]);
-        let rows_a = converter.convert_columns(&[Box::clone(&a)]).unwrap();
-
-        assert!(rows_a.row(3) < rows_a.row(5));
-        assert!(rows_a.row(2) < rows_a.row(1));
-        assert!(rows_a.row(0) < rows_a.row(1));
-        assert!(rows_a.row(3) < rows_a.row(0));
-
-        assert_eq!(rows_a.row(1), rows_a.row(4));
-        assert_eq!(rows_a.row(1), rows_a.row(6));
-        assert_eq!(rows_a.row(1), rows_a.row(7));
-
-        let data = vec![Some("hello"), None, Some("cupcakes")];
-        let mut array = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
-        array.try_extend(data).unwrap();
-        let b: DictionaryArray<i32> = array.into();
-
-        let rows_b = converter.convert_columns(&[b.to_boxed()]).unwrap();
-        assert_eq!(rows_a.row(1), rows_b.row(0));
-        assert_eq!(rows_a.row(3), rows_b.row(1));
-        assert!(rows_b.row(2) < rows_a.row(0));
-
-        let mut converter = RowConverter::new(vec![SortField::new_with_options(
-            a.data_type().clone(),
-            SortOptions {
-                descending: true,
-                nulls_first: false,
-            },
-        )]);
-
-        let rows_c = converter.convert_columns(&[Box::clone(&a)]).unwrap();
-        assert!(rows_c.row(3) > rows_c.row(5));
-        assert!(rows_c.row(2) > rows_c.row(1));
-        assert!(rows_c.row(0) > rows_c.row(1));
-        assert!(rows_c.row(3) > rows_c.row(0));
-    }
-
-    #[test]
-    fn test_primitive_dictionary() {
-        let mut builder = MutableDictionaryArray::<i32, MutablePrimitiveArray<i32>>::new();
-        builder.try_push(Some(2)).unwrap();
-        builder.try_push(Some(3)).unwrap();
-        builder.try_push(Some(0)).unwrap();
-        builder.push_null();
-        builder.try_push(Some(5)).unwrap();
-        builder.try_push(Some(3)).unwrap();
-        builder.try_push(Some(-1)).unwrap();
-
-        let a: DictionaryArray<i32> = builder.into();
-
-        let mut converter = RowConverter::new(vec![SortField::new(a.data_type().clone())]);
-        let rows = converter.convert_columns(&[a.to_boxed()]).unwrap();
-        assert!(rows.row(0) < rows.row(1));
-        assert!(rows.row(2) < rows.row(0));
-        assert!(rows.row(3) < rows.row(2));
-        assert!(rows.row(6) < rows.row(2));
-        assert!(rows.row(3) < rows.row(6));
-    }
-
-    #[test]
-    fn test_dictionary_nulls() {
-        let values = Int32Array::from_iter([Some(1), Some(-1), None, Some(4), None]);
-        let keys = Int32Array::from_iter([Some(0), Some(0), Some(1), Some(2), Some(4), None]);
-
-        let data_type = DataType::Dictionary(IntegerType::Int32, Box::new(DataType::Int32), false);
-        let data = DictionaryArray::try_from_keys(keys, values.to_boxed()).unwrap();
-
-        let mut converter = RowConverter::new(vec![SortField::new(data_type)]);
-        let rows = converter.convert_columns(&[data.to_boxed()]).unwrap();
-
-        assert_eq!(rows.row(0), rows.row(1));
-        assert_eq!(rows.row(3), rows.row(4));
-        assert_eq!(rows.row(4), rows.row(5));
-        assert!(rows.row(3) < rows.row(0));
     }
 
     fn generate_primitive_array<K>(len: usize, valid_percent: f64) -> PrimitiveArray<K>
@@ -1006,7 +794,7 @@ mod tests {
             let comparators = arrays
                 .iter()
                 .zip(options.iter())
-                .map(|(a, o)| build_compare(&**a, o.clone()).unwrap())
+                .map(|(a, o)| build_compare(&**a, *o).unwrap())
                 .collect::<Vec<_>>();
 
             let columns = options

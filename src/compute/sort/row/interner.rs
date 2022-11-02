@@ -28,7 +28,7 @@ pub struct Interned(NonZeroU32); // We use NonZeroU32 so that `Option<Interned>`
 
 /// A byte array interner that generates normalized keys that are sorted with respect
 /// to the interned values, e.g. `intern(a) < intern(b) => a < b`
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct OrderPreservingInterner {
     /// Provides a lookup from [`Interned`] to the normalized key
     keys: InternBuffer,
@@ -190,7 +190,7 @@ impl OrderPreservingInterner {
 }
 
 /// A buffer of `[u8]` indexed by `[Interned]`
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct InternBuffer {
     /// Raw values
     values: Vec<u8>,
