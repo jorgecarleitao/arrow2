@@ -112,11 +112,11 @@ fn test_eq_scalar() {
 
 #[test]
 fn test_eq_with_slice() {
-    let a = BooleanArray::from_slice(&[true, true, false]);
-    let b = BooleanArray::from_slice(&[true, true, true, true, false]);
+    let a = BooleanArray::from_slice([true, true, false]);
+    let b = BooleanArray::from_slice([true, true, true, true, false]);
     let c = b.slice(2, 3);
     let d = eq(&c, &a);
-    assert_eq!(d, BooleanArray::from_slice(&[true, true, true]));
+    assert_eq!(d, BooleanArray::from_slice([true, true, true]));
 }
 
 #[test]

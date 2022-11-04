@@ -4,11 +4,11 @@ use arrow2::compute::filter::*;
 
 #[test]
 fn array_slice() {
-    let a = Int32Array::from_slice(&[5, 6, 7, 8, 9]).slice(1, 4);
+    let a = Int32Array::from_slice([5, 6, 7, 8, 9]).slice(1, 4);
     let b = BooleanArray::from_slice(vec![true, true, false, false, true]).slice(1, 4);
     let c = filter(&a, &b).unwrap();
 
-    let expected = Int32Array::from_slice(&[6, 9]);
+    let expected = Int32Array::from_slice([6, 9]);
 
     assert_eq!(expected, c.as_ref());
 }
@@ -25,7 +25,7 @@ fn array_low_density() {
     let b = BooleanArray::from_slice(filter_values);
     let c = filter(&a, &b).unwrap();
 
-    let expected = Int32Array::from_slice(&[65, 67]);
+    let expected = Int32Array::from_slice([65, 67]);
 
     assert_eq!(expected, c.as_ref());
 }
@@ -57,8 +57,8 @@ fn array_high_density() {
 
 #[test]
 fn string_array_simple() {
-    let a = Utf8Array::<i32>::from_slice(&["hello", " ", "world", "!"]);
-    let b = BooleanArray::from_slice(&[true, false, true, false]);
+    let a = Utf8Array::<i32>::from_slice(["hello", " ", "world", "!"]);
+    let b = BooleanArray::from_slice([true, false, true, false]);
     let c = filter(&a, &b).unwrap();
     let d = c
         .as_ref()
@@ -115,15 +115,15 @@ fn binary_array_with_null() {
 
 #[test]
 fn masked_true_values() {
-    let a = Int32Array::from_slice(&[1, 2, 3]);
-    let b = BooleanArray::from_slice(&[true, false, true]);
+    let a = Int32Array::from_slice([1, 2, 3]);
+    let b = BooleanArray::from_slice([true, false, true]);
     let validity = Bitmap::from(&[true, false, false]);
 
     let b = b.with_validity(Some(validity));
 
     let c = filter(&a, &b).unwrap();
 
-    let expected = Int32Array::from_slice(&[1]);
+    let expected = Int32Array::from_slice([1]);
 
     assert_eq!(expected, c.as_ref());
 }

@@ -43,7 +43,7 @@ fn test_contains_binary() {
         Some(vec![Some(b"a"), Some(b"b"), None]),
         None,
     ];
-    let values = BinaryArray::<i32>::from(&[Some(b"a"), Some(b"c"), None, Some(b"a")]);
+    let values = BinaryArray::<i32>::from([Some(b"a"), Some(b"c"), None, Some(b"a")]);
     let expected = BooleanArray::from(vec![
         Some(true),
         Some(false),

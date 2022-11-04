@@ -6,7 +6,7 @@ use arrow2::{array::*, datatypes::DataType};
 
 #[test]
 fn test_primitive_array_min_max() {
-    let a = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
+    let a = Int32Array::from_slice([5, 6, 7, 8, 9]);
     assert_eq!(5, min_primitive(&a).unwrap());
     assert_eq!(9, max_primitive(&a).unwrap());
 }
@@ -114,28 +114,28 @@ fn min_max_f64_edge_cases() {
 
 #[test]
 fn test_string_min_max_with_nulls() {
-    let a = Utf8Array::<i32>::from(&[Some("b"), None, None, Some("a"), Some("c")]);
+    let a = Utf8Array::<i32>::from([Some("b"), None, None, Some("a"), Some("c")]);
     assert_eq!(Some("a"), min_string(&a));
     assert_eq!(Some("c"), max_string(&a));
 }
 
 #[test]
 fn test_string_min_max_all_nulls() {
-    let a = Utf8Array::<i32>::from(&[None::<&str>, None]);
+    let a = Utf8Array::<i32>::from([None::<&str>, None]);
     assert_eq!(None, min_string(&a));
     assert_eq!(None, max_string(&a));
 }
 
 #[test]
 fn test_string_min_max_no_null() {
-    let a = Utf8Array::<i32>::from(&[Some("abc"), Some("abd"), Some("bac"), Some("bbb")]);
+    let a = Utf8Array::<i32>::from([Some("abc"), Some("abd"), Some("bac"), Some("bbb")]);
     assert_eq!(Some("abc"), min_string(&a));
     assert_eq!(Some("bbb"), max_string(&a));
 }
 
 #[test]
 fn test_string_min_max_1() {
-    let a = Utf8Array::<i32>::from(&[None, None, Some("b"), Some("a")]);
+    let a = Utf8Array::<i32>::from([None, None, Some("b"), Some("a")]);
     assert_eq!(Some("a"), min_string(&a));
     assert_eq!(Some("b"), max_string(&a));
 }
@@ -197,14 +197,14 @@ fn test_boolean_min_max_smaller() {
 
 #[test]
 fn test_binary_min_max_with_nulls() {
-    let a = BinaryArray::<i32>::from(&[Some(b"b"), None, None, Some(b"a"), Some(b"c")]);
+    let a = BinaryArray::<i32>::from([Some(b"b"), None, None, Some(b"a"), Some(b"c")]);
     assert_eq!(Some("a".as_bytes()), min_binary(&a));
     assert_eq!(Some("c".as_bytes()), max_binary(&a));
 }
 
 #[test]
 fn test_binary_min_max_no_null() {
-    let a = BinaryArray::<i32>::from(&[
+    let a = BinaryArray::<i32>::from([
         Some("abc".as_bytes()),
         Some(b"acd"),
         Some(b"aabd"),
@@ -216,14 +216,14 @@ fn test_binary_min_max_no_null() {
 
 #[test]
 fn test_binary_min_max_all_nulls() {
-    let a = BinaryArray::<i32>::from(&[None::<&[u8]>, None]);
+    let a = BinaryArray::<i32>::from([None::<&[u8]>, None]);
     assert_eq!(None, min_binary(&a));
     assert_eq!(None, max_binary(&a));
 }
 
 #[test]
 fn test_binary_min_max_1() {
-    let a = BinaryArray::<i32>::from(&[None, None, Some(b"b"), Some(b"a")]);
+    let a = BinaryArray::<i32>::from([None, None, Some(b"b"), Some(b"a")]);
     assert_eq!(Some("a".as_bytes()), min_binary(&a));
     assert_eq!(Some("b".as_bytes()), max_binary(&a));
 }
@@ -231,7 +231,7 @@ fn test_binary_min_max_1() {
 #[test]
 fn test_max_not_lexi() {
     let values = [0, 10, 0, 0, 0, 0, 0, 0, 1, 0];
-    let arr = Int64Array::from_slice(&values);
+    let arr = Int64Array::from_slice(values);
 
     let maximum = 10;
     let out = max_primitive(&arr).unwrap();

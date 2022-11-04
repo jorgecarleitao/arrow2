@@ -9,13 +9,13 @@ use arrow2::io::csv::write::*;
 fn data() -> Chunk<Box<dyn Array>> {
     let c1 = Utf8Array::<i32>::from_slice(["a b", "c", "d"]);
     let c2 = Float64Array::from([Some(123.564532), None, Some(-556132.25)]);
-    let c3 = UInt32Array::from_slice(&[3, 2, 1]);
+    let c3 = UInt32Array::from_slice([3, 2, 1]);
     let c4 = BooleanArray::from(&[Some(true), Some(false), None]);
     let c5 = PrimitiveArray::<i64>::from([None, Some(1555584887378), Some(1555555555555)])
         .to(DataType::Timestamp(TimeUnit::Millisecond, None));
     let c6 = PrimitiveArray::<i32>::from_vec(vec![1234, 24680, 85563])
         .to(DataType::Time32(TimeUnit::Second));
-    let keys = UInt32Array::from_slice(&[2, 0, 1]);
+    let keys = UInt32Array::from_slice([2, 0, 1]);
     let c7 = DictionaryArray::try_from_keys(keys, Box::new(c1.clone())).unwrap();
 
     Chunk::new(vec![
@@ -103,39 +103,39 @@ fn data_array(column: &str) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
             vec!["a b", "c", "d"],
         ),
         "i8" => (
-            Int8Array::from_slice(&[3, 2, 1]).boxed(),
+            Int8Array::from_slice([3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         "i16" => (
-            Int16Array::from_slice(&[3, 2, 1]).boxed(),
+            Int16Array::from_slice([3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         "i32" => (
-            Int32Array::from_slice(&[3, 2, 1]).boxed(),
+            Int32Array::from_slice([3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         "i64" => (
-            Int64Array::from_slice(&[3, 2, 1]).boxed(),
+            Int64Array::from_slice([3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         "u8" => (
-            UInt8Array::from_slice(&[3, 2, 1]).boxed(),
+            UInt8Array::from_slice([3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         "u16" => (
-            UInt16Array::from_slice(&[3, 2, 1]).boxed(),
+            UInt16Array::from_slice([3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         "u32" => (
-            UInt32Array::from_slice(&[3, 2, 1]).boxed(),
+            UInt32Array::from_slice([3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
         "u64" => (
-            UInt64Array::from_slice(&[3, 2, 1]).boxed(),
+            UInt64Array::from_slice([3, 2, 1]).boxed(),
             vec!["3", "2", "1"],
         ),
-        "f32" => (Float32Array::from_slice(&[3.1]).boxed(), vec!["3.1"]),
-        "f64" => (Float64Array::from_slice(&[3.1]).boxed(), vec!["3.1"]),
+        "f32" => (Float32Array::from_slice([3.1]).boxed(), vec!["3.1"]),
+        "f64" => (Float64Array::from_slice([3.1]).boxed(), vec!["3.1"]),
         "date32" => {
             let array = PrimitiveArray::<i32>::from_vec(vec![1]).to(DataType::Date32);
             (array.boxed(), vec!["1970-01-02 00:00:00"])
@@ -254,13 +254,13 @@ fn data_array(column: &str) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
             )
         }
         "dictionary[u32]" => {
-            let keys = UInt32Array::from_slice(&[2, 1, 0]);
+            let keys = UInt32Array::from_slice([2, 1, 0]);
             let values = Utf8Array::<i64>::from_slice(["a b", "c", "d"]).boxed();
             let array = DictionaryArray::try_from_keys(keys, values).unwrap();
             (array.boxed(), vec!["d", "c", "a b"])
         }
         "dictionary[u64]" => {
-            let keys = UInt64Array::from_slice(&[2, 1, 0]);
+            let keys = UInt64Array::from_slice([2, 1, 0]);
             let values = Utf8Array::<i64>::from_slice(["a b", "c", "d"]).boxed();
             let array = DictionaryArray::try_from_keys(keys, values).unwrap();
             (array.boxed(), vec!["d", "c", "a b"])
@@ -398,8 +398,8 @@ fn test_generic(chunk: Chunk<Box<dyn Array>>, expected: &str) {
 
 #[test]
 fn write_empty_and_missing() {
-    let a = Utf8Array::<i32>::from(&[Some(""), None]);
-    let b = Utf8Array::<i32>::from(&[None, Some("")]);
+    let a = Utf8Array::<i32>::from([Some(""), None]);
+    let b = Utf8Array::<i32>::from([None, Some("")]);
     let chunk = Chunk::new(vec![a.boxed(), b.boxed()]);
     test_generic(chunk, "\"\",\n,\"\"\n");
 }
@@ -412,12 +412,12 @@ fn write_escaping_resize_local_buf() {
         "bar,1234567890123456789012345678901234567890123456789012345678900293480293847",
         "This is the mail system at host smtp.sciprofiles.com.I'm sorry to have to inform you that your message could notbe delivered to one or more recipients. It's attached below.For further assistance,bar",
     ] {
-        let a = Utf8Array::<i32>::from_slice(&[payload]);
+        let a = Utf8Array::<i32>::from_slice([payload]);
         let chunk = Chunk::new(vec![a.boxed()]);
 
         test_generic(chunk,  &format!("\"{}\"\n", payload));
 
-        let a = Utf8Array::<i64>::from_slice(&[payload]);
+        let a = Utf8Array::<i64>::from_slice([payload]);
         let chunk = Chunk::new(vec![a.boxed()]);
 
         test_generic(chunk,  &format!("\"{}\"\n", payload));

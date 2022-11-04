@@ -47,7 +47,7 @@ fn bool_nullable() -> Result<()> {
 
 #[test]
 fn bool() -> Result<()> {
-    let data = BooleanArray::from_slice(&[true, true, false]);
+    let data = BooleanArray::from_slice([true, true, false]);
     test_round_trip(data)
 }
 
@@ -66,7 +66,7 @@ fn u32_nullable() -> Result<()> {
 
 #[test]
 fn u32() -> Result<()> {
-    let data = Int32Array::from_slice(&[2, 0, 1, 0]);
+    let data = Int32Array::from_slice([2, 0, 1, 0]);
     test_round_trip(data)
 }
 
@@ -79,7 +79,7 @@ fn u32_sliced() -> Result<()> {
 
 #[test]
 fn decimal() -> Result<()> {
-    let data = Int128Array::from_slice(&[1, 0, 2, 0]);
+    let data = Int128Array::from_slice([1, 0, 2, 0]);
     test_round_trip(data)
 }
 
@@ -106,7 +106,7 @@ fn utf8_nullable() -> Result<()> {
 
 #[test]
 fn utf8() -> Result<()> {
-    let data = Utf8Array::<i32>::from_slice(&["a", "", "bb", ""]);
+    let data = Utf8Array::<i32>::from_slice(["a", "", "bb", ""]);
     test_round_trip(data)
 }
 
@@ -137,7 +137,7 @@ fn binary_nullable() -> Result<()> {
 
 #[test]
 fn binary() -> Result<()> {
-    let data = BinaryArray::<i32>::from_slice(&[b"a".as_ref(), b"", b"bb", b""]);
+    let data = BinaryArray::<i32>::from_slice([b"a".as_ref(), b"", b"bb", b""]);
     test_round_trip(data)
 }
 

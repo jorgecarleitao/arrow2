@@ -81,7 +81,7 @@ fn case_list() -> (String, Box<dyn Array>) {
     .unwrap();
     let c: ListArray<i32> = c.into();
 
-    let d = Utf8Array::<i32>::from(&[Some("4"), None, Some("text")]);
+    let d = Utf8Array::<i32>::from([Some("4"), None, Some("text")]);
 
     let array = StructArray::from_data(
         data_type,
@@ -153,10 +153,10 @@ fn case_basics() -> (String, Box<dyn Array>) {
     let array = StructArray::from_data(
         data_type,
         vec![
-            Int64Array::from_slice(&[1, -10, 100000000]).boxed(),
-            Float64Array::from_slice(&[2.0, -3.5, 0.6]).boxed(),
+            Int64Array::from_slice([1, -10, 100000000]).boxed(),
+            Float64Array::from_slice([2.0, -3.5, 0.6]).boxed(),
             BooleanArray::from(&[Some(false), Some(true), None]).boxed(),
-            Utf8Array::<i32>::from(&[Some("4"), None, Some("text")]).boxed(),
+            Utf8Array::<i32>::from([Some("4"), None, Some("text")]).boxed(),
         ],
         None,
     );
@@ -178,10 +178,10 @@ fn case_projection() -> (String, Box<dyn Array>) {
     let array = StructArray::from_data(
         data_type,
         vec![
-            UInt32Array::from_slice(&[1, 10, 100000000]).boxed(),
-            Float32Array::from_slice(&[2.0, -3.5, 0.6]).boxed(),
+            UInt32Array::from_slice([1, 10, 100000000]).boxed(),
+            Float32Array::from_slice([2.0, -3.5, 0.6]).boxed(),
             BooleanArray::from(&[Some(false), Some(true), None]).boxed(),
-            BinaryArray::<i32>::from(&[Some(b"4".as_ref()), Some(b"text".as_ref()), None]).boxed(),
+            BinaryArray::<i32>::from([Some(b"4".as_ref()), Some(b"text".as_ref()), None]).boxed(),
         ],
         None,
     );

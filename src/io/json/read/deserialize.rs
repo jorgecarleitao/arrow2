@@ -42,7 +42,7 @@ fn build_extract(data_type: &DataType) -> Extract {
             Box::new(move |value| {
                 let integer = match value {
                     Value::Number(number) => Some(deserialize_int_single::<i64>(*number)),
-                    Value::Bool(number) => Some(if *number { 1i64 } else { 0i64 }),
+                    Value::Bool(number) => Some(i64::from(*number)),
                     _ => None,
                 };
                 integer.map(|integer| {
@@ -208,9 +208,9 @@ fn deserialize_utf8_into<'a, O: Offset, A: Borrow<Value<'a>>>(
             Value::Number(number) => match number {
                 Number::Integer(number, exponent) | Number::Float(number, exponent) => {
                     scratch.clear();
-                    scratch.extend_from_slice(*number);
+                    scratch.extend_from_slice(number);
                     scratch.push(b'e');
-                    scratch.extend_from_slice(*exponent);
+                    scratch.extend_from_slice(exponent);
                 }
             },
             Value::Bool(v) => target.push(Some(if *v { "true" } else { "false" })),

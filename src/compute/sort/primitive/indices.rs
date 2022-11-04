@@ -48,7 +48,7 @@ mod tests {
         T: NativeType + std::cmp::Ord,
     {
         let input = PrimitiveArray::<T>::from(data).to(data_type);
-        let expected = Int32Array::from_slice(&expected_data);
+        let expected = Int32Array::from_slice(expected_data);
         let output =
             indices_sorted_unstable_by::<i32, _, _>(&input, ord::total_cmp, &options, limit);
         assert_eq!(output, expected)

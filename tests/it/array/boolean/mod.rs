@@ -18,10 +18,10 @@ fn basics() {
     assert!(!array.value(1));
     assert!(!array.value(2));
     assert!(!unsafe { array.value_unchecked(2) });
-    assert_eq!(array.values(), &Bitmap::from_u8_slice(&[0b00000001], 3));
+    assert_eq!(array.values(), &Bitmap::from_u8_slice([0b00000001], 3));
     assert_eq!(
         array.validity(),
-        Some(&Bitmap::from_u8_slice(&[0b00000101], 3))
+        Some(&Bitmap::from_u8_slice([0b00000101], 3))
     );
     assert!(array.is_valid(0));
     assert!(!array.is_valid(1));

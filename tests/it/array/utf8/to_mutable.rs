@@ -2,7 +2,7 @@ use arrow2::{array::Utf8Array, bitmap::Bitmap, buffer::Buffer, datatypes::DataTy
 
 #[test]
 fn not_shared() {
-    let array = Utf8Array::<i32>::from(&[Some("hello"), Some(" "), None]);
+    let array = Utf8Array::<i32>::from([Some("hello"), Some(" "), None]);
     assert!(array.into_mut().is_right());
 }
 
@@ -62,6 +62,6 @@ fn shared_offsets() {
 #[test]
 #[allow(clippy::redundant_clone)]
 fn shared_all() {
-    let array = Utf8Array::<i32>::from(&[Some("hello"), Some(" "), None]);
+    let array = Utf8Array::<i32>::from([Some("hello"), Some(" "), None]);
     assert!(array.clone().into_mut().is_left())
 }

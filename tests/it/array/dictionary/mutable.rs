@@ -55,7 +55,7 @@ fn push_utf8() {
         MutableUtf8Array::<i32>::from_iter_values(["A", "B", "C"].into_iter()).values()
     );
 
-    let mut expected_keys = MutablePrimitiveArray::<i32>::from_slice(&[0, 1]);
+    let mut expected_keys = MutablePrimitiveArray::<i32>::from_slice([0, 1]);
     expected_keys.push(None);
     expected_keys.push(Some(2));
     expected_keys.push(Some(0));

@@ -5,7 +5,7 @@ use arrow2::array::{
 
 #[test]
 fn no_offsets() {
-    let array = BinaryArray::<i32>::from(&[Some("a"), Some("bc"), None, Some("defh")]);
+    let array = BinaryArray::<i32>::from([Some("a"), Some("bc"), None, Some("defh")]);
 
     let mut a = GrowableBinary::new(vec![&array], false, 0);
 
@@ -13,7 +13,7 @@ fn no_offsets() {
 
     let result: BinaryArray<i32> = a.into();
 
-    let expected = BinaryArray::<i32>::from(&[Some("bc"), None]);
+    let expected = BinaryArray::<i32>::from([Some("bc"), None]);
     assert_eq!(result, expected);
 }
 
@@ -21,7 +21,7 @@ fn no_offsets() {
 /// with an offset and nulls
 #[test]
 fn with_offsets() {
-    let array = BinaryArray::<i32>::from(&[Some("a"), Some("bc"), None, Some("defh")]);
+    let array = BinaryArray::<i32>::from([Some("a"), Some("bc"), None, Some("defh")]);
     let array = array.slice(1, 3);
 
     let mut a = GrowableBinary::new(vec![&array], false, 0);
@@ -30,13 +30,13 @@ fn with_offsets() {
 
     let result: BinaryArray<i32> = a.into();
 
-    let expected = BinaryArray::<i32>::from(&[Some("bc"), None, Some("defh")]);
+    let expected = BinaryArray::<i32>::from([Some("bc"), None, Some("defh")]);
     assert_eq!(result, expected);
 }
 
 #[test]
 fn test_string_offsets() {
-    let array = BinaryArray::<i32>::from(&[Some("a"), Some("bc"), None, Some("defh")]);
+    let array = BinaryArray::<i32>::from([Some("a"), Some("bc"), None, Some("defh")]);
     let array = array.slice(1, 3);
 
     let mut a = GrowableBinary::new(vec![&array], false, 0);
@@ -45,14 +45,14 @@ fn test_string_offsets() {
 
     let result: BinaryArray<i32> = a.into();
 
-    let expected = BinaryArray::<i32>::from(&[Some("bc"), None, Some("defh")]);
+    let expected = BinaryArray::<i32>::from([Some("bc"), None, Some("defh")]);
     assert_eq!(result, expected);
 }
 
 #[test]
 fn test_multiple_with_validity() {
-    let array1 = BinaryArray::<i32>::from_slice(&[b"hello", b"world"]);
-    let array2 = BinaryArray::<i32>::from(&[Some("1"), None]);
+    let array1 = BinaryArray::<i32>::from_slice([b"hello", b"world"]);
+    let array2 = BinaryArray::<i32>::from([Some("1"), None]);
 
     let mut a = GrowableBinary::new(vec![&array1, &array2], false, 5);
 
@@ -61,13 +61,13 @@ fn test_multiple_with_validity() {
 
     let result: BinaryArray<i32> = a.into();
 
-    let expected = BinaryArray::<i32>::from(&[Some("hello"), Some("world"), Some("1"), None]);
+    let expected = BinaryArray::<i32>::from([Some("hello"), Some("world"), Some("1"), None]);
     assert_eq!(result, expected);
 }
 
 #[test]
 fn test_string_null_offset_validity() {
-    let array = BinaryArray::<i32>::from(&[Some("a"), Some("bc"), None, Some("defh")]);
+    let array = BinaryArray::<i32>::from([Some("a"), Some("bc"), None, Some("defh")]);
     let array = array.slice(1, 3);
 
     let mut a = GrowableBinary::new(vec![&array], true, 0);
@@ -77,6 +77,6 @@ fn test_string_null_offset_validity() {
 
     let result: BinaryArray<i32> = a.into();
 
-    let expected = BinaryArray::<i32>::from(&[None, Some("defh"), None]);
+    let expected = BinaryArray::<i32>::from([None, Some("defh"), None]);
     assert_eq!(result, expected);
 }

@@ -322,7 +322,7 @@ fn write_struct() -> Result<()> {
     ];
     let values = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
-        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
     let validity = Some(Bitmap::from(&[true, false, true]));
@@ -360,7 +360,7 @@ fn write_union() -> Result<()> {
     let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
-        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
     let array = UnionArray::from_data(data_type, types, fields, None);

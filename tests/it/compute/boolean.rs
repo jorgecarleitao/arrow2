@@ -213,7 +213,7 @@ fn array_and_validity_offset() {
 
 #[test]
 fn test_nonnull_array_is_null() {
-    let a = Int32Array::from_slice(&[1, 2, 3, 4]);
+    let a = Int32Array::from_slice([1, 2, 3, 4]);
 
     let res = is_null(&a);
 
@@ -236,7 +236,7 @@ fn test_nonnull_array_with_offset_is_null() {
 
 #[test]
 fn test_nonnull_array_is_not_null() {
-    let a = Int32Array::from_slice(&[1, 2, 3, 4]);
+    let a = Int32Array::from_slice([1, 2, 3, 4]);
 
     let res = is_not_null(&a);
 
@@ -247,12 +247,12 @@ fn test_nonnull_array_is_not_null() {
 
 #[test]
 fn test_nonnull_array_with_offset_is_not_null() {
-    let a = Int32Array::from_slice(&[1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1]);
+    let a = Int32Array::from_slice([1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1]);
     let a = a.slice(8, 4);
 
     let res = is_not_null(&a);
 
-    let expected = BooleanArray::from_slice(&[true, true, true, true]);
+    let expected = BooleanArray::from_slice([true, true, true, true]);
 
     assert_eq!(expected, res);
 }
@@ -341,18 +341,18 @@ fn test_nullable_array_with_offset_is_not_null() {
 
 #[test]
 fn array_and_scalar() {
-    let array = BooleanArray::from_slice(&[false, false, true, true]);
+    let array = BooleanArray::from_slice([false, false, true, true]);
 
     let scalar = BooleanScalar::new(Some(true));
     let real = and_scalar(&array, &scalar);
 
-    let expected = BooleanArray::from_slice(&[false, false, true, true]);
+    let expected = BooleanArray::from_slice([false, false, true, true]);
     assert_eq!(real, expected);
 
     let scalar = BooleanScalar::new(Some(false));
     let real = and_scalar(&array, &scalar);
 
-    let expected = BooleanArray::from_slice(&[false, false, false, false]);
+    let expected = BooleanArray::from_slice([false, false, false, false]);
 
     assert_eq!(real, expected);
 }
@@ -373,7 +373,7 @@ fn array_and_scalar_validity() {
     let expected = BooleanArray::from(&[None; 3]);
     assert_eq!(real, expected);
 
-    let array = BooleanArray::from_slice(&[true, false, true]);
+    let array = BooleanArray::from_slice([true, false, true]);
     let real = and_scalar(&array, &scalar);
 
     let expected = BooleanArray::from(&[None; 3]);
@@ -382,18 +382,18 @@ fn array_and_scalar_validity() {
 
 #[test]
 fn array_or_scalar() {
-    let array = BooleanArray::from_slice(&[false, false, true, true]);
+    let array = BooleanArray::from_slice([false, false, true, true]);
 
     let scalar = BooleanScalar::new(Some(true));
     let real = or_scalar(&array, &scalar);
 
-    let expected = BooleanArray::from_slice(&[true, true, true, true]);
+    let expected = BooleanArray::from_slice([true, true, true, true]);
     assert_eq!(real, expected);
 
     let scalar = BooleanScalar::new(Some(false));
     let real = or_scalar(&array, &scalar);
 
-    let expected = BooleanArray::from_slice(&[false, false, true, true]);
+    let expected = BooleanArray::from_slice([false, false, true, true]);
     assert_eq!(real, expected);
 }
 
@@ -413,7 +413,7 @@ fn array_or_scalar_validity() {
     let expected = BooleanArray::from(&[None; 3]);
     assert_eq!(real, expected);
 
-    let array = BooleanArray::from_slice(&[true, false, true]);
+    let array = BooleanArray::from_slice([true, false, true]);
     let real = and_scalar(&array, &scalar);
 
     let expected = BooleanArray::from(&[None; 3]);

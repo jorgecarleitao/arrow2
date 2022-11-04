@@ -248,7 +248,7 @@ fn extend_from_bitmap() {
 
 #[test]
 fn extend_from_bitmap_offset() {
-    let other = Bitmap::from_u8_slice(&[0b00111111], 8);
+    let other = Bitmap::from_u8_slice([0b00111111], 8);
     let mut bitmap = MutableBitmap::from_vec(vec![1, 0, 0b00101010], 22);
 
     // call is optimized to perform a memcopy
@@ -258,7 +258,7 @@ fn extend_from_bitmap_offset() {
     assert_eq!(bitmap.as_slice(), &[1, 0, 0b11101010, 0b00001111]);
 
     // more than one byte
-    let other = Bitmap::from_u8_slice(&[0b00111111, 0b00001111, 0b0001100], 20);
+    let other = Bitmap::from_u8_slice([0b00111111, 0b00001111, 0b0001100], 20);
     let mut bitmap = MutableBitmap::from_vec(vec![1, 0, 0b00101010], 22);
 
     // call is optimized to perform a memcopy

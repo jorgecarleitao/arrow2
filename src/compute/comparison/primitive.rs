@@ -331,8 +331,8 @@ mod tests {
 
     #[test]
     fn test_primitive_array_eq_with_slice() {
-        let a = Int64Array::from_slice(&[6, 7, 8, 8, 10]);
-        let b = Int64Array::from_slice(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let a = Int64Array::from_slice([6, 7, 8, 8, 10]);
+        let b = Int64Array::from_slice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         let c = b.slice(5, 5);
         let d = eq(&c, &a);
         assert_eq!(

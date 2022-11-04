@@ -100,7 +100,7 @@ fn test_deserialize(input: &str, data_type: DataType) -> Result<Box<dyn Array>> 
 #[test]
 fn utf8() -> Result<()> {
     let data = "1,\n,\n3,";
-    let expected = Utf8Array::<i32>::from(&[Some("1"), Some(""), Some("3")]);
+    let expected = Utf8Array::<i32>::from([Some("1"), Some(""), Some("3")]);
 
     let result = test_deserialize(data, expected.data_type().clone())?;
     assert_eq!(expected, result.as_ref());
@@ -110,7 +110,7 @@ fn utf8() -> Result<()> {
 #[test]
 fn large_utf8() -> Result<()> {
     let data = "1,\n,\n3,";
-    let expected = Utf8Array::<i64>::from(&[Some("1"), Some(""), Some("3")]);
+    let expected = Utf8Array::<i64>::from([Some("1"), Some(""), Some("3")]);
 
     let result = test_deserialize(data, expected.data_type().clone())?;
     assert_eq!(expected, result.as_ref());
@@ -120,7 +120,7 @@ fn large_utf8() -> Result<()> {
 #[test]
 fn binary() -> Result<()> {
     let data = "1,\n,\n3,";
-    let expected = BinaryArray::<i32>::from(&[Some(b"1".as_ref()), Some(b"".as_ref()), Some(b"3")]);
+    let expected = BinaryArray::<i32>::from([Some(b"1".as_ref()), Some(b"".as_ref()), Some(b"3")]);
 
     let result = test_deserialize(data, expected.data_type().clone())?;
     assert_eq!(expected, result.as_ref());
@@ -130,7 +130,7 @@ fn binary() -> Result<()> {
 #[test]
 fn large_binary() -> Result<()> {
     let data = "1,\n,\n3,";
-    let expected = BinaryArray::<i64>::from(&[Some(b"1".as_ref()), Some(b"".as_ref()), Some(b"3")]);
+    let expected = BinaryArray::<i64>::from([Some(b"1".as_ref()), Some(b"".as_ref()), Some(b"3")]);
 
     let result = test_deserialize(data, expected.data_type().clone())?;
     assert_eq!(expected, result.as_ref());
@@ -220,7 +220,7 @@ fn i64() -> Result<()> {
 #[test]
 fn ts_ns() -> Result<()> {
     let data = "1970-01-01T00:00:00.000000001\n";
-    let expected = Int64Array::from_slice(&[1]).to(DataType::Timestamp(TimeUnit::Nanosecond, None));
+    let expected = Int64Array::from_slice([1]).to(DataType::Timestamp(TimeUnit::Nanosecond, None));
 
     let result = test_deserialize(data, expected.data_type().clone())?;
     assert_eq!(expected, result.as_ref());
@@ -231,7 +231,7 @@ fn ts_ns() -> Result<()> {
 fn ts_us() -> Result<()> {
     let data = "1970-01-01T00:00:00.000001\n";
     let expected =
-        Int64Array::from_slice(&[1]).to(DataType::Timestamp(TimeUnit::Microsecond, None));
+        Int64Array::from_slice([1]).to(DataType::Timestamp(TimeUnit::Microsecond, None));
 
     let result = test_deserialize(data, expected.data_type().clone())?;
     assert_eq!(expected, result.as_ref());
@@ -242,7 +242,7 @@ fn ts_us() -> Result<()> {
 fn ts_ms() -> Result<()> {
     let data = "1970-01-01T00:00:00.001\n";
     let expected =
-        Int64Array::from_slice(&[1]).to(DataType::Timestamp(TimeUnit::Millisecond, None));
+        Int64Array::from_slice([1]).to(DataType::Timestamp(TimeUnit::Millisecond, None));
 
     let result = test_deserialize(data, expected.data_type().clone())?;
     assert_eq!(expected, result.as_ref());
@@ -252,7 +252,7 @@ fn ts_ms() -> Result<()> {
 #[test]
 fn ts_s() -> Result<()> {
     let data = "1970-01-01T00:00:01\n";
-    let expected = Int64Array::from_slice(&[1]).to(DataType::Timestamp(TimeUnit::Second, None));
+    let expected = Int64Array::from_slice([1]).to(DataType::Timestamp(TimeUnit::Second, None));
 
     let result = test_deserialize(data, expected.data_type().clone())?;
     assert_eq!(expected, result.as_ref());

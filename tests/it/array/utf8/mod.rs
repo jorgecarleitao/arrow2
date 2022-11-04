@@ -18,7 +18,7 @@ fn basics() {
     assert_eq!(array.offsets().as_slice(), &[0, 5, 5, 11]);
     assert_eq!(
         array.validity(),
-        Some(&Bitmap::from_u8_slice(&[0b00000101], 3))
+        Some(&Bitmap::from_u8_slice([0b00000101], 3))
     );
     assert!(array.is_valid(0));
     assert!(!array.is_valid(1));
@@ -50,7 +50,7 @@ fn empty() {
 
 #[test]
 fn from() {
-    let array = Utf8Array::<i32>::from(&[Some("hello"), Some(" "), None]);
+    let array = Utf8Array::<i32>::from([Some("hello"), Some(" "), None]);
 
     let a = array.validity().unwrap();
     assert_eq!(a, &Bitmap::from([true, true, false]));
@@ -172,7 +172,7 @@ fn index_out_of_bounds_panics() {
 
 #[test]
 fn debug() {
-    let array = Utf8Array::<i32>::from(&[Some("aa"), Some(""), None]);
+    let array = Utf8Array::<i32>::from([Some("aa"), Some(""), None]);
 
     assert_eq!(format!("{:?}", array), "Utf8Array[aa, , None]");
 }
@@ -219,7 +219,7 @@ fn into_mut_4() {
 
 #[test]
 fn rev_iter() {
-    let array = Utf8Array::<i32>::from(&[Some("hello"), Some(" "), None]);
+    let array = Utf8Array::<i32>::from([Some("hello"), Some(" "), None]);
 
     assert_eq!(
         array.into_iter().rev().collect::<Vec<_>>(),
@@ -229,7 +229,7 @@ fn rev_iter() {
 
 #[test]
 fn iter_nth() {
-    let array = Utf8Array::<i32>::from(&[Some("hello"), Some(" "), None]);
+    let array = Utf8Array::<i32>::from([Some("hello"), Some(" "), None]);
 
     assert_eq!(array.iter().nth(1), Some(Some(" ")));
     assert_eq!(array.iter().nth(10), None);

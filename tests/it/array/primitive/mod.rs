@@ -18,7 +18,7 @@ fn basics() {
     assert_eq!(array.values().as_slice(), &[1, 0, 10]);
     assert_eq!(
         array.validity(),
-        Some(&Bitmap::from_u8_slice(&[0b00000101], 3))
+        Some(&Bitmap::from_u8_slice([0b00000101], 3))
     );
     assert!(array.is_valid(0));
     assert!(!array.is_valid(1));
@@ -79,7 +79,7 @@ fn months_days_ns_from_slice() {
         months_days_ns::new(2, 3, 3),
     ];
 
-    let array = MonthsDaysNsArray::from_slice(&data);
+    let array = MonthsDaysNsArray::from_slice(data);
 
     let a = array.values().as_slice();
     assert_eq!(a, data.as_ref());

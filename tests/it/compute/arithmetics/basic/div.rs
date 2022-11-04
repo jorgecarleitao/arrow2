@@ -5,8 +5,8 @@ use arrow2::compute::arithmetics::{ArrayCheckedDiv, ArrayDiv};
 #[test]
 #[should_panic]
 fn test_div_mismatched_length() {
-    let a = Int32Array::from_slice(&[5, 6]);
-    let b = Int32Array::from_slice(&[5]);
+    let a = Int32Array::from_slice([5, 6]);
+    let b = Int32Array::from_slice([5]);
     div(&a, &b);
 }
 

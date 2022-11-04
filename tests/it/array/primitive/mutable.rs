@@ -138,19 +138,19 @@ fn from_iter() {
 
 #[test]
 fn natural_arc() {
-    let a = MutablePrimitiveArray::<i32>::from_slice(&[0, 1]).into_arc();
+    let a = MutablePrimitiveArray::<i32>::from_slice([0, 1]).into_arc();
     assert_eq!(a.len(), 2);
 }
 
 #[test]
 fn as_arc() {
-    let a = MutablePrimitiveArray::<i32>::from_slice(&[0, 1]).as_arc();
+    let a = MutablePrimitiveArray::<i32>::from_slice([0, 1]).as_arc();
     assert_eq!(a.len(), 2);
 }
 
 #[test]
 fn as_box() {
-    let a = MutablePrimitiveArray::<i32>::from_slice(&[0, 1]).as_box();
+    let a = MutablePrimitiveArray::<i32>::from_slice([0, 1]).as_box();
     assert_eq!(a.len(), 2);
 }
 

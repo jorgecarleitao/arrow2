@@ -105,7 +105,7 @@ fn test_extend_trusted_len_values() {
     assert_eq!(array.offsets().as_slice(), &[0, 2, 7, 12, 17, 17]);
     assert_eq!(
         array.validity(),
-        Some(&Bitmap::from_u8_slice(&[0b00001111], 5))
+        Some(&Bitmap::from_u8_slice([0b00001111], 5))
     );
 }
 
@@ -123,7 +123,7 @@ fn test_extend_trusted_len() {
     assert_eq!(array.offsets().as_slice(), &[0, 2, 7, 7, 12, 17]);
     assert_eq!(
         array.validity(),
-        Some(&Bitmap::from_u8_slice(&[0b00011011], 5))
+        Some(&Bitmap::from_u8_slice([0b00011011], 5))
     );
 }
 
@@ -201,7 +201,7 @@ fn as_box_twice() {
 
 #[test]
 fn extend_from_self() {
-    let mut a = MutableUtf8Array::<i32>::from(&[Some("aa"), None]);
+    let mut a = MutableUtf8Array::<i32>::from([Some("aa"), None]);
 
     a.try_extend_from_self(&a.clone()).unwrap();
 

@@ -29,7 +29,7 @@ fn sparse_debug() -> Result<()> {
     let types = vec![0, 0, 1].into();
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
-        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
     let array = UnionArray::from_data(data_type, types, fields, None);
@@ -49,7 +49,7 @@ fn dense_debug() -> Result<()> {
     let types = vec![0, 0, 1].into();
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
-        Utf8Array::<i32>::from(&[Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("c")]).boxed(),
     ];
     let offsets = Some(vec![0, 1, 0].into());
 
@@ -70,7 +70,7 @@ fn slice() -> Result<()> {
     let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
-        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
     let array = UnionArray::from_data(data_type.clone(), types, fields.clone(), None);
@@ -80,7 +80,7 @@ fn slice() -> Result<()> {
     let sliced_types = Buffer::from(vec![0, 1]);
     let sliced_fields = vec![
         Int32Array::from(&[None, Some(2)]).boxed(),
-        Utf8Array::<i32>::from(&[Some("b"), Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("b"), Some("c")]).boxed(),
     ];
     let expected = UnionArray::from_data(data_type, sliced_types, sliced_fields, None);
 
@@ -98,7 +98,7 @@ fn iter_sparse() -> Result<()> {
     let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
-        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
     let array = UnionArray::from_data(data_type, types, fields.clone(), None);
@@ -132,7 +132,7 @@ fn iter_dense() -> Result<()> {
     let offsets = Buffer::<i32>::from(vec![0, 1, 0]);
     let fields = vec![
         Int32Array::from(&[Some(1), None]).boxed(),
-        Utf8Array::<i32>::from(&[Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("c")]).boxed(),
     ];
 
     let array = UnionArray::from_data(data_type, types, fields.clone(), Some(offsets));
@@ -165,7 +165,7 @@ fn iter_sparse_slice() -> Result<()> {
     let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
         Int32Array::from(&[Some(1), Some(3), Some(2)]).boxed(),
-        Utf8Array::<i32>::from(&[Some("a"), Some("b"), Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
     let array = UnionArray::from_data(data_type, types, fields.clone(), None);
@@ -192,7 +192,7 @@ fn iter_dense_slice() -> Result<()> {
     let offsets = Buffer::<i32>::from(vec![0, 1, 0]);
     let fields = vec![
         Int32Array::from(&[Some(1), Some(3)]).boxed(),
-        Utf8Array::<i32>::from(&[Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("c")]).boxed(),
     ];
 
     let array = UnionArray::from_data(data_type, types, fields.clone(), Some(offsets));
@@ -219,7 +219,7 @@ fn scalar() -> Result<()> {
     let offsets = Buffer::<i32>::from(vec![0, 1, 0]);
     let fields = vec![
         Int32Array::from(&[Some(1), None]).boxed(),
-        Utf8Array::<i32>::from(&[Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("c")]).boxed(),
     ];
 
     let array = UnionArray::from_data(data_type, types, fields.clone(), Some(offsets));

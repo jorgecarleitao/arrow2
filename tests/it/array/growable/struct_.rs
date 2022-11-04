@@ -6,7 +6,7 @@ use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::{DataType, Field};
 
 fn some_values() -> (DataType, Vec<Box<dyn Array>>) {
-    let strings: Box<dyn Array> = Box::new(Utf8Array::<i32>::from(&[
+    let strings: Box<dyn Array> = Box::new(Utf8Array::<i32>::from([
         Some("a"),
         Some("aa"),
         None,
@@ -73,7 +73,7 @@ fn nulls() {
     let array = StructArray::from_data(
         fields.clone(),
         values.clone(),
-        Some(Bitmap::from_u8_slice(&[0b00000010], 5)),
+        Some(Bitmap::from_u8_slice([0b00000010], 5)),
     );
 
     let mut a = GrowableStruct::new(vec![&array], false, 0);
@@ -84,7 +84,7 @@ fn nulls() {
     let expected = StructArray::from_data(
         fields,
         vec![values[0].slice(1, 2), values[1].slice(1, 2)],
-        Some(Bitmap::from_u8_slice(&[0b00000010], 5).slice(1, 2)),
+        Some(Bitmap::from_u8_slice([0b00000010], 5).slice(1, 2)),
     );
 
     assert_eq!(result, expected)
@@ -103,7 +103,7 @@ fn many() {
     mutable.extend_validity(1);
     let result = mutable.as_box();
 
-    let expected_string: Box<dyn Array> = Box::new(Utf8Array::<i32>::from(&[
+    let expected_string: Box<dyn Array> = Box::new(Utf8Array::<i32>::from([
         Some("aa"),
         None,
         Some("a"),

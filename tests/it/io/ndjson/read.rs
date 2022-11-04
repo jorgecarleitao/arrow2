@@ -230,7 +230,7 @@ fn line_break_in_values() -> Result<()> {
     let data_type = DataType::Utf8;
     let arrays = read_and_deserialize(ndjson, &data_type, 1000)?;
 
-    let expected = Utf8Array::<i32>::from(&[Some("aa\n\n"), Some("aa\n"), None]);
+    let expected = Utf8Array::<i32>::from([Some("aa\n\n"), Some("aa\n"), None]);
 
     assert_eq!(expected, arrays[0].as_ref());
     Ok(())

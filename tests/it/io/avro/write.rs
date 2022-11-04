@@ -191,8 +191,8 @@ fn large_format_schema() -> Schema {
 
 fn large_format_data() -> Chunk<Box<dyn Array>> {
     let columns = vec![
-        Box::new(Utf8Array::<i64>::from_slice(&["a", "b"])) as Box<dyn Array>,
-        Box::new(Utf8Array::<i64>::from(&[Some("a"), None])),
+        Box::new(Utf8Array::<i64>::from_slice(["a", "b"])) as Box<dyn Array>,
+        Box::new(Utf8Array::<i64>::from([Some("a"), None])),
         Box::new(BinaryArray::<i64>::from_slice([b"foo", b"bar"])),
         Box::new(BinaryArray::<i64>::from([Some(b"foo"), None])),
     ];
@@ -210,8 +210,8 @@ fn large_format_expected_schema() -> Schema {
 
 fn large_format_expected_data() -> Chunk<Box<dyn Array>> {
     let columns = vec![
-        Box::new(Utf8Array::<i32>::from_slice(&["a", "b"])) as Box<dyn Array>,
-        Box::new(Utf8Array::<i32>::from(&[Some("a"), None])),
+        Box::new(Utf8Array::<i32>::from_slice(["a", "b"])) as Box<dyn Array>,
+        Box::new(Utf8Array::<i32>::from([Some("a"), None])),
         Box::new(BinaryArray::<i32>::from_slice([b"foo", b"bar"])),
         Box::new(BinaryArray::<i32>::from([Some(b"foo"), None])),
     ];

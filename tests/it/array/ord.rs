@@ -7,7 +7,7 @@ use arrow2::error::Result;
 
 #[test]
 fn i32() -> Result<()> {
-    let array = Int32Array::from_slice(&[1, 2]);
+    let array = Int32Array::from_slice([1, 2]);
 
     let cmp = build_compare(&array, &array)?;
 
@@ -17,8 +17,8 @@ fn i32() -> Result<()> {
 
 #[test]
 fn i32_i32() -> Result<()> {
-    let array1 = Int32Array::from_slice(&[1]);
-    let array2 = Int32Array::from_slice(&[2]);
+    let array1 = Int32Array::from_slice([1]);
+    let array2 = Int32Array::from_slice([2]);
 
     let cmp = build_compare(&array1, &array2)?;
 
@@ -28,7 +28,7 @@ fn i32_i32() -> Result<()> {
 
 #[test]
 fn f32() -> Result<()> {
-    let array = &Float32Array::from_slice(&[1.0, 2.0]);
+    let array = &Float32Array::from_slice([1.0, 2.0]);
 
     let cmp = build_compare(array, array)?;
 
@@ -38,7 +38,7 @@ fn f32() -> Result<()> {
 
 #[test]
 fn f64() -> Result<()> {
-    let array = Float64Array::from_slice(&[1.0, 2.0]);
+    let array = Float64Array::from_slice([1.0, 2.0]);
 
     let cmp = build_compare(&array, &array)?;
 
@@ -48,7 +48,7 @@ fn f64() -> Result<()> {
 
 #[test]
 fn f64_nan() -> Result<()> {
-    let array = Float64Array::from_slice(&[1.0, f64::NAN]);
+    let array = Float64Array::from_slice([1.0, f64::NAN]);
 
     let cmp = build_compare(&array, &array)?;
 
@@ -58,7 +58,7 @@ fn f64_nan() -> Result<()> {
 
 #[test]
 fn f64_zeros() -> Result<()> {
-    let array = Float64Array::from_slice(&[-0.0, 0.0]);
+    let array = Float64Array::from_slice([-0.0, 0.0]);
 
     let cmp = build_compare(&array, &array)?;
 
@@ -70,7 +70,7 @@ fn f64_zeros() -> Result<()> {
 
 #[test]
 fn decimal() -> Result<()> {
-    let array = Int128Array::from_slice(&[1, 2]).to(DataType::Decimal(38, 0));
+    let array = Int128Array::from_slice([1, 2]).to(DataType::Decimal(38, 0));
 
     let cmp = build_compare(&array, &array)?;
 

@@ -96,14 +96,14 @@ fn test_neg() {
 #[test]
 fn test_neg_dict() {
     let a = DictionaryArray::try_from_keys(
-        UInt8Array::from_slice(&[0, 0, 1]),
-        Int8Array::from_slice(&[1, 2]).boxed(),
+        UInt8Array::from_slice([0, 0, 1]),
+        Int8Array::from_slice([1, 2]).boxed(),
     )
     .unwrap();
     let result = neg(&a);
     let expected = DictionaryArray::try_from_keys(
-        UInt8Array::from_slice(&[0, 0, 1]),
-        Int8Array::from_slice(&[-1, -2]).boxed(),
+        UInt8Array::from_slice([0, 0, 1]),
+        Int8Array::from_slice([-1, -2]).boxed(),
     )
     .unwrap();
     assert_eq!(expected, result.as_ref());
