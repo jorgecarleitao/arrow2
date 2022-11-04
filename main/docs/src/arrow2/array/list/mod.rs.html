@@ -412,7 +412,7 @@
 <span class="kw">pub use </span>mutable::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// An [`Array`] semantically equivalent to `Vec&lt;Option&lt;Vec&lt;Option&lt;T&gt;&gt;&gt;&gt;` with Arrow&#39;s in-memory.
-</span><span class="attribute">#[derive(Clone)]
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>ListArray&lt;O: Offset&gt; {
     data_type: DataType,
     offsets: Buffer&lt;O&gt;,
@@ -502,7 +502,7 @@
     }
 
     <span class="doccomment">/// Returns a new null [`ListArray`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new_null(data_type: DataType, length: usize) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>child = <span class="self">Self</span>::get_child_type(<span class="kw-2">&amp;</span>data_type).clone();
         <span class="self">Self</span>::new(
@@ -628,7 +628,7 @@
     <span class="doccomment">/// Returns this [`ListArray`] with a new validity.
     /// # Panic
     /// This function panics iff `validity.len() != self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>with_validity(<span class="kw-2">mut </span><span class="self">self</span>, validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.set_validity(validity);
         <span class="self">self
@@ -648,13 +648,13 @@
 <span class="comment">// Accessors
 </span><span class="kw">impl</span>&lt;O: Offset&gt; ListArray&lt;O&gt; {
     <span class="doccomment">/// Returns the length of this array
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.offsets.len() - <span class="number">1
     </span>}
 
     <span class="doccomment">/// Returns the element at index `i`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
         <span class="kw">let </span>offset = <span class="self">self</span>.offsets[i];
         <span class="kw">let </span>offset_1 = <span class="self">self</span>.offsets[i + <span class="number">1</span>];
@@ -669,7 +669,7 @@
     <span class="doccomment">/// Returns the element at index `i` as &amp;str
     /// # Safety
     /// Assumes that the `i &lt; self.len`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>value_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
         <span class="kw">let </span>offset = <span class="kw-2">*</span><span class="self">self</span>.offsets.get_unchecked(i);
         <span class="kw">let </span>offset_1 = <span class="kw-2">*</span><span class="self">self</span>.offsets.get_unchecked(i + <span class="number">1</span>);
@@ -679,19 +679,19 @@
     }
 
     <span class="doccomment">/// The optional validity.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Bitmap&gt; {
         <span class="self">self</span>.validity.as_ref()
     }
 
     <span class="doccomment">/// The offsets [`Buffer`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>offsets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Buffer&lt;O&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.offsets
     }
 
     <span class="doccomment">/// The values.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Box&lt;<span class="kw">dyn </span>Array&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.values
     }
@@ -741,27 +741,27 @@
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; Array <span class="kw">for </span>ListArray&lt;O&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.len()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Bitmap&gt; {
         <span class="self">self</span>.validity.as_ref()
     }
@@ -783,4 +783,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

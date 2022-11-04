@@ -219,7 +219,7 @@
 
 <span class="kw">use </span><span class="kw">super</span>::ColumnPageStatistics;
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>deserialize_int32&lt;I: TrustedLen&lt;Item = <span class="prelude-ty">Option</span>&lt;i32&gt;&gt;&gt;(
     iter: I,
     data_type: DataType,
@@ -246,7 +246,7 @@
     }
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>timestamp(
     array: <span class="kw-2">&amp;mut </span>MutablePrimitiveArray&lt;i64&gt;,
     time_unit: TimeUnit,
@@ -304,7 +304,7 @@
     }
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>deserialize_int64&lt;I: TrustedLen&lt;Item = <span class="prelude-ty">Option</span>&lt;i64&gt;&gt;&gt;(
     iter: I,
     primitive_type: <span class="kw-2">&amp;</span>PrimitiveType,
@@ -334,7 +334,7 @@
     }
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>deserialize_int96&lt;I: TrustedLen&lt;Item = <span class="prelude-ty">Option</span>&lt;[u32; <span class="number">3</span>]&gt;&gt;&gt;(
     iter: I,
     data_type: DataType,
@@ -345,7 +345,7 @@
     )
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>deserialize_id_s&lt;T: NativeType, I: TrustedLen&lt;Item = <span class="prelude-ty">Option</span>&lt;T&gt;&gt;&gt;(
     iter: I,
     data_type: DataType,
@@ -419,4 +419,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

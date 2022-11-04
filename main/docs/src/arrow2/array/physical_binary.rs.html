@@ -323,7 +323,7 @@
 
 <span class="doccomment">/// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 #[allow(clippy::type_complexity)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>try_trusted_len_unzip&lt;E, I, P, O&gt;(
     iterator: I,
@@ -372,7 +372,7 @@
 /// corresponds to a values buffer.
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>trusted_len_unzip&lt;O, I, P&gt;(
     iterator: I,
 ) -&gt; (<span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;, Vec&lt;O&gt;, Vec&lt;u8&gt;)
@@ -405,7 +405,7 @@
 /// The first buffer corresponds to a offset buffer, the second to a values buffer.
 /// # Safety
 /// The caller must ensure that `iterator` is [`TrustedLen`].
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>trusted_len_values_iter&lt;O, I, P&gt;(iterator: I) -&gt; (Vec&lt;O&gt;, Vec&lt;u8&gt;)
 <span class="kw">where
     </span>O: Offset,
@@ -429,7 +429,7 @@
 // from the incoming `iterator`.
 // # Safety
 // The caller must ensure the `iterator` is [`TrustedLen`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>extend_from_trusted_len_values_iter&lt;I, P, O&gt;(
     offsets: <span class="kw-2">&amp;mut </span>Vec&lt;O&gt;,
     values: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;,
@@ -480,7 +480,7 @@
 <span class="comment">// Populates `offsets` and `values` [`Vec`]s with information extracted
 // from the incoming `iterator`.
 // the return value indicates how many items were added.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>extend_from_values_iter&lt;I, P, O&gt;(
     offsets: <span class="kw-2">&amp;mut </span>Vec&lt;O&gt;,
     values: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;,
@@ -516,7 +516,7 @@
 //
 // # Safety
 // The caller must ensure that `iterator` is [`TrustedLen`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>extend_from_trusted_len_iter&lt;O, I, P&gt;(
     offsets: <span class="kw-2">&amp;mut </span>Vec&lt;O&gt;,
     values: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;,
@@ -576,7 +576,7 @@
 
 <span class="doccomment">/// Creates two [`Vec`]s from an iterator of `&amp;[u8]`.
 /// The first buffer corresponds to a offset buffer, the second to a values buffer.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>values_iter&lt;O, I, P&gt;(iterator: I) -&gt; (Vec&lt;O&gt;, Vec&lt;u8&gt;)
 <span class="kw">where
     </span>O: Offset,
@@ -602,7 +602,7 @@
 }
 
 <span class="doccomment">/// Extends `offsets` with all offsets from `other`
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>try_extend_offsets&lt;O&gt;(offsets: <span class="kw-2">&amp;mut </span>Vec&lt;O&gt;, other: <span class="kw-2">&amp;</span>[O]) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
 <span class="kw">where
     </span>O: Offset,
@@ -637,4 +637,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

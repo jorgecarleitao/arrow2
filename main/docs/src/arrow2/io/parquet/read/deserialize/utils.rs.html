@@ -535,44 +535,44 @@
 }
 
 <span class="kw">impl </span>Pushable&lt;bool&gt; <span class="kw">for </span>MutableBitmap {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.len()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: bool) {
         <span class="self">self</span>.push(value)
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.push(<span class="bool-val">false</span>)
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>extend_constant(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize, value: bool) {
         <span class="self">self</span>.extend_constant(additional, value)
     }
 }
 
 <span class="kw">impl</span>&lt;A: Copy + Default&gt; Pushable&lt;A&gt; <span class="kw">for </span>Vec&lt;A&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.len()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.push(A::default())
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: A) {
         <span class="self">self</span>.push(value)
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>extend_constant(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize, value: A) {
         <span class="self">self</span>.resize(<span class="self">self</span>.len() + additional, value);
     }
@@ -583,7 +583,7 @@
     <span class="kw">fn </span>next_limited(<span class="kw-2">&amp;mut </span><span class="self">self</span>, limit: usize) -&gt; <span class="prelude-ty">Option</span>&lt;FilteredHybridEncoded&lt;<span class="lifetime">&#39;a</span>&gt;&gt;;
 }
 
-<span class="attribute">#[derive(Debug, Clone)]
+<span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>FilteredOptionalPageValidity&lt;<span class="lifetime">&#39;a</span>&gt; {
     iter: FilteredHybridRleDecoderIter&lt;<span class="lifetime">&#39;a</span>&gt;,
     current: <span class="prelude-ty">Option</span>&lt;(FilteredHybridEncoded&lt;<span class="lifetime">&#39;a</span>&gt;, usize)&gt;,
@@ -685,20 +685,20 @@
 <span class="kw">impl</span>&lt;T, V: Iterator&lt;Item = bool&gt;, I: Iterator&lt;Item = T&gt;&gt; Iterator <span class="kw">for </span>Zip&lt;V, I&gt; {
     <span class="kw">type </span>Item = <span class="prelude-ty">Option</span>&lt;T&gt;;
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="self">self</span>.validity
             .next()
             .map(|x| <span class="kw">if </span>x { <span class="self">self</span>.values.next() } <span class="kw">else </span>{ <span class="prelude-val">None </span>})
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>size_hint(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (usize, <span class="prelude-ty">Option</span>&lt;usize&gt;) {
         <span class="self">self</span>.validity.size_hint()
     }
 }
 
-<span class="attribute">#[derive(Debug, Clone)]
+<span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>OptionalPageValidity&lt;<span class="lifetime">&#39;a</span>&gt; {
     iter: HybridDecoderBitmapIter&lt;<span class="lifetime">&#39;a</span>&gt;,
     current: <span class="prelude-ty">Option</span>&lt;(HybridEncoded&lt;<span class="lifetime">&#39;a</span>&gt;, usize)&gt;,
@@ -906,7 +906,7 @@
 }
 
 <span class="doccomment">/// Represents what happened when a new page was consumed
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub enum </span>MaybeNext&lt;P&gt; {
     <span class="doccomment">/// Whether the page was sufficient to fill `chunk_size`
     </span><span class="prelude-val">Some</span>(P),
@@ -916,7 +916,7 @@
     </span>More,
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>next&lt;<span class="lifetime">&#39;a</span>, I: Pages, D: Decoder&lt;<span class="lifetime">&#39;a</span>&gt;&gt;(
     iter: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>I,
     items: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>VecDeque&lt;D::DecodedState&gt;,
@@ -980,7 +980,7 @@
     }
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>dict_indices_decoder(page: <span class="kw-2">&amp;</span>DataPage) -&gt; <span class="prelude-ty">Result</span>&lt;hybrid_rle::HybridRleDecoder, Error&gt; {
     <span class="kw">let </span>(<span class="kw">_</span>, <span class="kw">_</span>, indices_buffer) = split_buffer(page)<span class="question-mark">?</span>;
 
@@ -993,4 +993,4 @@
         .map_err(Error::from)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

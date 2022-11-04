@@ -548,7 +548,7 @@
     <span class="doccomment">/// The number of null slots on this [`Array`].
     /// # Implementation
     /// This is `O(1)` since the number of null elements is pre-computed.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">fn </span>null_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="kw">if </span><span class="self">self</span>.data_type() == <span class="kw-2">&amp;</span>DataType::Null {
             <span class="kw">return </span><span class="self">self</span>.len();
@@ -562,7 +562,7 @@
     <span class="doccomment">/// Returns whether slot `i` is null.
     /// # Panic
     /// Panics iff `i &gt;= self.len()`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">fn </span>is_null(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; bool {
         <span class="self">self</span>.validity()
             .as_ref()
@@ -573,7 +573,7 @@
     <span class="doccomment">/// Returns whether slot `i` is valid.
     /// # Panic
     /// Panics iff `i &gt;= self.len()`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">fn </span>is_valid(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; bool {
         !<span class="self">self</span>.is_null(i)
     }
@@ -656,7 +656,7 @@
     <span class="doccomment">/// Whether `index` is valid / set.
     /// # Panic
     /// Panics if `index &gt;= self.len()`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">fn </span>is_valid(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; bool {
         <span class="self">self</span>.validity()
             .as_ref()
@@ -700,7 +700,7 @@
         <span class="self">self</span>.as_mut().as_mut_any()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.as_mut().push_null()
     }
@@ -981,4 +981,4 @@
     </span><span class="kw">fn </span>offsets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[O];
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

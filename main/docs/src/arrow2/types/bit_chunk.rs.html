@@ -189,12 +189,12 @@
 <span class="macro">macro_rules! </span>bit_chunk {
     (<span class="macro-nonterminal">$ty</span>:ty) =&gt; {
         <span class="kw">impl </span>BitChunk <span class="kw">for </span><span class="macro-nonterminal">$ty </span>{
-            <span class="attribute">#[inline(always)]
+            <span class="attr">#[inline(always)]
             </span><span class="kw">fn </span>to_ne_bytes(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Bytes {
                 <span class="self">self</span>.to_ne_bytes()
             }
 
-            <span class="attribute">#[inline(always)]
+            <span class="attr">#[inline(always)]
             </span><span class="kw">fn </span>from_ne_bytes(v: <span class="self">Self</span>::Bytes) -&gt; <span class="self">Self </span>{
                 <span class="self">Self</span>::from_ne_bytes(v)
             }
@@ -227,7 +227,7 @@
 
 <span class="kw">impl</span>&lt;T: BitChunk&gt; BitChunkIter&lt;T&gt; {
     <span class="doccomment">/// Creates a new [`BitChunkIter`] with `len` bits.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(value: T, len: usize) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(len &lt;= std::mem::size_of::&lt;T&gt;() * <span class="number">8</span>);
         <span class="self">Self </span>{
@@ -241,7 +241,7 @@
 <span class="kw">impl</span>&lt;T: BitChunk&gt; Iterator <span class="kw">for </span>BitChunkIter&lt;T&gt; {
     <span class="kw">type </span>Item = bool;
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">if </span><span class="self">self</span>.remaining == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">None</span>;
@@ -252,7 +252,7 @@
         result
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>size_hint(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (usize, <span class="prelude-ty">Option</span>&lt;usize&gt;) {
         (<span class="self">self</span>.remaining, <span class="prelude-val">Some</span>(<span class="self">self</span>.remaining))
     }
@@ -279,7 +279,7 @@
 
 <span class="kw">impl</span>&lt;T: BitChunk&gt; BitChunkOnes&lt;T&gt; {
     <span class="doccomment">/// Creates a new [`BitChunkOnes`] with `len` bits.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(value: T) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             value,
@@ -291,7 +291,7 @@
 <span class="kw">impl</span>&lt;T: BitChunk&gt; Iterator <span class="kw">for </span>BitChunkOnes&lt;T&gt; {
     <span class="kw">type </span>Item = usize;
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">if </span><span class="self">self</span>.remaining == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">None</span>;
@@ -303,7 +303,7 @@
         <span class="prelude-val">Some</span>(v)
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>size_hint(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (usize, <span class="prelude-ty">Option</span>&lt;usize&gt;) {
         (<span class="self">self</span>.remaining, <span class="prelude-val">Some</span>(<span class="self">self</span>.remaining))
     }
@@ -313,4 +313,4 @@
 // a mathematical invariant of this iterator
 </span><span class="kw">unsafe impl</span>&lt;T: BitChunk&gt; <span class="kw">crate</span>::trusted_len::TrustedLen <span class="kw">for </span>BitChunkOnes&lt;T&gt; {}
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

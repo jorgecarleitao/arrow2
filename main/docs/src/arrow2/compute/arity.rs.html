@@ -299,7 +299,7 @@
 /// This will apply the function for all values, including those on null slots.
 /// This implies that the operation must be infallible for any value of the
 /// corresponding type or this function may panic.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>unary&lt;I, F, O&gt;(array: <span class="kw-2">&amp;</span>PrimitiveArray&lt;I&gt;, op: F, data_type: DataType) -&gt; PrimitiveArray&lt;O&gt;
 <span class="kw">where
     </span>I: NativeType,
@@ -422,7 +422,7 @@
 /// &quot;op&quot; needs to handle the different types in the arrays. The datatype for the
 /// resulting array has to be selected by the implementer of the function as
 /// an argument for the function.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>binary&lt;T, D, F&gt;(
     lhs: <span class="kw-2">&amp;</span>PrimitiveArray&lt;T&gt;,
     rhs: <span class="kw-2">&amp;</span>PrimitiveArray&lt;D&gt;,
@@ -561,4 +561,4 @@
     PrimitiveArray::&lt;T&gt;::new(data_type, values, validity)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

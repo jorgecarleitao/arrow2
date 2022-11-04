@@ -349,7 +349,7 @@
 
 <span class="doccomment">/// The Arrow&#39;s equivalent to an immutable `Vec&lt;Option&lt;[u8; size]&gt;&gt;`.
 /// Cloning and slicing this struct is `O(1)`.
-</span><span class="attribute">#[derive(Clone)]
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>FixedSizeBinaryArray {
     size: usize, <span class="comment">// this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
     </span>data_type: DataType,
@@ -446,7 +446,7 @@
     /// This operation is `O(1)` as it amounts to increase 3 ref counts.
     /// # Panics
     /// panics iff `offset + length &gt; self.len()`
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(
             offset + length &lt;= <span class="self">self</span>.len(),
@@ -460,7 +460,7 @@
     /// This operation is `O(1)` as it amounts to increase 3 ref counts.
     /// # Safety
     /// The caller must ensure that `offset + length &lt;= self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>validity = <span class="self">self
             </span>.validity
@@ -482,7 +482,7 @@
     <span class="doccomment">/// Returns this [`FixedSizeBinaryArray`] with a new validity.
     /// # Panic
     /// This function panics iff `validity.len() != self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>with_validity(<span class="kw-2">mut </span><span class="self">self</span>, validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.set_validity(validity);
         <span class="self">self
@@ -502,13 +502,13 @@
 <span class="comment">// accessors
 </span><span class="kw">impl </span>FixedSizeBinaryArray {
     <span class="doccomment">/// Returns the length of this array
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.len() / <span class="self">self</span>.size <span class="kw">as </span>usize
     }
 
     <span class="doccomment">/// The optional validity.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Bitmap&gt; {
         <span class="self">self</span>.validity.as_ref()
     }
@@ -521,7 +521,7 @@
     <span class="doccomment">/// Returns value at position `i`.
     /// # Panic
     /// Panics iff `i &gt;= self.len()`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;</span>[u8] {
         <span class="macro">assert!</span>(i &lt; <span class="self">self</span>.len());
         <span class="kw">unsafe </span>{ <span class="self">self</span>.value_unchecked(i) }
@@ -530,7 +530,7 @@
     <span class="doccomment">/// Returns the element at index `i` as &amp;str
     /// # Safety
     /// Assumes that the `i &lt; self.len`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>value_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;</span>[u8] {
         <span class="comment">// soundness: invariant of the function.
         </span><span class="self">self</span>.values
@@ -541,7 +541,7 @@
     /// This is `O(1)`.
     /// # Panics
     /// Panics iff the data_type is not supported for the physical type.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>to(<span class="self">self</span>, data_type: DataType) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>(
             data_type.to_logical_type(),
@@ -587,22 +587,22 @@
 }
 
 <span class="kw">impl </span>Array <span class="kw">for </span>FixedSizeBinaryArray {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.len()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
     }
@@ -666,15 +666,15 @@
 }
 
 <span class="kw">impl </span>FixedSizeBinaryValues <span class="kw">for </span>FixedSizeBinaryArray {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
         <span class="kw-2">&amp;</span><span class="self">self</span>.values
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.size <span class="kw">as </span>usize
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

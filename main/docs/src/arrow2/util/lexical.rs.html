@@ -41,7 +41,7 @@
 <span id="41">41</span>
 <span id="42">42</span>
 </pre><pre class="rust"><code><span class="doccomment">/// Converts numeric type to a `String`
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>lexical_to_bytes&lt;N: lexical_core::ToLexical&gt;(n: N) -&gt; Vec&lt;u8&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::&lt;u8&gt;::with_capacity(N::FORMATTED_SIZE_DECIMAL);
     lexical_to_bytes_mut(n, <span class="kw-2">&amp;mut </span>buf);
@@ -49,7 +49,7 @@
 }
 
 <span class="doccomment">/// Converts numeric type to a `String`
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>lexical_to_bytes_mut&lt;N: lexical_core::ToLexical&gt;(n: N, buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) {
     buf.clear();
     buf.reserve(N::FORMATTED_SIZE_DECIMAL);
@@ -64,12 +64,12 @@
 
         <span class="comment">//  Safety:
         //  Omits an unneeded bound check as we just ensured that we reserved `N::FORMATTED_SIZE_DECIMAL`
-        </span><span class="attribute">#[cfg(debug_assertions)]
+        </span><span class="attr">#[cfg(debug_assertions)]
         </span>{
             <span class="kw">let </span>len = lexical_core::write(n, slice).len();
             buf.set_len(len);
         }
-        <span class="attribute">#[cfg(not(debug_assertions))]
+        <span class="attr">#[cfg(not(debug_assertions))]
         </span>{
             <span class="kw">let </span>len = lexical_core::write_unchecked(n, slice).len();
             buf.set_len(len);
@@ -78,9 +78,9 @@
 }
 
 <span class="doccomment">/// Converts numeric type to a `String`
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>lexical_to_string&lt;N: lexical_core::ToLexical&gt;(n: N) -&gt; String {
     <span class="kw">unsafe </span>{ String::from_utf8_unchecked(lexical_to_bytes(n)) }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

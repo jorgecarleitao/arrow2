@@ -1055,7 +1055,7 @@
     )
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>interval_write(x: <span class="kw-2">&amp;</span>months_days_ns, buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) {
     <span class="comment">// https://avro.apache.org/docs/current/spec.html#Duration
     // 12 bytes, months, days, millis in LE
@@ -1065,4 +1065,4 @@
     buf.extend(((x.ns() / <span class="number">1_000_000</span>) <span class="kw">as </span>i32).to_le_bytes());
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

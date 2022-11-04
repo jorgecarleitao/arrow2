@@ -135,7 +135,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::error::{Error, <span class="prelude-ty">Result</span>};
 
 <span class="doccomment">/// Maximum value that can exist with a selected precision
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">fn </span>max_value(precision: usize) -&gt; i128 {
     <span class="number">10i128</span>.pow(precision <span class="kw">as </span>u32) - <span class="number">1
 </span>}
@@ -205,18 +205,18 @@
     (res_p, res_s, diff)
 }
 
-<span class="attribute">#[cfg(test)]
+<span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_max_value() {
         <span class="macro">assert_eq!</span>(<span class="number">999</span>, max_value(<span class="number">3</span>));
         <span class="macro">assert_eq!</span>(<span class="number">99999</span>, max_value(<span class="number">5</span>));
         <span class="macro">assert_eq!</span>(<span class="number">999999</span>, max_value(<span class="number">6</span>));
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_number_digits() {
         <span class="macro">assert_eq!</span>(<span class="number">2</span>, number_digits(<span class="number">12i128</span>));
         <span class="macro">assert_eq!</span>(<span class="number">3</span>, number_digits(<span class="number">123i128</span>));
@@ -227,7 +227,7 @@
         <span class="macro">assert_eq!</span>(<span class="number">3</span>, number_digits(-<span class="number">123i128</span>));
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_adjusted_precision_scale() {
         <span class="comment">//    11.1111 -&gt; 5, 4  -&gt;   2        4
         // 11111.01   -&gt; 7, 2  -&gt;   5        2
@@ -237,4 +237,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

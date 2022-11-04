@@ -294,12 +294,12 @@
 
 <span class="kw">use </span><span class="kw">super</span>::utils::RFC3339;
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>to_utf8(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt; {
     simdutf8::basic::from_utf8(bytes).ok()
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>deserialize_primitive&lt;T, B: ByteRecordGeneric, F&gt;(
     rows: <span class="kw-2">&amp;</span>[B],
     column: usize,
@@ -322,14 +322,14 @@
     Box::new(PrimitiveArray::&lt;T&gt;::from_trusted_len_iter(iter).to(datatype))
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>significant_bytes(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; usize {
     bytes.iter().map(|byte| (<span class="kw-2">*</span>byte != <span class="string">b&#39;0&#39;</span>) <span class="kw">as </span>usize).sum()
 }
 
 <span class="doccomment">/// Deserializes bytes to a single i128 representing a decimal
 /// The decimal precision and scale are not checked.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">fn </span>deserialize_decimal(bytes: <span class="kw-2">&amp;</span>[u8], precision: usize, scale: usize) -&gt; <span class="prelude-ty">Option</span>&lt;i128&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>a = bytes.split(|x| <span class="kw-2">*</span>x == <span class="string">b&#39;.&#39;</span>);
     <span class="kw">let </span>lhs = a.next();
@@ -366,7 +366,7 @@
     }
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>deserialize_boolean&lt;B, F&gt;(rows: <span class="kw-2">&amp;</span>[B], column: usize, op: F) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt;
 <span class="kw">where
     </span>B: ByteRecordGeneric,
@@ -384,7 +384,7 @@
     Box::new(BooleanArray::from_trusted_len_iter(iter))
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>deserialize_utf8&lt;O: Offset, B: ByteRecordGeneric&gt;(rows: <span class="kw-2">&amp;</span>[B], column: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
     <span class="kw">let </span>iter = rows.iter().map(|row| <span class="kw">match </span>row.get(column) {
         <span class="prelude-val">Some</span>(bytes) =&gt; to_utf8(bytes),
@@ -393,7 +393,7 @@
     Box::new(Utf8Array::&lt;O&gt;::from_trusted_len_iter(iter))
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>deserialize_binary&lt;O: Offset, B: ByteRecordGeneric&gt;(
     rows: <span class="kw-2">&amp;</span>[B],
     column: usize,
@@ -402,7 +402,7 @@
     Box::new(BinaryArray::&lt;O&gt;::from_trusted_len_iter(iter))
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>deserialize_datetime&lt;T: chrono::TimeZone&gt;(string: <span class="kw-2">&amp;</span>str, tz: <span class="kw-2">&amp;</span>T) -&gt; <span class="prelude-ty">Option</span>&lt;i64&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>parsed = chrono::format::Parsed::new();
     <span class="kw">let </span>fmt = chrono::format::StrftimeItems::new(RFC3339);
@@ -419,7 +419,7 @@
 }
 
 <span class="doccomment">/// Deserializes `column` of `rows` into an [`Array`] of [`DataType`] `datatype`.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>deserialize_column&lt;B: ByteRecordGeneric&gt;(
     rows: <span class="kw-2">&amp;</span>[B],
     column: usize,
@@ -551,4 +551,4 @@
         .and_then(Chunk::try_new)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

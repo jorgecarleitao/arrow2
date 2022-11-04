@@ -426,19 +426,19 @@
 </span><span class="kw">pub const </span>EPOCH_DAYS_FROM_CE: i32 = <span class="number">719_163</span>;
 
 <span class="doccomment">/// converts a `i32` representing a `date32` to [`NaiveDateTime`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>date32_to_datetime(v: i32) -&gt; NaiveDateTime {
     NaiveDateTime::from_timestamp(v <span class="kw">as </span>i64 * SECONDS_IN_DAY, <span class="number">0</span>)
 }
 
 <span class="doccomment">/// converts a `i32` representing a `date32` to [`NaiveDate`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>date32_to_date(days: i32) -&gt; NaiveDate {
     NaiveDate::from_num_days_from_ce(EPOCH_DAYS_FROM_CE + days)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `date64` to [`NaiveDateTime`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>date64_to_datetime(v: i64) -&gt; NaiveDateTime {
     NaiveDateTime::from_timestamp(
         <span class="comment">// extract seconds from milliseconds
@@ -449,19 +449,19 @@
 }
 
 <span class="doccomment">/// converts a `i64` representing a `date64` to [`NaiveDate`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>date64_to_date(milliseconds: i64) -&gt; NaiveDate {
     date64_to_datetime(milliseconds).date()
 }
 
 <span class="doccomment">/// converts a `i32` representing a `time32(s)` to [`NaiveDateTime`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>time32s_to_time(v: i32) -&gt; NaiveTime {
     NaiveTime::from_num_seconds_from_midnight(v <span class="kw">as </span>u32, <span class="number">0</span>)
 }
 
 <span class="doccomment">/// converts a `i32` representing a `time32(ms)` to [`NaiveTime`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>time32ms_to_time(v: i32) -&gt; NaiveTime {
     <span class="kw">let </span>v = v <span class="kw">as </span>i64;
     <span class="kw">let </span>seconds = v / MILLISECONDS;
@@ -472,7 +472,7 @@
 }
 
 <span class="doccomment">/// converts a `i64` representing a `time64(us)` to [`NaiveDateTime`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>time64us_to_time(v: i64) -&gt; NaiveTime {
     NaiveTime::from_num_seconds_from_midnight(
         <span class="comment">// extract seconds from microseconds
@@ -484,7 +484,7 @@
 }
 
 <span class="doccomment">/// converts a `i64` representing a `time64(ns)` to [`NaiveDateTime`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>time64ns_to_time(v: i64) -&gt; NaiveTime {
     NaiveTime::from_num_seconds_from_midnight(
         <span class="comment">// extract seconds from nanoseconds
@@ -495,13 +495,13 @@
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(s)` to [`NaiveDateTime`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_s_to_datetime(seconds: i64) -&gt; NaiveDateTime {
     NaiveDateTime::from_timestamp(seconds, <span class="number">0</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(ms)` to [`NaiveDateTime`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_ms_to_datetime(v: i64) -&gt; NaiveDateTime {
     NaiveDateTime::from_timestamp(
         <span class="comment">// extract seconds from milliseconds
@@ -512,7 +512,7 @@
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(us)` to [`NaiveDateTime`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_us_to_datetime(v: i64) -&gt; NaiveDateTime {
     NaiveDateTime::from_timestamp(
         <span class="comment">// extract seconds from microseconds
@@ -523,7 +523,7 @@
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(ns)` to [`NaiveDateTime`]
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_ns_to_datetime(v: i64) -&gt; NaiveDateTime {
     NaiveDateTime::from_timestamp(
         <span class="comment">// extract seconds from nanoseconds
@@ -534,7 +534,7 @@
 }
 
 <span class="doccomment">/// Converts a timestamp in `time_unit` and `timezone` into [`chrono::DateTime`].
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_to_naive_datetime(timestamp: i64, time_unit: TimeUnit) -&gt; chrono::NaiveDateTime {
     <span class="kw">match </span>time_unit {
         TimeUnit::Second =&gt; timestamp_s_to_datetime(timestamp),
@@ -545,7 +545,7 @@
 }
 
 <span class="doccomment">/// Converts a timestamp in `time_unit` and `timezone` into [`chrono::DateTime`].
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_to_datetime&lt;T: chrono::TimeZone&gt;(
     timestamp: i64,
     time_unit: TimeUnit,
@@ -608,7 +608,7 @@
 
 <span class="doccomment">/// Parses `value` to `Option&lt;i64&gt;` consistent with the Arrow&#39;s definition of timestamp with timezone.
 /// `tz` must be built from `timezone` (either via [`parse_offset`] or `chrono-tz`).
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>utf8_to_timestamp_ns_scalar&lt;T: chrono::TimeZone&gt;(
     value: <span class="kw-2">&amp;</span>str,
     fmt: <span class="kw-2">&amp;</span>str,
@@ -630,7 +630,7 @@
 }
 
 <span class="doccomment">/// Parses `value` to `Option&lt;i64&gt;` consistent with the Arrow&#39;s definition of timestamp without timezone.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>utf8_to_naive_timestamp_ns_scalar(value: <span class="kw-2">&amp;</span>str, fmt: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;i64&gt; {
     <span class="kw">let </span>fmt = StrftimeItems::new(fmt);
     <span class="kw">let </span><span class="kw-2">mut </span>parsed = Parsed::new();
@@ -656,7 +656,7 @@
 }
 
 <span class="doccomment">/// Parses `value` to a [`chrono_tz::Tz`] with the Arrow&#39;s definition of timestamp with a timezone.
-</span><span class="attribute">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)))]
 </span><span class="kw">pub fn </span>parse_offset_tz(timezone: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;chrono_tz::Tz&gt; {
     timezone.parse::&lt;chrono_tz::Tz&gt;().map_err(|<span class="kw">_</span>| {
@@ -664,7 +664,7 @@
     })
 }
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)))]
 </span><span class="kw">fn </span>chrono_tz_utf_to_timestamp_ns&lt;O: Offset&gt;(
     array: <span class="kw-2">&amp;</span>Utf8Array&lt;O&gt;,
@@ -675,7 +675,7 @@
     <span class="prelude-val">Ok</span>(utf8_to_timestamp_ns_impl(array, fmt, timezone, tz))
 }
 
-<span class="attribute">#[cfg(not(feature = <span class="string">&quot;chrono-tz&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;chrono-tz&quot;</span>))]
 </span><span class="kw">fn </span>chrono_tz_utf_to_timestamp_ns&lt;O: Offset&gt;(
     <span class="kw">_</span>: <span class="kw-2">&amp;</span>Utf8Array&lt;O&gt;,
     <span class="kw">_</span>: <span class="kw-2">&amp;</span>str,
@@ -737,7 +737,7 @@
 }
 
 <span class="doccomment">/// Adds an `interval` to a `timestamp` in `time_unit` units without timezone.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>add_naive_interval(timestamp: i64, time_unit: TimeUnit, interval: months_days_ns) -&gt; i64 {
     <span class="comment">// convert seconds to a DateTime of a given offset.
     </span><span class="kw">let </span>datetime = <span class="kw">match </span>time_unit {
@@ -765,7 +765,7 @@
 }
 
 <span class="doccomment">/// Adds an `interval` to a `timestamp` in `time_unit` units and timezone `timezone`.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>add_interval&lt;T: chrono::TimeZone&gt;(
     timestamp: i64,
     time_unit: TimeUnit,
@@ -793,4 +793,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

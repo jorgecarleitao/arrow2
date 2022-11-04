@@ -105,17 +105,17 @@
             <span class="kw">const </span>MIN: <span class="macro-nonterminal">$</span><span class="kw">type </span>= &lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt;<span class="macro-nonterminal">::NAN</span>;
             <span class="kw">const </span>MAX: <span class="macro-nonterminal">$</span><span class="kw">type </span>= &lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt;<span class="macro-nonterminal">::NAN</span>;
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>max_element(<span class="self">self</span>) -&gt; <span class="macro-nonterminal">$</span><span class="kw">type </span>{
                 <span class="macro-nonterminal">self</span>.<span class="number">0</span>.iter().copied().fold(<span class="self">Self</span>::MIN, &lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt;<span class="macro-nonterminal">::max</span>)
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>min_element(<span class="self">self</span>) -&gt; <span class="macro-nonterminal">$</span><span class="kw">type </span>{
                 <span class="macro-nonterminal">self</span>.<span class="number">0</span>.iter().copied().fold(<span class="self">Self</span>::MAX, &lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt;<span class="macro-nonterminal">::min</span>)
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>max_lane(<span class="self">self</span>, x: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
                 <span class="kw">let </span><span class="kw-2">mut </span>result = &lt;<span class="macro-nonterminal">$simd</span>&gt;::default();
                 result
@@ -127,7 +127,7 @@
                 result
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>min_lane(<span class="self">self</span>, x: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
                 <span class="kw">let </span><span class="kw-2">mut </span>result = &lt;<span class="macro-nonterminal">$simd</span>&gt;::default();
                 result
@@ -139,12 +139,12 @@
                 result
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>new_min() -&gt; <span class="self">Self </span>{
                 <span class="self">Self</span>([<span class="self">Self</span>::MAX; &lt;<span class="macro-nonterminal">$simd</span>&gt;::LANES])
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>new_max() -&gt; <span class="self">Self </span>{
                 <span class="self">Self</span>([<span class="self">Self</span>::MIN; &lt;<span class="macro-nonterminal">$simd</span>&gt;::LANES])
             }
@@ -163,4 +163,4 @@
 <span class="macro">simd_ord_float!</span>(f32x16, f32);
 <span class="macro">simd_ord_float!</span>(f64x8, f64);
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

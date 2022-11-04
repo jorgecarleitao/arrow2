@@ -405,7 +405,7 @@
 }
 
 <span class="doccomment">/// Iterator adapter of parquet / dremel definition levels
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>DefLevelsIter&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="comment">// iterators of validities and lengths. E.g. [[[None,b,c], None], None] -&gt; [[(true, 2), (false, 0)], [(true, 3), (false, 0)], [(false, 1), (true, 1), (true, 1)]]
     </span>iter: Vec&lt;Box&lt;<span class="kw">dyn </span>DebugIter + <span class="lifetime">&#39;a</span>&gt;&gt;,
@@ -501,7 +501,7 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]
+<span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
@@ -513,7 +513,7 @@
         <span class="macro">assert_eq!</span>(iter.size_hint().<span class="number">0</span>, <span class="number">0</span>);
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>struct_optional() {
         <span class="kw">let </span>b = Bitmap::from([
             <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>,
@@ -527,7 +527,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>struct_optional_1() {
         <span class="kw">let </span>b = Bitmap::from([
             <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>,
@@ -541,7 +541,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>struct_optional_optional() {
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">10</span>),
@@ -552,7 +552,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>l1_required_required() {
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             <span class="comment">// [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
@@ -568,7 +568,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>l1_optional_optional() {
         <span class="comment">// [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
 
@@ -593,7 +593,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>l2_required_required_required() {
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::List(ListNested::&lt;i32&gt; {
@@ -613,7 +613,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>l2_optional_required_required() {
         <span class="kw">let </span>a = Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>]);
         <span class="comment">// e.g. [[[1,2,3], [4,5,6,7]], None, [[8], [], [9, 10]]]
@@ -635,7 +635,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>l2_optional_optional_required() {
         <span class="kw">let </span>a = Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>]);
         <span class="kw">let </span>b = Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>]);
@@ -658,7 +658,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>l2_optional_optional_optional() {
         <span class="kw">let </span>a = Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>]);
         <span class="kw">let </span>b = Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>]);
@@ -683,4 +683,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

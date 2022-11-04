@@ -582,7 +582,7 @@
 
 <span class="doccomment">/// A [`MutableArray`] that builds a [`Utf8Array`]. It differs
 /// from [`MutableUtf8ValuesArray`] in that it can build nullable [`Utf8Array`]s.
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableUtf8Array&lt;O: Offset&gt; {
     values: MutableUtf8ValuesArray&lt;O&gt;,
     validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
@@ -729,7 +729,7 @@
     }
 
     <span class="doccomment">/// Returns the length of this array
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.len()
     }
@@ -737,7 +737,7 @@
     <span class="doccomment">/// Pushes a new element to the array.
     /// # Panic
     /// This operation panics iff the length of all values (in bytes) exceeds `O` maximum value.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>push&lt;T: AsRef&lt;str&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: <span class="prelude-ty">Option</span>&lt;T&gt;) {
         <span class="self">self</span>.try_push(value).unwrap()
     }
@@ -745,7 +745,7 @@
     <span class="doccomment">/// Returns the value of the element at index `i`, ignoring the array&#39;s validity.
     /// # Safety
     /// This function is safe iff `i &lt; self.len`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;</span>str {
         <span class="self">self</span>.values.value(i)
     }
@@ -753,7 +753,7 @@
     <span class="doccomment">/// Returns the value of the element at index `i`, ignoring the array&#39;s validity.
     /// # Safety
     /// This function is safe iff `i &lt; self.len`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>value_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;</span>str {
         <span class="self">self</span>.values.value_unchecked(i)
     }
@@ -876,7 +876,7 @@
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.push::&lt;<span class="kw-2">&amp;</span>str&gt;(<span class="prelude-val">None</span>)
     }
@@ -899,7 +899,7 @@
 <span class="kw">impl</span>&lt;O: Offset&gt; MutableUtf8Array&lt;O&gt; {
     <span class="doccomment">/// Extends the [`MutableUtf8Array`] from an iterator of values of trusted len.
     /// This differs from `extended_trusted_len` which accepts iterator of optional values.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_trusted_len_values&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: AsRef&lt;str&gt;,
@@ -910,7 +910,7 @@
 
     <span class="doccomment">/// Extends the [`MutableUtf8Array`] from an iterator of values.
     /// This differs from `extended_trusted_len` which accepts iterator of optional values.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_values&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: AsRef&lt;str&gt;,
@@ -930,7 +930,7 @@
     /// values.
     /// # Safety
     /// The iterator must be trusted len.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>extend_trusted_len_values_unchecked&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: AsRef&lt;str&gt;,
@@ -946,7 +946,7 @@
     }
 
     <span class="doccomment">/// Extends the [`MutableUtf8Array`] from an iterator of trusted len.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_trusted_len&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: AsRef&lt;str&gt;,
@@ -958,7 +958,7 @@
     <span class="doccomment">/// Extends [`MutableUtf8Array`] from an iterator of trusted len.
     /// # Safety
     /// The iterator must be trusted len.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>extend_trusted_len_unchecked&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: AsRef&lt;str&gt;,
@@ -978,7 +978,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>from_trusted_len_iter_unchecked&lt;I, P&gt;(iterator: I) -&gt; <span class="self">Self
     </span><span class="kw">where
         </span>P: AsRef&lt;str&gt;,
@@ -992,7 +992,7 @@
     }
 
     <span class="doccomment">/// Creates a [`MutableUtf8Array`] from an iterator of trusted length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_trusted_len_iter&lt;I, P&gt;(iterator: I) -&gt; <span class="self">Self
     </span><span class="kw">where
         </span>P: AsRef&lt;str&gt;,
@@ -1006,7 +1006,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>from_trusted_len_values_iter_unchecked&lt;T: AsRef&lt;str&gt;, I: Iterator&lt;Item = T&gt;&gt;(
         iterator: I,
     ) -&gt; <span class="self">Self </span>{
@@ -1014,7 +1014,7 @@
     }
 
     <span class="doccomment">/// Creates a new [`MutableUtf8Array`] from a [`TrustedLen`] of `&amp;str`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_trusted_len_values_iter&lt;T: AsRef&lt;str&gt;, I: TrustedLen&lt;Item = T&gt;&gt;(
         iterator: I,
     ) -&gt; <span class="self">Self </span>{
@@ -1040,7 +1040,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>try_from_trusted_len_iter_unchecked&lt;E, I, P&gt;(
         iterator: I,
     ) -&gt; std::result::Result&lt;<span class="self">Self</span>, E&gt;
@@ -1063,7 +1063,7 @@
     }
 
     <span class="doccomment">/// Creates a [`MutableUtf8Array`] from an falible iterator of trusted length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>try_from_trusted_len_iter&lt;E, I, P&gt;(iterator: I) -&gt; std::result::Result&lt;<span class="self">Self</span>, E&gt;
     <span class="kw">where
         </span>P: AsRef&lt;str&gt;,
@@ -1094,7 +1094,7 @@
 }
 
 <span class="kw">impl</span>&lt;O: Offset, T: AsRef&lt;str&gt;&gt; TryPush&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>MutableUtf8Array&lt;O&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>try_push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: <span class="prelude-ty">Option</span>&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">match </span>value {
             <span class="prelude-val">Some</span>(value) =&gt; {
@@ -1131,4 +1131,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

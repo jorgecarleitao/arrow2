@@ -392,7 +392,7 @@
 <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::utils::{get_selected_rows, FilteredOptionalPageValidity, OptionalPageValidity};
 <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::Pages;
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>FilteredRequiredValues&lt;<span class="lifetime">&#39;a</span>&gt; {
     values: SliceFilteredIter&lt;std::slice::ChunksExact&lt;<span class="lifetime">&#39;a</span>, u8&gt;&gt;,
 }
@@ -410,13 +410,13 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ values })
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.size_hint().<span class="number">0
     </span>}
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>Values&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub </span>values: std::slice::ChunksExact&lt;<span class="lifetime">&#39;a</span>, u8&gt;,
 }
@@ -430,13 +430,13 @@
         })
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.size_hint().<span class="number">0
     </span>}
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>ValuesDictionary&lt;<span class="lifetime">&#39;a</span>, T&gt;
 <span class="kw">where
     </span>T: NativeType,
@@ -455,14 +455,14 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ dict, values })
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.size_hint().<span class="number">0
     </span>}
 }
 
 <span class="comment">// The state of a `DataPage` of `Primitive` parquet primitive type
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum </span>State&lt;<span class="lifetime">&#39;a</span>, T&gt;
 <span class="kw">where
     </span>T: NativeType,
@@ -491,7 +491,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>PrimitiveDecoder&lt;T, P, F&gt;
 <span class="kw">where
     </span>T: NativeType,
@@ -509,7 +509,7 @@
     P: ParquetNativeType,
     F: Fn(P) -&gt; T,
 {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new(op: F) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             phantom: std::marker::PhantomData,
@@ -659,7 +659,7 @@
 }
 
 <span class="doccomment">/// An [`Iterator`] adapter over [`Pages`] assumed to be encoded as primitive arrays
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Iter&lt;T, I, P, F&gt;
 <span class="kw">where
     </span>I: Pages,
@@ -747,4 +747,4 @@
         .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

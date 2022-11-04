@@ -240,7 +240,7 @@
 };
 
 <span class="comment">// The state of a required DataPage with a boolean physical type
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Required&lt;<span class="lifetime">&#39;a</span>&gt; {
     values: HybridRleDecoder&lt;<span class="lifetime">&#39;a</span>&gt;,
     length: usize,
@@ -255,7 +255,7 @@
 }
 
 <span class="comment">// The state of a `DataPage` of a `Dictionary` type
-</span><span class="attribute">#[allow(clippy::large_enum_variant)]
+</span><span class="attr">#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 </span><span class="kw">pub enum </span>State&lt;<span class="lifetime">&#39;a</span>&gt; {
     Optional(HybridRleDecoder&lt;<span class="lifetime">&#39;a</span>&gt;),
@@ -277,7 +277,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>DictionaryDecoder&lt;K&gt;
 <span class="kw">where
     </span>K: DictionaryKey,
@@ -289,7 +289,7 @@
 <span class="kw">where
     </span>K: DictionaryKey,
 {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             phantom_k: std::marker::PhantomData,
@@ -363,7 +363,7 @@
     <span class="kw">fn </span>deserialize_dict(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>DictPage) -&gt; <span class="self">Self</span>::Dictionary {}
 }
 
-<span class="attribute">#[allow(clippy::too_many_arguments)]
+<span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">pub fn </span>next_dict&lt;<span class="lifetime">&#39;a</span>, K: DictionaryKey, I: Pages, F: Fn(<span class="kw-2">&amp;</span>DictPage) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt;&gt;(
     iter: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>I,
     items: <span class="kw-2">&amp;mut </span>VecDeque&lt;(NestedState, (Vec&lt;K&gt;, MutableBitmap))&gt;,
@@ -437,4 +437,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

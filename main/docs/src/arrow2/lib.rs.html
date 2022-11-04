@@ -45,20 +45,22 @@
 <span id="45">45</span>
 <span id="46">46</span>
 <span id="47">47</span>
-</pre><pre class="rust"><code><span class="attribute">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;doc/lib.md&quot;</span>)]
+<span id="48">48</span>
+</pre><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;doc/lib.md&quot;</span>)]
 #![deny(missing_docs)]
 </span><span class="comment">// So that we have more control over what is `unsafe` inside an `unsafe` block
-</span><span class="attribute">#![allow(unused_unsafe)]
+</span><span class="attr">#![allow(unused_unsafe)]
 </span><span class="comment">//
-</span><span class="attribute">#![allow(clippy::len_without_is_empty)]
+</span><span class="attr">#![allow(clippy::len_without_is_empty)]
 </span><span class="comment">// this landed on 1.60. Let&#39;s not force everyone to bump just yet
-</span><span class="attribute">#![allow(clippy::unnecessary_lazy_evaluations)]
+</span><span class="attr">#![allow(clippy::unnecessary_lazy_evaluations)]
 </span><span class="comment">// Trait objects must be returned as a &amp;Box&lt;dyn Array&gt; so that they can be cloned
-</span><span class="attribute">#![allow(clippy::borrowed_box)]
+</span><span class="attr">#![allow(clippy::borrowed_box)]
 </span><span class="comment">// Allow type complexity warning to avoid API break.
-</span><span class="attribute">#![allow(clippy::type_complexity)]
+</span><span class="attr">#![allow(clippy::type_complexity)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = <span class="string">&quot;simd&quot;</span>, feature(portable_simd))]
+#![cfg_attr(feature = <span class="string">&quot;nightly_build&quot;</span>, feature(build_hasher_simple_hash_one))]
 
 #[macro_use]
 </span><span class="kw">pub mod </span>array;
@@ -66,7 +68,7 @@
 <span class="kw">pub mod </span>buffer;
 <span class="kw">pub mod </span>chunk;
 <span class="kw">pub mod </span>error;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;io_ipc&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;io_ipc&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_ipc&quot;</span>)))]
 </span><span class="kw">pub mod </span>mmap;
 
@@ -84,7 +86,7 @@
 <span class="kw">pub mod </span>util;
 
 <span class="comment">// so that documentation gets test
-</span><span class="attribute">#[cfg(any(test, doctest))]
+</span><span class="attr">#[cfg(any(test, doctest))]
 </span><span class="kw">mod </span>docs;
 
 <span class="comment">// re-exported because we return `Either` in our public API
@@ -93,4 +95,4 @@
 <span class="comment">// re-exported to construct dictionaries
 </span><span class="kw">pub use </span>ahash::AHashMap;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

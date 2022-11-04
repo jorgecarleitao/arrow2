@@ -857,7 +857,7 @@
 }
 
 <span class="comment">// disable wrapping inside literal vectors used for test data and assertions
-</span><span class="attribute">#[rustfmt::skip::macros(vec)]
+</span><span class="attr">#[rustfmt::skip::macros(vec)]
 #[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -905,7 +905,7 @@
         };
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_eq() {
         <span class="macro">cmp_i64!</span>(
             eq,
@@ -915,7 +915,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_eq_scalar() {
         <span class="macro">cmp_i64_scalar!</span>(
             eq_scalar,
@@ -925,7 +925,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_eq_with_slice() {
         <span class="kw">let </span>a = Int64Array::from_slice(<span class="kw-2">&amp;</span>[<span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">8</span>, <span class="number">10</span>]);
         <span class="kw">let </span>b = Int64Array::from_slice(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span>]);
@@ -937,7 +937,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_neq() {
         <span class="macro">cmp_i64!</span>(
             neq,
@@ -947,7 +947,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_neq_scalar() {
         <span class="macro">cmp_i64_scalar!</span>(
             neq_scalar,
@@ -957,7 +957,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_lt() {
         <span class="macro">cmp_i64!</span>(
             lt,
@@ -967,7 +967,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_lt_scalar() {
         <span class="macro">cmp_i64_scalar!</span>(
             lt_scalar,
@@ -977,7 +977,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_lt_nulls() {
         <span class="macro">cmp_i64_options!</span>(
             lt,
@@ -987,7 +987,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_lt_scalar_nulls() {
         <span class="macro">cmp_i64_scalar_options!</span>(
             lt_scalar,
@@ -997,7 +997,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_lt_eq() {
         <span class="macro">cmp_i64!</span>(
             lt_eq,
@@ -1007,7 +1007,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_lt_eq_scalar() {
         <span class="macro">cmp_i64_scalar!</span>(
             lt_eq_scalar,
@@ -1017,7 +1017,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_lt_eq_nulls() {
         <span class="macro">cmp_i64_options!</span>(
             lt_eq,
@@ -1047,7 +1047,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_lt_eq_scalar_nulls() {
         <span class="macro">cmp_i64_scalar_options!</span>(
             lt_eq_scalar,
@@ -1057,7 +1057,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_gt() {
         <span class="macro">cmp_i64!</span>(
             gt,
@@ -1067,7 +1067,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_gt_scalar() {
         <span class="macro">cmp_i64_scalar!</span>(
             gt_scalar,
@@ -1077,7 +1077,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_gt_nulls() {
         <span class="macro">cmp_i64_options!</span>(
             gt,
@@ -1107,7 +1107,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_gt_scalar_nulls() {
         <span class="macro">cmp_i64_scalar_options!</span>(
             gt_scalar,
@@ -1117,7 +1117,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_gt_eq() {
         <span class="macro">cmp_i64!</span>(
             gt_eq,
@@ -1127,7 +1127,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_gt_eq_scalar() {
         <span class="macro">cmp_i64_scalar!</span>(
             gt_eq_scalar,
@@ -1137,7 +1137,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_gt_eq_nulls() {
         <span class="macro">cmp_i64_options!</span>(
             gt_eq,
@@ -1147,7 +1147,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_gt_eq_scalar_nulls() {
         <span class="macro">cmp_i64_scalar_options!</span>(
             gt_eq_scalar,
@@ -1157,7 +1157,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_compare_slice() {
         <span class="kw">let </span>a = (<span class="number">0</span>..<span class="number">100</span>).map(<span class="prelude-val">Some</span>).collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
         <span class="kw">let </span>a = a.slice(<span class="number">50</span>, <span class="number">50</span>);
@@ -1168,7 +1168,7 @@
         <span class="macro">assert_eq!</span>(expected, actual);
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_compare_scalar_slice() {
         <span class="kw">let </span>a = (<span class="number">0</span>..<span class="number">100</span>).map(<span class="prelude-val">Some</span>).collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
         <span class="kw">let </span>a = a.slice(<span class="number">50</span>, <span class="number">50</span>);
@@ -1177,7 +1177,7 @@
         <span class="macro">assert_eq!</span>(expected, actual);
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_length_of_result_buffer() {
         <span class="comment">// `item_count` is chosen to not be a multiple of 64.
         </span><span class="kw">let </span>item_count = <span class="number">130</span>;
@@ -1191,4 +1191,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

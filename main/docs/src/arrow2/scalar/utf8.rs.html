@@ -58,7 +58,7 @@
 <span class="kw">use </span><span class="kw">super</span>::Scalar;
 
 <span class="doccomment">/// The implementation of [`Scalar`] for utf8, semantically equivalent to [`Option&lt;String&gt;`].
-</span><span class="attribute">#[derive(Debug, Clone, PartialEq, Eq)]
+</span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>Utf8Scalar&lt;O: Offset&gt; {
     value: <span class="prelude-ty">Option</span>&lt;String&gt;,
     phantom: std::marker::PhantomData&lt;O&gt;,
@@ -66,7 +66,7 @@
 
 <span class="kw">impl</span>&lt;O: Offset&gt; Utf8Scalar&lt;O&gt; {
     <span class="doccomment">/// Returns a new [`Utf8Scalar`]
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new&lt;P: Into&lt;String&gt;&gt;(value: <span class="prelude-ty">Option</span>&lt;P&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             value: value.map(|x| x.into()),
@@ -75,31 +75,31 @@
     }
 
     <span class="doccomment">/// Returns the value irrespectively of the validity.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt; {
         <span class="self">self</span>.value.as_ref().map(|x| x.as_ref())
     }
 }
 
 <span class="kw">impl</span>&lt;O: Offset, P: Into&lt;String&gt;&gt; From&lt;<span class="prelude-ty">Option</span>&lt;P&gt;&gt; <span class="kw">for </span>Utf8Scalar&lt;O&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from(v: <span class="prelude-ty">Option</span>&lt;P&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new(v)
     }
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; Scalar <span class="kw">for </span>Utf8Scalar&lt;O&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>is_valid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.value.is_some()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw">if </span>O::IS_LARGE {
             <span class="kw-2">&amp;</span>DataType::LargeUtf8
@@ -109,4 +109,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

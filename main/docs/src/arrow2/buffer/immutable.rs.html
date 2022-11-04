@@ -248,7 +248,7 @@
 /// // but cloning forbids getting mut since `slice` and `buffer` now share data
 /// assert_eq!(buffer.get_mut(), None);
 /// ```
-</span><span class="attribute">#[derive(Clone)]
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Buffer&lt;T&gt; {
     <span class="doccomment">/// the internal byte buffer.
     </span>data: Arc&lt;Bytes&lt;T&gt;&gt;,
@@ -262,7 +262,7 @@
 }
 
 <span class="kw">impl</span>&lt;T: PartialEq&gt; PartialEq <span class="kw">for </span>Buffer&lt;T&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
         <span class="self">self</span>.deref() == other.deref()
     }
@@ -275,7 +275,7 @@
 }
 
 <span class="kw">impl</span>&lt;T&gt; Default <span class="kw">for </span>Buffer&lt;T&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         Vec::new().into()
     }
@@ -283,7 +283,7 @@
 
 <span class="kw">impl</span>&lt;T&gt; Buffer&lt;T&gt; {
     <span class="doccomment">/// Creates an empty [`Buffer`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::default()
     }
@@ -299,19 +299,19 @@
     }
 
     <span class="doccomment">/// Returns the number of bytes in the buffer
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.length
     }
 
     <span class="doccomment">/// Returns whether the buffer is empty.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.len() == <span class="number">0
     </span>}
 
     <span class="doccomment">/// Returns the byte slice stored in this buffer
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>as_slice(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[T] {
         <span class="comment">// Safety:
         // invariant of this struct `offset + length &lt;= data.len()`
@@ -325,7 +325,7 @@
     <span class="doccomment">/// Returns the byte slice stored in this buffer
     /// # Safety
     /// `index` must be smaller than `len`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">unsafe fn </span>get_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; <span class="kw-2">&amp;</span>T {
         <span class="comment">// Safety:
         // invariant of this function
@@ -337,7 +337,7 @@
     /// Doing so allows the same memory region to be shared between buffers.
     /// # Panics
     /// Panics iff `offset` is larger than `len`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>slice(<span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(
             offset + length &lt;= <span class="self">self</span>.len(),
@@ -351,7 +351,7 @@
     /// Doing so allows the same memory region to be shared between buffers.
     /// # Safety
     /// The caller must ensure `offset + length &lt;= self.len()`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">mut </span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.offset += offset;
         <span class="self">self</span>.length = length;
@@ -359,13 +359,13 @@
     </span>}
 
     <span class="doccomment">/// Returns a pointer to the start of this buffer.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>as_ptr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">*const </span>T {
         <span class="self">self</span>.data.deref().as_ptr()
     }
 
     <span class="doccomment">/// Returns the offset of this buffer.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>offset(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.offset
     }
@@ -396,7 +396,7 @@
 }
 
 <span class="kw">impl</span>&lt;T&gt; From&lt;Vec&lt;T&gt;&gt; <span class="kw">for </span>Buffer&lt;T&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from(p: Vec&lt;T&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>bytes: Bytes&lt;T&gt; = p.into();
         <span class="self">Self </span>{
@@ -410,14 +410,14 @@
 <span class="kw">impl</span>&lt;T&gt; std::ops::Deref <span class="kw">for </span>Buffer&lt;T&gt; {
     <span class="kw">type </span>Target = [T];
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[T] {
         <span class="self">self</span>.as_slice()
     }
 }
 
 <span class="kw">impl</span>&lt;T&gt; FromIterator&lt;T&gt; <span class="kw">for </span>Buffer&lt;T&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from_iter&lt;I: IntoIterator&lt;Item = T&gt;&gt;(iter: I) -&gt; <span class="self">Self </span>{
         Vec::from_iter(iter).into()
     }
@@ -433,4 +433,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

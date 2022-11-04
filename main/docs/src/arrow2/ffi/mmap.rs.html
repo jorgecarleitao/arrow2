@@ -624,7 +624,7 @@
 
 <span class="kw">use super</span>::{export_array_to_c, try_from, ArrowArray, InternalArrowArray};
 
-<span class="attribute">#[allow(dead_code)]
+<span class="attr">#[allow(dead_code)]
 </span><span class="kw">struct </span>PrivateData&lt;T&gt; {
     <span class="comment">// the owner of the pointers&#39; regions
     </span>data: T,
@@ -925,7 +925,7 @@
     ))
 }
 
-<span class="attribute">#[allow(clippy::too_many_arguments)]
+<span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">fn </span>mmap_list&lt;O: Offset, T: AsRef&lt;[u8]&gt;&gt;(
     data: Arc&lt;T&gt;,
     node: <span class="kw-2">&amp;</span>Node,
@@ -975,7 +975,7 @@
     ))
 }
 
-<span class="attribute">#[allow(clippy::too_many_arguments)]
+<span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">fn </span>mmap_fixed_size_list&lt;T: AsRef&lt;[u8]&gt;&gt;(
     data: Arc&lt;T&gt;,
     node: <span class="kw-2">&amp;</span>Node,
@@ -1024,7 +1024,7 @@
     ))
 }
 
-<span class="attribute">#[allow(clippy::too_many_arguments)]
+<span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">fn </span>mmap_struct&lt;T: AsRef&lt;[u8]&gt;&gt;(
     data: Arc&lt;T&gt;,
     node: <span class="kw-2">&amp;</span>Node,
@@ -1078,7 +1078,7 @@
     ))
 }
 
-<span class="attribute">#[allow(clippy::too_many_arguments)]
+<span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">fn </span>mmap_dict&lt;K: DictionaryKey, T: AsRef&lt;[u8]&gt;&gt;(
     data: Arc&lt;T&gt;,
     node: <span class="kw-2">&amp;</span>Node,
@@ -1223,4 +1223,4 @@
     </span><span class="kw">unsafe </span>{ try_from(InternalArrowArray::new(array, data_type)) }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

@@ -244,7 +244,7 @@
 <span class="kw">use </span><span class="kw">super</span>::FixedSizeListArray;
 
 <span class="doccomment">/// The mutable version of [`FixedSizeListArray`].
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableFixedSizeListArray&lt;M: MutableArray&gt; {
     data_type: DataType,
     size: usize,
@@ -322,7 +322,7 @@
         <span class="self">self</span>.validity = <span class="prelude-val">Some</span>(validity)
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="doccomment">/// Needs to be called when a valid value was extended to this array.
     /// This is a relatively low level function, prefer `try_push` when you can.
     </span><span class="kw">pub fn </span>try_push_valid(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -335,7 +335,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         (<span class="number">0</span>..<span class="self">self</span>.size).for_each(|<span class="kw">_</span>| <span class="self">self</span>.values.push_null());
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.validity {
@@ -398,7 +398,7 @@
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         (<span class="number">0</span>..<span class="self">self</span>.size).for_each(|<span class="kw">_</span>| {
             <span class="self">self</span>.values.push_null();
@@ -424,7 +424,7 @@
     </span>M: MutableArray + TryExtend&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;,
     I: IntoIterator&lt;Item = <span class="prelude-ty">Option</span>&lt;T&gt;&gt;,
 {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>try_extend&lt;II: IntoIterator&lt;Item = <span class="prelude-ty">Option</span>&lt;I&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iter: II) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">for </span>items <span class="kw">in </span>iter {
             <span class="self">self</span>.try_push(items)<span class="question-mark">?</span>;
@@ -438,7 +438,7 @@
     </span>M: MutableArray + TryExtend&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;,
     I: IntoIterator&lt;Item = <span class="prelude-ty">Option</span>&lt;T&gt;&gt;,
 {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>try_push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: <span class="prelude-ty">Option</span>&lt;I&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(items) = item {
             <span class="self">self</span>.values.try_extend(items)<span class="question-mark">?</span>;
@@ -461,4 +461,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

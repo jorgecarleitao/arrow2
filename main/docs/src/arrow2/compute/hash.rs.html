@@ -160,7 +160,7 @@
 <span id="160">160</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains the [`hash`] and typed (e.g. [`hash_primitive`]) operators.
 </span><span class="comment">// multiversion does not copy documentation, causing a false positive
-</span><span class="attribute">#![allow(missing_docs)]
+</span><span class="attr">#![allow(missing_docs)]
 </span><span class="kw">use </span>ahash::{CallHasher, RandomState};
 <span class="kw">use </span>multiversion::multiversion;
 <span class="kw">use </span>std::hash::Hash;
@@ -180,7 +180,7 @@
 
 <span class="kw">use </span><span class="kw">super</span>::arity::unary;
 
-<span class="attribute">#[multiversion]
+<span class="attr">#[multiversion]
 #[clone(target = <span class="string">&quot;x86_64+aes+sse3+ssse3+avx+avx2&quot;</span>)]
 </span><span class="doccomment">/// Element-wise hash of a [`PrimitiveArray`]. Validity is preserved.
 </span><span class="kw">pub fn </span>hash_primitive&lt;T: NativeType + Hash&gt;(array: <span class="kw-2">&amp;</span>PrimitiveArray&lt;T&gt;) -&gt; PrimitiveArray&lt;u64&gt; {
@@ -189,7 +189,7 @@
     unary(array, |x| T::get_hash(<span class="kw-2">&amp;</span>x, <span class="kw-2">&amp;</span>state), DataType::UInt64)
 }
 
-<span class="attribute">#[multiversion]
+<span class="attr">#[multiversion]
 #[clone(target = <span class="string">&quot;x86_64+aes+sse3+ssse3+avx+avx2&quot;</span>)]
 </span><span class="doccomment">/// Element-wise hash of a [`BooleanArray`]. Validity is preserved.
 </span><span class="kw">pub fn </span>hash_boolean(array: <span class="kw-2">&amp;</span>BooleanArray) -&gt; PrimitiveArray&lt;u64&gt; {
@@ -204,7 +204,7 @@
     PrimitiveArray::&lt;u64&gt;::new(DataType::UInt64, values, array.validity().cloned())
 }
 
-<span class="attribute">#[multiversion]
+<span class="attr">#[multiversion]
 #[clone(target = <span class="string">&quot;x86_64+aes+sse3+ssse3+avx+avx2&quot;</span>)]
 </span><span class="doccomment">/// Element-wise hash of a [`Utf8Array`]. Validity is preserved.
 </span><span class="kw">pub fn </span>hash_utf8&lt;O: Offset&gt;(array: <span class="kw-2">&amp;</span>Utf8Array&lt;O&gt;) -&gt; PrimitiveArray&lt;u64&gt; {
@@ -319,4 +319,4 @@
     )
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

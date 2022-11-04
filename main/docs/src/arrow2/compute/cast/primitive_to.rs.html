@@ -1058,7 +1058,7 @@
     }
 }
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)))]
 </span><span class="kw">fn </span>chrono_tz_timestamp_to_utf8&lt;O: Offset&gt;(
     from: <span class="kw-2">&amp;</span>PrimitiveArray&lt;i64&gt;,
@@ -1071,7 +1071,7 @@
     ))
 }
 
-<span class="attribute">#[cfg(not(feature = <span class="string">&quot;chrono-tz&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;chrono-tz&quot;</span>))]
 </span><span class="kw">fn </span>chrono_tz_timestamp_to_utf8&lt;O: Offset&gt;(
     <span class="kw">_</span>: <span class="kw-2">&amp;</span>PrimitiveArray&lt;i64&gt;,
     <span class="kw">_</span>: TimeUnit,
@@ -1142,7 +1142,7 @@
     }
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>days_ms_to_months_days_ns_scalar(from: days_ms) -&gt; months_days_ns {
     months_days_ns::new(<span class="number">0</span>, from.days(), from.milliseconds() <span class="kw">as </span>i64 * <span class="number">1000</span>)
 }
@@ -1156,7 +1156,7 @@
     )
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>months_to_months_days_ns_scalar(from: i32) -&gt; months_days_ns {
     months_days_ns::new(from, <span class="number">0</span>, <span class="number">0</span>)
 }
@@ -1175,4 +1175,4 @@
     unary(from, |x| x.to_f32(), DataType::Float32)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

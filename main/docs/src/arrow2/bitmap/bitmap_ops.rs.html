@@ -434,7 +434,7 @@
     bitmap.slice(new_offset, length)
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="doccomment">/// Compute bitwise AND operation
 </span><span class="kw">pub fn </span>and(lhs: <span class="kw-2">&amp;</span>Bitmap, rhs: <span class="kw-2">&amp;</span>Bitmap) -&gt; Bitmap {
     <span class="kw">if </span>lhs.unset_bits() == lhs.len() || rhs.unset_bits() == rhs.len() {
@@ -445,7 +445,7 @@
     }
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="doccomment">/// Compute bitwise OR operation
 </span><span class="kw">pub fn </span>or(lhs: <span class="kw-2">&amp;</span>Bitmap, rhs: <span class="kw-2">&amp;</span>Bitmap) -&gt; Bitmap {
     <span class="kw">if </span>lhs.unset_bits() == <span class="number">0 </span>|| rhs.unset_bits() == <span class="number">0 </span>{
@@ -458,7 +458,7 @@
     }
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="doccomment">/// Compute bitwise XOR operation
 </span><span class="kw">pub fn </span>xor(lhs: <span class="kw-2">&amp;</span>Bitmap, rhs: <span class="kw-2">&amp;</span>Bitmap) -&gt; Bitmap {
     <span class="kw">let </span>lhs_nulls = lhs.unset_bits();
@@ -541,4 +541,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

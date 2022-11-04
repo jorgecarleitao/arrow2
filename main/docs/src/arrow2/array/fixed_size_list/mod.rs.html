@@ -304,7 +304,7 @@
 
 <span class="doccomment">/// The Arrow&#39;s equivalent to an immutable `Vec&lt;Option&lt;[T; size]&gt;&gt;` where `T` is an Arrow type.
 /// Cloning and slicing this struct is `O(1)`.
-</span><span class="attribute">#[derive(Clone)]
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>FixedSizeListArray {
     size: usize, <span class="comment">// this is redundant with `data_type`, but useful to not have to deconstruct the data_type.
     </span>data_type: DataType,
@@ -419,7 +419,7 @@
     /// This operation is `O(1)`.
     /// # Panics
     /// panics iff `offset + length &gt; self.len()`
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(
             offset + length &lt;= <span class="self">self</span>.len(),
@@ -433,7 +433,7 @@
     /// This operation is `O(1)`.
     /// # Safety
     /// The caller must ensure that `offset + length &lt;= self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>validity = <span class="self">self
             </span>.validity
@@ -455,7 +455,7 @@
     <span class="doccomment">/// Returns this [`FixedSizeListArray`] with a new validity.
     /// # Panic
     /// This function panics iff `validity.len() != self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>with_validity(<span class="kw-2">mut </span><span class="self">self</span>, validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.set_validity(validity);
         <span class="self">self
@@ -475,13 +475,13 @@
 <span class="comment">// accessors
 </span><span class="kw">impl </span>FixedSizeListArray {
     <span class="doccomment">/// Returns the length of this array
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.len() / <span class="self">self</span>.size <span class="kw">as </span>usize
     }
 
     <span class="doccomment">/// The optional validity.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Bitmap&gt; {
         <span class="self">self</span>.validity.as_ref()
     }
@@ -494,7 +494,7 @@
     <span class="doccomment">/// Returns the `Vec&lt;T&gt;` at position `i`.
     /// # Panic:
     /// panics iff `i &gt;= self.len()`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
         <span class="self">self</span>.values
             .slice(i * <span class="self">self</span>.size <span class="kw">as </span>usize, <span class="self">self</span>.size <span class="kw">as </span>usize)
@@ -503,7 +503,7 @@
     <span class="doccomment">/// Returns the `Vec&lt;T&gt;` at position `i`.
     /// # Safety
     /// Caller must ensure that `i &lt; self.len()`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>value_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
         <span class="self">self</span>.values
             .slice_unchecked(i * <span class="self">self</span>.size <span class="kw">as </span>usize, <span class="self">self</span>.size <span class="kw">as </span>usize)
@@ -537,22 +537,22 @@
 }
 
 <span class="kw">impl </span>Array <span class="kw">for </span>FixedSizeListArray {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.len()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
     }
@@ -575,4 +575,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

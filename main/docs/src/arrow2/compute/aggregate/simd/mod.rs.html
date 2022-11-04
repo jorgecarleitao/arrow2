@@ -118,7 +118,7 @@
 <span class="macro">macro_rules! </span>simd_add {
     (<span class="macro-nonterminal">$simd</span>:tt, <span class="macro-nonterminal">$</span><span class="kw">type</span>:<span class="macro-nonterminal">ty</span>, <span class="macro-nonterminal">$lanes</span>:expr, <span class="macro-nonterminal">$add</span>:tt) =&gt; {
         <span class="kw">impl </span>std::ops::AddAssign <span class="kw">for </span><span class="macro-nonterminal">$simd </span>{
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>add_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="self">Self</span>) {
                 <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="macro-nonterminal">$lanes </span>{
                     <span class="self">self</span>[i] = &lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt;::<span class="macro-nonterminal">$add</span>(<span class="self">self</span>[i], rhs[i]);
@@ -129,7 +129,7 @@
         <span class="kw">impl </span>std::ops::Add <span class="kw">for </span><span class="macro-nonterminal">$simd </span>{
             <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>add(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
                 <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">Self</span>::default();
                 <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="macro-nonterminal">$lanes </span>{
@@ -140,7 +140,7 @@
         }
 
         <span class="kw">impl </span>Sum&lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt; <span class="kw">for </span><span class="macro-nonterminal">$simd </span>{
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>simd_sum(<span class="self">self</span>) -&gt; <span class="macro-nonterminal">$</span><span class="kw">type </span>{
                 <span class="kw">let </span><span class="kw-2">mut </span><span class="macro-nonterminal">reduced </span>= &lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt;<span class="macro-nonterminal">::default</span>();
                 (<span class="number">0</span>..&lt;<span class="macro-nonterminal">$simd</span>&gt;::LANES).for_each(|i| {
@@ -158,17 +158,17 @@
             <span class="kw">const </span>MIN: <span class="macro-nonterminal">$</span><span class="kw">type </span>= &lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt;<span class="macro-nonterminal">::MIN</span>;
             <span class="kw">const </span>MAX: <span class="macro-nonterminal">$</span><span class="kw">type </span>= &lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt;<span class="macro-nonterminal">::MAX</span>;
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>max_element(<span class="self">self</span>) -&gt; <span class="macro-nonterminal">$</span><span class="kw">type </span>{
                 <span class="macro-nonterminal">self</span>.<span class="number">0</span>.iter().copied().fold(<span class="self">Self</span>::MIN, &lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt;<span class="macro-nonterminal">::max</span>)
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>min_element(<span class="self">self</span>) -&gt; <span class="macro-nonterminal">$</span><span class="kw">type </span>{
                 <span class="macro-nonterminal">self</span>.<span class="number">0</span>.iter().copied().fold(<span class="self">Self</span>::MAX, &lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt;<span class="macro-nonterminal">::min</span>)
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>max_lane(<span class="self">self</span>, x: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
                 <span class="kw">let </span><span class="kw-2">mut </span>result = &lt;<span class="macro-nonterminal">$simd</span>&gt;::default();
                 result
@@ -180,7 +180,7 @@
                 result
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>min_lane(<span class="self">self</span>, x: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
                 <span class="kw">let </span><span class="kw-2">mut </span>result = &lt;<span class="macro-nonterminal">$simd</span>&gt;::default();
                 result
@@ -192,12 +192,12 @@
                 result
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>new_min() -&gt; <span class="self">Self </span>{
                 <span class="self">Self</span>([<span class="self">Self</span>::MAX; &lt;<span class="macro-nonterminal">$simd</span>&gt;::LANES])
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>new_max() -&gt; <span class="self">Self </span>{
                 <span class="self">Self</span>([<span class="self">Self</span>::MIN; &lt;<span class="macro-nonterminal">$simd</span>&gt;::LANES])
             }
@@ -211,14 +211,14 @@
 <span class="macro">simd_add!</span>(i128x8, i128, <span class="number">8</span>, add);
 <span class="macro">simd_ord_int!</span>(i128x8, i128);
 
-<span class="attribute">#[cfg(not(feature = <span class="string">&quot;simd&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;simd&quot;</span>))]
 </span><span class="kw">mod </span>native;
-<span class="attribute">#[cfg(not(feature = <span class="string">&quot;simd&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;simd&quot;</span>))]
 </span><span class="kw">pub use </span>native::<span class="kw-2">*</span>;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;simd&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;simd&quot;</span>)]
 </span><span class="kw">mod </span>packed;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;simd&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;simd&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;simd&quot;</span>)))]
 </span><span class="kw">pub use </span>packed::<span class="kw-2">*</span>;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

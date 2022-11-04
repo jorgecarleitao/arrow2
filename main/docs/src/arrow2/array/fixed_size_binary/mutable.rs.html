@@ -320,7 +320,7 @@
 /// Converting a [`MutableFixedSizeBinaryArray`] into a [`FixedSizeBinaryArray`] is `O(1)`.
 /// # Implementation
 /// This struct does not allocate a validity until one is required (i.e. push a null to it).
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableFixedSizeBinaryArray {
     data_type: DataType,
     size: usize,
@@ -400,7 +400,7 @@
     <span class="doccomment">/// tries to push a new entry to [`MutableFixedSizeBinaryArray`].
     /// # Error
     /// Errors iff the size of `value` is not equal to its own size.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>try_push&lt;P: AsRef&lt;[u8]&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: <span class="prelude-ty">Option</span>&lt;P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">match </span>value {
             <span class="prelude-val">Some</span>(bytes) =&gt; {
@@ -431,13 +431,13 @@
     <span class="doccomment">/// pushes a new entry to [`MutableFixedSizeBinaryArray`].
     /// # Panics
     /// Panics iff the size of `value` is not equal to its own size.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>push&lt;P: AsRef&lt;[u8]&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: <span class="prelude-ty">Option</span>&lt;P&gt;) {
         <span class="self">self</span>.try_push(value).unwrap()
     }
 
     <span class="doccomment">/// Returns the length of this array
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.len() / <span class="self">self</span>.size <span class="kw">as </span>usize
     }
@@ -474,7 +474,7 @@
     }
 
     <span class="doccomment">/// returns the (fixed) size of the [`MutableFixedSizeBinaryArray`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.size
     }
@@ -492,7 +492,7 @@
     }
 
     <span class="doccomment">/// Returns the element at index `i` as `&amp;[u8]`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;</span>[u8] {
         <span class="kw-2">&amp;</span><span class="self">self</span>.values[i * <span class="self">self</span>.size..(i + <span class="number">1</span>) * <span class="self">self</span>.size]
     }
@@ -500,7 +500,7 @@
     <span class="doccomment">/// Returns the element at index `i` as `&amp;[u8]`
     /// # Safety
     /// Assumes that the `i &lt; self.len`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>value_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;</span>[u8] {
         std::slice::from_raw_parts(<span class="self">self</span>.values.as_ptr().add(i * <span class="self">self</span>.size), <span class="self">self</span>.size)
     }
@@ -586,12 +586,12 @@
 }
 
 <span class="kw">impl </span>FixedSizeBinaryValues <span class="kw">for </span>MutableFixedSizeBinaryArray {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
         <span class="kw-2">&amp;</span><span class="self">self</span>.values
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.size
     }
@@ -613,4 +613,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

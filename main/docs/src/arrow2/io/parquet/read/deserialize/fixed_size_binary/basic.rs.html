@@ -345,7 +345,7 @@
 
 <span class="kw">type </span>Dict = Vec&lt;u8&gt;;
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">struct </span>Optional&lt;<span class="lifetime">&#39;a</span>&gt; {
     values: std::slice::ChunksExact&lt;<span class="lifetime">&#39;a</span>, u8&gt;,
     validity: OptionalPageValidity&lt;<span class="lifetime">&#39;a</span>&gt;,
@@ -364,7 +364,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">struct </span>Required&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub </span>values: std::slice::ChunksExact&lt;<span class="lifetime">&#39;a</span>, u8&gt;,
 }
@@ -377,13 +377,13 @@
         <span class="self">Self </span>{ values }
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.size_hint().<span class="number">0
     </span>}
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">struct </span>FilteredRequired&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub </span>values: SliceFilteredIter&lt;std::slice::ChunksExact&lt;<span class="lifetime">&#39;a</span>, u8&gt;&gt;,
 }
@@ -400,13 +400,13 @@
         <span class="self">Self </span>{ values }
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.size_hint().<span class="number">0
     </span>}
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">struct </span>RequiredDictionary&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub </span>values: hybrid_rle::HybridRleDecoder&lt;<span class="lifetime">&#39;a</span>&gt;,
     dict: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Dict,
@@ -419,13 +419,13 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ dict, values })
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.size_hint().<span class="number">0
     </span>}
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">struct </span>OptionalDictionary&lt;<span class="lifetime">&#39;a</span>&gt; {
     values: hybrid_rle::HybridRleDecoder&lt;<span class="lifetime">&#39;a</span>&gt;,
     validity: OptionalPageValidity&lt;<span class="lifetime">&#39;a</span>&gt;,
@@ -444,7 +444,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">enum </span>State&lt;<span class="lifetime">&#39;a</span>&gt; {
     Optional(Optional&lt;<span class="lifetime">&#39;a</span>&gt;),
     Required(Required&lt;<span class="lifetime">&#39;a</span>&gt;),
@@ -647,4 +647,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

@@ -629,7 +629,7 @@
     array.release = <span class="prelude-val">None</span>;
 }
 
-<span class="attribute">#[allow(dead_code)]
+<span class="attr">#[allow(dead_code)]
 </span><span class="kw">struct </span>PrivateData {
     array: Box&lt;<span class="kw">dyn </span>Array&gt;,
     buffers_ptr: Box&lt;[<span class="kw-2">*const </span>std::os::raw::c_void]&gt;,
@@ -1025,7 +1025,7 @@
 /// calling [ArrowArray::release] and [ArrowSchema::release] accordingly.
 ///
 /// Furthermore, this struct assumes that the incoming data agrees with the C data interface.
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>InternalArrowArray {
     <span class="comment">// Arc is used for sharability since this is immutable
     </span>array: Arc&lt;ArrowArray&gt;,
@@ -1061,7 +1061,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>ArrowArrayChild&lt;<span class="lifetime">&#39;a</span>&gt; {
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ArrowArray,
     data_type: DataType,
@@ -1097,4 +1097,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

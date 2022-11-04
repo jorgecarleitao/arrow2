@@ -72,7 +72,7 @@
 /// let result = merge_reversed(current, next, 1);
 /// assert_eq!(result, 0b10101100);
 /// ```
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>merge_reversed&lt;T&gt;(<span class="kw-2">mut </span>current: T, <span class="kw-2">mut </span>next: T, offset: usize) -&gt; T
 <span class="kw">where
     </span>T: BitChunk,
@@ -95,11 +95,11 @@
     </span>current | next
 }
 
-<span class="attribute">#[cfg(test)]
+<span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_merge_reversed() {
         <span class="kw">let </span>current = <span class="number">0b00000000</span>;
         <span class="kw">let </span>next = <span class="number">0b00000001</span>;
@@ -112,7 +112,7 @@
         <span class="macro">assert_eq!</span>(result, <span class="number">0b10101100</span>);
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_merge_reversed_offset2() {
         <span class="kw">let </span>current = <span class="number">0b00000000</span>;
         <span class="kw">let </span>next = <span class="number">0b00000001</span>;
@@ -121,4 +121,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

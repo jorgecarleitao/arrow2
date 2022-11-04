@@ -68,7 +68,7 @@
 
 <span class="doccomment">/// The implementation of [`Scalar`] for primitive, semantically equivalent to [`Option&lt;T&gt;`]
 /// with [`DataType`].
-</span><span class="attribute">#[derive(Debug, Clone, PartialEq, Eq)]
+</span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>PrimitiveScalar&lt;T: NativeType&gt; {
     value: <span class="prelude-ty">Option</span>&lt;T&gt;,
     data_type: DataType,
@@ -76,7 +76,7 @@
 
 <span class="kw">impl</span>&lt;T: NativeType&gt; PrimitiveScalar&lt;T&gt; {
     <span class="doccomment">/// Returns a new [`PrimitiveScalar`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(data_type: DataType, value: <span class="prelude-ty">Option</span>&lt;T&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">if </span>!data_type.to_physical_type().eq_primitive(T::PRIMITIVE) {
             <span class="prelude-val">Err</span>(Error::InvalidArgumentError(<span class="macro">format!</span>(
@@ -90,7 +90,7 @@
     }
 
     <span class="doccomment">/// Returns the optional value.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;T&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.value
     }
@@ -104,27 +104,27 @@
 }
 
 <span class="kw">impl</span>&lt;T: NativeType&gt; From&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>PrimitiveScalar&lt;T&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from(v: <span class="prelude-ty">Option</span>&lt;T&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new(T::PRIMITIVE.into(), v)
     }
 }
 
 <span class="kw">impl</span>&lt;T: NativeType&gt; Scalar <span class="kw">for </span>PrimitiveScalar&lt;T&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>is_valid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.value.is_some()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

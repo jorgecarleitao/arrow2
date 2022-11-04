@@ -354,7 +354,7 @@
 ///
 /// let array = StructArray::new(DataType::Struct(fields), vec![boolean, int], None);
 /// ```
-</span><span class="attribute">#[derive(Clone)]
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>StructArray {
     data_type: DataType,
     values: Vec&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;,
@@ -485,7 +485,7 @@
 <span class="comment">// must use
 </span><span class="kw">impl </span>StructArray {
     <span class="doccomment">/// Deconstructs the [`StructArray`] into its individual components.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>into_data(<span class="self">self</span>) -&gt; (Vec&lt;Field&gt;, Vec&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;, <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) {
         <span class="kw">let </span><span class="self">Self </span>{
             data_type,
@@ -505,7 +505,7 @@
     /// * `offset + length` must be smaller than `self.len()`.
     /// # Implementation
     /// This operation is `O(F)` where `F` is the number of fields.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(
             offset + length &lt;= <span class="self">self</span>.len(),
@@ -519,7 +519,7 @@
     /// This operation is `O(F)` where `F` is the number of fields.
     /// # Safety
     /// The caller must ensure that `offset + length &lt;= self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>validity = <span class="self">self
             </span>.validity
@@ -540,7 +540,7 @@
     <span class="doccomment">/// Returns this [`StructArray`] with a new validity.
     /// # Panics
     /// This function panics iff `validity.len() != self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>with_validity(<span class="kw-2">mut </span><span class="self">self</span>, validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.set_validity(validity);
         <span class="self">self
@@ -569,13 +569,13 @@
 
 <span class="comment">// Accessors
 </span><span class="kw">impl </span>StructArray {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values[<span class="number">0</span>].len()
     }
 
     <span class="doccomment">/// The optional validity.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Bitmap&gt; {
         <span class="self">self</span>.validity.as_ref()
     }
@@ -609,27 +609,27 @@
 }
 
 <span class="kw">impl </span>Array <span class="kw">for </span>StructArray {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.len()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Bitmap&gt; {
         <span class="self">self</span>.validity.as_ref()
     }
@@ -651,4 +651,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

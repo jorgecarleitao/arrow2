@@ -417,7 +417,7 @@
 /// // when sliced (or cloned), it is no longer possible to `into_mut`.
 /// let same: Bitmap = sliced.into_mut().left().unwrap();
 /// ```
-</span><span class="attribute">#[derive(Clone)]
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Bitmap {
     bytes: Arc&lt;Bytes&lt;u8&gt;&gt;,
     <span class="comment">// both are measured in bits. They are used to bound the bitmap to a region of Bytes.
@@ -442,7 +442,7 @@
 
 <span class="kw">impl </span>Bitmap {
     <span class="doccomment">/// Initializes an empty [`Bitmap`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::default()
     }
@@ -450,7 +450,7 @@
     <span class="doccomment">/// Initializes a new [`Bitmap`] from vector of bytes and a length.
     /// # Errors
     /// This function errors iff `length &gt; bytes.len() * 8`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>try_new(bytes: Vec&lt;u8&gt;, length: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="kw">if </span>length &gt; bytes.len().saturating_mul(<span class="number">8</span>) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgumentError(<span class="macro">format!</span>(
@@ -469,13 +469,13 @@
     }
 
     <span class="doccomment">/// Returns the length of the [`Bitmap`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.length
     }
 
     <span class="doccomment">/// Returns whether [`Bitmap`] is empty
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.len() == <span class="number">0
     </span>}
@@ -495,7 +495,7 @@
     <span class="doccomment">/// Creates a new [`Bitmap`] from [`Bytes`] and a length.
     /// # Panic
     /// Panics iff `length &lt;= bytes.len() * 8`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>from_bytes(bytes: Bytes&lt;u8&gt;, length: usize) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(length &lt;= bytes.len() * <span class="number">8</span>);
         <span class="kw">let </span>unset_bits = count_zeros(<span class="kw-2">&amp;</span>bytes, <span class="number">0</span>, length);
@@ -514,7 +514,7 @@
     ///       is within the first 8 bits.
     /// * `.2`: The start offset in bits on a range `0 &lt;= offsets &lt; 8`.
     /// * `.3`: The length in number of bits.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>as_slice(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (<span class="kw-2">&amp;</span>[u8], usize, usize) {
         <span class="kw">let </span>start = <span class="self">self</span>.offset / <span class="number">8</span>;
         <span class="kw">let </span>len = (<span class="self">self</span>.offset % <span class="number">8 </span>+ <span class="self">self</span>.length).saturating_add(<span class="number">7</span>) / <span class="number">8</span>;
@@ -536,7 +536,7 @@
     }
 
     <span class="doccomment">/// Returns the number of unset bits on this [`Bitmap`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     #[deprecated(since = <span class="string">&quot;0.13.0&quot;</span>, note = <span class="string">&quot;use `unset_bits` instead&quot;</span>)]
     </span><span class="kw">pub fn </span>null_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.unset_bits
@@ -546,7 +546,7 @@
     /// # Panic
     /// Panics iff `offset + length &gt; self.length`, i.e. if the offset and `length`
     /// exceeds the allocated capacity of `self`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     #[must_use]
     </span><span class="kw">pub fn </span>slice(<span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(offset + length &lt;= <span class="self">self</span>.length);
@@ -556,7 +556,7 @@
     <span class="doccomment">/// Slices `self`, offseting by `offset` and truncating up to `length` bits.
     /// # Safety
     /// The caller must ensure that `self.offset + offset + length &lt;= self.len()`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">mut </span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="comment">// count the smallest chunk
         </span><span class="kw">if </span>length &lt; <span class="self">self</span>.length / <span class="number">2 </span>{
@@ -577,7 +577,7 @@
     <span class="doccomment">/// Returns whether the bit at position `i` is set.
     /// # Panics
     /// Panics iff `i &gt;= self.len()`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>get_bit(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; bool {
         get_bit(<span class="kw-2">&amp;</span><span class="self">self</span>.bytes, <span class="self">self</span>.offset + i)
     }
@@ -585,7 +585,7 @@
     <span class="doccomment">/// Unsafely returns whether the bit at position `i` is set.
     /// # Safety
     /// Unsound iff `i &gt;= self.len()`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>get_bit_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; bool {
         get_bit_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>.bytes, <span class="self">self</span>.offset + i)
     }
@@ -642,13 +642,13 @@
     }
 
     <span class="doccomment">/// Initializes an new [`Bitmap`] filled with unset values.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new_zeroed(length: usize) -&gt; <span class="self">Self </span>{
         MutableBitmap::from_len_zeroed(length).into()
     }
 
     <span class="doccomment">/// Counts the nulls (unset bits) starting from `offset` bits and for `length` bits.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>null_count_range(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; usize {
         count_zeros(<span class="kw-2">&amp;</span><span class="self">self</span>.bytes, <span class="self">self</span>.offset + offset, length)
     }
@@ -656,7 +656,7 @@
     <span class="doccomment">/// Creates a new [`Bitmap`] from a slice and length.
     /// # Panic
     /// Panics iff `length &lt;= bytes.len() * 8`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_u8_slice&lt;T: AsRef&lt;[u8]&gt;&gt;(slice: T, length: usize) -&gt; <span class="self">Self </span>{
         Bitmap::try_new(slice.as_ref().to_vec(), length).unwrap()
     }
@@ -665,13 +665,13 @@
     /// This function is `O(1)`
     /// # Panic
     /// This function panics iff `length &lt;= bytes.len() * 8`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_u8_vec(vec: Vec&lt;u8&gt;, length: usize) -&gt; <span class="self">Self </span>{
         Bitmap::try_new(vec, length).unwrap()
     }
 
     <span class="doccomment">/// Returns whether the bit at position `i` is set.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="prelude-ty">Option</span>&lt;bool&gt; {
         <span class="kw">if </span>i &lt; <span class="self">self</span>.len() {
             <span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.get_bit_unchecked(i) })
@@ -700,19 +700,19 @@
     <span class="doccomment">/// Creates a new [`Bitmap`] from an iterator of booleans.
     /// # Safety
     /// The iterator must report an accurate length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>from_trusted_len_iter_unchecked&lt;I: Iterator&lt;Item = bool&gt;&gt;(iterator: I) -&gt; <span class="self">Self </span>{
         MutableBitmap::from_trusted_len_iter_unchecked(iterator).into()
     }
 
     <span class="doccomment">/// Creates a new [`Bitmap`] from an iterator of booleans.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_trusted_len_iter&lt;I: TrustedLen&lt;Item = bool&gt;&gt;(iterator: I) -&gt; <span class="self">Self </span>{
         MutableBitmap::from_trusted_len_iter(iterator).into()
     }
 
     <span class="doccomment">/// Creates a new [`Bitmap`] from a fallible iterator of booleans.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>try_from_trusted_len_iter&lt;E, I: TrustedLen&lt;Item = std::result::Result&lt;bool, E&gt;&gt;&gt;(
         iterator: I,
     ) -&gt; std::result::Result&lt;<span class="self">Self</span>, E&gt; {
@@ -722,7 +722,7 @@
     <span class="doccomment">/// Creates a new [`Bitmap`] from a fallible iterator of booleans.
     /// # Safety
     /// The iterator must report an accurate length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>try_from_trusted_len_iter_unchecked&lt;
         E,
         I: Iterator&lt;Item = std::result::Result&lt;bool, E&gt;&gt;,
@@ -751,4 +751,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

@@ -269,7 +269,7 @@
 }
 
 <span class="doccomment">/// Iterator adapter of parquet / dremel repetition levels
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>RepLevelsIter&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="comment">// iterators of lengths. E.g. [[[a,b,c], [d,e,f,g]], [[h], [i,j]]] -&gt; [[2, 2], [3, 4, 1, 2]]
     </span>iter: Vec&lt;Box&lt;<span class="kw">dyn </span>DebugIter + <span class="lifetime">&#39;a</span>&gt;&gt;,
@@ -357,7 +357,7 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]
+<span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::pages::ListNested;
 
@@ -371,7 +371,7 @@
         <span class="macro">assert_eq!</span>(iter.size_hint().<span class="number">0</span>, <span class="number">0</span>);
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>struct_required() {
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">10</span>),
@@ -382,7 +382,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>struct_optional() {
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">10</span>),
@@ -393,7 +393,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>l1() {
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::List(ListNested::&lt;i32&gt; {
@@ -409,7 +409,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>l2() {
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::List(ListNested::&lt;i32&gt; {
@@ -429,7 +429,7 @@
         test(nested, expected)
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>list_of_struct() {
         <span class="comment">/*
         [
@@ -451,4 +451,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

@@ -378,7 +378,7 @@
 <span class="kw">use </span><span class="kw">super</span>::deserialize::{read, skip};
 <span class="kw">use </span><span class="kw">super</span>::Dictionaries;
 
-<span class="attribute">#[derive(Debug, Eq, PartialEq, Hash)]
+<span class="attr">#[derive(Debug, Eq, PartialEq, Hash)]
 </span><span class="kw">enum </span>ProjectionResult&lt;A&gt; {
     Selected(A),
     NotSelected(A),
@@ -439,7 +439,7 @@
 <span class="doccomment">/// Returns a [`Chunk`] from a reader.
 /// # Panic
 /// Panics iff the projection is not in increasing order (e.g. `[1, 0]` nor `[0, 1, 1]` are valid)
-</span><span class="attribute">#[allow(clippy::too_many_arguments)]
+</span><span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">pub fn </span>read_record_batch&lt;R: Read + Seek&gt;(
     batch: arrow_format::ipc::RecordBatchRef,
     fields: <span class="kw-2">&amp;</span>[Field],
@@ -592,7 +592,7 @@
 
 <span class="doccomment">/// Reads a dictionary from the reader,
 /// updating `dictionaries` with the resulting dictionary
-</span><span class="attribute">#[allow(clippy::too_many_arguments)]
+</span><span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">pub fn </span>read_dictionary&lt;R: Read + Seek&gt;(
     batch: arrow_format::ipc::DictionaryBatchRef,
     fields: <span class="kw-2">&amp;</span>[Field],
@@ -656,11 +656,11 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="attribute">#[cfg(test)]
+<span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>project_iter() {
         <span class="kw">let </span>iter = <span class="number">1</span>..<span class="number">6</span>;
         <span class="kw">let </span>iter = ProjectionIter::new(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">4</span>], iter);
@@ -727,4 +727,4 @@
     Chunk::new(new_arrays)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

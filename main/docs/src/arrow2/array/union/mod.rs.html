@@ -384,7 +384,7 @@
 // let field = field.as_any().downcast to correct type;
 // let value = field.value(offset);
 // ```
-</span><span class="attribute">#[derive(Clone)]
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>UnionArray {
     types: Buffer&lt;i8&gt;,
     <span class="comment">// None represents when there is no typeid
@@ -551,7 +551,7 @@
     /// This operation is `O(F)` where `F` is the number of fields.
     /// # Panic
     /// This function panics iff `offset + length &gt;= self.len()`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             data_type: <span class="self">self</span>.data_type.clone(),
@@ -571,7 +571,7 @@
     /// This operation is `O(F)` where `F` is the number of fields.
     /// # Safety
     /// The caller must ensure that `offset + length &lt;= self.len()`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             data_type: <span class="self">self</span>.data_type.clone(),
@@ -589,7 +589,7 @@
 
 <span class="kw">impl </span>UnionArray {
     <span class="doccomment">/// Returns the length of this array
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.types.len()
     }
@@ -609,7 +609,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.types
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>field(<span class="kw-2">&amp;</span><span class="self">self</span>, type_: i8) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array {
         <span class="self">self</span>.fields_hash
             .as_ref()
@@ -617,7 +617,7 @@
             .unwrap_or_else(|| <span class="self">self</span>.fields[type_ <span class="kw">as </span>usize].as_ref())
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>field_slot(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; usize {
         <span class="self">self</span>.offsets()
             .as_ref()
@@ -651,7 +651,7 @@
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
@@ -713,4 +713,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

@@ -54,7 +54,7 @@
 <span id="54">54</span>
 </pre><pre class="rust"><code><span class="kw">use super</span>::{DataType, Metadata};
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;serde_types&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde_types&quot;</span>)]
 </span><span class="kw">use </span>serde_derive::{Deserialize, Serialize};
 
 <span class="doccomment">/// Represents Arrow&#39;s metadata of a &quot;column&quot;.
@@ -65,7 +65,7 @@
 ///
 /// Almost all IO in this crate uses [`Field`] to represent logical information about the data
 /// to be serialized.
-</span><span class="attribute">#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+</span><span class="attr">#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub struct </span>Field {
     <span class="doccomment">/// Its name
@@ -90,7 +90,7 @@
     }
 
     <span class="doccomment">/// Creates a new [`Field`] with metadata.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>with_metadata(<span class="self">self</span>, metadata: Metadata) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             name: <span class="self">self</span>.name,
@@ -101,10 +101,10 @@
     }
 
     <span class="doccomment">/// Returns the [`Field`]&#39;s [`DataType`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

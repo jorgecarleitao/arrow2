@@ -76,13 +76,13 @@
 <span id="76">76</span>
 </pre><pre class="rust"><code><span class="kw">pub use </span><span class="kw">crate</span>::types::PrimitiveType;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;serde_types&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde_types&quot;</span>)]
 </span><span class="kw">use </span>serde_derive::{Deserialize, Serialize};
 
 <span class="doccomment">/// The set of physical types: unique in-memory representations of an Arrow array.
 /// A physical type has a one-to-many relationship with a [`crate::datatypes::DataType`] and
 /// a one-to-one mapping to each struct in this crate that implements [`crate::array::Array`].
-</span><span class="attribute">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>PhysicalType {
     <span class="doccomment">/// A Null with no allocation.
@@ -130,7 +130,7 @@
 
 <span class="doccomment">/// the set of valid indices types of a dictionary-encoded Array.
 /// Each type corresponds to a variant of [`crate::array::DictionaryArray`].
-</span><span class="attribute">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>IntegerType {
     <span class="doccomment">/// A signed 8-bit integer.
@@ -151,4 +151,4 @@
     </span>UInt64,
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

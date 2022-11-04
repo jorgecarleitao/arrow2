@@ -242,7 +242,7 @@
     })
 }
 
-<span class="attribute">#[cfg(test)]
+<span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span>proptest::prelude::<span class="kw-2">*</span>;
 
@@ -255,7 +255,7 @@
     <span class="macro">proptest! </span>{
         <span class="comment">// a bit expensive, feel free to run it when changing the code above
         //#![proptest_config(ProptestConfig::with_cases(100000))]
-        </span><span class="attribute">#[test]
+        </span><span class="attr">#[test]
         #[cfg_attr(miri, ignore)] </span><span class="comment">// miri and proptest do not work well
         </span><span class="kw">fn </span>check_utf8_validation(values <span class="kw">in </span>binary_strategy()) {
 
@@ -271,4 +271,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

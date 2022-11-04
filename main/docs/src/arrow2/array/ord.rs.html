@@ -257,7 +257,7 @@
 <span class="doccomment">/// implements comparison using IEEE 754 total ordering for f32
 </span><span class="comment">// Original implementation from https://doc.rust-lang.org/std/primitive.f32.html#method.total_cmp
 // TODO to change to use std when it becomes stable
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>total_cmp_f32(l: <span class="kw-2">&amp;</span>f32, r: <span class="kw-2">&amp;</span>f32) -&gt; std::cmp::Ordering {
     <span class="kw">let </span><span class="kw-2">mut </span>left = l.to_bits() <span class="kw">as </span>i32;
     <span class="kw">let </span><span class="kw-2">mut </span>right = r.to_bits() <span class="kw">as </span>i32;
@@ -271,7 +271,7 @@
 <span class="doccomment">/// implements comparison using IEEE 754 total ordering for f64
 </span><span class="comment">// Original implementation from https://doc.rust-lang.org/std/primitive.f64.html#method.total_cmp
 // TODO to change to use std when it becomes stable
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>total_cmp_f64(l: <span class="kw-2">&amp;</span>f64, r: <span class="kw-2">&amp;</span>f64) -&gt; std::cmp::Ordering {
     <span class="kw">let </span><span class="kw-2">mut </span>left = l.to_bits() <span class="kw">as </span>i64;
     <span class="kw">let </span><span class="kw-2">mut </span>right = r.to_bits() <span class="kw">as </span>i64;
@@ -284,7 +284,7 @@
 
 <span class="doccomment">/// Total order of all native types whose Rust implementation
 /// that support total order.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>total_cmp&lt;T&gt;(l: <span class="kw-2">&amp;</span>T, r: <span class="kw-2">&amp;</span>T) -&gt; std::cmp::Ordering
 <span class="kw">where
     </span>T: NativeType + Ord,
@@ -489,4 +489,4 @@
     })
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

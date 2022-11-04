@@ -384,7 +384,7 @@
 <span class="kw">use </span><span class="kw">super</span>::ListArray;
 
 <span class="doccomment">/// The mutable version of [`ListArray`].
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableListArray&lt;O: Offset, M: MutableArray&gt; {
     data_type: DataType,
     offsets: Vec&lt;O&gt;,
@@ -459,7 +459,7 @@
     M: MutableArray + TryExtend&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;,
     I: IntoIterator&lt;Item = <span class="prelude-ty">Option</span>&lt;T&gt;&gt;,
 {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>try_push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: <span class="prelude-ty">Option</span>&lt;I&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(items) = item {
             <span class="kw">let </span>values = <span class="self">self</span>.mut_values();
@@ -518,7 +518,7 @@
         <span class="self">Self</span>::new_from(values, data_type, capacity)
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="doccomment">/// Needs to be called when a valid value was extended to this array.
     /// This is a relatively low level function, prefer `try_push` when you can.
     </span><span class="kw">pub fn </span>try_push_valid(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -533,7 +533,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.offsets.push(<span class="self">self</span>.last_offset());
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.validity {
@@ -612,7 +612,7 @@
     }
 
     <span class="doccomment">/// Returns the length of this array
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.offsets.len() - <span class="number">1
     </span>}
@@ -632,7 +632,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.values
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>last_offset(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; O {
         <span class="kw-2">*</span><span class="self">self</span>.offsets.last().unwrap()
     }
@@ -723,7 +723,7 @@
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.push_null()
     }
@@ -737,4 +737,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

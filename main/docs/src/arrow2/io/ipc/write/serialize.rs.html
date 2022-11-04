@@ -758,7 +758,7 @@
 <span id="758">758</span>
 <span id="759">759</span>
 <span id="760">760</span>
-</pre><pre class="rust"><code><span class="attribute">#![allow(clippy::ptr_arg)] </span><span class="comment">// false positive in clippy, see https://github.com/rust-lang/rust-clippy/issues/8463
+</pre><pre class="rust"><code><span class="attr">#![allow(clippy::ptr_arg)] </span><span class="comment">// false positive in clippy, see https://github.com/rust-lang/rust-clippy/issues/8463
 </span><span class="kw">use </span>arrow_format::ipc;
 
 <span class="kw">use crate</span>::{
@@ -822,7 +822,7 @@
     );
 }
 
-<span class="attribute">#[allow(clippy::too_many_arguments)]
+<span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">fn </span>write_generic_binary&lt;O: Offset&gt;(
     validity: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Bitmap&gt;,
     offsets: <span class="kw-2">&amp;</span>[O],
@@ -1146,7 +1146,7 @@
 }
 
 <span class="comment">// use `write_keys` to either write keys or values
-</span><span class="attribute">#[allow(clippy::too_many_arguments)]
+</span><span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>write_dictionary&lt;K: DictionaryKey&gt;(
     array: <span class="kw-2">&amp;</span>DictionaryArray&lt;K&gt;,
     buffers: <span class="kw-2">&amp;mut </span>Vec&lt;ipc::Buffer&gt;,
@@ -1323,7 +1323,7 @@
     }
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>pad_buffer_to_64(buffer: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;, length: usize) {
     <span class="kw">let </span>pad_len = pad_to_64(length);
     buffer.extend_from_slice(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[<span class="number">0u8</span>; pad_len]);
@@ -1404,7 +1404,7 @@
     buffers.push(finish_buffer(arrow_data, start, offset));
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>_write_buffer_from_iter&lt;T: NativeType, I: TrustedLen&lt;Item = T&gt;&gt;(
     buffer: I,
     arrow_data: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;,
@@ -1423,7 +1423,7 @@
     }
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>_write_compressed_buffer_from_iter&lt;T: NativeType, I: TrustedLen&lt;Item = T&gt;&gt;(
     buffer: I,
     arrow_data: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;,
@@ -1485,7 +1485,7 @@
 }
 
 <span class="doccomment">/// writes `bytes` to `arrow_data` updating `buffers` and `offset` and guaranteeing a 8 byte boundary.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">fn </span>write_buffer_from_iter&lt;T: NativeType, I: TrustedLen&lt;Item = T&gt;&gt;(
     buffer: I,
     buffers: <span class="kw-2">&amp;mut </span>Vec&lt;ipc::Buffer&gt;,
@@ -1519,4 +1519,4 @@
     buffer
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

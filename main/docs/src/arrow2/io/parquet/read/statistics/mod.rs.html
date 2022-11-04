@@ -588,7 +588,7 @@
 <span class="kw">use </span><span class="kw">super</span>::get_field_columns;
 
 <span class="doccomment">/// Arrow-deserialized parquet Statistics of a file
-</span><span class="attribute">#[derive(Debug, PartialEq)]
+</span><span class="attr">#[derive(Debug, PartialEq)]
 </span><span class="kw">pub struct </span>Statistics {
     <span class="doccomment">/// number of nulls. This is a [`UInt64Array`] for non-nested types
     </span><span class="kw">pub </span>null_count: Box&lt;<span class="kw">dyn </span>Array&gt;,
@@ -601,7 +601,7 @@
 }
 
 <span class="doccomment">/// Arrow-deserialized parquet Statistics of a file
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">struct </span>MutableStatistics {
     <span class="doccomment">/// number of nulls
     </span><span class="kw">pub </span>null_count: Box&lt;<span class="kw">dyn </span>MutableArray&gt;,
@@ -1109,4 +1109,4 @@
     <span class="prelude-val">Ok</span>(statistics.into())
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

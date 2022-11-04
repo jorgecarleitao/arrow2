@@ -22,7 +22,7 @@
 <span id="22">22</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Misc utilities used in different places in the crate.
 
-</span><span class="attribute">#[cfg(any(
+</span><span class="attr">#[cfg(any(
     feature = <span class="string">&quot;compute&quot;</span>,
     feature = <span class="string">&quot;io_csv_write&quot;</span>,
     feature = <span class="string">&quot;io_csv_read&quot;</span>,
@@ -30,7 +30,7 @@
     feature = <span class="string">&quot;compute_cast&quot;
 </span>))]
 </span><span class="kw">mod </span>lexical;
-<span class="attribute">#[cfg(any(
+<span class="attr">#[cfg(any(
     feature = <span class="string">&quot;compute&quot;</span>,
     feature = <span class="string">&quot;io_csv_write&quot;</span>,
     feature = <span class="string">&quot;io_csv_read&quot;</span>,
@@ -39,8 +39,8 @@
 </span>))]
 </span><span class="kw">pub use </span>lexical::<span class="kw-2">*</span>;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;benchmarks&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;benchmarks&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;benchmarks&quot;</span>)))]
 </span><span class="kw">pub mod </span>bench_util;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

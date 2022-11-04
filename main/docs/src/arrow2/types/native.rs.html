@@ -623,6 +623,18 @@
 <span id="623">623</span>
 <span id="624">624</span>
 <span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::convert::TryFrom;
 <span class="kw">use </span>std::ops::Neg;
 
@@ -675,22 +687,22 @@
             <span class="kw">const </span><span class="macro-nonterminal">PRIMITIVE</span>: PrimitiveType = <span class="macro-nonterminal">$primitive_type</span>;
 
             <span class="kw">type </span>Bytes = [u8; std::mem::size_of::&lt;<span class="self">Self</span>&gt;()];
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>to_le_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Bytes {
                 <span class="self">Self</span>::to_le_bytes(<span class="kw-2">*</span><span class="self">self</span>)
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>to_be_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Bytes {
                 <span class="self">Self</span>::to_be_bytes(<span class="kw-2">*</span><span class="self">self</span>)
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>from_le_bytes(bytes: <span class="self">Self</span>::Bytes) -&gt; <span class="self">Self </span>{
                 <span class="self">Self</span>::from_le_bytes(bytes)
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>from_be_bytes(bytes: <span class="self">Self</span>::Bytes) -&gt; <span class="self">Self </span>{
                 <span class="self">Self</span>::from_be_bytes(bytes)
             }
@@ -711,26 +723,26 @@
 <span class="macro">native_type!</span>(i128, PrimitiveType::Int128);
 
 <span class="doccomment">/// The in-memory representation of the DayMillisecond variant of arrow&#39;s &quot;Interval&quot; logical type.
-</span><span class="attribute">#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Zeroable, Pod)]
+</span><span class="attr">#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Zeroable, Pod)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>days_ms(<span class="kw">pub </span>i32, <span class="kw">pub </span>i32);
 
 <span class="kw">impl </span>days_ms {
     <span class="doccomment">/// A new [`days_ms`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(days: i32, milliseconds: i32) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(days, milliseconds)
     }
 
     <span class="doccomment">/// The number of days
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>days(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i32 {
         <span class="self">self</span>.<span class="number">0
     </span>}
 
     <span class="doccomment">/// The number of milliseconds
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>milliseconds(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i32 {
         <span class="self">self</span>.<span class="number">1
     </span>}
@@ -739,7 +751,7 @@
 <span class="kw">impl </span>NativeType <span class="kw">for </span>days_ms {
     <span class="kw">const </span>PRIMITIVE: PrimitiveType = PrimitiveType::DaysMs;
     <span class="kw">type </span>Bytes = [u8; <span class="number">8</span>];
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>to_le_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Bytes {
         <span class="kw">let </span>days = <span class="self">self</span>.<span class="number">0</span>.to_le_bytes();
         <span class="kw">let </span>ms = <span class="self">self</span>.<span class="number">1</span>.to_le_bytes();
@@ -755,7 +767,7 @@
         result
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>to_be_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Bytes {
         <span class="kw">let </span>days = <span class="self">self</span>.<span class="number">0</span>.to_be_bytes();
         <span class="kw">let </span>ms = <span class="self">self</span>.<span class="number">1</span>.to_be_bytes();
@@ -771,7 +783,7 @@
         result
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from_le_bytes(bytes: <span class="self">Self</span>::Bytes) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>days = [<span class="number">0</span>; <span class="number">4</span>];
         days[<span class="number">0</span>] = bytes[<span class="number">0</span>];
@@ -786,7 +798,7 @@
         <span class="self">Self</span>(i32::from_le_bytes(days), i32::from_le_bytes(ms))
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from_be_bytes(bytes: <span class="self">Self</span>::Bytes) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>days = [<span class="number">0</span>; <span class="number">4</span>];
         days[<span class="number">0</span>] = bytes[<span class="number">0</span>];
@@ -803,32 +815,32 @@
 }
 
 <span class="doccomment">/// The in-memory representation of the MonthDayNano variant of the &quot;Interval&quot; logical type.
-</span><span class="attribute">#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Zeroable, Pod)]
+</span><span class="attr">#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Zeroable, Pod)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>months_days_ns(<span class="kw">pub </span>i32, <span class="kw">pub </span>i32, <span class="kw">pub </span>i64);
 
 <span class="kw">impl </span>months_days_ns {
     <span class="doccomment">/// A new [`months_days_ns`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(months: i32, days: i32, nanoseconds: i64) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(months, days, nanoseconds)
     }
 
     <span class="doccomment">/// The number of months
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>months(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i32 {
         <span class="self">self</span>.<span class="number">0
     </span>}
 
     <span class="doccomment">/// The number of days
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>days(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i32 {
         <span class="self">self</span>.<span class="number">1
     </span>}
 
     <span class="doccomment">/// The number of nanoseconds
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>ns(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i64 {
         <span class="self">self</span>.<span class="number">2
     </span>}
@@ -837,7 +849,7 @@
 <span class="kw">impl </span>NativeType <span class="kw">for </span>months_days_ns {
     <span class="kw">const </span>PRIMITIVE: PrimitiveType = PrimitiveType::MonthDayNano;
     <span class="kw">type </span>Bytes = [u8; <span class="number">16</span>];
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>to_le_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Bytes {
         <span class="kw">let </span>months = <span class="self">self</span>.months().to_le_bytes();
         <span class="kw">let </span>days = <span class="self">self</span>.days().to_le_bytes();
@@ -857,7 +869,7 @@
         result
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>to_be_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Bytes {
         <span class="kw">let </span>months = <span class="self">self</span>.months().to_be_bytes();
         <span class="kw">let </span>days = <span class="self">self</span>.days().to_be_bytes();
@@ -877,7 +889,7 @@
         result
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from_le_bytes(bytes: <span class="self">Self</span>::Bytes) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>months = [<span class="number">0</span>; <span class="number">4</span>];
         months[<span class="number">0</span>] = bytes[<span class="number">0</span>];
@@ -900,7 +912,7 @@
         )
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from_be_bytes(bytes: <span class="self">Self</span>::Bytes) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>months = [<span class="number">0</span>; <span class="number">4</span>];
         months[<span class="number">0</span>] = bytes[<span class="number">0</span>];
@@ -939,7 +951,7 @@
 <span class="kw">impl </span>Neg <span class="kw">for </span>days_ms {
     <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-    <span class="attribute">#[inline(always)]
+    <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>neg(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Output {
         <span class="self">Self</span>::new(-<span class="self">self</span>.days(), -<span class="self">self</span>.milliseconds())
     }
@@ -948,20 +960,20 @@
 <span class="kw">impl </span>Neg <span class="kw">for </span>months_days_ns {
     <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-    <span class="attribute">#[inline(always)]
+    <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>neg(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Output {
         <span class="self">Self</span>::new(-<span class="self">self</span>.months(), -<span class="self">self</span>.days(), -<span class="self">self</span>.ns())
     }
 }
 
 <span class="doccomment">/// Type representation of the Float16 physical type
-</span><span class="attribute">#[derive(Copy, Clone, Default, Zeroable, Pod)]
+</span><span class="attr">#[derive(Copy, Clone, Default, Zeroable, Pod)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>f16(<span class="kw">pub </span>u16);
 
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>f16 {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>f16) -&gt; bool {
         <span class="kw">if </span><span class="self">self</span>.is_nan() || other.is_nan() {
             <span class="bool-val">false
@@ -976,10 +988,22 @@
     <span class="doccomment">/// The difference between 1.0 and the next largest representable number.
     </span><span class="kw">pub const </span>EPSILON: f16 = f16(<span class="number">0x1400u16</span>);
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     #[must_use]
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const fn </span>is_nan(<span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.<span class="number">0 </span>&amp; <span class="number">0x7FFFu16 </span>&gt; <span class="number">0x7C00u16
+    </span>}
+
+    <span class="doccomment">/// Casts from u16.
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub const fn </span>from_bits(bits: u16) -&gt; f16 {
+        f16(bits)
+    }
+
+    <span class="doccomment">/// Casts to u16.
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub const fn </span>to_bits(<span class="self">self</span>) -&gt; u16 {
+        <span class="self">self</span>.<span class="number">0
     </span>}
 
     <span class="doccomment">/// Casts this `f16` to `f32`
@@ -1104,29 +1128,29 @@
 <span class="kw">impl </span>NativeType <span class="kw">for </span>f16 {
     <span class="kw">const </span>PRIMITIVE: PrimitiveType = PrimitiveType::Float16;
     <span class="kw">type </span>Bytes = [u8; <span class="number">2</span>];
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>to_le_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Bytes {
         <span class="self">self</span>.<span class="number">0</span>.to_le_bytes()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>to_be_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Bytes {
         <span class="self">self</span>.<span class="number">0</span>.to_be_bytes()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from_be_bytes(bytes: <span class="self">Self</span>::Bytes) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(u16::from_be_bytes(bytes))
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from_le_bytes(bytes: <span class="self">Self</span>::Bytes) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(u16::from_le_bytes(bytes))
     }
 }
 
 <span class="doccomment">/// Physical representation of a decimal
-</span><span class="attribute">#[derive(Clone, Copy, Default, Eq, Hash, PartialEq, PartialOrd)]
+</span><span class="attr">#[derive(Clone, Copy, Default, Eq, Hash, PartialEq, PartialOrd)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>i256(<span class="kw">pub </span>ethnum::I256);
@@ -1141,7 +1165,7 @@
 <span class="kw">impl </span>Neg <span class="kw">for </span>i256 {
     <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>neg(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Output {
         <span class="kw">let </span>(a, b) = <span class="self">self</span>.<span class="number">0</span>.into_words();
         <span class="self">Self</span>(ethnum::I256::from_words(-a, b))
@@ -1168,7 +1192,7 @@
 
     <span class="kw">type </span>Bytes = [u8; <span class="number">32</span>];
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>to_le_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Bytes {
         <span class="kw">let </span><span class="kw-2">mut </span>bytes = [<span class="number">0u8</span>; <span class="number">32</span>];
         <span class="kw">let </span>(a, b) = <span class="self">self</span>.<span class="number">0</span>.into_words();
@@ -1185,7 +1209,7 @@
         bytes
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>to_be_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Bytes {
         <span class="kw">let </span><span class="kw-2">mut </span>bytes = [<span class="number">0u8</span>; <span class="number">32</span>];
         <span class="kw">let </span>(a, b) = <span class="self">self</span>.<span class="number">0</span>.into_words();
@@ -1203,7 +1227,7 @@
         bytes
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from_be_bytes(bytes: <span class="self">Self</span>::Bytes) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>(b, a) = bytes.split_at(<span class="number">16</span>);
         <span class="kw">let </span>a: [u8; <span class="number">16</span>] = a.try_into().unwrap();
@@ -1213,7 +1237,7 @@
         <span class="self">Self</span>(ethnum::I256::from_words(a, b))
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from_le_bytes(bytes: <span class="self">Self</span>::Bytes) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>(b, a) = bytes.split_at(<span class="number">16</span>);
         <span class="kw">let </span>a: [u8; <span class="number">16</span>] = a.try_into().unwrap();
@@ -1224,10 +1248,10 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]
+<span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>test {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_f16_to_f32() {
         <span class="kw">let </span>f = f16::from_f32(<span class="number">7.0</span>);
         <span class="macro">assert_eq!</span>(f.to_f32(), <span class="number">7.0f32</span>);
@@ -1249,4 +1273,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

@@ -182,7 +182,7 @@
     </span><span class="kw">fn </span>simd_sum(<span class="self">self</span>) -&gt; T;
 }
 
-<span class="attribute">#[multiversion]
+<span class="attr">#[multiversion]
 #[clone(target = <span class="string">&quot;x86_64+avx&quot;</span>)]
 </span><span class="kw">fn </span>nonnull_sum&lt;T&gt;(values: <span class="kw-2">&amp;</span>[T]) -&gt; T
 <span class="kw">where
@@ -201,7 +201,7 @@
 
 <span class="doccomment">/// # Panics
 /// iff `values.len() != bitmap.len()` or the operation overflows.
-</span><span class="attribute">#[multiversion]
+</span><span class="attr">#[multiversion]
 #[clone(target = <span class="string">&quot;x86_64+avx&quot;</span>)]
 </span><span class="kw">fn </span>null_sum_impl&lt;T, I&gt;(values: <span class="kw-2">&amp;</span>[T], <span class="kw-2">mut </span>validity_masks: I) -&gt; T
 <span class="kw">where
@@ -323,4 +323,4 @@
     })
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

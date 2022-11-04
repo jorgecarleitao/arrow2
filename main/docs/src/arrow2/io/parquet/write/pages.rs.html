@@ -515,7 +515,7 @@
 
 <span class="kw">use super</span>::{array_to_pages, Encoding, WriteOptions};
 
-<span class="attribute">#[derive(Debug, Clone, PartialEq)]
+<span class="attr">#[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>ListNested&lt;<span class="lifetime">&#39;a</span>, O: Offset&gt; {
     <span class="kw">pub </span>is_optional: bool,
     <span class="kw">pub </span>offsets: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[O],
@@ -533,7 +533,7 @@
 }
 
 <span class="doccomment">/// Descriptor of nested information of a field
-</span><span class="attribute">#[derive(Debug, Clone, PartialEq)]
+</span><span class="attr">#[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub enum </span>Nested&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="doccomment">/// a primitive (leaf or parquet column)
     </span>Primitive(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt;, bool, usize),
@@ -723,7 +723,7 @@
         .collect()
 }
 
-<span class="attribute">#[cfg(test)]
+<span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span>parquet2::schema::Repetition;
 
@@ -735,7 +735,7 @@
 
     <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{FieldInfo, ParquetPhysicalType, ParquetPrimitiveType};
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_struct() {
         <span class="kw">let </span>boolean = BooleanArray::from_slice(<span class="kw-2">&amp;</span>[<span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>]).boxed();
         <span class="kw">let </span>int = Int32Array::from_slice(<span class="kw-2">&amp;</span>[<span class="number">42</span>, <span class="number">28</span>, <span class="number">19</span>, <span class="number">31</span>]).boxed();
@@ -799,7 +799,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_struct_struct() {
         <span class="kw">let </span>boolean = BooleanArray::from_slice(<span class="kw-2">&amp;</span>[<span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>]).boxed();
         <span class="kw">let </span>int = Int32Array::from_slice(<span class="kw-2">&amp;</span>[<span class="number">42</span>, <span class="number">28</span>, <span class="number">19</span>, <span class="number">31</span>]).boxed();
@@ -902,7 +902,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_list_struct() {
         <span class="kw">let </span>boolean = BooleanArray::from_slice(<span class="kw-2">&amp;</span>[<span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>]).boxed();
         <span class="kw">let </span>int = Int32Array::from_slice(<span class="kw-2">&amp;</span>[<span class="number">42</span>, <span class="number">28</span>, <span class="number">19</span>, <span class="number">31</span>]).boxed();
@@ -1005,4 +1005,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

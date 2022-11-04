@@ -228,7 +228,7 @@
 <span class="kw">impl </span>std::ops::Not <span class="kw">for </span>MutableBitmap {
     <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>not(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         unary_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, |a: u64| !a);
         <span class="self">self
@@ -295,7 +295,7 @@
     }
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="doccomment">/// Compute bitwise OR operation in-place
 </span><span class="kw">fn </span>or_assign&lt;T: BitChunk&gt;(lhs: <span class="kw-2">&amp;mut </span>MutableBitmap, rhs: <span class="kw-2">&amp;</span>Bitmap) {
     <span class="kw">if </span>rhs.unset_bits() == <span class="number">0 </span>{
@@ -310,7 +310,7 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; std::ops::BitOrAssign&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt; <span class="kw">for </span><span class="kw-2">&amp;mut </span>MutableBitmap {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>bitor_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap) {
         or_assign::&lt;u64&gt;(<span class="self">self</span>, rhs)
     }
@@ -319,14 +319,14 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; std::ops::BitOr&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt; <span class="kw">for </span>MutableBitmap {
     <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>bitor(<span class="kw-2">mut </span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap) -&gt; <span class="self">Self </span>{
         or_assign::&lt;u64&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs);
         <span class="self">self
     </span>}
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="doccomment">/// Compute bitwise `&amp;` between `lhs` and `rhs`, assigning it to `lhs`
 </span><span class="kw">fn </span>and_assign&lt;T: BitChunk&gt;(lhs: <span class="kw-2">&amp;mut </span>MutableBitmap, rhs: <span class="kw-2">&amp;</span>Bitmap) {
     <span class="kw">if </span>rhs.unset_bits() == <span class="number">0 </span>{
@@ -342,7 +342,7 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; std::ops::BitAndAssign&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt; <span class="kw">for </span><span class="kw-2">&amp;mut </span>MutableBitmap {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>bitand_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap) {
         and_assign::&lt;u64&gt;(<span class="self">self</span>, rhs)
     }
@@ -351,21 +351,21 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; std::ops::BitAnd&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt; <span class="kw">for </span>MutableBitmap {
     <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>bitand(<span class="kw-2">mut </span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap) -&gt; <span class="self">Self </span>{
         and_assign::&lt;u64&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs);
         <span class="self">self
     </span>}
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="doccomment">/// Compute bitwise XOR operation
 </span><span class="kw">fn </span>xor_assign&lt;T: BitChunk&gt;(lhs: <span class="kw-2">&amp;mut </span>MutableBitmap, rhs: <span class="kw-2">&amp;</span>Bitmap) {
     binary_assign(lhs, rhs, |x: T, y| x ^ y)
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; std::ops::BitXorAssign&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt; <span class="kw">for </span><span class="kw-2">&amp;mut </span>MutableBitmap {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>bitxor_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap) {
         xor_assign::&lt;u64&gt;(<span class="self">self</span>, rhs)
     }
@@ -374,11 +374,11 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; std::ops::BitXor&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt; <span class="kw">for </span>MutableBitmap {
     <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>bitxor(<span class="kw-2">mut </span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap) -&gt; <span class="self">Self </span>{
         xor_assign::&lt;u64&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs);
         <span class="self">self
     </span>}
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

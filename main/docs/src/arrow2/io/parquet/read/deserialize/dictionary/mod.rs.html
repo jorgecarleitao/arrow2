@@ -345,7 +345,7 @@
 };
 
 <span class="comment">// The state of a `DataPage` of `Primitive` parquet primitive type
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub enum </span>State&lt;<span class="lifetime">&#39;a</span>&gt; {
     Optional(Optional&lt;<span class="lifetime">&#39;a</span>&gt;),
     Required(Required&lt;<span class="lifetime">&#39;a</span>&gt;),
@@ -353,7 +353,7 @@
     FilteredOptional(FilteredOptionalPageValidity&lt;<span class="lifetime">&#39;a</span>&gt;, HybridRleDecoder&lt;<span class="lifetime">&#39;a</span>&gt;),
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Required&lt;<span class="lifetime">&#39;a</span>&gt; {
     values: HybridRleDecoder&lt;<span class="lifetime">&#39;a</span>&gt;,
 }
@@ -365,7 +365,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>FilteredRequired&lt;<span class="lifetime">&#39;a</span>&gt; {
     values: SliceFilteredIter&lt;HybridRleDecoder&lt;<span class="lifetime">&#39;a</span>&gt;&gt;,
 }
@@ -381,7 +381,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Optional&lt;<span class="lifetime">&#39;a</span>&gt; {
     values: HybridRleDecoder&lt;<span class="lifetime">&#39;a</span>&gt;,
     validity: OptionalPageValidity&lt;<span class="lifetime">&#39;a</span>&gt;,
@@ -409,7 +409,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>PrimitiveDecoder&lt;K&gt;
 <span class="kw">where
     </span>K: DictionaryKey,
@@ -421,7 +421,7 @@
 <span class="kw">where
     </span>K: DictionaryKey,
 {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             phantom_k: std::marker::PhantomData,
@@ -558,7 +558,7 @@
     PrimitiveArray::new(K::PRIMITIVE.into(), values.into(), validity.into())
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>next_dict&lt;<span class="lifetime">&#39;a</span>, K: DictionaryKey, I: Pages, F: Fn(<span class="kw-2">&amp;</span>DictPage) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt;&gt;(
     iter: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>I,
     items: <span class="kw-2">&amp;mut </span>VecDeque&lt;(Vec&lt;K&gt;, MutableBitmap)&gt;,
@@ -639,4 +639,4 @@
 
 <span class="kw">pub use </span>nested::next_dict <span class="kw">as </span>nested_next_dict;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

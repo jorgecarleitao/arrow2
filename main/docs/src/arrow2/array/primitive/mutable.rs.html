@@ -685,7 +685,7 @@
 
 <span class="doccomment">/// The Arrow&#39;s equivalent to `Vec&lt;Option&lt;T&gt;&gt;` where `T` is byte-size (e.g. `i32`).
 /// Converting a [`MutablePrimitiveArray`] into a [`PrimitiveArray`] is `O(1)`.
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutablePrimitiveArray&lt;T: NativeType&gt; {
     data_type: DataType,
     values: Vec&lt;T&gt;,
@@ -836,7 +836,7 @@
     }
 
     <span class="doccomment">/// Extends the [`MutablePrimitiveArray`] with a constant
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_constant(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize, value: <span class="prelude-ty">Option</span>&lt;T&gt;) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = value {
             <span class="self">self</span>.values.resize(<span class="self">self</span>.values.len() + additional, value);
@@ -858,7 +858,7 @@
     }
 
     <span class="doccomment">/// Extends the [`MutablePrimitiveArray`] from an iterator of trusted len.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_trusted_len&lt;P, I&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: std::borrow::Borrow&lt;T&gt;,
@@ -870,7 +870,7 @@
     <span class="doccomment">/// Extends the [`MutablePrimitiveArray`] from an iterator of trusted len.
     /// # Safety
     /// The iterator must be trusted len.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>extend_trusted_len_unchecked&lt;P, I&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: std::borrow::Borrow&lt;T&gt;,
@@ -887,7 +887,7 @@
     }
     <span class="doccomment">/// Extends the [`MutablePrimitiveArray`] from an iterator of values of trusted len.
     /// This differs from `extend_trusted_len` which accepts in iterator of optional values.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_trusted_len_values&lt;I&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>I: TrustedLen&lt;Item = T&gt;,
@@ -899,7 +899,7 @@
     /// This differs from `extend_trusted_len_unchecked` which accepts in iterator of optional values.
     /// # Safety
     /// The iterator must be trusted len.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>extend_trusted_len_values_unchecked&lt;I&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>I: Iterator&lt;Item = T&gt;,
@@ -908,7 +908,7 @@
         <span class="self">self</span>.update_all_valid();
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="doccomment">/// Extends the [`MutablePrimitiveArray`] from a slice
     </span><span class="kw">pub fn </span>extend_from_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>, items: <span class="kw-2">&amp;</span>[T]) {
         <span class="self">self</span>.values.extend_from_slice(items);
@@ -934,7 +934,7 @@
     /// Use to change the logical type without changing the corresponding physical Type.
     /// # Implementation
     /// This operation is `O(1)`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>to(<span class="self">self</span>, data_type: DataType) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::from_data(data_type, <span class="self">self</span>.values, <span class="self">self</span>.validity)
     }
@@ -1109,7 +1109,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>from_trusted_len_iter_unchecked&lt;I, P&gt;(iterator: I) -&gt; <span class="self">Self
     </span><span class="kw">where
         </span>P: std::borrow::Borrow&lt;T&gt;,
@@ -1125,7 +1125,7 @@
     }
 
     <span class="doccomment">/// Creates a [`MutablePrimitiveArray`] from a [`TrustedLen`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_trusted_len_iter&lt;I, P&gt;(iterator: I) -&gt; <span class="self">Self
     </span><span class="kw">where
         </span>P: std::borrow::Borrow&lt;T&gt;,
@@ -1138,7 +1138,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>try_from_trusted_len_iter_unchecked&lt;E, I, P&gt;(
         iter: I,
     ) -&gt; std::result::Result&lt;<span class="self">Self</span>, E&gt;
@@ -1158,7 +1158,7 @@
     }
 
     <span class="doccomment">/// Creates a [`MutablePrimitiveArray`] from an fallible iterator of trusted length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>try_from_trusted_len_iter&lt;E, I, P&gt;(iterator: I) -&gt; std::result::Result&lt;<span class="self">Self</span>, E&gt;
     <span class="kw">where
         </span>P: std::borrow::Borrow&lt;T&gt;,
@@ -1231,7 +1231,7 @@
 /// corresponds to a values buffer.
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>extend_trusted_len_unzip&lt;I, P, T&gt;(
     iterator: I,
     validity: <span class="kw-2">&amp;mut </span>MutableBitmap,
@@ -1262,7 +1262,7 @@
 /// corresponds to a values buffer.
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>trusted_len_unzip&lt;I, P, T&gt;(iterator: I) -&gt; (<span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;, Vec&lt;T&gt;)
 <span class="kw">where
     </span>T: NativeType,
@@ -1281,7 +1281,7 @@
 
 <span class="doccomment">/// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>try_trusted_len_unzip&lt;E, I, P, T&gt;(
     iterator: I,
 ) -&gt; std::result::Result&lt;(<span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;, Vec&lt;T&gt;), E&gt;
@@ -1337,4 +1337,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

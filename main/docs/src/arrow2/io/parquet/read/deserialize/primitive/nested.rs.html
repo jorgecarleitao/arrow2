@@ -267,7 +267,7 @@
 <span class="kw">use super</span>::{<span class="kw">super</span>::nested_utils::<span class="kw-2">*</span>, basic::deserialize_plain};
 
 <span class="comment">// The state of a `DataPage` of `Primitive` parquet primitive type
-</span><span class="attribute">#[allow(clippy::large_enum_variant)]
+</span><span class="attr">#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 </span><span class="kw">enum </span>State&lt;<span class="lifetime">&#39;a</span>, T&gt;
 <span class="kw">where
@@ -293,7 +293,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">struct </span>PrimitiveDecoder&lt;T, P, F&gt;
 <span class="kw">where
     </span>T: NativeType,
@@ -311,7 +311,7 @@
     P: ParquetNativeType,
     F: Fn(P) -&gt; T,
 {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>new(op: F) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             phantom: std::marker::PhantomData,
@@ -416,7 +416,7 @@
 }
 
 <span class="doccomment">/// An iterator adapter over [`Pages`] assumed to be encoded as boolean arrays
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>NestedIter&lt;T, I, P, F&gt;
 <span class="kw">where
     </span>I: Pages,
@@ -495,4 +495,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

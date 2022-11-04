@@ -765,7 +765,7 @@
                         )
                     },
                 )),
-                <span class="attribute">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
+                <span class="attr">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
                 </span><span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                     <span class="kw">let </span>timezone = temporal_conversions::parse_offset_tz(timezone_str)<span class="question-mark">?</span>;
                     <span class="prelude-val">Ok</span>(binary(
@@ -779,7 +779,7 @@
                         },
                     ))
                 }
-                <span class="attribute">#[cfg(not(feature = <span class="string">&quot;chrono-tz&quot;</span>))]
+                <span class="attr">#[cfg(not(feature = <span class="string">&quot;chrono-tz&quot;</span>))]
                 </span><span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgumentError(<span class="macro">format!</span>(
                     <span class="string">&quot;timezone \&quot;{}\&quot; cannot be parsed (feature chrono-tz is not active)&quot;</span>,
                     timezone_str
@@ -831,7 +831,7 @@
                     },
                     timestamp.data_type().clone(),
                 )),
-                <span class="attribute">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
+                <span class="attr">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
                 </span><span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                     <span class="kw">let </span>timezone = temporal_conversions::parse_offset_tz(timezone_str)<span class="question-mark">?</span>;
                     <span class="prelude-val">Ok</span>(unary(
@@ -844,7 +844,7 @@
                         timestamp.data_type().clone(),
                     ))
                 }
-                <span class="attribute">#[cfg(not(feature = <span class="string">&quot;chrono-tz&quot;</span>))]
+                <span class="attr">#[cfg(not(feature = <span class="string">&quot;chrono-tz&quot;</span>))]
                 </span><span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgumentError(<span class="macro">format!</span>(
                     <span class="string">&quot;timezone \&quot;{}\&quot; cannot be parsed (feature chrono-tz is not active)&quot;</span>,
                     timezone_str
@@ -867,4 +867,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

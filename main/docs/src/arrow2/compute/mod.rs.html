@@ -102,83 +102,83 @@
 //! Some dynamically-typed operators have an auxiliary function, `can_*`, that returns
 //! true if the operator can be applied to the particular `DataType`.
 
-</span><span class="attribute">#[cfg(any(feature = <span class="string">&quot;compute_aggregate&quot;</span>, feature = <span class="string">&quot;io_parquet&quot;</span>))]
+</span><span class="attr">#[cfg(any(feature = <span class="string">&quot;compute_aggregate&quot;</span>, feature = <span class="string">&quot;io_parquet&quot;</span>))]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_aggregate&quot;</span>)))]
 </span><span class="kw">pub mod </span>aggregate;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_arithmetics&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_arithmetics&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_arithmetics&quot;</span>)))]
 </span><span class="kw">pub mod </span>arithmetics;
 <span class="kw">pub mod </span>arity;
 <span class="kw">pub mod </span>arity_assign;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_bitwise&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_bitwise&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_bitwise&quot;</span>)))]
 </span><span class="kw">pub mod </span>bitwise;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_boolean&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_boolean&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_boolean&quot;</span>)))]
 </span><span class="kw">pub mod </span>boolean;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_boolean_kleene&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_boolean_kleene&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_boolean_kleene&quot;</span>)))]
 </span><span class="kw">pub mod </span>boolean_kleene;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_cast&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_cast&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_cast&quot;</span>)))]
 </span><span class="kw">pub mod </span>cast;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_comparison&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_comparison&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_comparison&quot;</span>)))]
 </span><span class="kw">pub mod </span>comparison;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_concatenate&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_concatenate&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_concatenate&quot;</span>)))]
 </span><span class="kw">pub mod </span>concatenate;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_contains&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_contains&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_contains&quot;</span>)))]
 </span><span class="kw">pub mod </span>contains;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_filter&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_filter&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_filter&quot;</span>)))]
 </span><span class="kw">pub mod </span>filter;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_hash&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_hash&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_hash&quot;</span>)))]
 </span><span class="kw">pub mod </span>hash;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_if_then_else&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_if_then_else&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_if_then_else&quot;</span>)))]
 </span><span class="kw">pub mod </span>if_then_else;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_length&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_length&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_length&quot;</span>)))]
 </span><span class="kw">pub mod </span>length;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_like&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_like&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_like&quot;</span>)))]
 </span><span class="kw">pub mod </span>like;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_limit&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_limit&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_limit&quot;</span>)))]
 </span><span class="kw">pub mod </span>limit;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_merge_sort&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_merge_sort&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_merge_sort&quot;</span>)))]
 </span><span class="kw">pub mod </span>merge_sort;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_nullif&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_nullif&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_nullif&quot;</span>)))]
 </span><span class="kw">pub mod </span>nullif;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_partition&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_partition&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_partition&quot;</span>)))]
 </span><span class="kw">pub mod </span>partition;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_regex_match&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_regex_match&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_regex_match&quot;</span>)))]
 </span><span class="kw">pub mod </span>regex_match;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_sort&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_sort&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_sort&quot;</span>)))]
 </span><span class="kw">pub mod </span>sort;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_substring&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_substring&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_substring&quot;</span>)))]
 </span><span class="kw">pub mod </span>substring;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_take&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_take&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_take&quot;</span>)))]
 </span><span class="kw">pub mod </span>take;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_temporal&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_temporal&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_temporal&quot;</span>)))]
 </span><span class="kw">pub mod </span>temporal;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_utf8&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_utf8&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_utf8&quot;</span>)))]
 </span><span class="kw">pub mod </span>utf8;
 <span class="kw">mod </span>utils;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;compute_window&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;compute_window&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;compute_window&quot;</span>)))]
 </span><span class="kw">pub mod </span>window;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

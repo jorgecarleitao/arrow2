@@ -208,7 +208,7 @@
     </span>}
 }
 
-<span class="attribute">#[allow(clippy::too_many_arguments)]
+<span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">pub fn </span>build_plain_page(
     buffer: Vec&lt;u8&gt;,
     num_values: usize,
@@ -279,7 +279,7 @@
 <span class="kw">impl</span>&lt;T, I: Iterator&lt;Item = T&gt;&gt; Iterator <span class="kw">for </span>ExactSizedIter&lt;T, I&gt; {
     <span class="kw">type </span>Item = T;
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="self">self</span>.iter.next().map(|x| {
             <span class="self">self</span>.remaining -= <span class="number">1</span>;
@@ -287,16 +287,16 @@
         })
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>size_hint(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (usize, <span class="prelude-ty">Option</span>&lt;usize&gt;) {
         (<span class="self">self</span>.remaining, <span class="prelude-val">Some</span>(<span class="self">self</span>.remaining))
     }
 }
 
 <span class="doccomment">/// Returns the number of bits needed to bitpack `max`
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>get_bit_width(max: u64) -&gt; u32 {
     <span class="number">64 </span>- max.leading_zeros()
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

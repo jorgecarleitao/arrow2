@@ -59,7 +59,7 @@
 <span class="kw">use </span><span class="kw">super</span>::Scalar;
 
 <span class="doccomment">/// The [`DictionaryArray`] equivalent of [`Array`] for [`Scalar`].
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>DictionaryScalar&lt;K: DictionaryKey&gt; {
     value: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Scalar&gt;&gt;,
     phantom: std::marker::PhantomData&lt;K&gt;,
@@ -78,7 +78,7 @@
     /// iff
     /// * the `data_type` is not `List` or `LargeList` (depending on this scalar&#39;s offset `O`)
     /// * the child of the `data_type` is not equal to the `values`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(data_type: DataType, value: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Scalar&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             value,
@@ -107,4 +107,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

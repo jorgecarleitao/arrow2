@@ -158,7 +158,7 @@
         }
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>to(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; PrimitiveArray&lt;T&gt; {
         <span class="kw">let </span>validity = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity);
         <span class="kw">let </span>values = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values);
@@ -168,7 +168,7 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: NativeType&gt; Growable&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>GrowablePrimitive&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: usize, start: usize, len: usize) {
         (<span class="self">self</span>.extend_null_bits[index])(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity, start, len);
 
@@ -176,29 +176,29 @@
         <span class="self">self</span>.values.extend_from_slice(<span class="kw-2">&amp;</span>values[start..start + len]);
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>extend_validity(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize) {
         <span class="self">self</span>.values
             .resize(<span class="self">self</span>.values.len() + additional, T::default());
         <span class="self">self</span>.validity.extend_constant(additional, <span class="bool-val">false</span>);
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_arc(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Array&gt; {
         Arc::new(<span class="self">self</span>.to())
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_box(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
         Box::new(<span class="self">self</span>.to())
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: NativeType&gt; From&lt;GrowablePrimitive&lt;<span class="lifetime">&#39;a</span>, T&gt;&gt; <span class="kw">for </span>PrimitiveArray&lt;T&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from(val: GrowablePrimitive&lt;<span class="lifetime">&#39;a</span>, T&gt;) -&gt; <span class="self">Self </span>{
         PrimitiveArray::&lt;T&gt;::new(val.data_type, val.values.into(), val.validity.into())
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

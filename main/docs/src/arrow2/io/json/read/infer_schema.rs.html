@@ -442,11 +442,11 @@
     };
 }
 
-<span class="attribute">#[cfg(test)]
+<span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>test {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_coersion_scalar_and_list() {
         <span class="kw">use </span><span class="kw">crate</span>::datatypes::DataType::<span class="kw-2">*</span>;
 
@@ -475,7 +475,7 @@
         );
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_coersion_of_nulls() {
         <span class="macro">assert_eq!</span>(coerce_data_type(<span class="kw-2">&amp;</span>[DataType::Null]), DataType::Null);
         <span class="macro">assert_eq!</span>(
@@ -487,4 +487,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

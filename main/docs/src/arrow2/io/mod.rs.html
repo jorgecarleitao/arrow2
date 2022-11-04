@@ -57,18 +57,18 @@
 <span id="57">57</span>
 <span id="58">58</span>
 <span id="59">59</span>
-</pre><pre class="rust"><code><span class="attribute">#![forbid(unsafe_code)]
+</pre><pre class="rust"><code><span class="attr">#![forbid(unsafe_code)]
 </span><span class="doccomment">//! Contains modules to interface with other formats such as [`csv`],
 //! [`parquet`], [`json`], [`ipc`], [`mod@print`] and [`avro`].
 
-</span><span class="attribute">#[cfg(feature = <span class="string">&quot;io_odbc&quot;</span>)]
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;io_odbc&quot;</span>)]
 </span><span class="kw">pub mod </span>odbc;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;io_orc&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;io_orc&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_orc&quot;</span>)))]
 </span><span class="kw">pub mod </span>orc;
 
-<span class="attribute">#[cfg(any(
+<span class="attr">#[cfg(any(
     feature = <span class="string">&quot;io_csv_read&quot;</span>,
     feature = <span class="string">&quot;io_csv_read_async&quot;</span>,
     feature = <span class="string">&quot;io_csv_write&quot;</span>,
@@ -83,38 +83,38 @@
 )]
 </span><span class="kw">pub mod </span>csv;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;io_json&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;io_json&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_json&quot;</span>)))]
 </span><span class="kw">pub mod </span>json;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;io_json&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;io_json&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_json&quot;</span>)))]
 </span><span class="kw">pub mod </span>ndjson;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;io_ipc&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;io_ipc&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_ipc&quot;</span>)))]
 </span><span class="kw">pub mod </span>ipc;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;io_flight&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;io_flight&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_flight&quot;</span>)))]
 </span><span class="kw">pub mod </span>flight;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;io_json_integration&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;io_json_integration&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_json_integration&quot;</span>)))]
 </span><span class="kw">pub mod </span>json_integration;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;io_parquet&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;io_parquet&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_parquet&quot;</span>)))]
 </span><span class="kw">pub mod </span>parquet;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;io_avro&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;io_avro&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_avro&quot;</span>)))]
 </span><span class="kw">pub mod </span>avro;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;io_print&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;io_print&quot;</span>)]
 #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_print&quot;</span>)))]
 </span><span class="kw">pub mod </span>print;
 
-<span class="attribute">#[cfg(any(feature = <span class="string">&quot;io_csv_write&quot;</span>, feature = <span class="string">&quot;io_avro&quot;</span>, feature = <span class="string">&quot;io_json&quot;</span>))]
+<span class="attr">#[cfg(any(feature = <span class="string">&quot;io_csv_write&quot;</span>, feature = <span class="string">&quot;io_avro&quot;</span>, feature = <span class="string">&quot;io_json&quot;</span>))]
 </span><span class="kw">mod </span>iterator;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

@@ -649,7 +649,7 @@
 <span class="comment">// Auxiliary struct to allow presenting &amp;str as [u8] to a generic function
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>StrAsBytes&lt;P&gt;(P);
 <span class="kw">impl</span>&lt;T: AsRef&lt;str&gt;&gt; AsRef&lt;[u8]&gt; <span class="kw">for </span>StrAsBytes&lt;T&gt; {
-    <span class="attribute">#[inline(always)]
+    <span class="attr">#[inline(always)]
     </span><span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
         <span class="self">self</span>.<span class="number">0</span>.as_ref().as_bytes()
     }
@@ -685,7 +685,7 @@
 /// * Two consecutives `offsets` casted (`as`) to `usize` are valid slices of `values`.
 /// * A slice of `values` taken from two consecutives `offsets` is valid `utf8`.
 /// * `len` is equal to `validity.len()`, when defined.
-</span><span class="attribute">#[derive(Clone)]
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Utf8Array&lt;O: Offset&gt; {
     data_type: DataType,
     offsets: Buffer&lt;O&gt;,
@@ -762,7 +762,7 @@
     }
 
     <span class="doccomment">/// Returns the length of this array
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.offsets.len() - <span class="number">1
     </span>}
@@ -770,7 +770,7 @@
     <span class="doccomment">/// Returns the value of the element at index `i`, ignoring the array&#39;s validity.
     /// # Panic
     /// This function panics iff `i &gt;= self.len`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;</span>str {
         <span class="macro">assert!</span>(i &lt; <span class="self">self</span>.len());
         <span class="kw">unsafe </span>{ <span class="self">self</span>.value_unchecked(i) }
@@ -779,7 +779,7 @@
     <span class="doccomment">/// Returns the value of the element at index `i`, ignoring the array&#39;s validity.
     /// # Safety
     /// This function is safe iff `i &lt; self.len`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>value_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;</span>str {
         <span class="comment">// soundness: the invariant of the function
         </span><span class="kw">let </span>start = <span class="self">self</span>.offsets.get_unchecked(i).to_usize();
@@ -793,25 +793,25 @@
     }
 
     <span class="doccomment">/// Returns the [`DataType`] of this array.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
     }
 
     <span class="doccomment">/// Returns the values of this [`Utf8Array`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Buffer&lt;u8&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.values
     }
 
     <span class="doccomment">/// Returns the offsets of this [`Utf8Array`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>offsets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Buffer&lt;O&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.offsets
     }
 
     <span class="doccomment">/// The optional validity.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Bitmap&gt; {
         <span class="self">self</span>.validity.as_ref()
     }
@@ -821,7 +821,7 @@
     /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
     /// # Panic
     /// This function panics iff `offset + length &gt;= self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(
             offset + length &lt;= <span class="self">self</span>.len(),
@@ -835,7 +835,7 @@
     /// This operation is `O(1)` as it amounts to essentially increase two ref counts.
     /// # Safety
     /// The caller must ensure that `offset + length &lt;= self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>validity = <span class="self">self
             </span>.validity
@@ -865,7 +865,7 @@
     <span class="doccomment">/// Returns this [`Utf8Array`] with a new validity.
     /// # Panics
     /// This function panics iff `validity.len() != self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>with_validity(<span class="kw-2">mut </span><span class="self">self</span>, validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.set_validity(validity);
         <span class="self">self
@@ -966,7 +966,7 @@
     <span class="doccomment">/// Returns a new empty [`Utf8Array`].
     ///
     /// The array is guaranteed to have no elements nor validity.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new_empty(data_type: DataType) -&gt; <span class="self">Self </span>{
         <span class="kw">unsafe </span>{
             <span class="self">Self</span>::from_data_unchecked(
@@ -979,7 +979,7 @@
     }
 
     <span class="doccomment">/// Returns a new [`Utf8Array`] whose all slots are null / `None`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new_null(data_type: DataType, length: usize) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new(
             data_type,
@@ -1086,7 +1086,7 @@
     <span class="doccomment">/// Returns a (non-null) [`Utf8Array`] created from a [`TrustedLen`] of `&amp;str`.
     /// # Implementation
     /// This function is `O(N)`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_trusted_len_values_iter&lt;T: AsRef&lt;str&gt;, I: TrustedLen&lt;Item = T&gt;&gt;(
         iterator: I,
     ) -&gt; <span class="self">Self </span>{
@@ -1102,7 +1102,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>from_trusted_len_iter_unchecked&lt;I, P&gt;(iterator: I) -&gt; <span class="self">Self
     </span><span class="kw">where
         </span>P: AsRef&lt;str&gt;,
@@ -1112,7 +1112,7 @@
     }
 
     <span class="doccomment">/// Creates a [`Utf8Array`] from an iterator of trusted length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_trusted_len_iter&lt;I, P&gt;(iterator: I) -&gt; <span class="self">Self
     </span><span class="kw">where
         </span>P: AsRef&lt;str&gt;,
@@ -1125,7 +1125,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>try_from_trusted_len_iter_unchecked&lt;E, I, P&gt;(
         iterator: I,
     ) -&gt; std::result::Result&lt;<span class="self">Self</span>, E&gt;
@@ -1137,7 +1137,7 @@
     }
 
     <span class="doccomment">/// Creates a [`Utf8Array`] from an fallible iterator of trusted length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>try_from_trusted_len_iter&lt;E, I, P&gt;(iter: I) -&gt; std::result::Result&lt;<span class="self">Self</span>, E&gt;
     <span class="kw">where
         </span>P: AsRef&lt;str&gt;,
@@ -1172,22 +1172,22 @@
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; Array <span class="kw">for </span>Utf8Array&lt;O&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.len()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
     }
@@ -1212,12 +1212,12 @@
 }
 
 <span class="kw">unsafe impl</span>&lt;O: Offset&gt; GenericBinaryArray&lt;O&gt; <span class="kw">for </span>Utf8Array&lt;O&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
         <span class="self">self</span>.values()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>offsets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[O] {
         <span class="self">self</span>.offsets()
     }
@@ -1239,4 +1239,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

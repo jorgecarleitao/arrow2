@@ -146,7 +146,7 @@
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::bitmap::Bitmap;
 
 <span class="doccomment">/// Internal state of [`SlicesIterator`]
-</span><span class="attribute">#[derive(Debug, Clone, PartialEq)]
+</span><span class="attr">#[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">enum </span>State {
     <span class="comment">// normal iteration
     </span>Nominal,
@@ -158,7 +158,7 @@
 /// This is the most efficient method to extract slices of values from arrays
 /// with a validity bitmap.
 /// For example, the bitmap `00101111` returns `[(0,4), (6,1)]`
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>SlicesIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
     values: std::slice::Iter&lt;<span class="lifetime">&#39;a</span>, u8&gt;,
     count: usize,
@@ -195,7 +195,7 @@
         }
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>finish(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(usize, usize)&gt; {
         <span class="self">self</span>.state = State::Finished;
         <span class="kw">if </span><span class="self">self</span>.on_region {
@@ -205,14 +205,14 @@
         </span>}
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>current_len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.start + <span class="self">self</span>.len
     }
 
     <span class="doccomment">/// Returns the total number of slots.
     /// It corresponds to the sum of all lengths of all slices.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>slots(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.count
     }
@@ -221,7 +221,7 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>SlicesIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">type </span>Item = (usize, usize);
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">loop </span>{
             <span class="kw">if </span><span class="self">self</span>.state == State::Finished {
@@ -289,4 +289,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

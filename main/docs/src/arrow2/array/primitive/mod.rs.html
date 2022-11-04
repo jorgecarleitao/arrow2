@@ -592,7 +592,7 @@
 /// assert_eq!(array.validity(), Some(&amp;Bitmap::from([true, false, true])));
 ///
 /// ```
-</span><span class="attribute">#[derive(Clone)]
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>PrimitiveArray&lt;T: NativeType&gt; {
     data_type: DataType,
     values: Buffer&lt;T&gt;,
@@ -660,7 +660,7 @@
     /// ```
     /// # Panics
     /// Panics iff the `data_type`&#39;s [`PhysicalType`] is not equal to [`PhysicalType::Primitive(T::PRIMITIVE)`]
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     #[must_use]
     </span><span class="kw">pub fn </span>to(<span class="self">self</span>, data_type: DataType) -&gt; <span class="self">Self </span>{
         check(<span class="kw-2">&amp;</span>data_type, <span class="kw-2">&amp;</span><span class="self">self</span>.values, <span class="kw-2">&amp;</span><span class="self">self</span>.validity).unwrap();
@@ -685,7 +685,7 @@
     }
 
     <span class="doccomment">/// Returns an iterator over the values and validity, `Option&lt;&amp;T&gt;`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ZipValidity&lt;<span class="kw-2">&amp;</span>T, std::slice::Iter&lt;T&gt;, BitmapIter&gt; {
         ZipValidity::new(
             <span class="self">self</span>.values().iter(),
@@ -694,32 +694,32 @@
     }
 
     <span class="doccomment">/// Returns an iterator of the values, `&amp;T`, ignoring the arrays&#39; validity.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>values_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::slice::Iter&lt;T&gt; {
         <span class="self">self</span>.values().iter()
     }
 
     <span class="doccomment">/// Returns the length of this array
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.len()
     }
 
     <span class="doccomment">/// The values [`Buffer`].
     /// Values on null slots are undetermined (they can be anything).
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Buffer&lt;T&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.values
     }
 
     <span class="doccomment">/// Returns the optional validity.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Bitmap&gt; {
         <span class="self">self</span>.validity.as_ref()
     }
 
     <span class="doccomment">/// Returns the arrays&#39; [`DataType`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
     }
@@ -729,7 +729,7 @@
     /// Equivalent to `self.values()[i]`. The value of a null slot is undetermined (it can be anything).
     /// # Panic
     /// This function panics iff `i &gt;= self.len`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; T {
         <span class="self">self</span>.values()[i]
     }
@@ -738,7 +738,7 @@
     /// The value on null slots is undetermined (it can be anything).
     /// # Safety
     /// Caller must be sure that `i &lt; self.len()`
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>value_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; T {
         <span class="kw-2">*</span><span class="self">self</span>.values.get_unchecked(i)
     }
@@ -758,7 +758,7 @@
     /// ```
     /// # Panic
     /// This function panics iff `offset + length &gt; self.len()`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     #[must_use]
     </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(
@@ -773,7 +773,7 @@
     /// This operation is `O(1)` as it amounts to increase two ref counts.
     /// # Safety
     /// The caller must ensure that `offset + length &lt;= self.len()`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     #[must_use]
     </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>validity = <span class="self">self
@@ -791,7 +791,7 @@
     <span class="doccomment">/// Returns this [`PrimitiveArray`] with a new validity.
     /// # Panics
     /// This function panics iff `validity.len() != self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>with_validity(<span class="kw-2">mut </span><span class="self">self</span>, validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.set_validity(validity);
         <span class="self">self
@@ -810,7 +810,7 @@
     <span class="doccomment">/// Returns this [`PrimitiveArray`] with new values.
     /// # Panics
     /// This function panics iff `values.len() != self.len()`.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>with_values(<span class="kw-2">mut </span><span class="self">self</span>, values: Buffer&lt;T&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.set_values(values);
         <span class="self">self
@@ -845,7 +845,7 @@
     }
 
     <span class="doccomment">/// Returns its internal representation
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>into_inner(<span class="self">self</span>) -&gt; (DataType, Buffer&lt;T&gt;, <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) {
         <span class="kw">let </span><span class="self">Self </span>{
             data_type,
@@ -862,7 +862,7 @@
     /// and validity have not been cloned / are unique references to their underlying vectors.
     ///
     /// This function is primarily used to re-use memory regions.
-    </span><span class="attribute">#[must_use]
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>into_mut(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; Either&lt;<span class="self">Self</span>, MutablePrimitiveArray&lt;T&gt;&gt; {
         <span class="kw">use </span>Either::<span class="kw-2">*</span>;
 
@@ -904,7 +904,7 @@
     }
 
     <span class="doccomment">/// Returns a new [`PrimitiveArray`] where all slots are null / `None`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new_null(data_type: DataType, length: usize) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new(
             data_type,
@@ -985,22 +985,22 @@
 }
 
 <span class="kw">impl</span>&lt;T: NativeType&gt; Array <span class="kw">for </span>PrimitiveArray&lt;T&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.len()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="self">self</span>.data_type()
     }
@@ -1091,4 +1091,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

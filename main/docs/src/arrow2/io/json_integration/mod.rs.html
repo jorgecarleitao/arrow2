@@ -138,77 +138,77 @@
 <span class="kw">pub mod </span>write;
 
 <span class="doccomment">/// A struct that represents an Arrow file with a schema and record batches
-</span><span class="attribute">#[derive(Deserialize, Serialize, Debug)]
+</span><span class="attr">#[derive(Deserialize, Serialize, Debug)]
 </span><span class="kw">pub struct </span>ArrowJson {
     <span class="doccomment">/// The schema
     </span><span class="kw">pub </span>schema: ArrowJsonSchema,
     <span class="doccomment">/// The batches
     </span><span class="kw">pub </span>batches: Vec&lt;ArrowJsonBatch&gt;,
     <span class="doccomment">/// The dictionaries
-    </span><span class="attribute">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="attr">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
     </span><span class="kw">pub </span>dictionaries: <span class="prelude-ty">Option</span>&lt;Vec&lt;ArrowJsonDictionaryBatch&gt;&gt;,
 }
 
 <span class="doccomment">/// A struct that partially reads the Arrow JSON schema.
 ///
 /// Fields are left as JSON `Value` as they vary by `DataType`
-</span><span class="attribute">#[derive(Deserialize, Serialize, Debug)]
+</span><span class="attr">#[derive(Deserialize, Serialize, Debug)]
 </span><span class="kw">pub struct </span>ArrowJsonSchema {
     <span class="doccomment">/// The fields
     </span><span class="kw">pub </span>fields: Vec&lt;ArrowJsonField&gt;,
     <span class="doccomment">/// The metadata
-    </span><span class="attribute">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="attr">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
     </span><span class="kw">pub </span>metadata: <span class="prelude-ty">Option</span>&lt;Value&gt;,
 }
 
 <span class="doccomment">/// Fields are left as JSON `Value` as they vary by `DataType`
-</span><span class="attribute">#[derive(Deserialize, Serialize, Debug)]
+</span><span class="attr">#[derive(Deserialize, Serialize, Debug)]
 </span><span class="kw">pub struct </span>ArrowJsonField {
     <span class="doccomment">/// The name
     </span><span class="kw">pub </span>name: String,
     <span class="doccomment">/// The type
-    </span><span class="attribute">#[serde(rename = <span class="string">&quot;type&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">&quot;type&quot;</span>)]
     </span><span class="kw">pub </span>field_type: Value,
     <span class="doccomment">/// whether it is nullable
     </span><span class="kw">pub </span>nullable: bool,
     <span class="doccomment">/// the children
     </span><span class="kw">pub </span>children: Vec&lt;ArrowJsonField&gt;,
     <span class="doccomment">/// the dictionary
-    </span><span class="attribute">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="attr">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
     </span><span class="kw">pub </span>dictionary: <span class="prelude-ty">Option</span>&lt;ArrowJsonFieldDictionary&gt;,
     <span class="doccomment">/// the fields&#39; metadata
-    </span><span class="attribute">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="attr">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
     </span><span class="kw">pub </span>metadata: <span class="prelude-ty">Option</span>&lt;Value&gt;,
 }
 
 <span class="doccomment">/// Dictionary metadata
-</span><span class="attribute">#[derive(Deserialize, Serialize, Debug)]
+</span><span class="attr">#[derive(Deserialize, Serialize, Debug)]
 </span><span class="kw">pub struct </span>ArrowJsonFieldDictionary {
     <span class="doccomment">/// the dictionary id
     </span><span class="kw">pub </span>id: i64,
     <span class="doccomment">/// the index type
-    </span><span class="attribute">#[serde(rename = <span class="string">&quot;indexType&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">&quot;indexType&quot;</span>)]
     </span><span class="kw">pub </span>index_type: IntegerType,
     <span class="doccomment">/// whether it is ordered
-    </span><span class="attribute">#[serde(rename = <span class="string">&quot;isOrdered&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">&quot;isOrdered&quot;</span>)]
     </span><span class="kw">pub </span>is_ordered: bool,
 }
 
 <span class="doccomment">/// the type of the integer in the dictionary
-</span><span class="attribute">#[derive(Deserialize, Serialize, Debug)]
+</span><span class="attr">#[derive(Deserialize, Serialize, Debug)]
 </span><span class="kw">pub struct </span>IntegerType {
     <span class="doccomment">/// its name
     </span><span class="kw">pub </span>name: String,
     <span class="doccomment">/// whether it is signed
-    </span><span class="attribute">#[serde(rename = <span class="string">&quot;isSigned&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">&quot;isSigned&quot;</span>)]
     </span><span class="kw">pub </span>is_signed: bool,
     <span class="doccomment">/// the bit width
-    </span><span class="attribute">#[serde(rename = <span class="string">&quot;bitWidth&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">&quot;bitWidth&quot;</span>)]
     </span><span class="kw">pub </span>bit_width: i64,
 }
 
 <span class="doccomment">/// A struct that partially reads the Arrow JSON record batch
-</span><span class="attribute">#[derive(Deserialize, Serialize, Debug)]
+</span><span class="attr">#[derive(Deserialize, Serialize, Debug)]
 </span><span class="kw">pub struct </span>ArrowJsonBatch {
     count: usize,
     <span class="doccomment">/// the columns
@@ -216,7 +216,7 @@
 }
 
 <span class="doccomment">/// A struct that partially reads the Arrow JSON dictionary batch
-</span><span class="attribute">#[derive(Deserialize, Serialize, Debug)]
+</span><span class="attr">#[derive(Deserialize, Serialize, Debug)]
 #[allow(non_snake_case)]
 </span><span class="kw">pub struct </span>ArrowJsonDictionaryBatch {
     <span class="doccomment">/// the id
@@ -226,22 +226,22 @@
 }
 
 <span class="doccomment">/// A struct that partially reads the Arrow JSON column/array
-</span><span class="attribute">#[derive(Deserialize, Serialize, Clone, Debug)]
+</span><span class="attr">#[derive(Deserialize, Serialize, Clone, Debug)]
 </span><span class="kw">pub struct </span>ArrowJsonColumn {
     name: String,
     <span class="doccomment">/// the number of elements
     </span><span class="kw">pub </span>count: usize,
     <span class="doccomment">/// the validity bitmap
-    </span><span class="attribute">#[serde(rename = <span class="string">&quot;VALIDITY&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">&quot;VALIDITY&quot;</span>)]
     </span><span class="kw">pub </span>validity: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
     <span class="doccomment">/// the data
-    </span><span class="attribute">#[serde(rename = <span class="string">&quot;DATA&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">&quot;DATA&quot;</span>)]
     </span><span class="kw">pub </span>data: <span class="prelude-ty">Option</span>&lt;Vec&lt;Value&gt;&gt;,
     <span class="doccomment">/// the offsets
-    </span><span class="attribute">#[serde(rename = <span class="string">&quot;OFFSET&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">&quot;OFFSET&quot;</span>)]
     </span><span class="kw">pub </span>offset: <span class="prelude-ty">Option</span>&lt;Vec&lt;Value&gt;&gt;, <span class="comment">// leaving as Value as 64-bit offsets are strings
     </span><span class="doccomment">/// the type id for union types
-    </span><span class="attribute">#[serde(rename = <span class="string">&quot;TYPE_ID&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">&quot;TYPE_ID&quot;</span>)]
     </span><span class="kw">pub </span>type_id: <span class="prelude-ty">Option</span>&lt;Vec&lt;Value&gt;&gt;,
     <span class="doccomment">/// the children
     </span><span class="kw">pub </span>children: <span class="prelude-ty">Option</span>&lt;Vec&lt;ArrowJsonColumn&gt;&gt;,
@@ -253,4 +253,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

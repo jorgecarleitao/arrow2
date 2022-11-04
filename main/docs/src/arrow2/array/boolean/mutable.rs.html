@@ -566,7 +566,7 @@
 /// Converting a [`MutableBooleanArray`] into a [`BooleanArray`] is `O(1)`.
 /// # Implementation
 /// This struct does not allocate a validity until one is required (i.e. push a null to it).
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableBooleanArray {
     data_type: DataType,
     values: MutableBitmap,
@@ -667,7 +667,7 @@
 
     <span class="doccomment">/// Extends the [`MutableBooleanArray`] from an iterator of values of trusted len.
     /// This differs from `extend_trusted_len` which accepts in iterator of optional values.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_trusted_len_values&lt;I&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>I: TrustedLen&lt;Item = bool&gt;,
@@ -680,7 +680,7 @@
     /// This differs from `extend_trusted_len_unchecked`, which accepts in iterator of optional values.
     /// # Safety
     /// The iterator must be trusted len.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>extend_trusted_len_values_unchecked&lt;I&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>I: Iterator&lt;Item = bool&gt;,
@@ -697,7 +697,7 @@
     }
 
     <span class="doccomment">/// Extends the [`MutableBooleanArray`] from an iterator of trusted len.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_trusted_len&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: std::borrow::Borrow&lt;bool&gt;,
@@ -710,7 +710,7 @@
     <span class="doccomment">/// Extends the [`MutableBooleanArray`] from an iterator of trusted len.
     /// # Safety
     /// The iterator must be trusted len.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>extend_trusted_len_unchecked&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: std::borrow::Borrow&lt;bool&gt;,
@@ -778,7 +778,7 @@
 <span class="doccomment">/// From implementations
 </span><span class="kw">impl </span>MutableBooleanArray {
     <span class="doccomment">/// Creates a new [`MutableBooleanArray`] from an [`TrustedLen`] of `bool`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_trusted_len_values_iter&lt;I: TrustedLen&lt;Item = bool&gt;&gt;(iterator: I) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::from_data(
             DataType::Boolean,
@@ -793,7 +793,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>from_trusted_len_values_iter_unchecked&lt;I: Iterator&lt;Item = bool&gt;&gt;(
         iterator: I,
     ) -&gt; <span class="self">Self </span>{
@@ -803,7 +803,7 @@
     }
 
     <span class="doccomment">/// Creates a new [`MutableBooleanArray`] from a slice of `bool`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_slice&lt;P: AsRef&lt;[bool]&gt;&gt;(slice: P) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::from_trusted_len_values_iter(slice.as_ref().iter().copied())
     }
@@ -814,7 +814,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>from_trusted_len_iter_unchecked&lt;I, P&gt;(iterator: I) -&gt; <span class="self">Self
     </span><span class="kw">where
         </span>P: std::borrow::Borrow&lt;bool&gt;,
@@ -826,7 +826,7 @@
     }
 
     <span class="doccomment">/// Creates a [`BooleanArray`] from a [`TrustedLen`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_trusted_len_iter&lt;I, P&gt;(iterator: I) -&gt; <span class="self">Self
     </span><span class="kw">where
         </span>P: std::borrow::Borrow&lt;bool&gt;,
@@ -840,7 +840,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>try_from_trusted_len_iter_unchecked&lt;E, I, P&gt;(
         iterator: I,
     ) -&gt; std::result::Result&lt;<span class="self">Self</span>, E&gt;
@@ -860,7 +860,7 @@
     }
 
     <span class="doccomment">/// Creates a [`BooleanArray`] from a [`TrustedLen`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>try_from_trusted_len_iter&lt;E, I, P&gt;(iterator: I) -&gt; std::result::Result&lt;<span class="self">Self</span>, E&gt;
     <span class="kw">where
         </span>P: std::borrow::Borrow&lt;bool&gt;,
@@ -884,7 +884,7 @@
 /// corresponds to a values buffer.
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>trusted_len_unzip&lt;I, P&gt;(iterator: I) -&gt; (<span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;, MutableBitmap)
 <span class="kw">where
     </span>P: std::borrow::Borrow&lt;bool&gt;,
@@ -907,7 +907,7 @@
 <span class="doccomment">/// Extends validity [`MutableBitmap`] and values [`MutableBitmap`] from an iterator of `Option`.
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>extend_trusted_len_unzip&lt;I, P&gt;(
     iterator: I,
     validity: <span class="kw-2">&amp;mut </span>MutableBitmap,
@@ -946,7 +946,7 @@
 
 <span class="doccomment">/// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>try_trusted_len_unzip&lt;E, I, P&gt;(
     iterator: I,
 ) -&gt; std::result::Result&lt;(MutableBitmap, MutableBitmap), E&gt;
@@ -1041,7 +1041,7 @@
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.push(<span class="prelude-val">None</span>)
     }
@@ -1095,4 +1095,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

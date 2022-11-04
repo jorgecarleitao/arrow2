@@ -324,7 +324,7 @@
 <span id="324">324</span>
 <span id="325">325</span>
 <span id="326">326</span>
-</pre><pre class="rust"><code><span class="attribute">#![forbid(unsafe_code)]
+</pre><pre class="rust"><code><span class="attr">#![forbid(unsafe_code)]
 </span><span class="doccomment">//! Contains all metadata, such as [`PhysicalType`], [`DataType`], [`Field`] and [`Schema`].
 
 </span><span class="kw">mod </span>field;
@@ -338,7 +338,7 @@
 <span class="kw">use </span>std::collections::BTreeMap;
 <span class="kw">use </span>std::sync::Arc;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;serde_types&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde_types&quot;</span>)]
 </span><span class="kw">use </span>serde_derive::{Deserialize, Serialize};
 
 <span class="doccomment">/// typedef for [BTreeMap&lt;String, String&gt;] denoting [`Field`]&#39;s and [`Schema`]&#39;s metadata.
@@ -354,7 +354,7 @@
 /// which declares the in-memory representation of data.
 /// The [`DataType::Extension`] is special in that it augments a [`DataType`] with metadata to support custom types.
 /// Use `to_logical_type` to desugar such type and return its correspoding logical type.
-</span><span class="attribute">#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+</span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>DataType {
     <span class="doccomment">/// Null type
@@ -487,7 +487,7 @@
 }
 
 <span class="doccomment">/// Mode of [`DataType::Union`]
-</span><span class="attribute">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>UnionMode {
     <span class="doccomment">/// Dense union
@@ -519,7 +519,7 @@
 }
 
 <span class="doccomment">/// The time units defined in Arrow.
-</span><span class="attribute">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>TimeUnit {
     <span class="doccomment">/// Time in seconds.
@@ -533,7 +533,7 @@
 }
 
 <span class="doccomment">/// Interval units defined in Arrow
-</span><span class="attribute">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>IntervalUnit {
     <span class="doccomment">/// The number of elapsed whole months.
@@ -651,4 +651,4 @@
     </span>}
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

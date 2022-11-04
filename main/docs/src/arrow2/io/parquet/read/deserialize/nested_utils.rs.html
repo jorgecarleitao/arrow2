@@ -586,7 +586,7 @@
     </span><span class="kw">fn </span>num_values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
 }
 
-<span class="attribute">#[derive(Debug, Default)]
+<span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">pub struct </span>NestedPrimitive {
     is_nullable: bool,
     length: usize,
@@ -627,7 +627,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug, Default)]
+<span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">pub struct </span>NestedOptional {
     <span class="kw">pub </span>validity: MutableBitmap,
     <span class="kw">pub </span>offsets: Vec&lt;i64&gt;,
@@ -675,7 +675,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug, Default)]
+<span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">pub struct </span>NestedValid {
     <span class="kw">pub </span>offsets: Vec&lt;i64&gt;,
 }
@@ -719,7 +719,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug, Default)]
+<span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">pub struct </span>NestedStructValid {
     length: usize,
 }
@@ -756,7 +756,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug, Default)]
+<span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">pub struct </span>NestedStruct {
     validity: MutableBitmap,
 }
@@ -816,7 +816,7 @@
     <span class="kw">fn </span>deserialize_dict(<span class="kw-2">&amp;</span><span class="self">self</span>, page: <span class="kw-2">&amp;</span>DictPage) -&gt; <span class="self">Self</span>::Dictionary;
 }
 
-<span class="attribute">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 </span><span class="kw">pub enum </span>InitNested {
     Primitive(bool),
     List(bool),
@@ -876,7 +876,7 @@
     </span>}
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>NestedState {
     <span class="kw">pub </span>nested: Vec&lt;Box&lt;<span class="kw">dyn </span>Nested&gt;&gt;,
 }
@@ -1029,7 +1029,7 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>next&lt;<span class="lifetime">&#39;a</span>, I, D&gt;(
     iter: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>I,
     items: <span class="kw-2">&amp;mut </span>VecDeque&lt;(NestedState, D::DecodedState)&gt;,
@@ -1103,4 +1103,4 @@
 <span class="kw">pub type </span>NestedArrayIter&lt;<span class="lifetime">&#39;a</span>&gt; =
     Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = <span class="prelude-ty">Result</span>&lt;(NestedState, Box&lt;<span class="kw">dyn </span>Array&gt;)&gt;&gt; + Send + Sync + <span class="lifetime">&#39;a</span>&gt;;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

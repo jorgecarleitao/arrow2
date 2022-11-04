@@ -374,6 +374,7 @@
 <span id="374">374</span>
 <span id="375">375</span>
 <span id="376">376</span>
+<span id="377">377</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains operators to sort individual and slices of [`Array`]s.
 </span><span class="kw">use </span>std::cmp::Ordering;
 
@@ -393,6 +394,7 @@
 <span class="kw">mod </span>primitive;
 <span class="kw">mod </span>utf8;
 
+<span class="kw">pub mod </span>row;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use </span>lex_sort::build_compare;
 <span class="kw">pub use </span>lex_sort::{lexsort, lexsort_to_indices, lexsort_to_indices_impl, SortColumn};
 
@@ -666,7 +668,7 @@
 }
 
 <span class="doccomment">/// Options that define how sort kernels should behave
-</span><span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="attr">#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 </span><span class="kw">pub struct </span>SortOptions {
     <span class="doccomment">/// Whether to sort in descending order
     </span><span class="kw">pub </span>descending: bool,
@@ -751,4 +753,4 @@
     a.len().cmp(<span class="kw-2">&amp;</span>b.len())
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

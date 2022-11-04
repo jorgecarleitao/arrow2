@@ -175,18 +175,18 @@
 <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::utils::Pushable;
 
 <span class="doccomment">/// [`Pushable`] for variable length binary data.
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Binary&lt;O: Offset&gt; {
     <span class="kw">pub </span>offsets: Offsets&lt;O&gt;,
     <span class="kw">pub </span>values: Vec&lt;u8&gt;,
     <span class="kw">pub </span>last_offset: O,
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Offsets&lt;O: Offset&gt;(<span class="kw">pub </span>Vec&lt;O&gt;);
 
 <span class="kw">impl</span>&lt;O: Offset&gt; Offsets&lt;O&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_lengths&lt;I: Iterator&lt;Item = usize&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, lengths: I) {
         <span class="kw">let </span><span class="kw-2">mut </span>last_offset = <span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.last().unwrap();
         <span class="self">self</span>.<span class="number">0</span>.extend(lengths.map(|length| {
@@ -197,29 +197,29 @@
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; Pushable&lt;O&gt; <span class="kw">for </span>Offsets&lt;O&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.<span class="number">0</span>.len() - <span class="number">1
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: O) {
         <span class="self">self</span>.<span class="number">0</span>.push(value)
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.<span class="number">0</span>.push(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.last().unwrap())
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>extend_constant(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize, value: O) {
         <span class="self">self</span>.<span class="number">0</span>.extend_constant(additional, value)
     }
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; Binary&lt;O&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>with_capacity(capacity: usize) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>offsets = Vec::with_capacity(<span class="number">1 </span>+ capacity);
         offsets.push(O::default());
@@ -230,24 +230,24 @@
         }
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, v: <span class="kw-2">&amp;</span>[u8]) {
         <span class="self">self</span>.values.extend(v);
         <span class="self">self</span>.last_offset += O::from_usize(v.len()).unwrap();
         <span class="self">self</span>.offsets.push(<span class="self">self</span>.last_offset)
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_constant(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize) {
         <span class="self">self</span>.offsets.extend_constant(additional, <span class="self">self</span>.last_offset);
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.offsets.len()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_lengths&lt;I: Iterator&lt;Item = usize&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, lengths: I, values: <span class="kw-2">&amp;mut &amp;</span>[u8]) {
         <span class="kw">let </span>current_offset = <span class="self">self</span>.last_offset;
         <span class="self">self</span>.offsets.extend_lengths(lengths);
@@ -260,29 +260,29 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, O: Offset&gt; Pushable&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]&gt; <span class="kw">for </span>Binary&lt;O&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.len()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.push(<span class="kw-2">&amp;</span>[])
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: <span class="kw-2">&amp;</span>[u8]) {
         <span class="self">self</span>.push(value)
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>extend_constant(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize, value: <span class="kw-2">&amp;</span>[u8]) {
         <span class="macro">assert_eq!</span>(value.len(), <span class="number">0</span>);
         <span class="self">self</span>.extend_constant(additional)
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>BinaryIter&lt;<span class="lifetime">&#39;a</span>&gt; {
     values: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8],
 }
@@ -296,7 +296,7 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>BinaryIter&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8];
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">if </span><span class="self">self</span>.values.is_empty() {
             <span class="kw">return </span><span class="prelude-val">None</span>;
@@ -309,7 +309,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>SizedBinaryIter&lt;<span class="lifetime">&#39;a</span>&gt; {
     iter: BinaryIter&lt;<span class="lifetime">&#39;a</span>&gt;,
     remaining: usize,
@@ -328,7 +328,7 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>SizedBinaryIter&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8];
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">if </span><span class="self">self</span>.remaining == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">None</span>;
@@ -343,4 +343,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

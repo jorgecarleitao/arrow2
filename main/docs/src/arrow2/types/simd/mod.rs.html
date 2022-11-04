@@ -217,19 +217,19 @@
     </span><span class="kw">type </span>Simd: NativeSimd&lt;Native = <span class="self">Self</span>&gt;;
 }
 
-<span class="attribute">#[cfg(not(feature = <span class="string">&quot;simd&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;simd&quot;</span>))]
 </span><span class="kw">mod </span>native;
-<span class="attribute">#[cfg(not(feature = <span class="string">&quot;simd&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;simd&quot;</span>))]
 </span><span class="kw">pub use </span>native::<span class="kw-2">*</span>;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;simd&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;simd&quot;</span>)]
 </span><span class="kw">mod </span>packed;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;simd&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;simd&quot;</span>)]
 </span><span class="kw">pub use </span>packed::<span class="kw-2">*</span>;
 
 <span class="macro">macro_rules! </span>native_simd {
     (<span class="macro-nonterminal">$name</span>:tt, <span class="macro-nonterminal">$</span><span class="kw">type</span>:<span class="macro-nonterminal">ty</span>, <span class="macro-nonterminal">$lanes</span>:expr, <span class="macro-nonterminal">$mask</span>:ty) =&gt; {
         <span class="doccomment">/// Multi-Data correspondence of the native type
-        </span><span class="attribute">#[allow(non_camel_case_types)]
+        </span><span class="attr">#[allow(non_camel_case_types)]
         #[derive(Copy, Clone)]
         </span><span class="kw">pub struct </span><span class="macro-nonterminal">$name</span>(<span class="kw">pub </span>[<span class="macro-nonterminal">$</span><span class="kw">type</span>; <span class="macro-nonterminal">$lanes</span>]);
 
@@ -239,7 +239,7 @@
             <span class="kw">type </span><span class="macro-nonterminal">Chunk </span>= <span class="macro-nonterminal">$mask</span>;
             <span class="kw">type </span>Mask = <span class="macro-nonterminal">$mask</span>;
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>select(<span class="self">self</span>, mask: <span class="macro-nonterminal">$mask</span>, default: <span class="self">Self</span>) -&gt; <span class="self">Self </span>{
                 <span class="kw">let </span><span class="kw-2">mut </span>reduced = default;
                 <span class="kw">let </span>iter = BitChunkIter::new(mask, <span class="self">Self</span>::LANES);
@@ -249,19 +249,19 @@
                 reduced
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>from_chunk(v: <span class="kw-2">&amp;</span>[<span class="macro-nonterminal">$</span><span class="kw">type</span>]) -&gt; <span class="macro-nonterminal">Self </span>{
                 (<span class="macro-nonterminal">$name</span>)(v.try_into().unwrap())
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>from_incomplete_chunk(v: <span class="kw-2">&amp;</span>[<span class="macro-nonterminal">$</span><span class="kw">type</span>], <span class="macro-nonterminal">remaining</span>: <span class="macro-nonterminal">$</span><span class="kw">type</span>) -&gt; <span class="macro-nonterminal">Self </span>{
                 <span class="kw">let </span><span class="kw-2">mut </span>a = [remaining; <span class="macro-nonterminal">$lanes</span>];
                 a.iter_mut().zip(v.iter()).for_each(|(a, b)| <span class="kw-2">*</span>a = <span class="kw-2">*</span>b);
                 <span class="self">Self</span>(a)
             }
 
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>align(values: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Native]) -&gt; (<span class="kw-2">&amp;</span>[<span class="self">Self</span>::Native], <span class="kw-2">&amp;</span>[<span class="self">Self</span>], <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Native]) {
                 <span class="kw">unsafe </span>{ values.align_to::&lt;<span class="self">Self</span>&gt;() }
             }
@@ -270,21 +270,21 @@
         <span class="kw">impl </span>std::ops::Index&lt;usize&gt; <span class="kw">for </span><span class="macro-nonterminal">$name </span>{
             <span class="kw">type </span>Output = <span class="macro-nonterminal">$</span><span class="kw">type</span>;
 
-            <span class="attribute">#[<span class="macro-nonterminal">inline</span>]
+            <span class="attr">#[<span class="macro-nonterminal">inline</span>]
             </span><span class="kw">fn </span>index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Output {
                 <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>[index]
             }
         }
 
         <span class="kw">impl </span>std::ops::IndexMut&lt;usize&gt; <span class="kw">for </span><span class="macro-nonterminal">$name </span>{
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>index_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: usize) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Output {
                 <span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0</span>[index]
             }
         }
 
         <span class="kw">impl </span>Default <span class="kw">for </span><span class="macro-nonterminal">$name </span>{
-            <span class="attribute">#[inline]
+            <span class="attr">#[inline]
             </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
                 (<span class="macro-nonterminal">$name</span>)([&lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt;<span class="macro-nonterminal">::default</span>(); <span class="macro-nonterminal">$lanes</span>])
             }
@@ -305,7 +305,7 @@
 
 <span class="comment">// In the native implementation, a mask is 1 bit wide, as per AVX512.
 </span><span class="kw">impl</span>&lt;T: BitChunk&gt; FromMaskChunk&lt;T&gt; <span class="kw">for </span>T {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>from_chunk(v: T) -&gt; <span class="self">Self </span>{
         v
     }
@@ -335,4 +335,4 @@
 <span class="macro">native!</span>(days_ms, days_msx8);
 <span class="macro">native!</span>(months_days_ns, months_days_nsx8);
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

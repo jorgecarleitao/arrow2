@@ -568,7 +568,7 @@
 <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::Pages;
 <span class="kw">use super</span>::{<span class="kw">super</span>::utils, utils::<span class="kw-2">*</span>};
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>Required&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub </span>values: SizedBinaryIter&lt;<span class="lifetime">&#39;a</span>&gt;,
 }
@@ -586,7 +586,7 @@
     </span>}
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>Delta&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub </span>lengths: std::vec::IntoIter&lt;usize&gt;,
     <span class="kw">pub </span>values: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8],
@@ -598,7 +598,7 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>lengths_iter = delta_length_byte_array::Decoder::try_new(values)<span class="question-mark">?</span>;
 
-        <span class="attribute">#[allow(clippy::needless_collect)] </span><span class="comment">// we need to consume it to get the values
+        <span class="attr">#[allow(clippy::needless_collect)] </span><span class="comment">// we need to consume it to get the values
         </span><span class="kw">let </span>lengths = lengths_iter
             .by_ref()
             .map(|x| x.map(|x| x <span class="kw">as </span>usize).map_err(Error::from))
@@ -619,7 +619,7 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>Delta&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8];
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>length = <span class="self">self</span>.lengths.next()<span class="question-mark">?</span>;
         <span class="kw">let </span>(item, remaining) = <span class="self">self</span>.values.split_at(length);
@@ -632,7 +632,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>FilteredRequired&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub </span>values: SliceFilteredIter&lt;SizedBinaryIter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;,
 }
@@ -652,7 +652,7 @@
     </span>}
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>FilteredDelta&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub </span>values: SliceFilteredIter&lt;Delta&lt;<span class="lifetime">&#39;a</span>&gt;&gt;,
 }
@@ -674,7 +674,7 @@
 
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>Dict = Vec&lt;Vec&lt;u8&gt;&gt;;
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>RequiredDictionary&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub </span>values: hybrid_rle::HybridRleDecoder&lt;<span class="lifetime">&#39;a</span>&gt;,
     <span class="kw">pub </span>dict: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Dict,
@@ -687,13 +687,13 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ dict, values })
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.size_hint().<span class="number">0
     </span>}
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>FilteredRequiredDictionary&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub </span>values: SliceFilteredIter&lt;hybrid_rle::HybridRleDecoder&lt;<span class="lifetime">&#39;a</span>&gt;&gt;,
     <span class="kw">pub </span>dict: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Dict,
@@ -709,13 +709,13 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ values, dict })
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.size_hint().<span class="number">0
     </span>}
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>ValuesDictionary&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub </span>values: hybrid_rle::HybridRleDecoder&lt;<span class="lifetime">&#39;a</span>&gt;,
     <span class="kw">pub </span>dict: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Dict,
@@ -728,13 +728,13 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ dict, values })
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.values.size_hint().<span class="number">0
     </span>}
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">enum </span>State&lt;<span class="lifetime">&#39;a</span>&gt; {
     Optional(OptionalPageValidity&lt;<span class="lifetime">&#39;a</span>&gt;, BinaryIter&lt;<span class="lifetime">&#39;a</span>&gt;),
     Required(Required&lt;<span class="lifetime">&#39;a</span>&gt;),
@@ -808,7 +808,7 @@
     }
 }
 
-<span class="attribute">#[derive(Debug, Default)]
+<span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">struct </span>BinaryDecoder&lt;O: Offset&gt; {
     phantom_o: std::marker::PhantomData&lt;O&gt;,
 }
@@ -1089,4 +1089,4 @@
         .collect()
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

@@ -531,7 +531,7 @@
 /// Converting a [`MutableBinaryArray`] into a [`BinaryArray`] is `O(1)`.
 /// # Implementation
 /// This struct does not allocate a validity until one is required (i.e. push a null to it).
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableBinaryArray&lt;O: Offset&gt; {
     values: MutableBinaryValuesArray&lt;O&gt;,
     validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
@@ -780,7 +780,7 @@
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>push_null(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.push::&lt;<span class="kw-2">&amp;</span>[u8]&gt;(<span class="prelude-val">None</span>)
     }
@@ -805,7 +805,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>from_trusted_len_iter_unchecked&lt;I, P&gt;(iterator: I) -&gt; <span class="self">Self
     </span><span class="kw">where
         </span>P: AsRef&lt;[u8]&gt;,
@@ -817,7 +817,7 @@
     }
 
     <span class="doccomment">/// Creates a [`MutableBinaryArray`] from an iterator of trusted length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_trusted_len_iter&lt;I, P&gt;(iterator: I) -&gt; <span class="self">Self
     </span><span class="kw">where
         </span>P: AsRef&lt;[u8]&gt;,
@@ -831,7 +831,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>from_trusted_len_values_iter_unchecked&lt;T: AsRef&lt;[u8]&gt;, I: Iterator&lt;Item = T&gt;&gt;(
         iterator: I,
     ) -&gt; <span class="self">Self </span>{
@@ -840,7 +840,7 @@
     }
 
     <span class="doccomment">/// Creates a new [`BinaryArray`] from a [`TrustedLen`] of `&amp;[u8]`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_trusted_len_values_iter&lt;T: AsRef&lt;[u8]&gt;, I: TrustedLen&lt;Item = T&gt;&gt;(
         iterator: I,
     ) -&gt; <span class="self">Self </span>{
@@ -852,7 +852,7 @@
     /// # Safety
     /// The iterator must be [`TrustedLen`](https://doc.rust-lang.org/std/iter/trait.TrustedLen.html).
     /// I.e. that `size_hint().1` correctly reports its length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>try_from_trusted_len_iter_unchecked&lt;E, I, P&gt;(
         iterator: I,
     ) -&gt; std::result::Result&lt;<span class="self">Self</span>, E&gt;
@@ -878,7 +878,7 @@
     }
 
     <span class="doccomment">/// Creates a [`MutableBinaryArray`] from an falible iterator of trusted length.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>try_from_trusted_len_iter&lt;E, I, P&gt;(iterator: I) -&gt; std::result::Result&lt;<span class="self">Self</span>, E&gt;
     <span class="kw">where
         </span>P: AsRef&lt;[u8]&gt;,
@@ -890,7 +890,7 @@
 
     <span class="doccomment">/// Extends the [`MutableBinaryArray`] from an iterator of trusted length.
     /// This differs from `extend_trusted_len` which accepts iterator of optional values.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_trusted_len_values&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: AsRef&lt;[u8]&gt;,
@@ -902,7 +902,7 @@
 
     <span class="doccomment">/// Extends the [`MutableBinaryArray`] from an iterator of values.
     /// This differs from `extended_trusted_len` which accepts iterator of optional values.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_values&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: AsRef&lt;[u8]&gt;,
@@ -922,7 +922,7 @@
     /// values.
     /// # Safety
     /// The `iterator` must be [`TrustedLen`]
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>extend_trusted_len_values_unchecked&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: AsRef&lt;[u8]&gt;,
@@ -938,7 +938,7 @@
     }
 
     <span class="doccomment">/// Extends the [`MutableBinaryArray`] from an iterator of [`TrustedLen`]
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>extend_trusted_len&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: AsRef&lt;[u8]&gt;,
@@ -951,7 +951,7 @@
     <span class="doccomment">/// Extends the [`MutableBinaryArray`] from an iterator of [`TrustedLen`]
     /// # Safety
     /// The `iterator` must be [`TrustedLen`]
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>extend_trusted_len_unchecked&lt;I, P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iterator: I)
     <span class="kw">where
         </span>P: AsRef&lt;[u8]&gt;,
@@ -1025,4 +1025,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

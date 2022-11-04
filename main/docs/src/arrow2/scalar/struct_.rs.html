@@ -58,7 +58,7 @@
 <span class="kw">use </span><span class="kw">super</span>::Scalar;
 
 <span class="doccomment">/// A single entry of a [`crate::array::StructArray`].
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>StructScalar {
     values: Vec&lt;Box&lt;<span class="kw">dyn </span>Scalar&gt;&gt;,
     is_valid: bool,
@@ -75,7 +75,7 @@
 
 <span class="kw">impl </span>StructScalar {
     <span class="doccomment">/// Returns a new [`StructScalar`]
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(data_type: DataType, values: <span class="prelude-ty">Option</span>&lt;Vec&lt;Box&lt;<span class="kw">dyn </span>Scalar&gt;&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>is_valid = values.is_some();
         <span class="self">Self </span>{
@@ -86,27 +86,27 @@
     }
 
     <span class="doccomment">/// Returns the values irrespectively of the validity.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[Box&lt;<span class="kw">dyn </span>Scalar&gt;] {
         <span class="kw-2">&amp;</span><span class="self">self</span>.values
     }
 }
 
 <span class="kw">impl </span>Scalar <span class="kw">for </span>StructScalar {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::any::Any {
         <span class="self">self
     </span>}
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>is_valid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.is_valid
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

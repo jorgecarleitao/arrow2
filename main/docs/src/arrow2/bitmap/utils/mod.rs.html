@@ -172,13 +172,13 @@
 ];
 
 <span class="doccomment">/// Returns whether bit at position `i` in `byte` is set or not
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>is_set(byte: u8, i: usize) -&gt; bool {
     (byte &amp; BIT_MASK[i]) != <span class="number">0
 </span>}
 
 <span class="doccomment">/// Sets bit at position `i` in `byte`
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>set(byte: u8, i: usize, value: bool) -&gt; u8 {
     <span class="kw">if </span>value {
         byte | BIT_MASK[i]
@@ -190,7 +190,7 @@
 <span class="doccomment">/// Sets bit at position `i` in `data`
 /// # Panics
 /// panics if `i &gt;= data.len() / 8`
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>set_bit(data: <span class="kw-2">&amp;mut </span>[u8], i: usize, value: bool) {
     data[i / <span class="number">8</span>] = set(data[i / <span class="number">8</span>], i % <span class="number">8</span>, value);
 }
@@ -198,7 +198,7 @@
 <span class="doccomment">/// Sets bit at position `i` in `data` without doing bound checks
 /// # Safety
 /// caller must ensure that `i &lt; data.len() / 8`
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub unsafe fn </span>set_bit_unchecked(data: <span class="kw-2">&amp;mut </span>[u8], i: usize, value: bool) {
     <span class="kw">let </span>byte = data.get_unchecked_mut(i / <span class="number">8</span>);
     <span class="kw-2">*</span>byte = set(<span class="kw-2">*</span>byte, i % <span class="number">8</span>, value);
@@ -207,7 +207,7 @@
 <span class="doccomment">/// Returns whether bit at position `i` in `data` is set
 /// # Panic
 /// This function panics iff `i / 8 &gt;= bytes.len()`
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>get_bit(bytes: <span class="kw-2">&amp;</span>[u8], i: usize) -&gt; bool {
     is_set(bytes[i / <span class="number">8</span>], i % <span class="number">8</span>)
 }
@@ -216,13 +216,13 @@
 ///
 /// # Safety
 /// `i &gt;= data.len() * 8` results in undefined behavior
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub unsafe fn </span>get_bit_unchecked(data: <span class="kw-2">&amp;</span>[u8], i: usize) -&gt; bool {
     (<span class="kw-2">*</span>data.as_ptr().add(i &gt;&gt; <span class="number">3</span>) &amp; BIT_MASK[i &amp; <span class="number">7</span>]) != <span class="number">0
 </span>}
 
 <span class="doccomment">/// Returns the number of bytes required to hold `bits` bits.
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>bytes_for(bits: usize) -&gt; usize {
     bits.saturating_add(<span class="number">7</span>) / <span class="number">8
 </span>}
@@ -285,4 +285,4 @@
     len - set_count
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

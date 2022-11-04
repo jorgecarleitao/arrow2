@@ -370,7 +370,7 @@
     error::{Error, <span class="prelude-ty">Result</span>},
 };
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>is_like_pattern(c: char) -&gt; bool {
     c == <span class="string">&#39;%&#39; </span>|| c == <span class="string">&#39;_&#39;
 </span>}
@@ -412,7 +412,7 @@
     result
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>a_like_utf8&lt;O: Offset, F: Fn(bool) -&gt; bool&gt;(
     lhs: <span class="kw-2">&amp;</span>Utf8Array&lt;O&gt;,
     rhs: <span class="kw-2">&amp;</span>Utf8Array&lt;O&gt;,
@@ -559,7 +559,7 @@
     a_like_utf8_scalar(lhs, rhs, |x| !x)
 }
 
-<span class="attribute">#[inline]
+<span class="attr">#[inline]
 </span><span class="kw">fn </span>a_like_binary&lt;O: Offset, F: Fn(bool) -&gt; bool&gt;(
     lhs: <span class="kw-2">&amp;</span>BinaryArray&lt;O&gt;,
     rhs: <span class="kw-2">&amp;</span>BinaryArray&lt;O&gt;,
@@ -715,4 +715,4 @@
     a_like_binary_scalar(lhs, rhs, |x| !x)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

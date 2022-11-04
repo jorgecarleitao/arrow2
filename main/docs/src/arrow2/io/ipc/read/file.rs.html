@@ -335,7 +335,7 @@
 <span class="kw">use </span>arrow_format::ipc::planus::ReadAsRoot;
 
 <span class="doccomment">/// Metadata of an Arrow IPC file, written in the footer of the file.
-</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>FileMetadata {
     <span class="doccomment">/// The schema that is read from the file footer
     </span><span class="kw">pub </span>schema: Schema,
@@ -573,7 +573,7 @@
 /// certain parts of the file.
 /// # Panics
 /// This function panics iff `index &gt;= metadata.blocks.len()`
-</span><span class="attribute">#[allow(clippy::too_many_arguments)]
+</span><span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">pub fn </span>read_batch&lt;R: Read + Seek&gt;(
     reader: <span class="kw-2">&amp;mut </span>R,
     dictionaries: <span class="kw-2">&amp;</span>Dictionaries,
@@ -637,4 +637,4 @@
     )
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

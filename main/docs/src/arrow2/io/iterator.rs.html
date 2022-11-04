@@ -84,7 +84,7 @@
     </span>I: Iterator&lt;Item = T&gt;,
     F: FnMut(T, <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;),
 {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(iterator: I, f: F, buffer: Vec&lt;u8&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             iterator,
@@ -102,7 +102,7 @@
 {
     <span class="kw">type </span>Item = [u8];
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>advance(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">let </span>a = <span class="self">self</span>.iterator.next();
         <span class="kw">if let </span><span class="prelude-val">Some</span>(a) = a {
@@ -114,7 +114,7 @@
         }
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="self">Self</span>::Item&gt; {
         <span class="kw">if </span><span class="self">self</span>.is_valid {
             <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.buffer)
@@ -123,10 +123,10 @@
         </span>}
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>size_hint(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (usize, <span class="prelude-ty">Option</span>&lt;usize&gt;) {
         <span class="self">self</span>.iterator.size_hint()
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

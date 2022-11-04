@@ -106,7 +106,7 @@
 <span class="kw">use super</span>::{BitChunk, BitChunkIterExact};
 
 <span class="doccomment">/// An iterator over a slice of bytes in [`BitChunk`]s.
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>BitChunksExact&lt;<span class="lifetime">&#39;a</span>, T: BitChunk&gt; {
     iter: ChunksExact&lt;<span class="lifetime">&#39;a</span>, u8&gt;,
     remainder: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8],
@@ -116,7 +116,7 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: BitChunk&gt; BitChunksExact&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="doccomment">/// Creates a new [`BitChunksExact`].
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(bitmap: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8], length: usize) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(length &lt;= bitmap.len() * <span class="number">8</span>);
         <span class="kw">let </span>size_of = std::mem::size_of::&lt;T&gt;();
@@ -137,19 +137,19 @@
     }
 
     <span class="doccomment">/// Returns the number of chunks of this iterator
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.iter.len()
     }
 
     <span class="doccomment">/// Returns whether there are still elements in this iterator
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.len() == <span class="number">0
     </span>}
 
     <span class="doccomment">/// Returns the remaining [`BitChunk`]. It is zero iff `len / 8 == 0`.
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>remainder(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; T {
         <span class="kw">let </span>remainder_bytes = <span class="self">self</span>.remainder;
         <span class="kw">if </span>remainder_bytes.is_empty() {
@@ -173,7 +173,7 @@
 <span class="kw">impl</span>&lt;T: BitChunk&gt; Iterator <span class="kw">for </span>BitChunksExact&lt;<span class="lifetime">&#39;_</span>, T&gt; {
     <span class="kw">type </span>Item = T;
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="self">self</span>.iter.next().map(|x| <span class="kw">match </span>x.try_into() {
             <span class="prelude-val">Ok</span>(a) =&gt; T::from_ne_bytes(a),
@@ -181,7 +181,7 @@
         })
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>size_hint(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (usize, <span class="prelude-ty">Option</span>&lt;usize&gt;) {
         <span class="self">self</span>.iter.size_hint()
     }
@@ -190,15 +190,15 @@
 <span class="kw">unsafe impl</span>&lt;T: BitChunk&gt; TrustedLen <span class="kw">for </span>BitChunksExact&lt;<span class="lifetime">&#39;_</span>, T&gt; {}
 
 <span class="kw">impl</span>&lt;T: BitChunk&gt; BitChunkIterExact&lt;T&gt; <span class="kw">for </span>BitChunksExact&lt;<span class="lifetime">&#39;_</span>, T&gt; {
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>remainder(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; T {
         <span class="self">self</span>.remainder()
     }
 
-    <span class="attribute">#[inline]
+    <span class="attr">#[inline]
     </span><span class="kw">fn </span>remainder_len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.remainder_len
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

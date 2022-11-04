@@ -60,7 +60,7 @@
 <span id="60">60</span>
 </pre><pre class="rust"><code><span class="kw">use super</span>::{Field, Metadata};
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;serde_types&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde_types&quot;</span>)]
 </span><span class="kw">use </span>serde_derive::{Deserialize, Serialize};
 
 <span class="doccomment">/// An ordered sequence of [`Field`]s with associated [`Metadata`].
@@ -68,7 +68,7 @@
 /// [`Schema`] is an abstration used to read from, and write to, Arrow IPC format,
 /// Apache Parquet, and Apache Avro. All these formats have a concept of a schema
 /// with fields and metadata.
-</span><span class="attribute">#[derive(Debug, Clone, PartialEq, Eq, Default)]
+</span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub struct </span>Schema {
     <span class="doccomment">/// The fields composing this schema.
@@ -79,7 +79,7 @@
 
 <span class="kw">impl </span>Schema {
     <span class="doccomment">/// Attaches a [`Metadata`] to [`Schema`]
-    </span><span class="attribute">#[inline]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>with_metadata(<span class="self">self</span>, metadata: Metadata) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             fields: <span class="self">self</span>.fields,
@@ -119,4 +119,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

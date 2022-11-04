@@ -380,7 +380,7 @@
 <span class="kw">pub use </span>parquet2::indexes::{FilteredPage, Interval};
 
 <span class="doccomment">/// Page statistics of an Arrow field.
-</span><span class="attribute">#[derive(Debug, PartialEq)]
+</span><span class="attr">#[derive(Debug, PartialEq)]
 </span><span class="kw">pub enum </span>FieldPageStatistics {
     <span class="doccomment">/// Variant used for fields with a single parquet column (e.g. primitives, dictionaries, list)
     </span>Single(ColumnPageStatistics),
@@ -400,7 +400,7 @@
 /// * `min`, `max` and `null_count` have the same length (equal to the number of pages in the column)
 /// * `min`, `max` and `null_count` are guaranteed to be non-null
 /// * `min` and `max` have the same logical type
-</span><span class="attribute">#[derive(Debug, PartialEq)]
+</span><span class="attr">#[derive(Debug, PartialEq)]
 </span><span class="kw">pub struct </span>ColumnPageStatistics {
     <span class="doccomment">/// The minimum values in the pages
     </span><span class="kw">pub </span>min: Box&lt;<span class="kw">dyn </span>Array&gt;,
@@ -701,4 +701,4 @@
         .collect()
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

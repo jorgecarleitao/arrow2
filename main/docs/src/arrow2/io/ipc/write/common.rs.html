@@ -440,7 +440,7 @@
 <span class="kw">use super</span>::{write, write_dictionary};
 
 <span class="doccomment">/// Compression codec
-</span><span class="attribute">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 </span><span class="kw">pub enum </span>Compression {
     <span class="doccomment">/// LZ4 (framed)
     </span>LZ4,
@@ -449,7 +449,7 @@
 }
 
 <span class="doccomment">/// Options declaring the behaviour of writing to IPC
-</span><span class="attribute">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 </span><span class="kw">pub struct </span>WriteOptions {
     <span class="doccomment">/// Whether the buffers should be compressed and which codec to use.
     /// Note: to use compression the crate must be compiled with feature `io_ipc_compression`.
@@ -787,7 +787,7 @@
 }
 
 <span class="doccomment">/// Stores the encoded data, which is an ipc::Schema::Message, and optional Arrow data
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>EncodedData {
     <span class="doccomment">/// An encoded ipc::Schema::Message
     </span><span class="kw">pub </span>ipc_message: Vec&lt;u8&gt;,
@@ -796,13 +796,13 @@
 }
 
 <span class="doccomment">/// Calculate an 8-byte boundary and return the number of bytes needed to pad to 8 bytes
-</span><span class="attribute">#[inline]
+</span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>pad_to_64(len: usize) -&gt; usize {
     (((len + <span class="number">63</span>) &amp; !<span class="number">63</span>) - len) <span class="kw">as </span>usize
 }
 
 <span class="doccomment">/// An array [`Chunk`] with optional accompanying IPC fields.
-</span><span class="attribute">#[derive(Debug, Clone, PartialEq)]
+</span><span class="attr">#[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>Record&lt;<span class="lifetime">&#39;a</span>&gt; {
     columns: Cow&lt;<span class="lifetime">&#39;a</span>, Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;&gt;,
     fields: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;a</span>, [IpcField]&gt;&gt;,
@@ -853,4 +853,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>

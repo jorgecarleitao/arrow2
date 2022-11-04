@@ -391,7 +391,7 @@
     compare_op_scalar(lhs, rhs, |a, b| a &gt;= b)
 }
 
-<span class="attribute">#[cfg(test)]
+<span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
@@ -418,7 +418,7 @@
         <span class="macro">assert_eq!</span>(op(<span class="kw-2">&amp;</span>lhs, rhs), expected);
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_gt_eq() {
         test_generic::&lt;i32, <span class="kw">_</span>&gt;(
             <span class="macro">vec!</span>[<span class="string">b&quot;arrow&quot;</span>, <span class="string">b&quot;datafusion&quot;</span>, <span class="string">b&quot;flight&quot;</span>, <span class="string">b&quot;parquet&quot;</span>],
@@ -428,7 +428,7 @@
         )
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_gt_eq_scalar() {
         test_generic_scalar::&lt;i32, <span class="kw">_</span>&gt;(
             <span class="macro">vec!</span>[<span class="string">b&quot;arrow&quot;</span>, <span class="string">b&quot;datafusion&quot;</span>, <span class="string">b&quot;flight&quot;</span>, <span class="string">b&quot;parquet&quot;</span>],
@@ -438,7 +438,7 @@
         )
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_eq() {
         test_generic::&lt;i32, <span class="kw">_</span>&gt;(
             <span class="macro">vec!</span>[<span class="string">b&quot;arrow&quot;</span>, <span class="string">b&quot;arrow&quot;</span>, <span class="string">b&quot;arrow&quot;</span>, <span class="string">b&quot;arrow&quot;</span>],
@@ -448,7 +448,7 @@
         )
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_eq_scalar() {
         test_generic_scalar::&lt;i32, <span class="kw">_</span>&gt;(
             <span class="macro">vec!</span>[<span class="string">b&quot;arrow&quot;</span>, <span class="string">b&quot;parquet&quot;</span>, <span class="string">b&quot;datafusion&quot;</span>, <span class="string">b&quot;flight&quot;</span>],
@@ -458,7 +458,7 @@
         )
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_neq() {
         test_generic::&lt;i32, <span class="kw">_</span>&gt;(
             <span class="macro">vec!</span>[<span class="string">b&quot;arrow&quot;</span>, <span class="string">b&quot;arrow&quot;</span>, <span class="string">b&quot;arrow&quot;</span>, <span class="string">b&quot;arrow&quot;</span>],
@@ -468,7 +468,7 @@
         )
     }
 
-    <span class="attribute">#[test]
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>test_neq_scalar() {
         test_generic_scalar::&lt;i32, <span class="kw">_</span>&gt;(
             <span class="macro">vec!</span>[<span class="string">b&quot;arrow&quot;</span>, <span class="string">b&quot;parquet&quot;</span>, <span class="string">b&quot;datafusion&quot;</span>, <span class="string">b&quot;flight&quot;</span>],
@@ -479,4 +479,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>
