@@ -17,6 +17,7 @@ mod lex_sort;
 mod primitive;
 mod utf8;
 
+pub mod row;
 pub(crate) use lex_sort::build_compare;
 pub use lex_sort::{lexsort, lexsort_to_indices, lexsort_to_indices_impl, SortColumn};
 
@@ -290,7 +291,7 @@ pub fn can_sort(data_type: &DataType) -> bool {
 }
 
 /// Options that define how sort kernels should behave
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SortOptions {
     /// Whether to sort in descending order
     pub descending: bool,

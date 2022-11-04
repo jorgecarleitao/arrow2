@@ -32,6 +32,8 @@ hash_hasher = "^2.0.3"
 simdutf8 = "0.1.3"
 # faster hashing
 ahash = { version = "0.7" }
+# A Rust port of SwissTable 
+hashbrown = { version = "0.12", default-features = false, optional = true }
 
 # for timezone support
 chrono-tz = { version = "0.6", optional = true }
@@ -207,7 +209,7 @@ compute_merge_sort = ["itertools", "compute_sort"]
 compute_nullif = ["compute_comparison"]
 compute_partition = ["compute_sort"]
 compute_regex_match = ["regex"]
-compute_sort = ["compute_take"]
+compute_sort = ["compute_take", "hashbrown"]
 compute_substring = []
 compute_take = []
 compute_temporal = []
@@ -243,6 +245,9 @@ compute = [
 benchmarks = ["rand"]
 serde_types = ["serde", "serde_derive"]
 simd = []
+
+[build-dependencies]
+rustc_version = "0.4.0"
 
 [package.metadata.cargo-all-features]
 allowlist = ["compute", "compute_sort", "compute_hash", "compute_nullif"]

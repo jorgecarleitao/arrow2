@@ -1,4 +1,5 @@
 mod lex_sort;
+mod row;
 
 use arrow2::array::*;
 use arrow2::compute::sort::*;
