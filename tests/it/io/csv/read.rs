@@ -230,8 +230,7 @@ fn ts_ns() -> Result<()> {
 #[test]
 fn ts_us() -> Result<()> {
     let data = "1970-01-01T00:00:00.000001\n";
-    let expected =
-        Int64Array::from_slice([1]).to(DataType::Timestamp(TimeUnit::Microsecond, None));
+    let expected = Int64Array::from_slice([1]).to(DataType::Timestamp(TimeUnit::Microsecond, None));
 
     let result = test_deserialize(data, expected.data_type().clone())?;
     assert_eq!(expected, result.as_ref());
@@ -241,8 +240,7 @@ fn ts_us() -> Result<()> {
 #[test]
 fn ts_ms() -> Result<()> {
     let data = "1970-01-01T00:00:00.001\n";
-    let expected =
-        Int64Array::from_slice([1]).to(DataType::Timestamp(TimeUnit::Millisecond, None));
+    let expected = Int64Array::from_slice([1]).to(DataType::Timestamp(TimeUnit::Millisecond, None));
 
     let result = test_deserialize(data, expected.data_type().clone())?;
     assert_eq!(expected, result.as_ref());
