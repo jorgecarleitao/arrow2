@@ -5,7 +5,7 @@ This is a library for efficient in-memory data operations with
 It is a re-write from the bottom up of the official `arrow` crate with soundness
 and type safety in mind.
 
-Check out [the guide](https://jorgecarleitao.github.io/arrow2/) for an introduction.
+Check out [the guide](https://jorgecarleitao.github.io/arrow2/main/guide/) for an introduction.
 Below is an example of some of the things you can do with it:
 
 ```rust
