@@ -268,7 +268,7 @@
         </span>T: NativeType + std::cmp::Ord,
     {
         <span class="kw">let </span>input = PrimitiveArray::&lt;T&gt;::from(data).to(data_type);
-        <span class="kw">let </span>expected = Int32Array::from_slice(<span class="kw-2">&amp;</span>expected_data);
+        <span class="kw">let </span>expected = Int32Array::from_slice(expected_data);
         <span class="kw">let </span>output =
             indices_sorted_unstable_by::&lt;i32, <span class="kw">_</span>, <span class="kw">_</span>&gt;(<span class="kw-2">&amp;</span>input, ord::total_cmp, <span class="kw-2">&amp;</span>options, limit);
         <span class="macro">assert_eq!</span>(output, expected)
@@ -439,4 +439,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (09508489e 2022-11-04)" ></div></body></html>

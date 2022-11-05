@@ -927,8 +927,8 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_eq_with_slice() {
-        <span class="kw">let </span>a = Int64Array::from_slice(<span class="kw-2">&amp;</span>[<span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">8</span>, <span class="number">10</span>]);
-        <span class="kw">let </span>b = Int64Array::from_slice(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span>]);
+        <span class="kw">let </span>a = Int64Array::from_slice([<span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">8</span>, <span class="number">10</span>]);
+        <span class="kw">let </span>b = Int64Array::from_slice([<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span>]);
         <span class="kw">let </span>c = b.slice(<span class="number">5</span>, <span class="number">5</span>);
         <span class="kw">let </span>d = eq(<span class="kw-2">&amp;</span>c, <span class="kw-2">&amp;</span>a);
         <span class="macro">assert_eq!</span>(
@@ -1191,4 +1191,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (215e3cd21 2022-11-03)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="arrow2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (09508489e 2022-11-04)" ></div></body></html>
