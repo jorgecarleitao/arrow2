@@ -9,9 +9,15 @@ fn validity_size(validity: Option<&Bitmap>) -> usize {
 macro_rules! dyn_binary {
     ($array:expr, $ty:ty, $o:ty) => {{
         let array = $array.as_any().downcast_ref::<$ty>().unwrap();
+        let offsets = array.offsets();
 
-        array.values().len()
-            + array.offsets().len() * std::mem::size_of::<$o>()
+        // in case of Binary/Utf8/List the offsets are sliced,
+        // not the values buffer
+        let values_start = offsets[0] as usize;
+        let values_end = offsets[offsets.len() - 1] as usize;
+
+        values_end - values_start
+            + offsets.len() * std::mem::size_of::<$o>()
             + validity_size(array.validity())
     }};
 }
