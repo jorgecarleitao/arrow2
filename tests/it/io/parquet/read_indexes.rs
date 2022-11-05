@@ -284,7 +284,7 @@ fn indexed_dict() -> Result<()> {
     let values = PrimitiveArray::from_slice([4i32, 6i32]).boxed();
     let array = DictionaryArray::try_from_keys(indices, values).unwrap();
 
-    let indices = PrimitiveArray::from_slice(&[0u64]);
+    let indices = PrimitiveArray::from_slice([0u64]);
     let values = PrimitiveArray::from_slice([4i32, 6i32]).boxed();
     let expected = DictionaryArray::try_from_keys(indices, values).unwrap();
 

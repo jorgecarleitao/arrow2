@@ -326,7 +326,7 @@ fn list_of_struct() -> Result<()> {
         Some(Bitmap::from_u8_slice([0b00000101], 3)),
     );
 
-    let c2 = Int32Array::from_slice(&[1, 2, 3]);
+    let c2 = Int32Array::from_slice([1, 2, 3]);
 
     let data_type = DataType::Struct(vec![
         Field::new("c1", c1.data_type().clone(), true),

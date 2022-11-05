@@ -4,7 +4,7 @@ use arrow2::{array::*, datatypes::DataType};
 
 #[test]
 fn try_new_ok() {
-    let values = Utf8Array::<i32>::from_slice(&["a", "aa"]);
+    let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
     let data_type =
         DataType::Dictionary(i32::KEY_TYPE, Box::new(values.data_type().clone()), false);
     let array = DictionaryArray::try_new(
@@ -16,7 +16,7 @@ fn try_new_ok() {
 
     assert_eq!(array.keys(), &PrimitiveArray::from_vec(vec![1i32, 0]));
     assert_eq!(
-        &Utf8Array::<i32>::from_slice(&["a", "aa"]) as &dyn Array,
+        &Utf8Array::<i32>::from_slice(["a", "aa"]) as &dyn Array,
         array.values().as_ref(),
     );
     assert!(!array.is_ordered());
@@ -26,7 +26,7 @@ fn try_new_ok() {
 
 #[test]
 fn try_new_incorrect_key() {
-    let values = Utf8Array::<i32>::from_slice(&["a", "aa"]);
+    let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
     let data_type =
         DataType::Dictionary(i16::KEY_TYPE, Box::new(values.data_type().clone()), false);
 
@@ -42,7 +42,7 @@ fn try_new_incorrect_key() {
 
 #[test]
 fn try_new_incorrect_dt() {
-    let values = Utf8Array::<i32>::from_slice(&["a", "aa"]);
+    let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
     let data_type = DataType::Int32;
 
     let r = DictionaryArray::try_new(
@@ -57,7 +57,7 @@ fn try_new_incorrect_dt() {
 
 #[test]
 fn try_new_incorrect_values_dt() {
-    let values = Utf8Array::<i32>::from_slice(&["a", "aa"]);
+    let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
     let data_type = DataType::Dictionary(i32::KEY_TYPE, Box::new(DataType::LargeUtf8), false);
 
     let r = DictionaryArray::try_new(
@@ -72,7 +72,7 @@ fn try_new_incorrect_values_dt() {
 
 #[test]
 fn try_new_out_of_bounds() {
-    let values = Utf8Array::<i32>::from_slice(&["a", "aa"]);
+    let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
 
     let r = DictionaryArray::try_from_keys(PrimitiveArray::from_vec(vec![2, 0]), values.boxed())
         .is_err();
@@ -82,7 +82,7 @@ fn try_new_out_of_bounds() {
 
 #[test]
 fn try_new_out_of_bounds_neg() {
-    let values = Utf8Array::<i32>::from_slice(&["a", "aa"]);
+    let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
 
     let r = DictionaryArray::try_from_keys(PrimitiveArray::from_vec(vec![-1, 0]), values.boxed())
         .is_err();
@@ -108,7 +108,7 @@ fn new_empty() {
 
 #[test]
 fn with_validity() {
-    let values = Utf8Array::<i32>::from_slice(&["a", "aa"]);
+    let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
     let array =
         DictionaryArray::try_from_keys(PrimitiveArray::from_vec(vec![1, 0]), values.boxed())
             .unwrap();
@@ -120,7 +120,7 @@ fn with_validity() {
 
 #[test]
 fn rev_iter() {
-    let values = Utf8Array::<i32>::from_slice(&["a", "aa"]);
+    let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
     let array =
         DictionaryArray::try_from_keys(PrimitiveArray::from_vec(vec![1, 0]), values.boxed())
             .unwrap();
@@ -132,7 +132,7 @@ fn rev_iter() {
 
 #[test]
 fn iter_values() {
-    let values = Utf8Array::<i32>::from_slice(&["a", "aa"]);
+    let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
     let array =
         DictionaryArray::try_from_keys(PrimitiveArray::from_vec(vec![1, 0]), values.boxed())
             .unwrap();
@@ -144,7 +144,7 @@ fn iter_values() {
 
 #[test]
 fn keys_values_iter() {
-    let values = Utf8Array::<i32>::from_slice(&["a", "aa"]);
+    let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
     let array =
         DictionaryArray::try_from_keys(PrimitiveArray::from_vec(vec![1, 0]), values.boxed())
             .unwrap();

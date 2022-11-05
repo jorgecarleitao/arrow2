@@ -16,7 +16,7 @@ fn lexicographical_partition_ranges_empty() {
 #[test]
 fn lexicographical_partition_ranges_unaligned_rows() {
     let values1 = Int64Array::from([None, Some(-1)]);
-    let values2 = Utf8Array::<i32>::from(&[Some("foo")]);
+    let values2 = Utf8Array::<i32>::from([Some("foo")]);
     let input = vec![
         SortColumn {
             values: &values1,
@@ -35,7 +35,7 @@ fn lexicographical_partition_ranges_unaligned_rows() {
 
 #[test]
 fn lexicographical_partition_single_column() -> Result<()> {
-    let values = Int64Array::from_slice(&[1, 2, 2, 2, 2, 2, 2, 2, 9]);
+    let values = Int64Array::from_slice([1, 2, 2, 2, 2, 2, 2, 2, 9]);
     let input = vec![SortColumn {
         values: &values,
         options: Some(SortOptions {

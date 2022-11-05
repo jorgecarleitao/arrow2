@@ -48,7 +48,7 @@ fn test_multi() -> Result<()> {
     original_data1.extend(original_data2.iter().cloned());
     let expected = DictionaryArray::try_from_keys(
         PrimitiveArray::from(&[Some(1), None, Some(3), None]),
-        Utf8Array::<i32>::from_slice(&["a", "b", "c", "b", "a"]).boxed(),
+        Utf8Array::<i32>::from_slice(["a", "b", "c", "b", "a"]).boxed(),
     )
     .unwrap();
 

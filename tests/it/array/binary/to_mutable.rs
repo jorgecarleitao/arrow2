@@ -2,7 +2,7 @@ use arrow2::{array::BinaryArray, bitmap::Bitmap, buffer::Buffer, datatypes::Data
 
 #[test]
 fn not_shared() {
-    let array = BinaryArray::<i32>::from(&[Some("hello"), Some(" "), None]);
+    let array = BinaryArray::<i32>::from([Some("hello"), Some(" "), None]);
     assert!(array.into_mut().is_right());
 }
 
@@ -62,6 +62,6 @@ fn shared_offsets() {
 #[test]
 #[allow(clippy::redundant_clone)]
 fn shared_all() {
-    let array = BinaryArray::<i32>::from(&[Some("hello"), Some(" "), None]);
+    let array = BinaryArray::<i32>::from([Some("hello"), Some(" "), None]);
     assert!(array.clone().into_mut().is_left())
 }

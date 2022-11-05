@@ -6,7 +6,7 @@ use arrow2::array::{
 /// tests extending from a variable-sized (strings and binary) array w/ offset with nulls
 #[test]
 fn validity() {
-    let array = Utf8Array::<i32>::from(&[Some("a"), Some("bc"), None, Some("defh")]);
+    let array = Utf8Array::<i32>::from([Some("a"), Some("bc"), None, Some("defh")]);
 
     let mut a = GrowableUtf8::new(vec![&array], false, 0);
 
@@ -14,7 +14,7 @@ fn validity() {
 
     let result: Utf8Array<i32> = a.into();
 
-    let expected = Utf8Array::<i32>::from(&[Some("bc"), None]);
+    let expected = Utf8Array::<i32>::from([Some("bc"), None]);
     assert_eq!(result, expected);
 }
 
@@ -22,7 +22,7 @@ fn validity() {
 /// with an offset and nulls
 #[test]
 fn offsets() {
-    let array = Utf8Array::<i32>::from(&[Some("a"), Some("bc"), None, Some("defh")]);
+    let array = Utf8Array::<i32>::from([Some("a"), Some("bc"), None, Some("defh")]);
     let array = array.slice(1, 3);
 
     let mut a = GrowableUtf8::new(vec![&array], false, 0);
@@ -31,13 +31,13 @@ fn offsets() {
 
     let result: Utf8Array<i32> = a.into();
 
-    let expected = Utf8Array::<i32>::from(&[Some("bc"), None, Some("defh")]);
+    let expected = Utf8Array::<i32>::from([Some("bc"), None, Some("defh")]);
     assert_eq!(result, expected);
 }
 
 #[test]
 fn offsets2() {
-    let array = Utf8Array::<i32>::from(&[Some("a"), Some("bc"), None, Some("defh")]);
+    let array = Utf8Array::<i32>::from([Some("a"), Some("bc"), None, Some("defh")]);
     let array = array.slice(1, 3);
 
     let mut a = GrowableUtf8::new(vec![&array], false, 0);
@@ -46,14 +46,14 @@ fn offsets2() {
 
     let result: Utf8Array<i32> = a.into();
 
-    let expected = Utf8Array::<i32>::from(&[Some("bc"), None, Some("defh")]);
+    let expected = Utf8Array::<i32>::from([Some("bc"), None, Some("defh")]);
     assert_eq!(result, expected);
 }
 
 #[test]
 fn multiple_with_validity() {
-    let array1 = Utf8Array::<i32>::from_slice(&["hello", "world"]);
-    let array2 = Utf8Array::<i32>::from(&[Some("1"), None]);
+    let array1 = Utf8Array::<i32>::from_slice(["hello", "world"]);
+    let array2 = Utf8Array::<i32>::from([Some("1"), None]);
 
     let mut a = GrowableUtf8::new(vec![&array1, &array2], false, 5);
 
@@ -62,13 +62,13 @@ fn multiple_with_validity() {
 
     let result: Utf8Array<i32> = a.into();
 
-    let expected = Utf8Array::<i32>::from(&[Some("hello"), Some("world"), Some("1"), None]);
+    let expected = Utf8Array::<i32>::from([Some("hello"), Some("world"), Some("1"), None]);
     assert_eq!(result, expected);
 }
 
 #[test]
 fn null_offset_validity() {
-    let array = Utf8Array::<i32>::from(&[Some("a"), Some("bc"), None, Some("defh")]);
+    let array = Utf8Array::<i32>::from([Some("a"), Some("bc"), None, Some("defh")]);
     let array = array.slice(1, 3);
 
     let mut a = GrowableUtf8::new(vec![&array], true, 0);
@@ -78,6 +78,6 @@ fn null_offset_validity() {
 
     let result: Utf8Array<i32> = a.into();
 
-    let expected = Utf8Array::<i32>::from(&[None, Some("defh"), None]);
+    let expected = Utf8Array::<i32>::from([None, Some("defh"), None]);
     assert_eq!(result, expected);
 }

@@ -35,7 +35,7 @@ pub fn num_values(nested: &[Nested]) -> usize {
                     .sum::<usize>()
             } else {
                 lengths
-                    .map(|length| if length == 0 { 1 } else { 0 })
+                    .map(|length| usize::from(length == 0))
                     .sum::<usize>()
             }
         })

@@ -23,7 +23,7 @@ fn as_slice_offset() {
 
 #[test]
 fn as_slice_offset_middle() {
-    let b = Bitmap::from_u8_slice(&[0, 0, 0, 0b00010101], 27);
+    let b = Bitmap::from_u8_slice([0, 0, 0, 0b00010101], 27);
     let b = b.slice(22, 5);
 
     let (slice, offset, length) = b.as_slice();

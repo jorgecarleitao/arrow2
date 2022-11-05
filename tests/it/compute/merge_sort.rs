@@ -7,8 +7,8 @@ use arrow2::error::Result;
 
 #[test]
 fn merge_u32() -> Result<()> {
-    let a0: &dyn Array = &Int32Array::from_slice(&[0, 1, 2, 3]);
-    let a1: &dyn Array = &Int32Array::from_slice(&[2, 3, 4, 5]);
+    let a0: &dyn Array = &Int32Array::from_slice([0, 1, 2, 3]);
+    let a1: &dyn Array = &Int32Array::from_slice([2, 3, 4, 5]);
 
     let options = SortOptions::default();
     let arrays = vec![a0, a1];
@@ -36,8 +36,8 @@ fn merge_u32() -> Result<()> {
 
 #[test]
 fn merge_with_limit() -> Result<()> {
-    let a0: &dyn Array = &Int32Array::from_slice(&[0, 2, 4, 6, 8]);
-    let a1: &dyn Array = &Int32Array::from_slice(&[1, 3, 5, 7, 9]);
+    let a0: &dyn Array = &Int32Array::from_slice([0, 2, 4, 6, 8]);
+    let a1: &dyn Array = &Int32Array::from_slice([1, 3, 5, 7, 9]);
 
     let options = SortOptions::default();
     let arrays = vec![a0, a1];
@@ -48,7 +48,7 @@ fn merge_with_limit() -> Result<()> {
     // thus, they can be used to take from the arrays
     let array = take_arrays(&arrays, slices, Some(5));
 
-    let expected = Int32Array::from_slice(&[0, 1, 2, 3, 4]);
+    let expected = Int32Array::from_slice([0, 1, 2, 3, 4]);
     // values are right
     assert_eq!(expected, array.as_ref());
     Ok(())
@@ -56,8 +56,8 @@ fn merge_with_limit() -> Result<()> {
 
 #[test]
 fn merge_slices_to_vec() -> Result<()> {
-    let a0: &dyn Array = &Int32Array::from_slice(&[0, 2, 4, 6, 8]);
-    let a1: &dyn Array = &Int32Array::from_slice(&[1, 3, 5, 7, 9]);
+    let a0: &dyn Array = &Int32Array::from_slice([0, 2, 4, 6, 8]);
+    let a1: &dyn Array = &Int32Array::from_slice([1, 3, 5, 7, 9]);
 
     let options = SortOptions::default();
     let arrays = vec![a0, a1];
@@ -72,10 +72,10 @@ fn merge_slices_to_vec() -> Result<()> {
 
 #[test]
 fn merge_4_i32() -> Result<()> {
-    let a0: &dyn Array = &Int32Array::from_slice(&[0, 1]);
-    let a1: &dyn Array = &Int32Array::from_slice(&[2, 6]);
-    let a2: &dyn Array = &Int32Array::from_slice(&[3, 5]);
-    let a3: &dyn Array = &Int32Array::from_slice(&[4, 7]);
+    let a0: &dyn Array = &Int32Array::from_slice([0, 1]);
+    let a1: &dyn Array = &Int32Array::from_slice([2, 6]);
+    let a2: &dyn Array = &Int32Array::from_slice([3, 5]);
+    let a3: &dyn Array = &Int32Array::from_slice([4, 7]);
 
     let options = SortOptions::default();
     let arrays = vec![a0, a1, a2, a3];
@@ -99,7 +99,7 @@ fn merge_4_i32() -> Result<()> {
     // thus, they can be used to take from the arrays
     let array = take_arrays(&arrays, slices, None);
 
-    let expected = Int32Array::from_slice(&[0, 1, 2, 3, 4, 5, 6, 7]);
+    let expected = Int32Array::from_slice([0, 1, 2, 3, 4, 5, 6, 7]);
 
     // values are right
     assert_eq!(expected, array.as_ref());
@@ -108,8 +108,8 @@ fn merge_4_i32() -> Result<()> {
 
 #[test]
 fn merge_binary() -> Result<()> {
-    let a0: &dyn Array = &BinaryArray::<i32>::from_slice(&[b"a", b"c", b"d", b"e"]);
-    let a1: &dyn Array = &BinaryArray::<i32>::from_slice(&[b"b", b"y", b"z", b"z"]);
+    let a0: &dyn Array = &BinaryArray::<i32>::from_slice([b"a", b"c", b"d", b"e"]);
+    let a1: &dyn Array = &BinaryArray::<i32>::from_slice([b"b", b"y", b"z", b"z"]);
 
     let options = SortOptions::default();
     let arrays = vec![a0, a1];
@@ -139,8 +139,8 @@ fn merge_binary() -> Result<()> {
 
 #[test]
 fn merge_string() -> Result<()> {
-    let a0: &dyn Array = &Utf8Array::<i32>::from_slice(&["a", "c", "d", "e"]);
-    let a1: &dyn Array = &Utf8Array::<i32>::from_slice(&["b", "y", "z", "z"]);
+    let a0: &dyn Array = &Utf8Array::<i32>::from_slice(["a", "c", "d", "e"]);
+    let a1: &dyn Array = &Utf8Array::<i32>::from_slice(["b", "y", "z", "z"]);
 
     let options = SortOptions::default();
     let arrays = vec![a0, a1];
@@ -171,17 +171,17 @@ fn merge_string() -> Result<()> {
 #[test]
 fn merge_sort_many() -> Result<()> {
     // column 1
-    let a00: &dyn Array = &Int32Array::from_slice(&[0, 1, 2, 3]);
-    let a01: &dyn Array = &Int32Array::from_slice(&[2, 3, 4]);
+    let a00: &dyn Array = &Int32Array::from_slice([0, 1, 2, 3]);
+    let a01: &dyn Array = &Int32Array::from_slice([2, 3, 4]);
     // column 2
-    let a10: &dyn Array = &Utf8Array::<i32>::from_slice(&["a", "c", "d", "e"]);
-    let a11: &dyn Array = &Utf8Array::<i32>::from_slice(&["b", "y", "z"]);
+    let a10: &dyn Array = &Utf8Array::<i32>::from_slice(["a", "c", "d", "e"]);
+    let a11: &dyn Array = &Utf8Array::<i32>::from_slice(["b", "y", "z"]);
     // column 3
     // arrays to be sorted via the columns above
-    let array0: &dyn Array = &Int32Array::from_slice(&[0, 1, 2, 3]);
-    let array1: &dyn Array = &Int32Array::from_slice(&[4, 5, 6]);
+    let array0: &dyn Array = &Int32Array::from_slice([0, 1, 2, 3]);
+    let array1: &dyn Array = &Int32Array::from_slice([4, 5, 6]);
 
-    let expected = Int32Array::from_slice(&[
+    let expected = Int32Array::from_slice([
         0, // 0 (a00) < 2 (a01)
         1, // 1 (a00) < 2 (a01)
         4, // 2 (a00) == 2 (a01), "d" (a10) > "b" (a11)

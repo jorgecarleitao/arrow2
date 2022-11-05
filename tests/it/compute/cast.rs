@@ -5,7 +5,7 @@ use arrow2::types::{days_ms, months_days_ns, NativeType};
 
 #[test]
 fn i32_to_f64() {
-    let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
+    let array = Int32Array::from_slice([5, 6, 7, 8, 9]);
     let b = cast(&array, &DataType::Float64, CastOptions::default()).unwrap();
     let c = b.as_any().downcast_ref::<Float64Array>().unwrap();
     assert!((5.0 - c.value(0)).abs() < f64::EPSILON);
@@ -17,7 +17,7 @@ fn i32_to_f64() {
 
 #[test]
 fn i32_as_f64_no_overflow() {
-    let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
+    let array = Int32Array::from_slice([5, 6, 7, 8, 9]);
     let b = cast(
         &array,
         &DataType::Float64,
@@ -37,7 +37,7 @@ fn i32_as_f64_no_overflow() {
 
 #[test]
 fn u16_as_u8_overflow() {
-    let array = UInt16Array::from_slice(&[255, 256, 257, 258, 259]);
+    let array = UInt16Array::from_slice([255, 256, 257, 258, 259]);
     let b = cast(
         &array,
         &DataType::UInt8,
@@ -55,7 +55,7 @@ fn u16_as_u8_overflow() {
 
 #[test]
 fn u16_as_u8_no_overflow() {
-    let array = UInt16Array::from_slice(&[1, 2, 3, 4, 5]);
+    let array = UInt16Array::from_slice([1, 2, 3, 4, 5]);
     let b = cast(
         &array,
         &DataType::UInt8,
@@ -72,7 +72,7 @@ fn u16_as_u8_no_overflow() {
 
 #[test]
 fn f32_as_u8_overflow() {
-    let array = Float32Array::from_slice(&[1.1, 5000.0]);
+    let array = Float32Array::from_slice([1.1, 5000.0]);
     let b = cast(&array, &DataType::UInt8, CastOptions::default()).unwrap();
     let expected = UInt8Array::from(&[Some(1), None]);
     assert_eq!(expected, b.as_ref());
@@ -92,7 +92,7 @@ fn f32_as_u8_overflow() {
 
 #[test]
 fn i32_to_u8() {
-    let array = Int32Array::from_slice(&[-5, 6, -7, 8, 100000000]);
+    let array = Int32Array::from_slice([-5, 6, -7, 8, 100000000]);
     let b = cast(&array, &DataType::UInt8, CastOptions::default()).unwrap();
     let expected = UInt8Array::from(&[None, Some(6), None, Some(8), None]);
     let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
@@ -101,7 +101,7 @@ fn i32_to_u8() {
 
 #[test]
 fn i32_to_u8_sliced() {
-    let array = Int32Array::from_slice(&[-5, 6, -7, 8, 100000000]);
+    let array = Int32Array::from_slice([-5, 6, -7, 8, 100000000]);
     let array = array.slice(2, 3);
     let b = cast(&array, &DataType::UInt8, CastOptions::default()).unwrap();
     let expected = UInt8Array::from(&[None, Some(8), None]);
@@ -111,7 +111,7 @@ fn i32_to_u8_sliced() {
 
 #[test]
 fn i32_to_i32() {
-    let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
+    let array = Int32Array::from_slice([5, 6, 7, 8, 9]);
     let b = cast(&array, &DataType::Int32, CastOptions::default()).unwrap();
     let c = b.as_any().downcast_ref::<Int32Array>().unwrap();
 
@@ -122,7 +122,7 @@ fn i32_to_i32() {
 
 #[test]
 fn i32_to_list_i32() {
-    let array = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
+    let array = Int32Array::from_slice([5, 6, 7, 8, 9]);
     let b = cast(
         &array,
         &DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
@@ -138,7 +138,7 @@ fn i32_to_list_i32() {
         .downcast_ref::<PrimitiveArray<i32>>()
         .unwrap();
 
-    let expected = Int32Array::from_slice(&[5, 6, 7, 8, 9]);
+    let expected = Int32Array::from_slice([5, 6, 7, 8, 9]);
     assert_eq!(c, &expected);
 }
 
@@ -190,16 +190,16 @@ fn i32_to_list_f64_nullable_sliced() {
 
 #[test]
 fn i32_to_binary() {
-    let array = Int32Array::from_slice(&[5, 6, 7]);
+    let array = Int32Array::from_slice([5, 6, 7]);
     let b = cast(&array, &DataType::Binary, CastOptions::default()).unwrap();
-    let expected = BinaryArray::<i32>::from(&[Some(b"5"), Some(b"6"), Some(b"7")]);
+    let expected = BinaryArray::<i32>::from([Some(b"5"), Some(b"6"), Some(b"7")]);
     let c = b.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
     assert_eq!(c, &expected);
 }
 
 #[test]
 fn binary_to_i32() {
-    let array = BinaryArray::<i32>::from_slice(&["5", "6", "seven", "8", "9.1"]);
+    let array = BinaryArray::<i32>::from_slice(["5", "6", "seven", "8", "9.1"]);
     let b = cast(&array, &DataType::Int32, CastOptions::default()).unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
@@ -210,7 +210,7 @@ fn binary_to_i32() {
 
 #[test]
 fn binary_to_i32_partial() {
-    let array = BinaryArray::<i32>::from_slice(&["5", "6", "123 abseven", "aaa", "9.1"]);
+    let array = BinaryArray::<i32>::from_slice(["5", "6", "123 abseven", "aaa", "9.1"]);
     let b = cast(
         &array,
         &DataType::Int32,
@@ -229,7 +229,7 @@ fn binary_to_i32_partial() {
 
 #[test]
 fn utf8_to_i32() {
-    let array = Utf8Array::<i32>::from_slice(&["5", "6", "seven", "8", "9.1"]);
+    let array = Utf8Array::<i32>::from_slice(["5", "6", "seven", "8", "9.1"]);
     let b = cast(&array, &DataType::Int32, CastOptions::default()).unwrap();
     let c = b.as_any().downcast_ref::<PrimitiveArray<i32>>().unwrap();
 
@@ -362,7 +362,7 @@ fn decimal_to_integer() {
 
 #[test]
 fn utf8_to_i32_partial() {
-    let array = Utf8Array::<i32>::from_slice(&["5", "6", "seven", "8aa", "9.1aa"]);
+    let array = Utf8Array::<i32>::from_slice(["5", "6", "seven", "8aa", "9.1aa"]);
     let b = cast(
         &array,
         &DataType::Int32,
@@ -407,7 +407,7 @@ fn bool_to_utf8() {
     let b = cast(&array, &DataType::Utf8, CastOptions::default()).unwrap();
     let c = b.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
 
-    let expected = Utf8Array::<i32>::from(&[Some("1"), Some("0"), Some("0")]);
+    let expected = Utf8Array::<i32>::from([Some("1"), Some("0"), Some("0")]);
     assert_eq!(c, &expected);
 }
 
@@ -417,7 +417,7 @@ fn bool_to_binary() {
     let b = cast(&array, &DataType::Binary, CastOptions::default()).unwrap();
     let c = b.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
 
-    let expected = BinaryArray::<i32>::from(&[Some("1"), Some("0"), Some("0")]);
+    let expected = BinaryArray::<i32>::from([Some("1"), Some("0"), Some("0")]);
     assert_eq!(c, &expected);
 }
 
@@ -631,7 +631,7 @@ fn timestamp_to_timestamp() {
 
 #[test]
 fn utf8_to_dict() {
-    let array = Utf8Array::<i32>::from(&[Some("one"), None, Some("three"), Some("one")]);
+    let array = Utf8Array::<i32>::from([Some("one"), None, Some("three"), Some("one")]);
 
     // Cast to a dictionary (same value type, Utf8)
     let cast_type = DataType::Dictionary(u8::KEY_TYPE, Box::new(DataType::Utf8), false);
@@ -655,7 +655,7 @@ fn dict_to_utf8() {
 
     let result = cast(&array, &DataType::Utf8, CastOptions::default()).expect("cast failed");
 
-    let expected = Utf8Array::<i32>::from(&[Some("one"), None, Some("three"), Some("one")]);
+    let expected = Utf8Array::<i32>::from([Some("one"), None, Some("three"), Some("one")]);
 
     assert_eq!(expected, result.as_ref());
 }
@@ -732,8 +732,8 @@ fn list_to_from_fixed_size_list() {
 fn timestamp_with_tz_to_utf8() {
     let tz = "-02:00".to_string();
     let expected =
-        Utf8Array::<i32>::from_slice(&["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
-    let array = Int64Array::from_slice(&[851020797000000000, 851024397000000000])
+        Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
+    let array = Int64Array::from_slice([851020797000000000, 851024397000000000])
         .to(DataType::Timestamp(TimeUnit::Nanosecond, Some(tz)));
 
     let result = cast(&array, expected.data_type(), CastOptions::default()).expect("cast failed");
@@ -744,9 +744,9 @@ fn timestamp_with_tz_to_utf8() {
 fn utf8_to_timestamp_with_tz() {
     let tz = "-02:00".to_string();
     let array =
-        Utf8Array::<i32>::from_slice(&["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
+        Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
     // the timezone is used to map the time to UTC.
-    let expected = Int64Array::from_slice(&[851020797000000000, 851024397000000000])
+    let expected = Int64Array::from_slice([851020797000000000, 851024397000000000])
         .to(DataType::Timestamp(TimeUnit::Nanosecond, Some(tz)));
 
     let result = cast(&array, expected.data_type(), CastOptions::default()).expect("cast failed");
@@ -756,9 +756,9 @@ fn utf8_to_timestamp_with_tz() {
 #[test]
 fn utf8_to_naive_timestamp() {
     let array =
-        Utf8Array::<i32>::from_slice(&["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
+        Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
     // the timezone is disregarded from the string and we assume UTC
-    let expected = Int64Array::from_slice(&[851013597000000000, 851017197000000000])
+    let expected = Int64Array::from_slice([851013597000000000, 851017197000000000])
         .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
 
     let result = cast(&array, expected.data_type(), CastOptions::default()).expect("cast failed");
@@ -767,10 +767,10 @@ fn utf8_to_naive_timestamp() {
 
 #[test]
 fn naive_timestamp_to_utf8() {
-    let array = Int64Array::from_slice(&[851013597000000000, 851017197000000000])
+    let array = Int64Array::from_slice([851013597000000000, 851017197000000000])
         .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
 
-    let expected = Utf8Array::<i32>::from_slice(&["1996-12-19 16:39:57", "1996-12-19 17:39:57"]);
+    let expected = Utf8Array::<i32>::from_slice(["1996-12-19 16:39:57", "1996-12-19 17:39:57"]);
 
     let result = cast(&array, expected.data_type(), CastOptions::default()).expect("cast failed");
     assert_eq!(expected, result.as_ref());
@@ -817,22 +817,22 @@ fn null_array_from_and_to_others() {
 
 #[test]
 fn utf8_to_date32() {
-    let array = Utf8Array::<i32>::from_slice(&["1970-01-01", "1970-01-02"]);
+    let array = Utf8Array::<i32>::from_slice(["1970-01-01", "1970-01-02"]);
     let b = cast(&array, &DataType::Date32, CastOptions::default()).unwrap();
     let c = b.as_any().downcast_ref::<Int32Array>().unwrap();
 
-    let expected = Int32Array::from_slice(&[0, 1]).to(DataType::Date32);
+    let expected = Int32Array::from_slice([0, 1]).to(DataType::Date32);
 
     assert_eq!(&expected, c);
 }
 
 #[test]
 fn utf8_to_date64() {
-    let array = Utf8Array::<i32>::from_slice(&["1970-01-01", "1970-01-02"]);
+    let array = Utf8Array::<i32>::from_slice(["1970-01-01", "1970-01-02"]);
     let b = cast(&array, &DataType::Date64, CastOptions::default()).unwrap();
     let c = b.as_any().downcast_ref::<Int64Array>().unwrap();
 
-    let expected = Int64Array::from_slice(&[0, 86400000]).to(DataType::Date64);
+    let expected = Int64Array::from_slice([0, 86400000]).to(DataType::Date64);
 
     assert_eq!(&expected, c);
 }

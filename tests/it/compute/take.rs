@@ -22,7 +22,7 @@ where
 
 #[test]
 fn test_take_primitive_non_null_indices() {
-    let indices = Int32Array::from_slice(&[0, 5, 3, 1, 4, 2]);
+    let indices = Int32Array::from_slice([0, 5, 3, 1, 4, 2]);
     test_take_primitive::<i8>(
         &[None, Some(2), Some(4), Some(6), Some(8), None],
         &indices,
@@ -61,8 +61,8 @@ fn test_take_primitive_null_values() {
 }
 
 fn create_test_struct() -> StructArray {
-    let boolean = BooleanArray::from_slice(&[true, false, false, true]);
-    let int = Int32Array::from_slice(&[42, 28, 19, 31]);
+    let boolean = BooleanArray::from_slice([true, false, false, true]);
+    let int = Int32Array::from_slice([42, 28, 19, 31]);
     let validity = vec![true, true, false, true]
         .into_iter()
         .collect::<MutableBitmap>()
@@ -154,7 +154,7 @@ fn consistency() {
 
 #[test]
 fn empty() {
-    let indices = Int32Array::from_slice(&[]);
+    let indices = Int32Array::from_slice([]);
     let values = BooleanArray::from(vec![Some(true), Some(false)]);
     let a = take(&values, &indices).unwrap();
     assert_eq!(a.len(), 0)
@@ -162,7 +162,7 @@ fn empty() {
 
 #[test]
 fn unsigned_take() {
-    let indices = UInt32Array::from_slice(&[]);
+    let indices = UInt32Array::from_slice([]);
     let values = BooleanArray::from(vec![Some(true), Some(false)]);
     let a = take(&values, &indices).unwrap();
     assert_eq!(a.len(), 0)

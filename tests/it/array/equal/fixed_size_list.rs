@@ -22,11 +22,11 @@ fn create_fixed_size_list_array<U: AsRef<[i32]>, T: AsRef<[Option<U>]>>(
 
 #[test]
 fn test_fixed_size_list_equal() {
-    let a = create_fixed_size_list_array(&[Some(&[1, 2, 3]), Some(&[4, 5, 6])]);
-    let b = create_fixed_size_list_array(&[Some(&[1, 2, 3]), Some(&[4, 5, 6])]);
+    let a = create_fixed_size_list_array([Some(&[1, 2, 3]), Some(&[4, 5, 6])]);
+    let b = create_fixed_size_list_array([Some(&[1, 2, 3]), Some(&[4, 5, 6])]);
     test_equal(&a, &b, true);
 
-    let b = create_fixed_size_list_array(&[Some(&[1, 2, 3]), Some(&[4, 5, 7])]);
+    let b = create_fixed_size_list_array([Some(&[1, 2, 3]), Some(&[4, 5, 7])]);
     test_equal(&a, &b, false);
 }
 
@@ -34,7 +34,7 @@ fn test_fixed_size_list_equal() {
 #[test]
 fn test_fixed_list_null() {
     let a =
-        create_fixed_size_list_array(&[Some(&[1, 2, 3]), None, None, Some(&[4, 5, 6]), None, None]);
+        create_fixed_size_list_array([Some(&[1, 2, 3]), None, None, Some(&[4, 5, 6]), None, None]);
     /*
     let b = create_fixed_size_list_array(&[
         Some(&[1, 2, 3]),
@@ -58,7 +58,7 @@ fn test_fixed_list_null() {
         */
 
     let b =
-        create_fixed_size_list_array(&[Some(&[1, 2, 3]), None, None, Some(&[3, 6, 9]), None, None]);
+        create_fixed_size_list_array([Some(&[1, 2, 3]), None, None, Some(&[3, 6, 9]), None, None]);
     test_equal(&a, &b, false);
 }
 
@@ -66,9 +66,9 @@ fn test_fixed_list_null() {
 fn test_fixed_list_offsets() {
     // Test the case where offset != 0
     let a =
-        create_fixed_size_list_array(&[Some(&[1, 2, 3]), None, None, Some(&[4, 5, 6]), None, None]);
+        create_fixed_size_list_array([Some(&[1, 2, 3]), None, None, Some(&[4, 5, 6]), None, None]);
     let b =
-        create_fixed_size_list_array(&[Some(&[1, 2, 3]), None, None, Some(&[3, 6, 9]), None, None]);
+        create_fixed_size_list_array([Some(&[1, 2, 3]), None, None, Some(&[3, 6, 9]), None, None]);
 
     let a_slice = a.slice(0, 3);
     let b_slice = b.slice(0, 3);

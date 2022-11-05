@@ -536,10 +536,10 @@ pub fn pyarrow_required(column: &str) -> Box<dyn Array> {
 
     match column {
         "int64" => Box::new(PrimitiveArray::<i64>::from(i64_values)),
-        "bool" => Box::new(BooleanArray::from_slice(&[
+        "bool" => Box::new(BooleanArray::from_slice([
             true, true, false, false, false, true, true, true, true, true,
         ])),
-        "string" => Box::new(Utf8Array::<i32>::from_slice(&[
+        "string" => Box::new(Utf8Array::<i32>::from_slice([
             "Hello", "bbb", "aa", "", "bbb", "abc", "bbb", "bbb", "def", "aaa",
         ])),
         "decimal_9" => {

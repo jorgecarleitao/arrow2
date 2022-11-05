@@ -131,7 +131,7 @@ fn extend_trusted_len_values() {
     assert_eq!(array.offsets().as_slice(), &[0, 5, 11, 16, 16, 22]);
     assert_eq!(
         array.validity(),
-        Some(&Bitmap::from_u8_slice(&[0b00010111], 5))
+        Some(&Bitmap::from_u8_slice([0b00010111], 5))
     );
 }
 
@@ -148,13 +148,13 @@ fn extend_trusted_len() {
     assert_eq!(array.offsets().as_slice(), &[0, 5, 11, 11, 16]);
     assert_eq!(
         array.validity(),
-        Some(&Bitmap::from_u8_slice(&[0b00001011], 4))
+        Some(&Bitmap::from_u8_slice([0b00001011], 4))
     );
 }
 
 #[test]
 fn extend_from_self() {
-    let mut a = MutableBinaryArray::<i32>::from(&[Some(b"aa"), None]);
+    let mut a = MutableBinaryArray::<i32>::from([Some(b"aa"), None]);
 
     a.try_extend_from_self(&a.clone()).unwrap();
 

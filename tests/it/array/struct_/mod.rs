@@ -7,8 +7,8 @@ use arrow2::datatypes::*;
 
 #[test]
 fn debug() {
-    let boolean = BooleanArray::from_slice(&[false, false, true, true]).boxed();
-    let int = Int32Array::from_slice(&[42, 28, 19, 31]).boxed();
+    let boolean = BooleanArray::from_slice([false, false, true, true]).boxed();
+    let int = Int32Array::from_slice([42, 28, 19, 31]).boxed();
 
     let fields = vec![
         Field::new("b", DataType::Boolean, false),

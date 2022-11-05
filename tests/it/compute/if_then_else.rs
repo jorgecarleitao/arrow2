@@ -4,12 +4,12 @@ use arrow2::error::Result;
 
 #[test]
 fn basics() -> Result<()> {
-    let lhs = Int32Array::from_slice(&[1, 2, 3]);
-    let rhs = Int32Array::from_slice(&[4, 5, 6]);
+    let lhs = Int32Array::from_slice([1, 2, 3]);
+    let rhs = Int32Array::from_slice([4, 5, 6]);
     let predicate = BooleanArray::from_slice(vec![true, false, true]);
     let c = if_then_else(&predicate, &lhs, &rhs)?;
 
-    let expected = Int32Array::from_slice(&[1, 5, 3]);
+    let expected = Int32Array::from_slice([1, 5, 3]);
 
     assert_eq!(expected, c.as_ref());
     Ok(())
@@ -30,8 +30,8 @@ fn basics_nulls() -> Result<()> {
 
 #[test]
 fn basics_nulls_pred() -> Result<()> {
-    let lhs = Int32Array::from_slice(&[1, 2, 3]);
-    let rhs = Int32Array::from_slice(&[4, 5, 6]);
+    let lhs = Int32Array::from_slice([1, 2, 3]);
+    let rhs = Int32Array::from_slice([4, 5, 6]);
     let predicate = BooleanArray::from(&[Some(true), None, Some(false)]);
     let result = if_then_else(&predicate, &lhs, &rhs)?;
 
