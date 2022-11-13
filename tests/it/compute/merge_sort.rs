@@ -35,6 +35,63 @@ fn merge_u32() -> Result<()> {
 }
 
 #[test]
+fn merge_null_first() -> Result<()> {
+    let a0: &dyn Array = &Int32Array::from(&[None, Some(0)]);
+    let a1: &dyn Array = &Int32Array::from(&[Some(2), Some(3)]);
+    let options = SortOptions {
+        descending: false,
+        nulls_first: true,
+    };
+    let arrays = vec![a0, a1];
+    let pairs = vec![(arrays.as_ref(), &options)];
+    let comparator = build_comparator(&pairs)?;
+    let result =
+        merge_sort_slices(once(&(0, 0, 2)), once(&(1, 0, 2)), &comparator).collect::<Vec<_>>();
+    assert_eq!(result, vec![(0, 0, 2), (1, 0, 2)]);
+
+    let a0: &dyn Array = &Int32Array::from(&[Some(0), None]);
+    let a1: &dyn Array = &Int32Array::from(&[Some(2), Some(3)]);
+    let options = SortOptions {
+        descending: false,
+        nulls_first: false,
+    };
+    let arrays = vec![a0, a1];
+    let pairs = vec![(arrays.as_ref(), &options)];
+    let comparator = build_comparator(&pairs)?;
+    let result =
+        merge_sort_slices(once(&(0, 0, 2)), once(&(1, 0, 2)), &comparator).collect::<Vec<_>>();
+    assert_eq!(result, vec![(0, 0, 1), (1, 0, 2), (0, 1, 1)]);
+
+    let a0: &dyn Array = &Int32Array::from(&[Some(0), None]);
+    let a1: &dyn Array = &Int32Array::from(&[Some(3), Some(2)]);
+    let options = SortOptions {
+        descending: true,
+        nulls_first: false,
+    };
+    let arrays = vec![a0, a1];
+    let pairs = vec![(arrays.as_ref(), &options)];
+    let comparator = build_comparator(&pairs)?;
+    let result =
+        merge_sort_slices(once(&(0, 0, 2)), once(&(1, 0, 2)), &comparator).collect::<Vec<_>>();
+    assert_eq!(result, vec![(1, 0, 2), (0, 0, 2)]);
+
+    let a0: &dyn Array = &Int32Array::from(&[None, Some(0)]);
+    let a1: &dyn Array = &Int32Array::from(&[Some(3), Some(2)]);
+    let options = SortOptions {
+        descending: true,
+        nulls_first: true,
+    };
+    let arrays = vec![a0, a1];
+    let pairs = vec![(arrays.as_ref(), &options)];
+    let comparator = build_comparator(&pairs)?;
+    let result =
+        merge_sort_slices(once(&(0, 0, 2)), once(&(1, 0, 2)), &comparator).collect::<Vec<_>>();
+    assert_eq!(result, vec![(0, 0, 1), (1, 0, 2), (0, 1, 1)]);
+
+    Ok(())
+}
+
+#[test]
 fn merge_with_limit() -> Result<()> {
     let a0: &dyn Array = &Int32Array::from_slice([0, 2, 4, 6, 8]);
     let a1: &dyn Array = &Int32Array::from_slice([1, 3, 5, 7, 9]);
