@@ -170,7 +170,7 @@ fn date_optional(
 
 fn days_since_epoch(date: &odbc_api::sys::Date) -> i32 {
     let unix_epoch = NaiveDate::from_ymd_opt(1970, 1, 1);
-    let date = NaiveDate::from_ymd_opt_opt(date.year as i32, date.month as u32, date.day as u32)
+    let date = NaiveDate::from_ymd_opt(date.year as i32, date.month as u32, date.day as u32)
         .unwrap_or(unix_epoch);
     let duration = date.signed_duration_since(unix_epoch);
     duration.num_days().try_into().unwrap_or(i32::MAX)
@@ -231,7 +231,7 @@ fn timestamp_optional(
 }
 
 fn timestamp_to_naive(timestamp: &odbc_api::sys::Timestamp) -> Option<NaiveDateTime> {
-    NaiveDate::from_ymd_opt_opt(
+    NaiveDate::from_ymd_opt(
         timestamp.year as i32,
         timestamp.month as u32,
         timestamp.day as u32,
