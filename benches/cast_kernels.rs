@@ -38,6 +38,7 @@ fn build_utf8_date_array(size: usize, with_nulls: bool) -> Utf8Array<i32> {
             } else {
                 Some(
                     NaiveDate::from_num_days_from_ce_opt(rng.sample(range))
+                        .unwrap()
                         .format("%Y-%m-%d")
                         .to_string(),
                 )
@@ -60,6 +61,7 @@ fn build_utf8_date_time_array(size: usize, with_nulls: bool) -> Utf8Array<i32> {
             } else {
                 Some(
                     NaiveDateTime::from_timestamp_opt(rng.sample(range), 0)
+                        .unwrap()
                         .format("%Y-%m-%dT%H:%M:%S")
                         .to_string(),
                 )
