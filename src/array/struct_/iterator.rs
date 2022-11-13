@@ -89,10 +89,7 @@ impl<'a> IntoIterator for &'a StructArray {
 impl<'a> StructArray {
     /// Returns an iterator of `Option<Box<dyn Array>>`
     pub fn iter(&'a self) -> ZipIter<'a> {
-        ZipValidity::new(
-            StructValueIter::new(self),
-            self.validity.as_ref().map(|x| x.iter()),
-        )
+        ZipValidity::new_with_validity(StructValueIter::new(self), self.validity())
     }
 
     /// Returns an iterator of `Box<dyn Array>`

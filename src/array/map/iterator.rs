@@ -72,10 +72,7 @@ impl<'a> IntoIterator for &'a MapArray {
 impl<'a> MapArray {
     /// Returns an iterator of `Option<Box<dyn Array>>`
     pub fn iter(&'a self) -> ZipValidity<Box<dyn Array>, MapValuesIter<'a>, BitmapIter<'a>> {
-        ZipValidity::new(
-            MapValuesIter::new(self),
-            self.validity.as_ref().map(|x| x.iter()),
-        )
+        ZipValidity::new_with_validity(MapValuesIter::new(self), self.validity())
     }
 
     /// Returns an iterator of `Box<dyn Array>`

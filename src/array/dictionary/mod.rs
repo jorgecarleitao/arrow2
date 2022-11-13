@@ -191,10 +191,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     /// This function will allocate a new [`Scalar`] per item and is usually not performant.
     /// Consider calling `keys_iter` and `values`, downcasting `values`, and iterating over that.
     pub fn iter(&self) -> ZipValidity<Box<dyn Scalar>, DictionaryValuesIter<K>, BitmapIter> {
-        ZipValidity::new(
-            DictionaryValuesIter::new(self),
-            self.keys.validity().as_ref().map(|x| x.iter()),
-        )
+        ZipValidity::new_with_validity(DictionaryValuesIter::new(self), self.keys.validity())
     }
 
     /// Returns an iterator of [`Box<dyn Scalar>`]

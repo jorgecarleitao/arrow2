@@ -1,3 +1,5 @@
+use crate::bitmap::utils::BitmapIter;
+use crate::bitmap::Bitmap;
 use crate::trusted_len::TrustedLen;
 
 /// An [`Iterator`] over validity and values.
@@ -111,7 +113,22 @@ where
     pub fn new(values: I, validity: Option<V>) -> Self {
         match validity {
             Some(validity) => Self::Optional(ZipValidityIter::new(values, validity)),
-            None => Self::Required(values),
+            _ => Self::Required(values),
+        }
+    }
+}
+
+impl<'a, T, I> ZipValidity<T, I, BitmapIter<'a>>
+where
+    I: Iterator<Item = T>,
+{
+    /// Returns a new [`ZipValidity`] and drops the `validity` if all values
+    /// are valid.
+    pub fn new_with_validity(values: I, validity: Option<&'a Bitmap>) -> Self {
+        // only if the validity has nulls we take the optional branch.
+        match validity.and_then(|validity| (validity.unset_bits() > 0).then(|| validity.iter())) {
+            Some(validity) => Self::Optional(ZipValidityIter::new(values, validity)),
+            _ => Self::Required(values),
         }
     }
 }

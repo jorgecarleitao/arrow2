@@ -103,7 +103,7 @@ fn struct_serializer<'a>(
     let names = array.fields().iter().map(|f| f.name.as_str());
 
     Box::new(BufStreamingIterator::new(
-        ZipValidity::new(0..array.len(), array.validity().map(|x| x.iter())),
+        ZipValidity::new_with_validity(0..array.len(), array.validity()),
         move |maybe, buf| {
             if maybe.is_some() {
                 let names = names.clone();
@@ -140,10 +140,7 @@ fn list_serializer<'a, O: Offset>(
     let mut serializer = new_serializer(array.values().as_ref());
 
     Box::new(BufStreamingIterator::new(
-        ZipValidity::new(
-            array.offsets().windows(2),
-            array.validity().map(|x| x.iter()),
-        ),
+        ZipValidity::new_with_validity(array.offsets().windows(2), array.validity()),
         move |offset, buf| {
             if let Some(offset) = offset {
                 let length = (offset[1] - offset[0]).to_usize();
