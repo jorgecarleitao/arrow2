@@ -541,9 +541,6 @@
 <span id="541">541</span>
 <span id="542">542</span>
 <span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::{
         utils::{BitmapIter, ZipValidity},
@@ -687,10 +684,7 @@
     <span class="doccomment">/// Returns an iterator over the values and validity, `Option&lt;&amp;T&gt;`.
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ZipValidity&lt;<span class="kw-2">&amp;</span>T, std::slice::Iter&lt;T&gt;, BitmapIter&gt; {
-        ZipValidity::new(
-            <span class="self">self</span>.values().iter(),
-            <span class="self">self</span>.validity().as_ref().map(|x| x.iter()),
-        )
+        ZipValidity::new_with_validity(<span class="self">self</span>.values().iter(), <span class="self">self</span>.validity())
     }
 
     <span class="doccomment">/// Returns an iterator of the values, `&amp;T`, ignoring the arrays&#39; validity.

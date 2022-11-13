@@ -97,9 +97,6 @@
 <span id="97">97</span>
 <span id="98">98</span>
 <span id="99">99</span>
-<span id="100">100</span>
-<span id="101">101</span>
-<span id="102">102</span>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::utils::{BitmapIter, ZipValidity},
     scalar::{new_scalar, Scalar},
@@ -191,10 +188,7 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; StructArray {
     <span class="doccomment">/// Returns an iterator of `Option&lt;Box&lt;dyn Array&gt;&gt;`
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>) -&gt; ZipIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-        ZipValidity::new(
-            StructValueIter::new(<span class="self">self</span>),
-            <span class="self">self</span>.validity.as_ref().map(|x| x.iter()),
-        )
+        ZipValidity::new_with_validity(StructValueIter::new(<span class="self">self</span>), <span class="self">self</span>.validity())
     }
 
     <span class="doccomment">/// Returns an iterator of `Box&lt;dyn Array&gt;`

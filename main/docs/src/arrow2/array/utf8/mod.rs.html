@@ -753,7 +753,7 @@
 
     <span class="doccomment">/// Returns an iterator of `Option&lt;&amp;str&gt;`
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ZipValidity&lt;<span class="kw-2">&amp;</span>str, Utf8ValuesIter&lt;O&gt;, BitmapIter&gt; {
-        ZipValidity::new(<span class="self">self</span>.values_iter(), <span class="self">self</span>.validity.as_ref().map(|x| x.iter()))
+        ZipValidity::new_with_validity(<span class="self">self</span>.values_iter(), <span class="self">self</span>.validity())
     }
 
     <span class="doccomment">/// Returns an iterator of `&amp;str`

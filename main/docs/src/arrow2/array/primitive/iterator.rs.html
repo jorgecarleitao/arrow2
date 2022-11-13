@@ -47,6 +47,7 @@
 <span id="47">47</span>
 <span id="48">48</span>
 <span id="49">49</span>
+<span id="50">50</span>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     array::MutableArray,
     bitmap::utils::{BitmapIter, ZipValidity},
@@ -65,7 +66,8 @@
     </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
         <span class="kw">let </span>(<span class="kw">_</span>, values, validity) = <span class="self">self</span>.into_inner();
         <span class="kw">let </span>values = values.into_iter();
-        <span class="kw">let </span>validity = validity.map(|x| x.into_iter());
+        <span class="kw">let </span>validity =
+            validity.and_then(|validity| (validity.unset_bits() &gt; <span class="number">0</span>).then(|| validity.into_iter()));
         ZipValidity::new(values, validity)
     }
 }

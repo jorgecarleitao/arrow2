@@ -383,9 +383,6 @@
 <span id="383">383</span>
 <span id="384">384</span>
 <span id="385">385</span>
-<span id="386">386</span>
-<span id="387">387</span>
-<span id="388">388</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::hint::unreachable_unchecked;
 
 <span class="kw">use crate</span>::{
@@ -579,10 +576,7 @@
     /// This function will allocate a new [`Scalar`] per item and is usually not performant.
     /// Consider calling `keys_iter` and `values`, downcasting `values`, and iterating over that.
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ZipValidity&lt;Box&lt;<span class="kw">dyn </span>Scalar&gt;, DictionaryValuesIter&lt;K&gt;, BitmapIter&gt; {
-        ZipValidity::new(
-            DictionaryValuesIter::new(<span class="self">self</span>),
-            <span class="self">self</span>.keys.validity().as_ref().map(|x| x.iter()),
-        )
+        ZipValidity::new_with_validity(DictionaryValuesIter::new(<span class="self">self</span>), <span class="self">self</span>.keys.validity())
     }
 
     <span class="doccomment">/// Returns an iterator of [`Box&lt;dyn Scalar&gt;`]

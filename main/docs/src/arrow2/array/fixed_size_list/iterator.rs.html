@@ -44,9 +44,6 @@
 <span id="44">44</span>
 <span id="45">45</span>
 <span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     array::{Array, ArrayAccessor, ArrayValuesIter},
     bitmap::utils::{BitmapIter, ZipValidity},
@@ -85,10 +82,7 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; FixedSizeListArray {
     <span class="doccomment">/// Returns an iterator of `Option&lt;Box&lt;dyn Array&gt;&gt;`
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>) -&gt; ZipIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-        ZipValidity::new(
-            FixedSizeListValuesIter::new(<span class="self">self</span>),
-            <span class="self">self</span>.validity.as_ref().map(|x| x.iter()),
-        )
+        ZipValidity::new_with_validity(FixedSizeListValuesIter::new(<span class="self">self</span>), <span class="self">self</span>.validity())
     }
 
     <span class="doccomment">/// Returns an iterator of `Box&lt;dyn Array&gt;`

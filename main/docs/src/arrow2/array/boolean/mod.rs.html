@@ -426,9 +426,6 @@
 <span id="426">426</span>
 <span id="427">427</span>
 <span id="428">428</span>
-<span id="429">429</span>
-<span id="430">430</span>
-<span id="431">431</span>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::{
         utils::{BitmapIter, ZipValidity},
@@ -519,10 +516,7 @@
     <span class="doccomment">/// Returns an iterator over the optional values of this [`BooleanArray`].
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ZipValidity&lt;bool, BitmapIter, BitmapIter&gt; {
-        ZipValidity::new(
-            <span class="self">self</span>.values().iter(),
-            <span class="self">self</span>.validity.as_ref().map(|x| x.iter()),
-        )
+        ZipValidity::new_with_validity(<span class="self">self</span>.values().iter(), <span class="self">self</span>.validity())
     }
 
     <span class="doccomment">/// Returns an iterator over the values of this [`BooleanArray`].

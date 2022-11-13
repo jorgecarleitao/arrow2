@@ -659,7 +659,7 @@
         .offsets()
         .windows(<span class="number">2</span>)
         .map(|w| (w[<span class="number">1</span>] - w[<span class="number">0</span>]).to_usize() <span class="kw">as </span>i64);
-    <span class="kw">let </span>lengths = ZipValidity::new(lengths, array.validity().as_ref().map(|x| x.iter()));
+    <span class="kw">let </span>lengths = ZipValidity::new_with_validity(lengths, array.validity());
 
     Box::new(BufStreamingIterator::new(
         lengths,
@@ -713,7 +713,7 @@
         .map(|(x, schema)| new_serializer(x.as_ref(), schema))
         .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-    <span class="kw">let </span>iterator = ZipValidity::new(<span class="number">0</span>..array.len(), array.validity().as_ref().map(|x| x.iter()));
+    <span class="kw">let </span>iterator = ZipValidity::new_with_validity(<span class="number">0</span>..array.len(), array.validity());
 
     Box::new(BufStreamingIterator::new(
         iterator,

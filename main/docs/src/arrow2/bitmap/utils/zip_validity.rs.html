@@ -197,7 +197,26 @@
 <span id="197">197</span>
 <span id="198">198</span>
 <span id="199">199</span>
-</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::trusted_len::TrustedLen;
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::bitmap::utils::BitmapIter;
+<span class="kw">use </span><span class="kw">crate</span>::bitmap::Bitmap;
+<span class="kw">use </span><span class="kw">crate</span>::trusted_len::TrustedLen;
 
 <span class="doccomment">/// An [`Iterator`] over validity and values.
 </span><span class="attr">#[derive(Debug, Clone)]
@@ -310,7 +329,22 @@
     </span><span class="kw">pub fn </span>new(values: I, validity: <span class="prelude-ty">Option</span>&lt;V&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>validity {
             <span class="prelude-val">Some</span>(validity) =&gt; <span class="self">Self</span>::Optional(ZipValidityIter::new(values, validity)),
-            <span class="prelude-val">None </span>=&gt; <span class="self">Self</span>::Required(values),
+            <span class="kw">_ </span>=&gt; <span class="self">Self</span>::Required(values),
+        }
+    }
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, I&gt; ZipValidity&lt;T, I, BitmapIter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;
+<span class="kw">where
+    </span>I: Iterator&lt;Item = T&gt;,
+{
+    <span class="doccomment">/// Returns a new [`ZipValidity`] and drops the `validity` if all values
+    /// are valid.
+    </span><span class="kw">pub fn </span>new_with_validity(values: I, validity: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt;) -&gt; <span class="self">Self </span>{
+        <span class="comment">// only if the validity has nulls we take the optional branch.
+        </span><span class="kw">match </span>validity.and_then(|validity| (validity.unset_bits() &gt; <span class="number">0</span>).then(|| validity.iter())) {
+            <span class="prelude-val">Some</span>(validity) =&gt; <span class="self">Self</span>::Optional(ZipValidityIter::new(values, validity)),
+            <span class="kw">_ </span>=&gt; <span class="self">Self</span>::Required(values),
         }
     }
 }

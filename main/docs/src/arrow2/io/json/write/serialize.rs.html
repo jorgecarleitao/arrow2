@@ -306,9 +306,6 @@
 <span id="306">306</span>
 <span id="307">307</span>
 <span id="308">308</span>
-<span id="309">309</span>
-<span id="310">310</span>
-<span id="311">311</span>
 </pre><pre class="rust"><code><span class="kw">use </span>chrono::{NaiveDate, NaiveDateTime};
 <span class="kw">use </span>lexical_core::ToLexical;
 <span class="kw">use </span>std::io::Write;
@@ -414,7 +411,7 @@
     <span class="kw">let </span>names = array.fields().iter().map(|f| f.name.as_str());
 
     Box::new(BufStreamingIterator::new(
-        ZipValidity::new(<span class="number">0</span>..array.len(), array.validity().map(|x| x.iter())),
+        ZipValidity::new_with_validity(<span class="number">0</span>..array.len(), array.validity()),
         <span class="kw">move </span>|maybe, buf| {
             <span class="kw">if </span>maybe.is_some() {
                 <span class="kw">let </span>names = names.clone();
@@ -451,10 +448,7 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>serializer = new_serializer(array.values().as_ref());
 
     Box::new(BufStreamingIterator::new(
-        ZipValidity::new(
-            array.offsets().windows(<span class="number">2</span>),
-            array.validity().map(|x| x.iter()),
-        ),
+        ZipValidity::new_with_validity(array.offsets().windows(<span class="number">2</span>), array.validity()),
         <span class="kw">move </span>|offset, buf| {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(offset) = offset {
                 <span class="kw">let </span>length = (offset[<span class="number">1</span>] - offset[<span class="number">0</span>]).to_usize();
