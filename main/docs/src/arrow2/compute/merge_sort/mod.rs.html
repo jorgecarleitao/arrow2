@@ -539,6 +539,9 @@
 <span id="539">539</span>
 <span id="540">540</span>
 <span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Functions to perform merge-sorts.
 //!
 //! The goal of merge-sort is to merge two sorted arrays, `[a0, a1]`, `merge_sort(a0, a1)`,
@@ -1050,8 +1053,14 @@
             <span class="kw">let </span>descending = pairs[c].<span class="number">1</span>.descending;
             <span class="kw">let </span>null_first = pairs[c].<span class="number">1</span>.nulls_first;
             <span class="kw">let </span>(l_is_valid, r_is_valid, value_comparator) = <span class="kw-2">&amp;</span>data[c];
-            <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="kw">match </span>((l_is_valid)(left_row), (r_is_valid)(right_row)) {
-                (<span class="bool-val">true</span>, <span class="bool-val">true</span>) =&gt; (value_comparator)(left_row, right_row),
+            <span class="kw">let </span>result = <span class="kw">match </span>((l_is_valid)(left_row), (r_is_valid)(right_row)) {
+                (<span class="bool-val">true</span>, <span class="bool-val">true</span>) =&gt; {
+                    <span class="kw">let </span>result = (value_comparator)(left_row, right_row);
+                    <span class="kw">match </span>descending {
+                        <span class="bool-val">true </span>=&gt; result.reverse(),
+                        <span class="bool-val">false </span>=&gt; result,
+                    }
+                }
                 (<span class="bool-val">false</span>, <span class="bool-val">true</span>) =&gt; {
                     <span class="kw">if </span>null_first {
                         Ordering::Less
@@ -1067,9 +1076,6 @@
                     }
                 }
                 (<span class="bool-val">false</span>, <span class="bool-val">false</span>) =&gt; Ordering::Equal,
-            };
-            <span class="kw">if </span>descending {
-                result = result.reverse();
             };
             <span class="kw">if </span>result != Ordering::Equal {
                 <span class="comment">// we found a relevant comparison =&gt; short-circuit and return it
