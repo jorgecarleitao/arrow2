@@ -31,24 +31,26 @@ pub const EPOCH_DAYS_FROM_CE: i32 = 719_163;
 /// converts a `i32` representing a `date32` to [`NaiveDateTime`]
 #[inline]
 pub fn date32_to_datetime(v: i32) -> NaiveDateTime {
-    NaiveDateTime::from_timestamp(v as i64 * SECONDS_IN_DAY, 0)
+    NaiveDateTime::from_timestamp_opt(v as i64 * SECONDS_IN_DAY, 0)
+        .expect("invalid or out-of-range datetime")
 }
 
 /// converts a `i32` representing a `date32` to [`NaiveDate`]
 #[inline]
 pub fn date32_to_date(days: i32) -> NaiveDate {
-    NaiveDate::from_num_days_from_ce(EPOCH_DAYS_FROM_CE + days)
+    NaiveDate::from_num_days_from_ce_opt(EPOCH_DAYS_FROM_CE + days).expect("out-of-range date")
 }
 
 /// converts a `i64` representing a `date64` to [`NaiveDateTime`]
 #[inline]
 pub fn date64_to_datetime(v: i64) -> NaiveDateTime {
-    NaiveDateTime::from_timestamp(
+    NaiveDateTime::from_timestamp_opt(
         // extract seconds from milliseconds
         v / MILLISECONDS,
         // discard extracted seconds and convert milliseconds to nanoseconds
         (v % MILLISECONDS * MICROSECONDS) as u32,
     )
+    .expect("invalid or out-of-range datetime")
 }
 
 /// converts a `i64` representing a `date64` to [`NaiveDate`]
@@ -60,7 +62,7 @@ pub fn date64_to_date(milliseconds: i64) -> NaiveDate {
 /// converts a `i32` representing a `time32(s)` to [`NaiveDateTime`]
 #[inline]
 pub fn time32s_to_time(v: i32) -> NaiveTime {
-    NaiveTime::from_num_seconds_from_midnight(v as u32, 0)
+    NaiveTime::from_num_seconds_from_midnight_opt(v as u32, 0).expect("invalid time")
 }
 
 /// converts a `i32` representing a `time32(ms)` to [`NaiveTime`]
@@ -71,69 +73,75 @@ pub fn time32ms_to_time(v: i32) -> NaiveTime {
 
     let milli_to_nano = 1_000_000;
     let nano = (v - seconds * MILLISECONDS) * milli_to_nano;
-    NaiveTime::from_num_seconds_from_midnight(seconds as u32, nano as u32)
+    NaiveTime::from_num_seconds_from_midnight_opt(seconds as u32, nano as u32)
+        .expect("invalid time")
 }
 
 /// converts a `i64` representing a `time64(us)` to [`NaiveDateTime`]
 #[inline]
 pub fn time64us_to_time(v: i64) -> NaiveTime {
-    NaiveTime::from_num_seconds_from_midnight(
+    NaiveTime::from_num_seconds_from_midnight_opt(
         // extract seconds from microseconds
         (v / MICROSECONDS) as u32,
         // discard extracted seconds and convert microseconds to
         // nanoseconds
         (v % MICROSECONDS * MILLISECONDS) as u32,
     )
+    .expect("invalid time")
 }
 
 /// converts a `i64` representing a `time64(ns)` to [`NaiveDateTime`]
 #[inline]
 pub fn time64ns_to_time(v: i64) -> NaiveTime {
-    NaiveTime::from_num_seconds_from_midnight(
+    NaiveTime::from_num_seconds_from_midnight_opt(
         // extract seconds from nanoseconds
         (v / NANOSECONDS) as u32,
         // discard extracted seconds
         (v % NANOSECONDS) as u32,
     )
+    .expect("invalid time")
 }
 
 /// converts a `i64` representing a `timestamp(s)` to [`NaiveDateTime`]
 #[inline]
 pub fn timestamp_s_to_datetime(seconds: i64) -> NaiveDateTime {
-    NaiveDateTime::from_timestamp(seconds, 0)
+    NaiveDateTime::from_timestamp_opt(seconds, 0).expect("invalid or out-of-range datetime")
 }
 
 /// converts a `i64` representing a `timestamp(ms)` to [`NaiveDateTime`]
 #[inline]
 pub fn timestamp_ms_to_datetime(v: i64) -> NaiveDateTime {
-    NaiveDateTime::from_timestamp(
+    NaiveDateTime::from_timestamp_opt(
         // extract seconds from milliseconds
         v / MILLISECONDS,
         // discard extracted seconds and convert milliseconds to nanoseconds
         (v % MILLISECONDS * MICROSECONDS) as u32,
     )
+    .expect("invalid or out-of-range datetime")
 }
 
 /// converts a `i64` representing a `timestamp(us)` to [`NaiveDateTime`]
 #[inline]
 pub fn timestamp_us_to_datetime(v: i64) -> NaiveDateTime {
-    NaiveDateTime::from_timestamp(
+    NaiveDateTime::from_timestamp_opt(
         // extract seconds from microseconds
         v / MICROSECONDS,
         // discard extracted seconds and convert microseconds to nanoseconds
         (v % MICROSECONDS * MILLISECONDS) as u32,
     )
+    .expect("invalid or out-of-range datetime")
 }
 
 /// converts a `i64` representing a `timestamp(ns)` to [`NaiveDateTime`]
 #[inline]
 pub fn timestamp_ns_to_datetime(v: i64) -> NaiveDateTime {
-    NaiveDateTime::from_timestamp(
+    NaiveDateTime::from_timestamp_opt(
         // extract seconds from nanoseconds
         v / NANOSECONDS,
         // discard extracted seconds
         (v % NANOSECONDS) as u32,
     )
+    .expect("invalid or out-of-range datetime")
 }
 
 /// Converts a timestamp in `time_unit` and `timezone` into [`chrono::DateTime`].
@@ -186,7 +194,7 @@ pub fn timeunit_scale(a: TimeUnit, b: TimeUnit) -> f64 {
 /// If the offset is not in any of the allowed forms.
 pub fn parse_offset(offset: &str) -> Result<FixedOffset> {
     if offset == "UTC" {
-        return Ok(FixedOffset::east(0));
+        return Ok(FixedOffset::east_opt(0).expect("FixedOffset::east out of bounds"));
     }
     let error = "timezone offset must be of the form [-]00:00";
 
@@ -206,7 +214,8 @@ pub fn parse_offset(offset: &str) -> Result<FixedOffset> {
         .parse()
         .map_err(|_| Error::InvalidArgumentError(error.to_string()))?;
 
-    Ok(FixedOffset::east(hours * 60 * 60 + minutes * 60))
+    Ok(FixedOffset::east_opt(hours * 60 * 60 + minutes * 60)
+        .expect("FixedOffset::east out of bounds"))
 }
 
 /// Parses `value` to `Option<i64>` consistent with the Arrow's definition of timestamp with timezone.
@@ -330,12 +339,15 @@ pub fn utf8_to_naive_timestamp_ns<O: Offset>(
 fn add_month(year: i32, month: u32, months: i32) -> chrono::NaiveDate {
     let new_year = (year * 12 + (month - 1) as i32 + months) / 12;
     let new_month = (year * 12 + (month - 1) as i32 + months) % 12 + 1;
-    chrono::NaiveDate::from_ymd(new_year, new_month as u32, 1)
+    chrono::NaiveDate::from_ymd_opt(new_year, new_month as u32, 1)
+        .expect("invalid or out-of-range date")
 }
 
 fn get_days_between_months(year: i32, month: u32, months: i32) -> i64 {
     add_month(year, month, months)
-        .signed_duration_since(chrono::NaiveDate::from_ymd(year, month, 1))
+        .signed_duration_since(
+            chrono::NaiveDate::from_ymd_opt(year, month, 1).expect("invalid or out-of-range date"),
+        )
         .num_days()
 }
 
