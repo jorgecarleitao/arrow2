@@ -367,6 +367,8 @@
 <a href="#367" id="367">367</a>
 <a href="#368" id="368">368</a>
 <a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use crate</span>::{
@@ -550,6 +552,7 @@
     /// - the new offsets are not in monotonic increasing order.
     /// - any new offset is not in bounds of the backing array.
     /// - the passed iterator has no upper bound.
+    </span><span class="attr">#[allow(dead_code)]
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>extend_offsets&lt;II&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, expansion: II)
     <span class="kw">where
         </span>II: TrustedLen&lt;Item = <span class="prelude-ty">Option</span>&lt;O&gt;&gt;,
@@ -583,6 +586,7 @@
     /// zero if the array is currently empty.
     ///
     /// Panics if the passed iterator has no upper bound.
+    </span><span class="attr">#[allow(dead_code)]
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>unsafe_extend_offsets&lt;II&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, expansion: II)
     <span class="kw">where
         </span>II: TrustedLen&lt;Item = <span class="prelude-ty">Option</span>&lt;O&gt;&gt;,

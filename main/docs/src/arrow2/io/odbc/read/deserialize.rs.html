@@ -444,7 +444,7 @@
 }
 
 <span class="kw">fn </span>days_since_epoch(date: <span class="kw-2">&amp;</span>odbc_api::sys::Date) -&gt; i32 {
-    <span class="kw">let </span>unix_epoch = NaiveDate::from_ymd(<span class="number">1970</span>, <span class="number">1</span>, <span class="number">1</span>);
+    <span class="kw">let </span>unix_epoch = NaiveDate::from_ymd_opt(<span class="number">1970</span>, <span class="number">1</span>, <span class="number">1</span>).expect(<span class="string">&quot;invalid or out-of-range date&quot;</span>);
     <span class="kw">let </span>date = NaiveDate::from_ymd_opt(date.year <span class="kw">as </span>i32, date.month <span class="kw">as </span>u32, date.day <span class="kw">as </span>u32)
         .unwrap_or(unix_epoch);
     <span class="kw">let </span>duration = date.signed_duration_since(unix_epoch);
