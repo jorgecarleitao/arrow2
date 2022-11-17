@@ -30,7 +30,7 @@ pub fn not_implemented(page: &DataPage) -> Error {
 
 /// A private trait representing structs that can receive elements.
 pub(super) trait Pushable<T>: Sized {
-    //fn reserve(&mut self, additional: usize);
+    fn reserve(&mut self, additional: usize);
     fn push(&mut self, value: T);
     fn len(&self) -> usize;
     fn push_null(&mut self);
@@ -38,6 +38,9 @@ pub(super) trait Pushable<T>: Sized {
 }
 
 impl Pushable<bool> for MutableBitmap {
+    fn reserve(&mut self, additional: usize) {
+        MutableBitmap::reserve(self, additional)
+    }
     #[inline]
     fn len(&self) -> usize {
         self.len()
@@ -60,6 +63,9 @@ impl Pushable<bool> for MutableBitmap {
 }
 
 impl<A: Copy + Default> Pushable<A> for Vec<A> {
+    fn reserve(&mut self, additional: usize) {
+        Vec::reserve(self, additional)
+    }
     #[inline]
     fn len(&self) -> usize {
         self.len()
@@ -304,6 +310,7 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
                 // consume `length` items
                 let iter = BitmapIter::new(values, offset, length);
                 let iter = Zip::new(iter, &mut values_iter);
+                pushable.reserve(length);
 
                 for item in iter {
                     if let Some(item) = item {
@@ -319,6 +326,7 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
             FilteredHybridEncoded::Repeated { is_set, length } => {
                 validity.extend_constant(length, is_set);
                 if is_set {
+                    pushable.reserve(length);
                     (0..length).for_each(|_| pushable.push(values_iter.next().unwrap()));
                 } else {
                     pushable.extend_constant(length, T::default());
