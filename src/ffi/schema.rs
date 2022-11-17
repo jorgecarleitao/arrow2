@@ -37,6 +37,35 @@ unsafe extern "C" fn c_release_schema(schema: *mut ArrowSchema) {
     schema.release = None;
 }
 
+/// allocate (and hold) the children
+fn schema_children(data_type: &DataType, flags: &mut i64) -> Vec<Box<ArrowSchema>> {
+    match data_type {
+        DataType::List(field) => {
+            vec![Box::new(ArrowSchema::new(field.as_ref()))]
+        }
+        DataType::FixedSizeList(field, _) => {
+            vec![Box::new(ArrowSchema::new(field.as_ref()))]
+        }
+        DataType::LargeList(field) => {
+            vec![Box::new(ArrowSchema::new(field.as_ref()))]
+        }
+        DataType::Map(field, is_sorted) => {
+            *flags += (*is_sorted as i64) * 4;
+            vec![Box::new(ArrowSchema::new(field.as_ref()))]
+        }
+        DataType::Struct(fields) => fields
+            .iter()
+            .map(|field| Box::new(ArrowSchema::new(field)))
+            .collect::<Vec<_>>(),
+        DataType::Union(fields, _, _) => fields
+            .iter()
+            .map(|field| Box::new(ArrowSchema::new(field)))
+            .collect::<Vec<_>>(),
+        DataType::Extension(_, inner, _) => schema_children(inner, flags),
+        _ => vec![],
+    }
+}
+
 impl ArrowSchema {
     /// creates a new [ArrowSchema]
     pub(crate) fn new(field: &Field) -> Self {
@@ -45,31 +74,8 @@ impl ArrowSchema {
 
         let mut flags = field.is_nullable as i64 * 2;
 
-        // allocate (and hold) the children
-        let children_vec = match field.data_type() {
-            DataType::List(field) => {
-                vec![Box::new(ArrowSchema::new(field.as_ref()))]
-            }
-            DataType::FixedSizeList(field, _) => {
-                vec![Box::new(ArrowSchema::new(field.as_ref()))]
-            }
-            DataType::LargeList(field) => {
-                vec![Box::new(ArrowSchema::new(field.as_ref()))]
-            }
-            DataType::Map(field, is_sorted) => {
-                flags += (*is_sorted as i64) * 4;
-                vec![Box::new(ArrowSchema::new(field.as_ref()))]
-            }
-            DataType::Struct(fields) => fields
-                .iter()
-                .map(|field| Box::new(ArrowSchema::new(field)))
-                .collect::<Vec<_>>(),
-            DataType::Union(fields, _, _) => fields
-                .iter()
-                .map(|field| Box::new(ArrowSchema::new(field)))
-                .collect::<Vec<_>>(),
-            _ => vec![],
-        };
+        let children_vec = schema_children(&field.data_type(), &mut flags);
+
         // note: this cannot be done along with the above because the above is fallible and this op leaks.
         let children_ptr = children_vec
             .into_iter()
@@ -480,6 +486,7 @@ pub(super) fn get_child(data_type: &DataType, index: usize) -> Result<DataType> 
         (0, DataType::Map(field, _)) => Ok(field.data_type().clone()),
         (index, DataType::Struct(fields)) => Ok(fields[index].data_type().clone()),
         (index, DataType::Union(fields, _, _)) => Ok(fields[index].data_type().clone()),
+        (index, DataType::Extension(_, subtype, _)) => get_child(subtype, index),
         (child, data_type) => Err(Error::OutOfSpec(format!(
             "Requested child {} to type {:?} that has no such child",
             child, data_type
