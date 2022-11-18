@@ -38,31 +38,21 @@ unsafe extern "C" fn c_release_schema(schema: *mut ArrowSchema) {
 }
 
 /// allocate (and hold) the children
-fn schema_children(data_type: &DataType, flags: &mut i64) -> Vec<Box<ArrowSchema>> {
+fn schema_children(data_type: &DataType, flags: &mut i64) -> Box<[*mut ArrowSchema]> {
     match data_type {
-        DataType::List(field) => {
-            vec![Box::new(ArrowSchema::new(field.as_ref()))]
-        }
-        DataType::FixedSizeList(field, _) => {
-            vec![Box::new(ArrowSchema::new(field.as_ref()))]
-        }
-        DataType::LargeList(field) => {
-            vec![Box::new(ArrowSchema::new(field.as_ref()))]
+        DataType::List(field) | DataType::FixedSizeList(field, _) | DataType::LargeList(field) => {
+            Box::new([Box::into_raw(Box::new(ArrowSchema::new(field.as_ref())))])
         }
         DataType::Map(field, is_sorted) => {
             *flags += (*is_sorted as i64) * 4;
-            vec![Box::new(ArrowSchema::new(field.as_ref()))]
+            Box::new([Box::into_raw(Box::new(ArrowSchema::new(field.as_ref())))])
         }
-        DataType::Struct(fields) => fields
+        DataType::Struct(fields) | DataType::Union(fields, _, _) => fields
             .iter()
-            .map(|field| Box::new(ArrowSchema::new(field)))
-            .collect::<Vec<_>>(),
-        DataType::Union(fields, _, _) => fields
-            .iter()
-            .map(|field| Box::new(ArrowSchema::new(field)))
-            .collect::<Vec<_>>(),
+            .map(|field| Box::into_raw(Box::new(ArrowSchema::new(field))))
+            .collect::<Box<[_]>>(),
         DataType::Extension(_, inner, _) => schema_children(inner, flags),
-        _ => vec![],
+        _ => Box::new([]),
     }
 }
 
@@ -74,13 +64,8 @@ impl ArrowSchema {
 
         let mut flags = field.is_nullable as i64 * 2;
 
-        let children_vec = schema_children(&field.data_type(), &mut flags);
-
         // note: this cannot be done along with the above because the above is fallible and this op leaks.
-        let children_ptr = children_vec
-            .into_iter()
-            .map(Box::into_raw)
-            .collect::<Box<_>>();
+        let children_ptr = schema_children(field.data_type(), &mut flags);
         let n_children = children_ptr.len() as i64;
 
         let dictionary = if let DataType::Dictionary(_, values, is_ordered) = field.data_type() {
