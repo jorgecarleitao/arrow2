@@ -30,6 +30,7 @@ impl FixedSizeBinary {
 }
 
 impl<'a> Pushable<&'a [u8]> for FixedSizeBinary {
+    #[inline]
     fn reserve(&mut self, additional: usize) {
         self.values.reserve(additional * self.size);
     }
