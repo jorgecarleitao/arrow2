@@ -36,6 +36,7 @@ fn round_trip(
         write_statistics: true,
         compression,
         version,
+        data_pagesize_limit: None,
     };
 
     let iter = vec![Chunk::try_new(vec![array.clone()])];

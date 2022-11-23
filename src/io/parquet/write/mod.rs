@@ -171,7 +171,7 @@ pub fn array_to_pages(
                 let page_size = options.data_pagesize_limit.unwrap_or(DEFAULT_PAGE_SIZE);
 
                 let bytes_per_row = estimated_bytes_size(array.slice(0, 1).as_ref()).max(1);
-                let row_per_page = PAGE_SIZE / bytes_per_row + 1;
+                let row_per_page = page_size / bytes_per_row + 1;
 
                 if array.len() <= row_per_page {
                     array_to_page(array, type_, nested, options, encoding)
