@@ -346,3 +346,21 @@ fn extension() -> Result<()> {
     );
     test_round_trip_schema(field)
 }
+
+#[test]
+fn extension_children() -> Result<()> {
+    let field = Field::new(
+        "a",
+        DataType::Extension(
+            "b".to_string(),
+            Box::new(DataType::Struct(vec![Field::new(
+                "c",
+                DataType::Int32,
+                true,
+            )])),
+            None,
+        ),
+        true,
+    );
+    test_round_trip_schema(field)
+}
