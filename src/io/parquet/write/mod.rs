@@ -131,6 +131,7 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
 }
 
 /// Returns an iterator of [`EncodedPage`].
+#[allow(clippy::needless_collect)]
 pub fn array_to_pages(
     array: &dyn Array,
     type_: ParquetPrimitiveType,
@@ -144,7 +145,7 @@ pub fn array_to_pages(
     // still have to figure out how to deal with values that are i32::MAX size, such as very large
     // strings or a list column with many elements
 
-    let array_byte_size = estimated_bytes_size(array.as_ref());
+    let array_byte_size = estimated_bytes_size(array);
     if array_byte_size >= (2u32.pow(31) - 2u32.pow(25)) as usize && array.len() > 3 {
         let split_at = array.len() / 2;
         let left = array.slice(0, split_at);
