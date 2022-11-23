@@ -30,7 +30,7 @@ pub fn not_implemented(page: &DataPage) -> Error {
 
 /// A private trait representing structs that can receive elements.
 pub(super) trait Pushable<T>: Sized {
-    //fn reserve(&mut self, additional: usize);
+    fn reserve(&mut self, additional: usize);
     fn push(&mut self, value: T);
     fn len(&self) -> usize;
     fn push_null(&mut self);
@@ -38,6 +38,10 @@ pub(super) trait Pushable<T>: Sized {
 }
 
 impl Pushable<bool> for MutableBitmap {
+    #[inline]
+    fn reserve(&mut self, additional: usize) {
+        MutableBitmap::reserve(self, additional)
+    }
     #[inline]
     fn len(&self) -> usize {
         self.len()
@@ -60,6 +64,10 @@ impl Pushable<bool> for MutableBitmap {
 }
 
 impl<A: Copy + Default> Pushable<A> for Vec<A> {
+    #[inline]
+    fn reserve(&mut self, additional: usize) {
+        Vec::reserve(self, additional)
+    }
     #[inline]
     fn len(&self) -> usize {
         self.len()
@@ -290,11 +298,33 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
 ) {
     let limit = limit.unwrap_or(usize::MAX);
 
+    let mut runs = vec![];
     let mut remaining = limit;
+    let mut reserve_pushable = 0;
+
+    // first do a scan so that we know how much to reserve up front
     while remaining > 0 {
         let run = page_validity.next_limited(remaining);
         let run = if let Some(run) = run { run } else { break };
 
+        match run {
+            FilteredHybridEncoded::Bitmap { length, .. } => {
+                reserve_pushable += length;
+                remaining -= length;
+            }
+            FilteredHybridEncoded::Repeated { length, .. } => {
+                reserve_pushable += length;
+                remaining -= length;
+            }
+            _ => {}
+        };
+        runs.push(run)
+    }
+    pushable.reserve(reserve_pushable);
+    validity.reserve(reserve_pushable);
+
+    // then a second loop to really fill the buffers
+    for run in runs {
         match run {
             FilteredHybridEncoded::Bitmap {
                 values,
@@ -313,18 +343,16 @@ pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<It
                     }
                 }
                 validity.extend_from_slice(values, offset, length);
-
-                remaining -= length;
             }
             FilteredHybridEncoded::Repeated { is_set, length } => {
                 validity.extend_constant(length, is_set);
                 if is_set {
-                    (0..length).for_each(|_| pushable.push(values_iter.next().unwrap()));
+                    for v in (&mut values_iter).take(length) {
+                        pushable.push(v)
+                    }
                 } else {
                     pushable.extend_constant(length, T::default());
                 }
-
-                remaining -= length;
             }
             FilteredHybridEncoded::Skipped(valids) => for _ in values_iter.by_ref().take(valids) {},
         };

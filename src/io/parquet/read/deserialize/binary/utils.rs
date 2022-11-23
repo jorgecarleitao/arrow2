@@ -25,6 +25,9 @@ impl<O: Offset> Offsets<O> {
 }
 
 impl<O: Offset> Pushable<O> for Offsets<O> {
+    fn reserve(&mut self, additional: usize) {
+        self.0.reserve(additional)
+    }
     #[inline]
     fn len(&self) -> usize {
         self.0.len() - 1
@@ -88,6 +91,12 @@ impl<O: Offset> Binary<O> {
 }
 
 impl<'a, O: Offset> Pushable<&'a [u8]> for Binary<O> {
+    #[inline]
+    fn reserve(&mut self, additional: usize) {
+        let avg_len = self.values.len() / std::cmp::max(self.last_offset.to_usize(), 1);
+        self.values.reserve(additional * avg_len);
+        self.offsets.reserve(additional);
+    }
     #[inline]
     fn len(&self) -> usize {
         self.len()
