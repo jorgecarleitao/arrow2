@@ -16,6 +16,7 @@ fn write_chunk(path: &str, schema: Schema, chunk: Chunk<Box<dyn Array>>) -> Resu
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
         version: Version::V2,
+        data_pagesize_limit: None,
     };
 
     let iter = vec![Ok(chunk)];

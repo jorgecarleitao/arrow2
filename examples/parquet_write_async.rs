@@ -17,6 +17,7 @@ async fn write_batch(path: &str, schema: Schema, columns: Chunk<Box<dyn Array>>)
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
         version: Version::V2,
+        data_pagesize_limit: None,
     };
 
     let mut stream = futures::stream::iter(vec![Ok(columns)].into_iter());
