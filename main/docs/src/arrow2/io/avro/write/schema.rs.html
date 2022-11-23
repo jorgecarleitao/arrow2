@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/avro/write/schema.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-3d4cb87af9468701.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../../static.files/light-1469fca9efc07bcb.css"><link rel="stylesheet" disabled href="../../../../../static.files/dark-e9b7e5d8ba0dc980.css"><link rel="stylesheet" disabled href="../../../../../static.files/ayu-0c1cf144240c9f40.css"><script id="default-settings" ></script><script src="../../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../static.files/main-799a64abec831f72.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/avro/write/schema.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-36393ba397788895.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../../../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../../../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -81,6 +81,19 @@
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
 </pre><pre class="rust"><code><span class="kw">use </span>avro_schema::schema::{
     BytesLogical, Field <span class="kw">as </span>AvroField, Fixed, FixedLogical, IntLogical, LongLogical, Record,
     Schema <span class="kw">as </span>AvroSchema,
@@ -91,10 +104,11 @@
 
 <span class="doccomment">/// Converts a [`Schema`] to an Avro [`Record`].
 </span><span class="kw">pub fn </span>to_record(schema: <span class="kw-2">&amp;</span>Schema) -&gt; <span class="prelude-ty">Result</span>&lt;Record&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>name_counter: i32 = <span class="number">0</span>;
     <span class="kw">let </span>fields = schema
         .fields
         .iter()
-        .map(field_to_field)
+        .map(|f| field_to_field(f, <span class="kw-2">&amp;mut </span>name_counter))
         .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(Record {
         name: <span class="string">&quot;&quot;</span>.to_string(),
@@ -105,20 +119,32 @@
     })
 }
 
-<span class="kw">fn </span>field_to_field(field: <span class="kw-2">&amp;</span>Field) -&gt; <span class="prelude-ty">Result</span>&lt;AvroField&gt; {
-    <span class="kw">let </span>schema = type_to_schema(field.data_type(), field.is_nullable)<span class="question-mark">?</span>;
+<span class="kw">fn </span>field_to_field(field: <span class="kw-2">&amp;</span>Field, name_counter: <span class="kw-2">&amp;mut </span>i32) -&gt; <span class="prelude-ty">Result</span>&lt;AvroField&gt; {
+    <span class="kw">let </span>schema = type_to_schema(field.data_type(), field.is_nullable, name_counter)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(AvroField::new(<span class="kw-2">&amp;</span>field.name, schema))
 }
 
-<span class="kw">fn </span>type_to_schema(data_type: <span class="kw-2">&amp;</span>DataType, is_nullable: bool) -&gt; <span class="prelude-ty">Result</span>&lt;AvroSchema&gt; {
+<span class="kw">fn </span>type_to_schema(
+    data_type: <span class="kw-2">&amp;</span>DataType,
+    is_nullable: bool,
+    name_counter: <span class="kw-2">&amp;mut </span>i32,
+) -&gt; <span class="prelude-ty">Result</span>&lt;AvroSchema&gt; {
     <span class="prelude-val">Ok</span>(<span class="kw">if </span>is_nullable {
-        AvroSchema::Union(<span class="macro">vec!</span>[AvroSchema::Null, _type_to_schema(data_type)<span class="question-mark">?</span>])
+        AvroSchema::Union(<span class="macro">vec!</span>[
+            AvroSchema::Null,
+            _type_to_schema(data_type, name_counter)<span class="question-mark">?</span>,
+        ])
     } <span class="kw">else </span>{
-        _type_to_schema(data_type)<span class="question-mark">?
+        _type_to_schema(data_type, name_counter)<span class="question-mark">?
     </span>})
 }
 
-<span class="kw">fn </span>_type_to_schema(data_type: <span class="kw-2">&amp;</span>DataType) -&gt; <span class="prelude-ty">Result</span>&lt;AvroSchema&gt; {
+<span class="kw">fn </span>_get_field_name(name_counter: <span class="kw-2">&amp;mut </span>i32) -&gt; String {
+    <span class="kw-2">*</span>name_counter += <span class="number">1</span>;
+    <span class="macro">format!</span>(<span class="string">&quot;r{}&quot;</span>, name_counter)
+}
+
+<span class="kw">fn </span>_type_to_schema(data_type: <span class="kw-2">&amp;</span>DataType, name_counter: <span class="kw-2">&amp;mut </span>i32) -&gt; <span class="prelude-ty">Result</span>&lt;AvroSchema&gt; {
     <span class="prelude-val">Ok</span>(<span class="kw">match </span>data_type.to_logical_type() {
         DataType::Null =&gt; AvroSchema::Null,
         DataType::Boolean =&gt; AvroSchema::Boolean,
@@ -131,13 +157,13 @@
         DataType::Utf8 =&gt; AvroSchema::String(<span class="prelude-val">None</span>),
         DataType::LargeUtf8 =&gt; AvroSchema::String(<span class="prelude-val">None</span>),
         DataType::LargeList(inner) | DataType::List(inner) =&gt; AvroSchema::Array(Box::new(
-            type_to_schema(<span class="kw-2">&amp;</span>inner.data_type, inner.is_nullable)<span class="question-mark">?</span>,
+            type_to_schema(<span class="kw-2">&amp;</span>inner.data_type, inner.is_nullable, name_counter)<span class="question-mark">?</span>,
         )),
         DataType::Struct(fields) =&gt; AvroSchema::Record(Record::new(
-            <span class="string">&quot;&quot;</span>,
+            _get_field_name(name_counter),
             fields
                 .iter()
-                .map(field_to_field)
+                .map(|f| field_to_field(f, name_counter))
                 .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;&gt;()<span class="question-mark">?</span>,
         )),
         DataType::Date32 =&gt; AvroSchema::Int(<span class="prelude-val">Some</span>(IntLogical::Date)),
@@ -165,4 +191,4 @@
     })
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (96ddd32c4 2022-11-14)" data-search-js="search-39ee4160c7dc16c9.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (ff8c8dfbe 2022-11-22)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
