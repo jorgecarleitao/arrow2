@@ -172,8 +172,8 @@ pub fn array_to_pages(
                 const DEFAULT_PAGE_SIZE: usize = 1024 * 1024;
                 let page_size = options.data_pagesize_limit.unwrap_or(DEFAULT_PAGE_SIZE);
                 let bytes_per_row =
-                    ((array_byte_size as f64) / (array.len() as f64)) as usize;
-                let rows_per_page = page_size / (bytes_per_row + 1);
+                    ((array_byte_size as f64) / ((array.len() + 1) as f64)) as usize;
+                let rows_per_page = (page_size / (bytes_per_row + 1)).max(1);
 
                 let vs: Vec<Result<EncodedPage>> = (0..array.len())
                     .step_by(rows_per_page)
