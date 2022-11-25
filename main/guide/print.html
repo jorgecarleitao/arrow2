@@ -1423,6 +1423,7 @@ fn write_chunk(path: &amp;str, schema: Schema, chunk: Chunk&lt;Box&lt;dyn Array&
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
         version: Version::V2,
+        data_pagesize_limit: None,
     };
 
     let iter = vec![Ok(chunk)];
@@ -1521,6 +1522,7 @@ fn parallel_write(path: &amp;str, schema: Schema, chunks: &amp;[Chunk]) -&gt; Re
         write_statistics: true,
         compression: CompressionOptions::Snappy,
         version: Version::V2,
+        data_pagesize_limit: None,
     };
 
     let encoding_map = |data_type: &amp;DataType| {
