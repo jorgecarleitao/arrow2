@@ -42,6 +42,7 @@ fn main() -> Result<()> {
         write_statistics: true,
         compression: CompressionOptions::Snappy,
         version: Version::V1,
+        data_pagesize_limit: None,
     };
 
     let row_groups = RowGroupIterator::try_new(

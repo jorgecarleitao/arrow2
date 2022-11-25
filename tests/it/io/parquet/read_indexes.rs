@@ -30,6 +30,7 @@ fn pages(
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
         version: Version::V1,
+        data_pagesize_limit: None,
     };
 
     let pages1 = [array11, array12, array13]
@@ -79,6 +80,7 @@ fn read_with_indexes(
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
         version: Version::V1,
+        data_pagesize_limit: None,
     };
 
     let to_compressed = |pages: Vec<EncodedPage>| {

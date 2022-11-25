@@ -56,6 +56,8 @@ pub struct WriteOptions {
     pub version: Version,
     /// The compression to apply to every page
     pub compression: CompressionOptions,
+    /// The size to flush a page, defaults to 1024 * 1024 if None
+    pub data_pagesize_limit: Option<usize>,
 }
 
 use crate::compute::aggregate::estimated_bytes_size;
@@ -129,6 +131,7 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
 }
 
 /// Returns an iterator of [`EncodedPage`].
+#[allow(clippy::needless_collect)]
 pub fn array_to_pages(
     array: &dyn Array,
     type_: ParquetPrimitiveType,
@@ -141,7 +144,9 @@ pub fn array_to_pages(
     // we also check for an array.len > 3 to prevent infinite recursion
     // still have to figure out how to deal with values that are i32::MAX size, such as very large
     // strings or a list column with many elements
-    if (estimated_bytes_size(array)) >= (2u32.pow(31) - 2u32.pow(25)) as usize && array.len() > 3 {
+
+    let array_byte_size = estimated_bytes_size(array);
+    if array_byte_size >= (2u32.pow(31) - 2u32.pow(25)) as usize && array.len() > 3 {
         let split_at = array.len() / 2;
         let left = array.slice(0, split_at);
         let right = array.slice(split_at, array.len() - split_at);
@@ -163,8 +168,29 @@ pub fn array_to_pages(
                     )
                 })
             }
-            _ => array_to_page(array, type_, nested, options, encoding)
-                .map(|page| DynIter::new(std::iter::once(Ok(page)))),
+            _ => {
+                const DEFAULT_PAGE_SIZE: usize = 1024 * 1024;
+                let page_size = options.data_pagesize_limit.unwrap_or(DEFAULT_PAGE_SIZE);
+                let bytes_per_row =
+                    ((array_byte_size as f64) / ((array.len() + 1) as f64)) as usize;
+                let rows_per_page = (page_size / (bytes_per_row + 1)).max(1);
+
+                let vs: Vec<Result<EncodedPage>> = (0..array.len())
+                    .step_by(rows_per_page)
+                    .map(|offset| {
+                        let length = if offset + rows_per_page > array.len() {
+                            array.len() - offset
+                        } else {
+                            rows_per_page
+                        };
+
+                        let sub_array = array.slice(offset, length);
+                        array_to_page(sub_array.as_ref(), type_.clone(), nested, options, encoding)
+                    })
+                    .collect();
+
+                Ok(DynIter::new(vs.into_iter()))
+            }
         }
     }
 }

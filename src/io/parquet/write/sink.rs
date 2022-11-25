@@ -35,6 +35,7 @@ use super::{Encoding, SchemaDescriptor, WriteOptions};
 ///     write_statistics: true,
 ///     compression: CompressionOptions::Uncompressed,
 ///     version: Version::V2,
+///     data_pagesize_limit: None,
 /// };
 ///
 /// let mut buffer = vec![];

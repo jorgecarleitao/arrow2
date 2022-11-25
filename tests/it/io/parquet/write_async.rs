@@ -31,6 +31,7 @@ async fn test_parquet_async_roundtrip() {
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
         version: Version::V2,
+        data_pagesize_limit: None,
     };
 
     let mut buffer = Cursor::new(Vec::new());

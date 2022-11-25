@@ -172,6 +172,7 @@ fn main() -> Result<()> {
         write_statistics: true,
         compression: args.compression.into(),
         version: args.version.into(),
+        data_pagesize_limit: None,
     };
 
     let encodings = schema

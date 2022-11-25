@@ -1128,6 +1128,7 @@ fn integration_write(schema: &Schema, chunks: &[Chunk<Box<dyn Array>>]) -> Resul
         write_statistics: true,
         compression: CompressionOptions::Uncompressed,
         version: Version::V1,
+        data_pagesize_limit: None,
     };
 
     let encodings = schema

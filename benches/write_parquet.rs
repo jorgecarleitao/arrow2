@@ -17,6 +17,7 @@ fn write(array: &dyn Array, encoding: Encoding) -> Result<()> {
         write_statistics: false,
         compression: CompressionOptions::Uncompressed,
         version: Version::V1,
+        data_pagesize_limit: None,
     };
 
     let row_groups = RowGroupIterator::try_new(

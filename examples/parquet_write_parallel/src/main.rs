@@ -47,6 +47,7 @@ fn parallel_write(path: &str, schema: Schema, chunks: &[Chunk]) -> Result<()> {
         write_statistics: true,
         compression: CompressionOptions::Snappy,
         version: Version::V2,
+        data_pagesize_limit: None,
     };
 
     let encoding_map = |data_type: &DataType| {
