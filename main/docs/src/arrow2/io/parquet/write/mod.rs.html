@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/write/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-36393ba397788895.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../../../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../../../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/write/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-bf4c5e264196f176.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../../../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../../../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -553,6 +553,32 @@
 <a href="#553" id="553">553</a>
 <a href="#554" id="554">554</a>
 <a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
 </pre><pre class="rust"><code><span class="doccomment">//! APIs to write to Parquet format.
 //!
 //! # Arrow/Parquet Interoperability
@@ -611,6 +637,8 @@
     </span><span class="kw">pub </span>version: Version,
     <span class="doccomment">/// The compression to apply to every page
     </span><span class="kw">pub </span>compression: CompressionOptions,
+    <span class="doccomment">/// The size to flush a page, defaults to 1024 * 1024 if None
+    </span><span class="kw">pub </span>data_pagesize_limit: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 
 <span class="kw">use </span><span class="kw">crate</span>::compute::aggregate::estimated_bytes_size;
@@ -684,6 +712,7 @@
 }
 
 <span class="doccomment">/// Returns an iterator of [`EncodedPage`].
+</span><span class="attr">#[allow(clippy::needless_collect)]
 </span><span class="kw">pub fn </span>array_to_pages(
     array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array,
     type_: ParquetPrimitiveType,
@@ -696,7 +725,9 @@
     // we also check for an array.len &gt; 3 to prevent infinite recursion
     // still have to figure out how to deal with values that are i32::MAX size, such as very large
     // strings or a list column with many elements
-    </span><span class="kw">if </span>(estimated_bytes_size(array)) &gt;= (<span class="number">2u32</span>.pow(<span class="number">31</span>) - <span class="number">2u32</span>.pow(<span class="number">25</span>)) <span class="kw">as </span>usize &amp;&amp; array.len() &gt; <span class="number">3 </span>{
+
+    </span><span class="kw">let </span>array_byte_size = estimated_bytes_size(array);
+    <span class="kw">if </span>array_byte_size &gt;= (<span class="number">2u32</span>.pow(<span class="number">31</span>) - <span class="number">2u32</span>.pow(<span class="number">25</span>)) <span class="kw">as </span>usize &amp;&amp; array.len() &gt; <span class="number">3 </span>{
         <span class="kw">let </span>split_at = array.len() / <span class="number">2</span>;
         <span class="kw">let </span>left = array.slice(<span class="number">0</span>, split_at);
         <span class="kw">let </span>right = array.slice(split_at, array.len() - split_at);
@@ -718,8 +749,29 @@
                     )
                 })
             }
-            <span class="kw">_ </span>=&gt; array_to_page(array, type_, nested, options, encoding)
-                .map(|page| DynIter::new(std::iter::once(<span class="prelude-val">Ok</span>(page)))),
+            <span class="kw">_ </span>=&gt; {
+                <span class="kw">const </span>DEFAULT_PAGE_SIZE: usize = <span class="number">1024 </span>* <span class="number">1024</span>;
+                <span class="kw">let </span>page_size = options.data_pagesize_limit.unwrap_or(DEFAULT_PAGE_SIZE);
+                <span class="kw">let </span>bytes_per_row =
+                    ((array_byte_size <span class="kw">as </span>f64) / ((array.len() + <span class="number">1</span>) <span class="kw">as </span>f64)) <span class="kw">as </span>usize;
+                <span class="kw">let </span>rows_per_page = (page_size / (bytes_per_row + <span class="number">1</span>)).max(<span class="number">1</span>);
+
+                <span class="kw">let </span>vs: Vec&lt;<span class="prelude-ty">Result</span>&lt;EncodedPage&gt;&gt; = (<span class="number">0</span>..array.len())
+                    .step_by(rows_per_page)
+                    .map(|offset| {
+                        <span class="kw">let </span>length = <span class="kw">if </span>offset + rows_per_page &gt; array.len() {
+                            array.len() - offset
+                        } <span class="kw">else </span>{
+                            rows_per_page
+                        };
+
+                        <span class="kw">let </span>sub_array = array.slice(offset, length);
+                        array_to_page(sub_array.as_ref(), type_.clone(), nested, options, encoding)
+                    })
+                    .collect();
+
+                <span class="prelude-val">Ok</span>(DynIter::new(vs.into_iter()))
+            }
         }
     }
 }
@@ -1109,4 +1161,4 @@
     encodings
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (ff8c8dfbe 2022-11-22)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (b3bc6bf31 2022-11-24)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
