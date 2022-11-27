@@ -38,7 +38,7 @@ pub use parquet2::{
     encoding::Encoding,
     fallible_streaming_iterator,
     metadata::{Descriptor, FileMetaData, KeyValue, SchemaDescriptor, ThriftFileMetaData},
-    page::{CompressedDataPage, CompressedPage, EncodedPage},
+    page::{CompressedDataPage, CompressedPage, Page},
     schema::types::{FieldInfo, ParquetType, PhysicalType as ParquetPhysicalType},
     write::{
         compress, write_metadata_sidecar, Compressor, DynIter, DynStreamingIterator, RowGroupIter,
@@ -130,7 +130,7 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
     )
 }
 
-/// Returns an iterator of [`EncodedPage`].
+/// Returns an iterator of [`Page`].
 #[allow(clippy::needless_collect)]
 pub fn array_to_pages(
     array: &dyn Array,
@@ -138,7 +138,7 @@ pub fn array_to_pages(
     nested: &[Nested],
     options: WriteOptions,
     encoding: Encoding,
-) -> Result<DynIter<'static, Result<EncodedPage>>> {
+) -> Result<DynIter<'static, Result<Page>>> {
     // maximum page size is 2^31 e.g. i32::MAX
     // we split at 2^31 - 2^25 to err on the safe side
     // we also check for an array.len > 3 to prevent infinite recursion
@@ -175,7 +175,7 @@ pub fn array_to_pages(
                     ((array_byte_size as f64) / ((array.len() + 1) as f64)) as usize;
                 let rows_per_page = (page_size / (bytes_per_row + 1)).max(1);
 
-                let vs: Vec<Result<EncodedPage>> = (0..array.len())
+                let vs: Vec<Result<Page>> = (0..array.len())
                     .step_by(rows_per_page)
                     .map(|offset| {
                         let length = if offset + rows_per_page > array.len() {
@@ -202,7 +202,7 @@ pub fn array_to_page(
     nested: &[Nested],
     options: WriteOptions,
     encoding: Encoding,
-) -> Result<EncodedPage> {
+) -> Result<Page> {
     if nested.len() == 1 {
         // special case where validity == def levels
         return array_to_page_simple(array, type_, options, encoding);
@@ -216,7 +216,7 @@ pub fn array_to_page_simple(
     type_: ParquetPrimitiveType,
     options: WriteOptions,
     encoding: Encoding,
-) -> Result<EncodedPage> {
+) -> Result<Page> {
     let data_type = array.data_type();
     if !can_encode(data_type, encoding) {
         return Err(Error::InvalidArgumentError(format!(
@@ -439,7 +439,7 @@ pub fn array_to_page_simple(
             other
         ))),
     }
-    .map(EncodedPage::Data)
+    .map(Page::Data)
 }
 
 fn array_to_page_nested(
@@ -448,7 +448,7 @@ fn array_to_page_nested(
     nested: &[Nested],
     options: WriteOptions,
     _encoding: Encoding,
-) -> Result<EncodedPage> {
+) -> Result<Page> {
     use DataType::*;
     match array.data_type().to_logical_type() {
         Null => {
@@ -520,7 +520,7 @@ fn array_to_page_nested(
             other
         ))),
     }
-    .map(EncodedPage::Data)
+    .map(Page::Data)
 }
 
 fn transverse_recursive<T, F: Fn(&DataType) -> T + Clone>(
