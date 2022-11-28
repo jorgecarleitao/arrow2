@@ -409,7 +409,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
     remaining: &mut usize,
     decoder: &T,
 ) {
-    let capacity = chunk_size.unwrap_or(0);
+    let capacity = chunk_size.unwrap_or(1048576);
     let chunk_size = chunk_size.unwrap_or(usize::MAX);
 
     let mut decoded = if let Some(decoded) = items.pop_back() {
