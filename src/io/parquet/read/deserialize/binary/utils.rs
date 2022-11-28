@@ -63,6 +63,14 @@ impl<O: Offset> Binary<O> {
 
     #[inline]
     pub fn push(&mut self, v: &[u8]) {
+        if self.offsets.0.len() == 101 && self.offsets.0.capacity() > 101 {
+            let bytes_per_row = self.values.len() / 100 + 1;
+            let bytes_estimate = bytes_per_row * self.offsets.0.capacity();
+            if bytes_estimate > self.values.capacity() {
+                self.values.reserve(bytes_estimate - self.values.capacity());
+            }
+        }
+
         self.values.extend(v);
         self.last_offset += O::from_usize(v.len()).unwrap();
         self.offsets.push(self.last_offset)
