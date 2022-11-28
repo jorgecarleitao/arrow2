@@ -1,3 +1,4 @@
+use crate::array::offsets::ValidOffsets;
 use crate::error::{Error, Result};
 use crate::types::Offset;
 
@@ -30,7 +31,33 @@ pub fn check_offsets_minimal<O: Offset>(offsets: &[O], values_len: usize) -> usi
     len
 }
 
-/// # Panics iff:
+/// # Errors iff:
+/// * the `offsets` is not monotonically increasing, or
+/// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
+/// * any offset is larger or equal to `values_len`.
+pub fn try_check_utf8<O: Offset>(offsets: &ValidOffsets<O>, values: &[u8]) -> Result<()> {
+    if values.is_ascii() {
+        Ok(())
+    } else {
+        let offsets = offsets.as_ref();
+        simdutf8::basic::from_utf8(values)?;
+
+        for start in &offsets[..offsets.len() - 1] {
+            let first = values.get(start.to_usize());
+
+            if let Some(&b) = first {
+                // A valid code-point iff it does not start with 0b10xxxxxx
+                // Bit-magic taken from `std::str::is_char_boundary`
+                if (b as i8) < -0x40 {
+                    return Err(Error::oos("Non-valid char boundary detected"));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+/// # Errors iff:
 /// * the `offsets` is not monotonically increasing, or
 /// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
 /// * any offset is larger or equal to `values_len`.

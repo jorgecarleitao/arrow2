@@ -431,6 +431,7 @@ mod ffi;
 mod fmt;
 pub mod growable;
 mod iterator;
+pub mod offsets;
 pub mod ord;
 
 pub(crate) use iterator::ArrayAccessor;

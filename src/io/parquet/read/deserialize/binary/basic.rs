@@ -1,3 +1,4 @@
+use crate::array::offsets::ValidOffsets;
 use std::collections::VecDeque;
 use std::default::Default;
 
@@ -227,7 +228,7 @@ impl<'a> utils::PageState<'a> for State<'a> {
 pub trait TraitBinaryArray<O: Offset>: Array + 'static {
     fn try_new(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: ValidOffsets<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self>
@@ -238,22 +239,22 @@ pub trait TraitBinaryArray<O: Offset>: Array + 'static {
 impl<O: Offset> TraitBinaryArray<O> for BinaryArray<O> {
     fn try_new(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: ValidOffsets<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self> {
-        Self::try_new(data_type, offsets, values, validity)
+        Self::try_new_from_valid_offsets(data_type, offsets, values, validity)
     }
 }
 
 impl<O: Offset> TraitBinaryArray<O> for Utf8Array<O> {
     fn try_new(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: ValidOffsets<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self> {
-        Self::try_new(data_type, offsets, values, validity)
+        Self::try_new_from_valid_offsets(data_type, offsets, values, validity)
     }
 }
 
@@ -483,12 +484,9 @@ pub(super) fn finish<O: Offset, A: TraitBinaryArray<O>>(
     values: Binary<O>,
     validity: MutableBitmap,
 ) -> Result<A> {
-    A::try_new(
-        data_type.clone(),
-        values.offsets.0.into(),
-        values.values.into(),
-        validity.into(),
-    )
+    let (offsets, values) = values.into_inner();
+
+    A::try_new(data_type.clone(), offsets, values.into(), validity.into())
 }
 
 pub struct Iter<O: Offset, A: TraitBinaryArray<O>, I: Pages> {

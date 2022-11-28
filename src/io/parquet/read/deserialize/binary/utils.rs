@@ -1,3 +1,4 @@
+use crate::array::offsets::ValidOffsets;
 use crate::array::Offset;
 
 use super::super::utils::Pushable;
@@ -50,6 +51,13 @@ impl<O: Offset> Pushable<O> for Offsets<O> {
 }
 
 impl<O: Offset> Binary<O> {
+    pub fn into_inner(self) -> (ValidOffsets<O>, Vec<u8>) {
+        // Safety:
+        // the invariant that all offsets are monotonically increasing is upheld.
+        let offsets = unsafe { ValidOffsets::new_unchecked(self.offsets.0.into()) }.unwrap();
+        (offsets, self.values)
+    }
+
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
         let mut offsets = Vec::with_capacity(1 + capacity);

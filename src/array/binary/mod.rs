@@ -24,6 +24,8 @@ mod from;
 mod mutable_values;
 pub use mutable_values::*;
 mod mutable;
+use crate::array::offsets::ValidOffsets;
+use crate::array::specification::check_offsets_minimal;
 pub use mutable::*;
 
 /// A [`BinaryArray`] is Arrow's semantically equivalent of an immutable `Vec<Option<Vec<u8>>>`.
@@ -101,6 +103,45 @@ impl<O: Offset> BinaryArray<O> {
         Ok(Self {
             data_type,
             offsets,
+            values,
+            validity,
+        })
+    }
+
+    /// Returns a [`BinaryArray`] created from its internal representation.
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity is `O(N)`
+    pub fn try_new_from_valid_offsets(
+        data_type: DataType,
+        offsets: ValidOffsets<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, Error> {
+        try_check_offsets_bounds(offsets.as_ref(), values.len())?;
+
+        if validity.as_ref().map_or(false, |validity| {
+            validity.len() != offsets.as_ref().len() - 1
+        }) {
+            return Err(Error::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            return Err(Error::oos(
+                "BinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            offsets: offsets.into(),
             values,
             validity,
         })

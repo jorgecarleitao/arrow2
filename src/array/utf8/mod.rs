@@ -22,6 +22,8 @@ mod from;
 mod iterator;
 mod mutable;
 mod mutable_values;
+use crate::array::offsets::ValidOffsets;
+use crate::array::specification::{check_offsets_minimal, try_check_utf8};
 pub use iterator::*;
 pub use mutable::*;
 pub use mutable_values::MutableUtf8ValuesArray;
@@ -111,6 +113,46 @@ impl<O: Offset> Utf8Array<O> {
         Ok(Self {
             data_type,
             offsets,
+            values,
+            validity,
+        })
+    }
+
+    /// Returns a [`Utf8Array`] created from its internal representation.
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
+    /// * The `values` between two consecutive `offsets` are not valid utf8
+    /// # Implementation
+    /// This function is `O(N)` - checking monotinicity and utf8 is `O(N)`
+    pub fn try_new_from_valid_offsets(
+        data_type: DataType,
+        offsets: ValidOffsets<O>,
+        values: Buffer<u8>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self> {
+        try_check_offsets_bounds(offsets.as_ref(), values.len())?;
+        try_check_utf8(&offsets, &values)?;
+        if validity.as_ref().map_or(false, |validity| {
+            validity.len() != offsets.as_ref().len() - 1
+        }) {
+            return Err(Error::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
+            return Err(Error::oos(
+                "Utf8Array can only be initialized with DataType::Utf8 or DataType::LargeUtf8",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            offsets: offsets.into(),
             values,
             validity,
         })
