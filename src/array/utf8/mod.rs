@@ -23,7 +23,7 @@ mod iterator;
 mod mutable;
 mod mutable_values;
 use crate::array::offsets::ValidOffsets;
-use crate::array::specification::{check_offsets_minimal, try_check_utf8};
+use crate::array::specification::try_check_utf8;
 pub use iterator::*;
 pub use mutable::*;
 pub use mutable_values::MutableUtf8ValuesArray;

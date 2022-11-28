@@ -25,7 +25,6 @@ mod mutable_values;
 pub use mutable_values::*;
 mod mutable;
 use crate::array::offsets::ValidOffsets;
-use crate::array::specification::check_offsets_minimal;
 pub use mutable::*;
 
 /// A [`BinaryArray`] is Arrow's semantically equivalent of an immutable `Vec<Option<Vec<u8>>>`.
