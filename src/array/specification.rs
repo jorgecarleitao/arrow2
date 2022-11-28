@@ -78,7 +78,7 @@ pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Re
 pub fn try_check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> Result<()> {
     // this code is carefully constructed to auto-vectorize, don't change naively!
     match offsets.first() {
-        None => Ok(()),
+        None => Err(Error::oos("offsets must have at least one element")),
         Some(first) => {
             let mut previous = *first;
             let mut any_invalid = false;
