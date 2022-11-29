@@ -5,7 +5,6 @@
         <meta charset="UTF-8">
         <title>High-level API - arrow2 documentation</title>
         <!-- Custom HTML head -->
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
@@ -28,13 +27,13 @@
     </head>
     <body>
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
+        <script>
             var path_to_root = "";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script type="text/javascript">
+        <script>
             try {
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
@@ -50,7 +49,7 @@
         </script>
 
         <!-- Set the theme before any content is loaded, prevents flash -->
-        <script type="text/javascript">
+        <script>
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
@@ -62,7 +61,7 @@
         </script>
 
         <!-- Hide / unhide sidebar before it is displayed -->
-        <script type="text/javascript">
+        <script>
             var html = document.querySelector('html');
             var sidebar = 'hidden';
             if (document.body.clientWidth >= 1080) {
@@ -93,7 +92,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
@@ -124,7 +123,7 @@
                     </div>
                 </div>
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script type="text/javascript">
+                <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
@@ -145,22 +144,19 @@ constructed from a slice of option values,</p>
 </span><span class="boring">fn main() {
 </span>let array = PrimitiveArray::&lt;i32&gt;::from([Some(1), None, Some(123)]);
 assert_eq!(array.len(), 3)
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>from a slice of values,</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
 </span><span class="boring">fn main() {
 </span>let array = PrimitiveArray::&lt;f32&gt;::from_slice([1.0, 0.0, 123.0]);
 assert_eq!(array.len(), 3)
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>or from an iterator</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use arrow2::array::{Array, PrimitiveArray};
 </span><span class="boring">fn main() {
 </span>let array: PrimitiveArray&lt;u64&gt; = [Some(1), None, Some(123)].iter().collect();
 assert_eq!(array.len(), 3)
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>A <code>PrimitiveArray</code> (and every <code>Array</code> implemented in this crate) has 3 components:</p>
 <ol>
 <li>A physical type (e.g. <code>i32</code>)</li>
@@ -180,8 +176,7 @@ In the example</p>
 </span><span class="boring">fn main() {
 </span>let ints = PrimitiveArray::&lt;i32&gt;::from([Some(1), None]);
 let dates = PrimitiveArray::&lt;i32&gt;::from([Some(1), None]).to(DataType::Date32);
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p><code>ints</code> and <code>dates</code> have the same in-memory representation but different logic
 representations (e.g. dates are usually printed to users as &quot;yyyy-mm-dd&quot;).</p>
 <p>All physical types (e.g. <code>i32</code>) have a &quot;natural&quot; logical <code>DataType</code> (e.g. <code>DataType::Int32</code>)
@@ -191,8 +186,7 @@ which is assigned when allocating arrays from iterators, slices, etc.</p>
 </span><span class="boring">fn main() {
 </span>let array = PrimitiveArray::&lt;i32&gt;::from_slice([1, 0, 123]);
 assert_eq!(array.data_type(), &amp;DataType::Int32);
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>they can be cheaply (<code>O(1)</code>) converted to via <code>.to(DataType)</code>.</p>
 <p>The following arrays are supported:</p>
 <ul>
@@ -215,8 +209,7 @@ to <code>&amp;dyn Array</code>, which enables dynamic casting and run-time nesti
 </span><span class="boring">fn main() {
 </span>let a = PrimitiveArray::&lt;i32&gt;::from(&amp;[Some(1), None]);
 let a: &amp;dyn Array = &amp;a;
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <h3 id="downcast-and-as_any"><a class="header" href="#downcast-and-as_any">Downcast and <code>as_any</code></a></h3>
 <p>Given a trait object <code>array: &amp;dyn Array</code>, we know its physical type via
 <code>PhysicalType: array.data_type().to_physical_type()</code>, which we use to downcast the array
@@ -228,8 +221,7 @@ to its concrete physical type:</p>
 let array = &amp;array as &amp;dyn Array;
 // ...
 let physical_type: PhysicalType = array.data_type().to_physical_type();
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>There is a one to one relationship between each variant of <code>PhysicalType</code> (an enum) and
 an each implementation of <code>Array</code> (a struct):</p>
 <div class="table-wrapper"><table><thead><tr><th><code>PhysicalType</code></th><th><code>Array</code></th></tr></thead><tbody>
@@ -272,8 +264,7 @@ fn float_operator(array: &amp;dyn Array) -&gt; Result&lt;Box&lt;dyn Array&gt;, S
         _ =&gt; Err(&quot;This operator is only valid for float point arrays&quot;.to_string()),
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <h2 id="from-iterator"><a class="header" href="#from-iterator">From Iterator</a></h2>
 <p>In the examples above, we've introduced how to create an array from an iterator.
 These APIs are available for all Arrays, and they are suitable to efficiently
@@ -303,8 +294,7 @@ for item in array.iter() {
         println!(&quot;NULL&quot;);
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>Like <code>FromIterator</code>, this crate contains two sets of APIs to iterate over data. Given
 an array <code>array: &amp;PrimitiveArray&lt;T&gt;</code>, the following applies:</p>
 <ol>
@@ -351,8 +341,7 @@ where
     // create the new array, cloning its validity
     PrimitiveArray::&lt;O&gt;::from_data(data_type.clone(), values.into(), array.validity().cloned())
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>Some notes:</p>
 <ol>
 <li>
@@ -412,8 +401,7 @@ fn main() {
     });
 
     assert_eq!(array, &amp;PrimitiveArray::from_vec(vec![0, 20]));
-}
-</code></pre>
+}</code></pre>
 
                     </main>
 
@@ -441,15 +429,15 @@ fn main() {
 
         </div>
 
-        <script type="text/javascript">
+        <script>
             window.playground_copyable = true;
         </script>
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
 
         <!-- Custom JS scripts -->
     </body>
