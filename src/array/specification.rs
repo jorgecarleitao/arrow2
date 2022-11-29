@@ -76,17 +76,35 @@ pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Re
 /// Checks that `offsets` is monotonically increasing, and all offsets are less than or equal to
 /// `values_len`.
 pub fn try_check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> Result<()> {
-    if offsets.windows(2).any(|window| window[0] > window[1]) {
-        Err(Error::oos("offsets must be monotonically increasing"))
-    } else if offsets
-        .last()
-        .map_or(true, |last| last.to_usize() > values_len)
-    {
-        Err(Error::oos(
-            "offsets must have at least one element and must not exceed values length",
-        ))
-    } else {
-        Ok(())
+    // this code is carefully constructed to auto-vectorize, don't change naively!
+    match offsets.first() {
+        None => Err(Error::oos("offsets must have at least one element")),
+        Some(first) => {
+            let mut previous = *first;
+            let mut any_invalid = false;
+
+            // This loop will auto-vectorize because there is not any break,
+            // an invalid value will be returned once the whole offsets buffer is processed.
+            for offset in offsets {
+                if previous > *offset {
+                    any_invalid = true
+                }
+                previous = *offset;
+            }
+
+            if any_invalid {
+                Err(Error::oos("offsets must be monotonically increasing"))
+            } else if offsets
+                .last()
+                .map_or(true, |last| last.to_usize() > values_len)
+            {
+                Err(Error::oos(
+                    "offsets must have at least one element and must not exceed values length",
+                ))
+            } else {
+                Ok(())
+            }
+        }
     }
 }
 
