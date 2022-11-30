@@ -480,12 +480,12 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
 
 pub(super) fn finish<O: Offset, A: TraitBinaryArray<O>>(
     data_type: &DataType,
-    mut values:  Binary<O>,
+    mut values: Binary<O>,
     validity: MutableBitmap,
 ) -> Result<A> {
     values.offsets.shrink_to_fit();
     values.values.shrink_to_fit();
-    
+
     A::try_new(
         data_type.clone(),
         values.offsets.0.into(),
