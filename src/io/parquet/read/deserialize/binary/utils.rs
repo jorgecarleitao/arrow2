@@ -56,7 +56,7 @@ impl<O: Offset> Binary<O> {
         offsets.push(O::default());
         Self {
             offsets: Offsets(offsets),
-            values: Vec::with_capacity(capacity * 24),
+            values: Vec::with_capacity(capacity.min(100) * 24),
             last_offset: O::default(),
         }
     }
