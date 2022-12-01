@@ -88,7 +88,9 @@ pub fn get_value_display<'a, F: Write + 'a>(
         Union => Box::new(move |f, index| {
             super::union::fmt::write_value(array.as_any().downcast_ref().unwrap(), index, null, f)
         }),
-        Map => todo!(),
+        Map => Box::new(move |f, index|{
+            super::map::fmt::write_value(array.as_any().downcast_ref().unwrap(), index, null, f)
+        }),
         Dictionary(key_type) => match_integer_type!(key_type, |$T| {
             Box::new(move |f, index| {
                 super::dictionary::fmt::write_value::<$T,_>(array.as_any().downcast_ref().unwrap(), index, null, f)
