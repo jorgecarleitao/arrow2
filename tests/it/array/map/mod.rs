@@ -49,4 +49,3 @@ fn basics() {
         )) as Box<dyn Array>
     );
 }
-

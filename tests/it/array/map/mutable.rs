@@ -20,16 +20,14 @@ fn basics() {
     assert_eq!(array.len(), 0);
 
     let field = array.mut_field();
-    field.value::<MutableUtf8Array<i32>>(0).unwrap().extend([
-        Some("a"),
-        Some("aa"),
-        Some("aaa"),
-    ]);
-    field.value::<MutableUtf8Array<i32>>(1).unwrap().extend([
-        Some("b"),
-        Some("bb"),
-        Some("bbb"),
-    ]);
+    field
+        .value::<MutableUtf8Array<i32>>(0)
+        .unwrap()
+        .extend([Some("a"), Some("aa"), Some("aaa")]);
+    field
+        .value::<MutableUtf8Array<i32>>(1)
+        .unwrap()
+        .extend([Some("b"), Some("bb"), Some("bbb")]);
     array.try_push_valid().unwrap();
     assert_eq!(array.len(), 1);
 

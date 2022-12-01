@@ -167,10 +167,18 @@ impl MutableArray for MutableMapArray {
     }
 
     fn reserve(&mut self, additional: usize) {
-        todo!()
+        self.offsets.reserve(additional);
+        self.field.reserve(additional);
+        if let Some(validity) = &mut self.validity {
+            validity.reserve(additional)
+        }
     }
 
     fn shrink_to_fit(&mut self) {
-        todo!()
+        self.offsets.shrink_to_fit();
+        self.field.shrink_to_fit();
+        if let Some(validity) = &mut self.validity {
+            validity.shrink_to_fit();
+        }
     }
 }
