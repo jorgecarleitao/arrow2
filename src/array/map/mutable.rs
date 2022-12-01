@@ -74,14 +74,22 @@ impl MutableMapArray {
         &self.field
     }
 
-    /// Get a mutable reference to the keys array
-    pub fn keys<A: MutableArray + 'static>(&mut self) -> &mut A {
-        self.field.value(0).unwrap()
-    }
+    /// Get a mutable reference to the keys and values arrays
+    pub fn keys_values<K, V>(&mut self) -> Option<(&mut K, &mut V)>
+    where
+        K: MutableArray + 'static,
+        V: MutableArray + 'static,
+    {
+        let [keys, values]: &mut [_; 2] =
+            self.field.mut_values().as_mut_slice().try_into().unwrap();
 
-    /// Get a mutable reference to the values array
-    pub fn values<A: MutableArray + 'static>(&mut self) -> &mut A {
-        self.field.value(1).unwrap()
+        match (
+            keys.as_mut_any().downcast_mut(),
+            values.as_mut_any().downcast_mut(),
+        ) {
+            (Some(keys), Some(values)) => Some((keys, values)),
+            _ => None,
+        }
     }
 
     /// Call this once for each "row" of children you push.
