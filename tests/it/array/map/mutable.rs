@@ -9,7 +9,7 @@ fn basics() {
         Field::new("a", DataType::Utf8, true),
         Field::new("b", DataType::Utf8, true),
     ]);
-    let data_type = DataType::Map(Box::new(Field::new("a", dt.clone(), true)), false);
+    let data_type = DataType::Map(Box::new(Field::new("a", dt, true)), false);
 
     let values = vec![
         Box::new(MutableUtf8Array::<i32>::new()) as Box<dyn MutableArray>,
@@ -47,7 +47,7 @@ fn failure() {
         Field::new("value", DataType::Utf8, true),
         Field::new("extra", DataType::Utf8, true),
     ]);
-    let data_type = DataType::Map(Box::new(Field::new("item", dt.clone(), true)), false);
+    let data_type = DataType::Map(Box::new(Field::new("item", dt, true)), false);
 
     let values = vec![
         Box::new(MutableUtf8Array::<i32>::new()) as Box<dyn MutableArray>,
