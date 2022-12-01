@@ -1,3 +1,5 @@
+mod mutable;
+
 use arrow2::{
     array::*,
     datatypes::{DataType, Field},
@@ -47,3 +49,4 @@ fn basics() {
         )) as Box<dyn Array>
     );
 }
+

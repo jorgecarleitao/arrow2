@@ -446,7 +446,7 @@ pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
 pub use fixed_size_binary::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
 pub use fixed_size_list::{FixedSizeListArray, MutableFixedSizeListArray};
 pub use list::{ListArray, ListValuesIter, MutableListArray};
-pub use map::MapArray;
+pub use map::{MapArray, MutableMapArray};
 pub use null::NullArray;
 pub use primitive::*;
 pub use struct_::{MutableStructArray, StructArray};

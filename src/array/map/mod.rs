@@ -11,6 +11,8 @@ mod ffi;
 mod fmt;
 mod iterator;
 pub use iterator::*;
+mod mutable;
+pub use mutable::*;
 
 /// An array representing a (key, value), both of arbitrary logical types.
 #[derive(Clone)]
