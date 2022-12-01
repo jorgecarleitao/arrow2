@@ -1,3 +1,4 @@
+use crate::array::DictionaryKey;
 use crate::error::{Error, Result};
 use crate::offset::{Offset, Offsets, OffsetsBuffer};
 
@@ -103,6 +104,30 @@ pub(crate) fn try_check_utf8<O: Offset, C: OffsetsContainer<O>>(
         if any_invalid {
             return Err(Error::oos("Non-valid char boundary detected"));
         }
+        Ok(())
+    }
+}
+
+/// Check dictionary indexes without checking usize conversion.
+/// # Safety
+/// The caller must ensure that `K::as_usize` always succeeds.
+pub(crate) unsafe fn check_indexes_unchecked<K: DictionaryKey>(
+    keys: &[K],
+    len: usize,
+) -> Result<()> {
+    let mut invalid = false;
+
+    // this loop is auto-vectorized
+    keys.iter().for_each(|k| {
+        if k.as_usize() > len {
+            invalid = true;
+        }
+    });
+
+    if invalid {
+        let key = keys.iter().map(|k| k.as_usize()).max().unwrap();
+        Err(Error::oos(format!("One of the dictionary keys is {} but it must be < than the length of the dictionary values, which is {}", key, len)))
+    } else {
         Ok(())
     }
 }

@@ -16,6 +16,7 @@ mod ffi;
 pub(super) mod fmt;
 mod iterator;
 mod mutable;
+use crate::array::specification::check_indexes_unchecked;
 pub use iterator::*;
 pub use mutable::*;
 
@@ -37,6 +38,10 @@ pub trait DictionaryKey: NativeType + TryInto<usize> + TryFrom<usize> {
             Err(_) => unreachable_unchecked(),
         }
     }
+
+    fn always_fits_usize() -> bool {
+        false
+    }
 }
 
 impl DictionaryKey for i8 {
@@ -53,15 +58,32 @@ impl DictionaryKey for i64 {
 }
 impl DictionaryKey for u8 {
     const KEY_TYPE: IntegerType = IntegerType::UInt8;
+
+    fn always_fits_usize() -> bool {
+        true
+    }
 }
 impl DictionaryKey for u16 {
     const KEY_TYPE: IntegerType = IntegerType::UInt16;
+
+    fn always_fits_usize() -> bool {
+        true
+    }
 }
 impl DictionaryKey for u32 {
     const KEY_TYPE: IntegerType = IntegerType::UInt32;
+
+    fn always_fits_usize() -> bool {
+        true
+    }
 }
 impl DictionaryKey for u64 {
     const KEY_TYPE: IntegerType = IntegerType::UInt64;
+
+    #[cfg(target_pointer_width = "64")]
+    fn always_fits_usize() -> bool {
+        true
+    }
 }
 
 /// An [`Array`] whose values are stored as indices. This [`Array`] is useful when the cardinality of
@@ -120,7 +142,13 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         check_data_type(K::KEY_TYPE, &data_type, values.data_type())?;
 
         if keys.null_count() != keys.len() {
-            check_indexes(keys.values(), values.len())?;
+            if K::always_fits_usize() {
+                // safety: we just checked that conversion to `usize` always
+                // succeeds
+                unsafe { check_indexes_unchecked(keys.values(), len) }?;
+            } else {
+                check_indexes(keys.values(), values.len())?;
+            }
         }
 
         Ok(Self {
