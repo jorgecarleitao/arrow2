@@ -22,8 +22,7 @@ pub use parquet2::{
         decompress, get_column_iterator, get_page_stream,
         read_columns_indexes as _read_columns_indexes, read_metadata as _read_metadata,
         read_metadata_async as _read_metadata_async, read_pages_locations, BasicDecompressor,
-        ColumnChunkIter, Decompressor, MutStreamingIterator, PageFilter, PageReader,
-        ReadColumnIterator, State,
+        Decompressor, MutStreamingIterator, PageFilter, PageReader, ReadColumnIterator, State,
     },
     schema::types::{
         GroupLogicalType, ParquetType, PhysicalType, PrimitiveConvertedType, PrimitiveLogicalType,
