@@ -1,6 +1,6 @@
-use crate::array::Offset;
 use crate::array::{Array, ArrayAccessor, ArrayValuesIter};
 use crate::bitmap::utils::{BitmapIter, ZipValidity};
+use crate::offset::Offset;
 
 use super::ListArray;
 

@@ -3,12 +3,12 @@ use std::{iter::FromIterator, sync::Arc};
 use crate::{
     array::{
         specification::{check_offsets_minimal, try_check_offsets},
-        Array, ArrayAccessor, ArrayValuesIter, MutableArray, Offset, TryExtend, TryExtendFromSelf,
-        TryPush,
+        Array, ArrayAccessor, ArrayValuesIter, MutableArray, TryExtend, TryExtendFromSelf, TryPush,
     },
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{Error, Result},
+    offset::Offset,
     trusted_len::TrustedLen,
 };
 

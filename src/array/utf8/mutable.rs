@@ -2,13 +2,14 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::array::{physical_binary::*, TryExtendFromSelf};
 use crate::{
-    array::{Array, MutableArray, Offset, TryExtend, TryPush},
+    array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::{
         utils::{BitmapIter, ZipValidity},
         Bitmap, MutableBitmap,
     },
     datatypes::DataType,
     error::{Error, Result},
+    offset::Offset,
     trusted_len::TrustedLen,
 };
 

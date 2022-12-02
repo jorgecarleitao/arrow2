@@ -21,6 +21,7 @@ use crate::{
     array::*,
     datatypes::DataType,
     error::{Error, Result},
+    offset::Offset,
 };
 
 fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>) -> Utf8Array<O> {

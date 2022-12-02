@@ -1,7 +1,8 @@
 use crate::{
-    array::{GenericBinaryArray, Offset, PrimitiveArray},
+    array::{GenericBinaryArray, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
+    offset::Offset,
 };
 
 use super::Index;

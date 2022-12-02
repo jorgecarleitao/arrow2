@@ -4,6 +4,7 @@ use num_traits::{AsPrimitive, Float, ToPrimitive};
 
 use crate::datatypes::IntervalUnit;
 use crate::error::Result;
+use crate::offset::Offset;
 use crate::types::{days_ms, f16, months_days_ns};
 use crate::{
     array::*,

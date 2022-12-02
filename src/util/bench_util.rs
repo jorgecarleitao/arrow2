@@ -3,7 +3,7 @@
 use rand::distributions::{Alphanumeric, Distribution, Standard};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{array::*, types::NativeType};
+use crate::{array::*, offset::Offset, types::NativeType};
 
 /// Returns fixed seedable RNG
 pub fn seedable_rng() -> StdRng {

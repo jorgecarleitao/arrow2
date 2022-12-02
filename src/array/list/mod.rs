@@ -3,13 +3,14 @@ use crate::{
     buffer::Buffer,
     datatypes::{DataType, Field},
     error::Error,
+    offset::Offset,
 };
 use std::sync::Arc;
 
 use super::{
     new_empty_array,
     specification::{try_check_offsets, try_check_offsets_bounds},
-    Array, Offset,
+    Array,
 };
 
 mod ffi;

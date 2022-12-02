@@ -6,6 +6,7 @@ use crate::{
     buffer::Buffer,
     datatypes::DataType,
     error::Error,
+    offset::Offset,
     trusted_len::TrustedLen,
 };
 
@@ -13,7 +14,7 @@ use either::Either;
 
 use super::{
     specification::{try_check_offsets, try_check_offsets_bounds},
-    Array, GenericBinaryArray, Offset,
+    Array, GenericBinaryArray,
 };
 
 mod ffi;

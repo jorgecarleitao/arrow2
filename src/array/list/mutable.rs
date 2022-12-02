@@ -4,11 +4,12 @@ use crate::{
     array::{
         physical_binary::{extend_validity, try_extend_offsets},
         specification::try_check_offsets,
-        Array, MutableArray, Offset, TryExtend, TryExtendFromSelf, TryPush,
+        Array, MutableArray, TryExtend, TryExtendFromSelf, TryPush,
     },
     bitmap::MutableBitmap,
     datatypes::{DataType, Field},
     error::{Error, Result},
+    offset::Offset,
     trusted_len::TrustedLen,
 };
 

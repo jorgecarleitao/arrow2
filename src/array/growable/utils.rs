@@ -1,7 +1,4 @@
-use crate::{
-    array::{Array, Offset},
-    bitmap::MutableBitmap,
-};
+use crate::{array::Array, bitmap::MutableBitmap, offset::Offset};
 
 pub(super) fn extend_offsets<T: Offset>(buffer: &mut Vec<T>, last_offset: &mut T, offsets: &[T]) {
     buffer.reserve(offsets.len() - 1);

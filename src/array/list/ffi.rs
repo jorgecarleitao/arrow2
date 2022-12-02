@@ -1,6 +1,8 @@
 use crate::{array::FromFfi, bitmap::align, error::Result, ffi};
 
-use super::super::{ffi::ToFfi, Array, Offset};
+use crate::offset::Offset;
+
+use super::super::{ffi::ToFfi, Array};
 use super::ListArray;
 
 unsafe impl<O: Offset> ToFfi for ListArray<O> {

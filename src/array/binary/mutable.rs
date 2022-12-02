@@ -1,13 +1,14 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
-    array::{Array, MutableArray, Offset, TryExtend, TryExtendFromSelf, TryPush},
+    array::{Array, MutableArray, TryExtend, TryExtendFromSelf, TryPush},
     bitmap::{
         utils::{BitmapIter, ZipValidity},
         Bitmap, MutableBitmap,
     },
     datatypes::DataType,
     error::{Error, Result},
+    offset::Offset,
     trusted_len::TrustedLen,
 };
 

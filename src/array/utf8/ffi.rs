@@ -1,8 +1,9 @@
 use crate::{
-    array::{FromFfi, Offset, ToFfi},
+    array::{FromFfi, ToFfi},
     bitmap::align,
     error::Result,
     ffi,
+    offset::Offset,
 };
 
 use super::Utf8Array;

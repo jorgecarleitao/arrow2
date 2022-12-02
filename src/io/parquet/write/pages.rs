@@ -1,10 +1,11 @@
 use parquet2::schema::types::{ParquetType, PrimitiveType as ParquetPrimitiveType};
 use parquet2::{page::Page, write::DynIter};
 
-use crate::array::{ListArray, Offset, StructArray};
+use crate::array::{ListArray, StructArray};
 use crate::bitmap::Bitmap;
 use crate::datatypes::PhysicalType;
 use crate::io::parquet::read::schema::is_nullable;
+use crate::offset::Offset;
 use crate::{
     array::Array,
     error::{Error, Result},

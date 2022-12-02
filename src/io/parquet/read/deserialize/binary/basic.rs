@@ -9,11 +9,12 @@ use parquet2::{
 };
 
 use crate::{
-    array::{Array, BinaryArray, Offset, Utf8Array},
+    array::{Array, BinaryArray, Utf8Array},
     bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
     datatypes::DataType,
     error::{Error, Result},
+    offset::Offset,
 };
 
 use super::super::utils::{

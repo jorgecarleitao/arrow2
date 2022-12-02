@@ -3,11 +3,12 @@ use std::collections::VecDeque;
 use parquet2::page::DictPage;
 
 use crate::{
-    array::{Array, BinaryArray, DictionaryArray, DictionaryKey, Offset, Utf8Array},
+    array::{Array, BinaryArray, DictionaryArray, DictionaryKey, Utf8Array},
     bitmap::MutableBitmap,
     datatypes::{DataType, PhysicalType},
     error::Result,
     io::parquet::read::deserialize::nested_utils::{InitNested, NestedState},
+    offset::Offset,
 };
 
 use super::super::Pages;

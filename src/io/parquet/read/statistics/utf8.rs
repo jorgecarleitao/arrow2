@@ -1,7 +1,8 @@
-use crate::array::{MutableArray, MutableUtf8Array, Offset};
 use parquet2::statistics::{BinaryStatistics, Statistics as ParquetStatistics};
 
+use crate::array::{MutableArray, MutableUtf8Array};
 use crate::error::Result;
+use crate::offset::Offset;
 
 pub(super) fn push<O: Offset>(
     from: Option<&dyn ParquetStatistics>,

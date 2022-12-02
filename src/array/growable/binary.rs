@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, BinaryArray, Offset},
+    array::{Array, BinaryArray},
     bitmap::MutableBitmap,
     datatypes::DataType,
+    offset::Offset,
 };
 
 use super::{

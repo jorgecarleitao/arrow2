@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Formatter, Result, Write};
 
-use crate::array::Offset;
+use crate::offset::Offset;
 
 use super::super::fmt::{get_display, write_vec};
 use super::ListArray;

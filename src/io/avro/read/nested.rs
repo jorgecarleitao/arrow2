@@ -2,6 +2,7 @@ use crate::array::*;
 use crate::bitmap::*;
 use crate::datatypes::*;
 use crate::error::*;
+use crate::offset::Offset;
 
 /// Auxiliary struct
 #[derive(Debug)]

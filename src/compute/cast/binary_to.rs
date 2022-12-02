@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use crate::error::{Error, Result};
+use crate::offset::Offset;
 use crate::{array::*, datatypes::DataType, types::NativeType};
 
 use super::CastOptions;

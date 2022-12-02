@@ -5,13 +5,15 @@ use crate::temporal_conversions;
 use crate::types::NativeType;
 use crate::util::lexical_to_bytes_mut;
 use crate::{
-    array::{Array, BinaryArray, BooleanArray, PrimitiveArray, Utf8Array},
+    array::{
+        Array, BinaryArray, BooleanArray, DictionaryArray, DictionaryKey, PrimitiveArray, Utf8Array,
+    },
     datatypes::{DataType, TimeUnit},
     error::Result,
+    offset::Offset,
 };
 
 use super::super::super::iterator::{BufStreamingIterator, StreamingIterator};
-use crate::array::{DictionaryArray, DictionaryKey, Offset};
 use csv_core::WriteResult;
 use std::any::Any;
 use std::fmt::{Debug, Write};

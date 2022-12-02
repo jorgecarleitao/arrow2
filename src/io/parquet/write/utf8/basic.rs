@@ -9,9 +9,10 @@ use super::super::binary::{encode_delta, ord_binary};
 use super::super::utils;
 use super::super::WriteOptions;
 use crate::{
-    array::{Array, Offset, Utf8Array},
+    array::{Array, Utf8Array},
     error::{Error, Result},
     io::parquet::read::schema::is_nullable,
+    offset::Offset,
 };
 
 pub(crate) fn encode_plain<O: Offset>(

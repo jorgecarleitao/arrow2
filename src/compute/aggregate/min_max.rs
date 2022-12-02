@@ -1,11 +1,12 @@
 use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
 use crate::datatypes::{DataType, PhysicalType, PrimitiveType};
 use crate::error::{Error, Result};
+use crate::offset::Offset;
 use crate::scalar::*;
 use crate::types::simd::*;
 use crate::types::NativeType;
 use crate::{
-    array::{Array, BinaryArray, BooleanArray, Offset, PrimitiveArray, Utf8Array},
+    array::{Array, BinaryArray, BooleanArray, PrimitiveArray, Utf8Array},
     bitmap::Bitmap,
 };
 

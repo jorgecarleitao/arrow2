@@ -1,4 +1,4 @@
-use crate::array::Offset;
+use crate::offset::Offset;
 
 use super::super::utils::Pushable;
 

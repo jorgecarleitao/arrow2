@@ -6,6 +6,7 @@ use crate::{
     array::*,
     datatypes::DataType,
     error::{Error, Result},
+    offset::Offset,
     temporal_conversions::{
         utf8_to_naive_timestamp_ns as utf8_to_naive_timestamp_ns_,
         utf8_to_timestamp_ns as utf8_to_timestamp_ns_, EPOCH_DAYS_FROM_CE,

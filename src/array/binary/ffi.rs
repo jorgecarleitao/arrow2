@@ -1,7 +1,8 @@
 use crate::{
-    array::{FromFfi, Offset, ToFfi},
+    array::{FromFfi, ToFfi},
     bitmap::align,
     ffi,
+    offset::Offset,
 };
 
 use crate::error::Result;

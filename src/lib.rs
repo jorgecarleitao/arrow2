@@ -24,6 +24,7 @@ pub mod error;
 #[cfg_attr(docsrs, doc(cfg(feature = "io_ipc")))]
 pub mod mmap;
 
+pub mod offset;
 pub mod scalar;
 pub mod trusted_len;
 pub mod types;

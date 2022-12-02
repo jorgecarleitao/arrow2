@@ -1,6 +1,7 @@
 use crate::{
-    array::{ArrayAccessor, ArrayValuesIter, Offset},
+    array::{ArrayAccessor, ArrayValuesIter},
     bitmap::utils::{BitmapIter, ZipValidity},
+    offset::Offset,
 };
 
 use super::{BinaryArray, MutableBinaryValuesArray};

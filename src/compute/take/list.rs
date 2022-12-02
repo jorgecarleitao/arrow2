@@ -17,8 +17,9 @@
 
 use crate::array::{
     growable::{Growable, GrowableList},
-    ListArray, Offset, PrimitiveArray,
+    ListArray, PrimitiveArray,
 };
+use crate::offset::Offset;
 
 use super::Index;
 

@@ -6,6 +6,7 @@ use streaming_iterator::StreamingIterator;
 use crate::bitmap::utils::ZipValidity;
 use crate::datatypes::TimeUnit;
 use crate::io::iterator::BufStreamingIterator;
+use crate::offset::Offset;
 use crate::temporal_conversions::{
     date32_to_date, date64_to_date, timestamp_ms_to_datetime, timestamp_ns_to_datetime,
     timestamp_s_to_datetime, timestamp_us_to_datetime,

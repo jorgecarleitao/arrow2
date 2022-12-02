@@ -6,8 +6,9 @@ use super::basic::{build_statistics, encode_plain};
 use crate::io::parquet::read::schema::is_nullable;
 use crate::io::parquet::write::Nested;
 use crate::{
-    array::{Array, Offset, Utf8Array},
+    array::{Array, Utf8Array},
     error::Result,
+    offset::Offset,
 };
 
 pub fn array_to_page<O>(

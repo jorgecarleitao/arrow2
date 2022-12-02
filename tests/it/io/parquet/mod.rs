@@ -10,6 +10,7 @@ use arrow2::{
     io::parquet::read as p_read,
     io::parquet::read::statistics::*,
     io::parquet::write::*,
+    offset::Offset,
     types::{days_ms, NativeType},
 };
 

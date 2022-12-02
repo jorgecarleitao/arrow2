@@ -1,9 +1,10 @@
 //! Comparison functions for [`BinaryArray`]
 use crate::compute::comparison::{finish_eq_validities, finish_neq_validities};
 use crate::{
-    array::{BinaryArray, BooleanArray, Offset},
+    array::{BinaryArray, BooleanArray},
     bitmap::Bitmap,
     datatypes::DataType,
+    offset::Offset,
 };
 
 use super::super::utils::combine_validities;

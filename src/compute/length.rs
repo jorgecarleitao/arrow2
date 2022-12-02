@@ -21,6 +21,7 @@ use crate::{
     array::*,
     datatypes::DataType,
     error::{Error, Result},
+    offset::Offset,
     types::NativeType,
 };
 

@@ -8,10 +8,11 @@ use parquet2::{
 use super::super::utils;
 use super::super::WriteOptions;
 use crate::{
-    array::{Array, BinaryArray, Offset},
+    array::{Array, BinaryArray},
     bitmap::Bitmap,
     error::{Error, Result},
     io::parquet::read::schema::is_nullable,
+    offset::Offset,
 };
 
 pub(crate) fn encode_plain<O: Offset>(

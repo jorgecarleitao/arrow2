@@ -1,4 +1,4 @@
-use crate::{array::*, datatypes::DataType};
+use crate::{datatypes::DataType, offset::Offset};
 
 use super::Scalar;
 

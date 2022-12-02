@@ -1,9 +1,10 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use crate::array::{Array, DictionaryKey, FixedSizeListArray, ListArray, Offset, StructArray};
+use crate::array::{Array, DictionaryKey, FixedSizeListArray, ListArray, StructArray};
 use crate::datatypes::DataType;
 use crate::error::Error;
+use crate::offset::Offset;
 
 use crate::io::ipc::read::{Dictionaries, OutOfSpecKind};
 use crate::io::ipc::read::{IpcBuffer, Node};

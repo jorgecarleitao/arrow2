@@ -1,12 +1,11 @@
 //! APIs to read from [ORC format](https://orc.apache.org).
 use std::io::Read;
 
-use crate::array::{
-    Array, BinaryArray, BooleanArray, Int64Array, Offset, PrimitiveArray, Utf8Array,
-};
+use crate::array::{Array, BinaryArray, BooleanArray, Int64Array, PrimitiveArray, Utf8Array};
 use crate::bitmap::{Bitmap, MutableBitmap};
 use crate::datatypes::{DataType, Field, Schema};
 use crate::error::Error;
+use crate::offset::Offset;
 use crate::types::NativeType;
 
 use orc_format::proto::stream::Kind;

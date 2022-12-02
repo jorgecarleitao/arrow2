@@ -2,7 +2,8 @@
 use arrow_format::ipc;
 
 use crate::{
-    array::*, bitmap::Bitmap, datatypes::PhysicalType, trusted_len::TrustedLen, types::NativeType,
+    array::*, bitmap::Bitmap, datatypes::PhysicalType, offset::Offset, trusted_len::TrustedLen,
+    types::NativeType,
 };
 
 use super::super::compression;

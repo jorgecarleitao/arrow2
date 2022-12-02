@@ -5,11 +5,12 @@ use regex::bytes::Regex as BytesRegex;
 use regex::Regex;
 
 use crate::{
-    array::{BinaryArray, BooleanArray, Offset, Utf8Array},
+    array::{BinaryArray, BooleanArray, Utf8Array},
     bitmap::Bitmap,
     compute::utils::combine_validities,
     datatypes::DataType,
     error::{Error, Result},
+    offset::Offset,
 };
 
 #[inline]

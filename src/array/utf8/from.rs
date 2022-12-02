@@ -1,6 +1,6 @@
 use std::iter::FromIterator;
 
-use crate::array::Offset;
+use crate::offset::Offset;
 
 use super::{MutableUtf8Array, Utf8Array};
 

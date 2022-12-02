@@ -3,6 +3,7 @@ use avro_schema::write::encode;
 
 use crate::bitmap::utils::ZipValidity;
 use crate::datatypes::{IntervalUnit, PhysicalType, PrimitiveType};
+use crate::offset::Offset;
 use crate::types::months_days_ns;
 use crate::{array::*, datatypes::DataType};
 

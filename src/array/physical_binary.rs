@@ -1,6 +1,6 @@
-use crate::array::Offset;
 use crate::bitmap::MutableBitmap;
 use crate::error::Error;
+use crate::offset::Offset;
 
 /// # Safety
 /// The caller must ensure that `iterator` is `TrustedLen`.

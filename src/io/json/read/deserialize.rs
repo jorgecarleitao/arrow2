@@ -12,6 +12,7 @@ use crate::{
     chunk::Chunk,
     datatypes::{DataType, Field, IntervalUnit, Schema},
     error::Error,
+    offset::Offset,
     types::{f16, NativeType},
 };
 

@@ -3,7 +3,7 @@ mod rep;
 
 use parquet2::{encoding::hybrid_rle::encode_u32, read::levels::get_bit_width, write::Version};
 
-use crate::{array::Offset, error::Result};
+use crate::{error::Result, offset::Offset};
 
 use super::Nested;
 

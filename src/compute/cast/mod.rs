@@ -18,6 +18,7 @@ use crate::{
     array::*,
     datatypes::*,
     error::{Error, Result},
+    offset::Offset,
 };
 
 /// options defining how Cast kernels behave

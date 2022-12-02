@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, ListArray, Offset},
+    array::{Array, ListArray},
     bitmap::MutableBitmap,
+    offset::Offset,
 };
 
 use super::{

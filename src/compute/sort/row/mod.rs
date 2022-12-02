@@ -637,9 +637,10 @@ mod tests {
 
     use super::*;
     use crate::{
-        array::{Array, DictionaryKey, Float32Array, Int16Array, NullArray, Offset},
+        array::{Array, DictionaryKey, Float32Array, Int16Array, NullArray},
         compute::sort::build_compare,
         datatypes::DataType,
+        offset::Offset,
         types::NativeType,
     };
 

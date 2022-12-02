@@ -1,6 +1,7 @@
-use arrow2::array::{BooleanArray, Offset, Utf8Array};
+use arrow2::array::{BooleanArray, Utf8Array};
 use arrow2::compute::regex_match::*;
 use arrow2::error::Result;
+use arrow2::offset::Offset;
 
 fn test_generic<O: Offset, F: Fn(&Utf8Array<O>, &Utf8Array<O>) -> Result<BooleanArray>>(
     lhs: Vec<&str>,

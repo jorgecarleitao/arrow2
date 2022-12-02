@@ -10,6 +10,7 @@ use crate::{
     datatypes::{DataType, PhysicalType, PrimitiveType, Schema},
     error::{Error, Result},
     io::ipc::IpcField,
+    offset::Offset,
     types::{days_ms, i256, months_days_ns, NativeType},
 };
 

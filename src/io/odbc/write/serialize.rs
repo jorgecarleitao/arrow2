@@ -4,6 +4,7 @@ use crate::array::*;
 use crate::bitmap::Bitmap;
 use crate::datatypes::DataType;
 use crate::error::{Error, Result};
+use crate::offset::Offset;
 use crate::types::NativeType;
 
 use super::super::api;
