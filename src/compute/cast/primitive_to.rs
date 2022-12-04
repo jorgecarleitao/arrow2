@@ -4,7 +4,7 @@ use num_traits::{AsPrimitive, Float, ToPrimitive};
 
 use crate::datatypes::IntervalUnit;
 use crate::error::Result;
-use crate::offset::Offset;
+use crate::offset::{Offset, Offsets};
 use crate::types::{days_ms, f16, months_days_ns};
 use crate::{
     array::*,
@@ -42,7 +42,9 @@ pub fn primitive_to_binary<T: NativeType + lexical_core::ToLexical, O: Offset>(
         }
         values.set_len(offset);
         values.shrink_to_fit();
-        BinaryArray::<O>::from_data_unchecked(
+        // Safety: offsets _are_ monotonically increasing
+        let offsets = unsafe { Offsets::new_unchecked(offsets) };
+        BinaryArray::<O>::new(
             BinaryArray::<O>::default_data_type(),
             offsets.into(),
             values.into(),
@@ -104,11 +106,13 @@ pub fn primitive_to_utf8<T: NativeType + lexical_core::ToLexical, O: Offset>(
             let len = lexical_core::write_unchecked(*x, bytes).len();
 
             offset += len;
-            offsets.push(O::from_usize(offset as usize).unwrap());
+            offsets.push(O::from_usize(offset).unwrap());
         }
         values.set_len(offset);
         values.shrink_to_fit();
-        Utf8Array::<O>::from_data_unchecked(
+        // Safety: offsets _are_ monotonically increasing
+        let offsets = unsafe { Offsets::new_unchecked(offsets) };
+        Utf8Array::<O>::new_unchecked(
             Utf8Array::<O>::default_data_type(),
             offsets.into(),
             values.into(),

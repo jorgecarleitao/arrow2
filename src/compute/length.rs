@@ -32,6 +32,7 @@ where
 {
     let values = array
         .offsets()
+        .buffer()
         .windows(2)
         .map(|offset| op(offset[1] - offset[0]))
         .collect::<Vec<_>>();

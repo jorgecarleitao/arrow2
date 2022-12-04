@@ -8,7 +8,7 @@ use crate::{
     },
     datatypes::DataType,
     error::{Error, Result},
-    offset::Offset,
+    offset::{Offset, Offsets},
     trusted_len::TrustedLen,
 };
 
@@ -54,15 +54,14 @@ impl<O: Offset> MutableBinaryArray<O> {
     ///
     /// # Errors
     /// This function returns an error iff:
-    /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * the validity's length is not equal to `offsets.len()`.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
     /// # Implementation
-    /// This function is `O(N)` - checking monotinicity is `O(N)`
+    /// This function is `O(1)`
     pub fn try_new(
         data_type: DataType,
-        offsets: Vec<O>,
+        offsets: Offsets<O>,
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Result<Self> {
@@ -78,26 +77,6 @@ impl<O: Offset> MutableBinaryArray<O> {
         }
 
         Ok(Self { values, validity })
-    }
-
-    /// Create a [`MutableBinaryArray`] out of its inner attributes.
-    /// # Safety
-    /// The caller must ensure that every value between offsets is a valid utf8.
-    /// # Panics
-    /// This function panics iff:
-    /// * The `offsets` and `values` are inconsistent
-    /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
-    pub unsafe fn new_unchecked(
-        data_type: DataType,
-        offsets: Vec<O>,
-        values: Vec<u8>,
-        validity: Option<MutableBitmap>,
-    ) -> Self {
-        let values = MutableBinaryValuesArray::new_unchecked(data_type, offsets, values);
-        if let Some(ref validity) = validity {
-            assert_eq!(values.len(), validity.len());
-        }
-        Self { values, validity }
     }
 
     /// Creates a new [`MutableBinaryArray`] from a slice of optional `&[u8]`.
@@ -185,7 +164,7 @@ impl<O: Offset> MutableBinaryArray<O> {
     /// Equivalent to `Self::try_new(...).unwrap()`
     pub fn from_data(
         data_type: DataType,
-        offsets: Vec<O>,
+        offsets: Offsets<O>,
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
@@ -200,7 +179,7 @@ impl<O: Offset> MutableBinaryArray<O> {
     }
 
     /// returns its offsets.
-    pub fn offsets(&self) -> &Vec<O> {
+    pub fn offsets(&self) -> &Offsets<O> {
         self.values.offsets()
     }
 
@@ -225,34 +204,24 @@ impl<O: Offset> MutableArray for MutableBinaryArray<O> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        // Safety:
-        // `MutableBinaryArray` has the same invariants as `BinaryArray` and thus
-        // `BinaryArray` can be safely created from `MutableBinaryArray` without checks.
         let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
-        unsafe {
-            BinaryArray::new_unchecked(
-                data_type,
-                offsets.into(),
-                values.into(),
-                std::mem::take(&mut self.validity).map(|x| x.into()),
-            )
-        }
+        BinaryArray::new(
+            data_type,
+            offsets.into(),
+            values.into(),
+            std::mem::take(&mut self.validity).map(|x| x.into()),
+        )
         .boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        // Safety:
-        // `MutableBinaryArray` has the same invariants as `BinaryArray` and thus
-        // `BinaryArray` can be safely created from `MutableBinaryArray` without checks.
         let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
-        unsafe {
-            BinaryArray::new_unchecked(
-                data_type,
-                offsets.into(),
-                values.into(),
-                std::mem::take(&mut self.validity).map(|x| x.into()),
-            )
-        }
+        BinaryArray::new(
+            data_type,
+            offsets.into(),
+            values.into(),
+            std::mem::take(&mut self.validity).map(|x| x.into()),
+        )
         .arced()
     }
 
@@ -323,7 +292,7 @@ impl<O: Offset> MutableBinaryArray<O> {
     pub unsafe fn from_trusted_len_values_iter_unchecked<T: AsRef<[u8]>, I: Iterator<Item = T>>(
         iterator: I,
     ) -> Self {
-        let (offsets, values) = unsafe { trusted_len_values_iter(iterator) };
+        let (offsets, values) = trusted_len_values_iter(iterator);
         Self::from_data(Self::default_data_type(), offsets, values, None)
     }
 

@@ -100,6 +100,7 @@ fn list_required<'a, O: Offset>(array: &'a ListArray<O>, schema: &AvroSchema) ->
     let mut inner = new_serializer(array.values().as_ref(), schema);
     let lengths = array
         .offsets()
+        .buffer()
         .windows(2)
         .map(|w| (w[1] - w[0]).to_usize() as i64);
 
@@ -125,6 +126,7 @@ fn list_optional<'a, O: Offset>(array: &'a ListArray<O>, schema: &AvroSchema) ->
     let mut inner = new_serializer(array.values().as_ref(), schema);
     let lengths = array
         .offsets()
+        .buffer()
         .windows(2)
         .map(|w| (w[1] - w[0]).to_usize() as i64);
     let lengths = ZipValidity::new_with_validity(lengths, array.validity());

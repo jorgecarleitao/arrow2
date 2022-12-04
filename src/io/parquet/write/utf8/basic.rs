@@ -63,7 +63,7 @@ pub fn array_to_page<O: Offset>(
         Encoding::Plain => encode_plain(array, is_optional, &mut buffer),
         Encoding::DeltaLengthByteArray => encode_delta(
             array.values(),
-            array.offsets(),
+            array.offsets().buffer(),
             array.validity(),
             is_optional,
             &mut buffer,

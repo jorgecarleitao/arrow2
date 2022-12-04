@@ -141,7 +141,7 @@ fn list_serializer<'a, O: Offset>(
     let mut serializer = new_serializer(array.values().as_ref());
 
     Box::new(BufStreamingIterator::new(
-        ZipValidity::new_with_validity(array.offsets().windows(2), array.validity()),
+        ZipValidity::new_with_validity(array.offsets().buffer().windows(2), array.validity()),
         move |offset, buf| {
             if let Some(offset) = offset {
                 let length = (offset[1] - offset[0]).to_usize();

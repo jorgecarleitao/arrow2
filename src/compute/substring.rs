@@ -21,7 +21,7 @@ use crate::{
     array::*,
     datatypes::DataType,
     error::{Error, Result},
-    offset::Offset,
+    offset::{Offset, Offsets},
 };
 
 fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>) -> Utf8Array<O> {
@@ -77,13 +77,10 @@ fn binary_substring<O: Offset>(
     let offsets = array.offsets();
     let values = array.values();
 
-    let mut new_offsets = Vec::<O>::with_capacity(array.len() + 1);
+    let mut new_offsets = Offsets::<O>::with_capacity(array.len());
     let mut new_values = Vec::<u8>::new(); // we have no way to estimate how much this will be.
 
-    let mut length_so_far = O::zero();
-    new_offsets.push(length_so_far);
-
-    offsets.windows(2).for_each(|windows| {
+    offsets.buffer().windows(2).for_each(|windows| {
         let length_i: O = windows[1] - windows[0];
 
         // compute where we should start slicing this entry
@@ -99,8 +96,9 @@ fn binary_substring<O: Offset>(
             .unwrap_or(length_i)
             // .max(0) is not needed as it is guaranteed
             .min(windows[1] - start); // so we do not go beyond this entry
-        length_so_far += length;
-        new_offsets.push(length_so_far);
+        new_offsets
+            .try_push(length)
+            .expect("Substring is always smaller than original - overflow never happens");
 
         // we need usize for ranges
         let start = start.to_usize();

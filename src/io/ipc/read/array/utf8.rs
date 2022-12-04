@@ -70,7 +70,7 @@ pub fn read_utf8<O: Offset, R: Read + Seek>(
         scratch,
     )?;
 
-    Utf8Array::<O>::try_new(data_type, offsets, values, validity)
+    Utf8Array::<O>::try_new(data_type, offsets.try_into()?, values, validity)
 }
 
 pub fn skip_utf8(

@@ -67,11 +67,10 @@ fn read_dict<O: Offset>(data_type: DataType, dict: &DictPage) -> Box<dyn Array> 
 
     match data_type.to_physical_type() {
         PhysicalType::Utf8 | PhysicalType::LargeUtf8 => {
-            Utf8Array::<O>::new(data_type, data.offsets.0.into(), data.values.into(), None).boxed()
+            Utf8Array::<O>::new(data_type, data.offsets.into(), data.values.into(), None).boxed()
         }
         PhysicalType::Binary | PhysicalType::LargeBinary => {
-            BinaryArray::<O>::new(data_type, data.offsets.0.into(), data.values.into(), None)
-                .boxed()
+            BinaryArray::<O>::new(data_type, data.offsets.into(), data.values.into(), None).boxed()
         }
         _ => unreachable!(),
     }

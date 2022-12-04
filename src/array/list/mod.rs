@@ -1,17 +1,12 @@
 use crate::{
     bitmap::Bitmap,
-    buffer::Buffer,
     datatypes::{DataType, Field},
     error::Error,
-    offset::Offset,
+    offset::{Offset, OffsetsBuffer},
 };
 use std::sync::Arc;
 
-use super::{
-    new_empty_array,
-    specification::{try_check_offsets, try_check_offsets_bounds},
-    Array,
-};
+use super::{new_empty_array, specification::try_check_offsets_bounds, Array};
 
 mod ffi;
 pub(super) mod fmt;
@@ -24,7 +19,7 @@ pub use mutable::*;
 #[derive(Clone)]
 pub struct ListArray<O: Offset> {
     data_type: DataType,
-    offsets: Buffer<O>,
+    offsets: OffsetsBuffer<O>,
     values: Box<dyn Array>,
     validity: Option<Bitmap>,
 }
@@ -34,24 +29,23 @@ impl<O: Offset> ListArray<O> {
     ///
     /// # Errors
     /// This function returns an error iff:
-    /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * the validity's length is not equal to `offsets.len()`.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either [`crate::datatypes::PhysicalType::List`] or [`crate::datatypes::PhysicalType::LargeList`].
     /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
     /// # Implementation
-    /// This function is `O(N)` - checking monotinicity is `O(N)`
+    /// This function is `O(1)`
     pub fn try_new(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: OffsetsBuffer<O>,
         values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
-        try_check_offsets(&offsets, values.len())?;
+        try_check_offsets_bounds(offsets.buffer(), values.len())?;
 
         if validity
             .as_ref()
-            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+            .map_or(false, |validity| validity.len() != offsets.len())
         {
             return Err(Error::oos(
                 "validity mask length must match the number of values",
@@ -78,16 +72,15 @@ impl<O: Offset> ListArray<O> {
     ///
     /// # Panics
     /// This function panics iff:
-    /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * the validity's length is not equal to `offsets.len()`.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either [`crate::datatypes::PhysicalType::List`] or [`crate::datatypes::PhysicalType::LargeList`].
     /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
     /// # Implementation
-    /// This function is `O(N)` - checking monotinicity is `O(N)`
+    /// This function is `O(1)`
     pub fn new(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: OffsetsBuffer<O>,
         values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
@@ -97,7 +90,7 @@ impl<O: Offset> ListArray<O> {
     /// Alias of `new`
     pub fn from_data(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: OffsetsBuffer<O>,
         values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
@@ -107,7 +100,7 @@ impl<O: Offset> ListArray<O> {
     /// Returns a new empty [`ListArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         let values = new_empty_array(Self::get_child_type(&data_type).clone());
-        Self::new(data_type, Buffer::from(vec![O::zero()]), values, None)
+        Self::new(data_type, OffsetsBuffer::default(), values, None)
     }
 
     /// Returns a new null [`ListArray`].
@@ -116,7 +109,7 @@ impl<O: Offset> ListArray<O> {
         let child = Self::get_child_type(&data_type).clone();
         Self::new(
             data_type,
-            vec![O::default(); 1 + length].into(),
+            vec![O::zero(); 1 + length].try_into().unwrap(),
             new_empty_array(child),
             Some(Bitmap::new_zeroed(length)),
         )
@@ -130,77 +123,6 @@ impl<O: Offset> ListArray<O> {
     /// Boxes self into a [`Arc<dyn Array>`].
     pub fn arced(self) -> Arc<dyn Array> {
         Arc::new(self)
-    }
-}
-
-// unsafe construtors
-impl<O: Offset> ListArray<O> {
-    /// Creates a new [`ListArray`].
-    ///
-    /// # Errors
-    /// This function returns an error iff:
-    /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
-    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either [`crate::datatypes::PhysicalType::List`] or [`crate::datatypes::PhysicalType::LargeList`].
-    /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
-    /// # Safety
-    /// This function is unsafe iff:
-    /// * the offsets are not monotonically increasing
-    /// # Implementation
-    /// This function is `O(1)`
-    pub unsafe fn try_new_unchecked(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Box<dyn Array>,
-        validity: Option<Bitmap>,
-    ) -> Result<Self, Error> {
-        try_check_offsets_bounds(&offsets, values.len())?;
-
-        if validity
-            .as_ref()
-            .map_or(false, |validity| validity.len() != offsets.len() - 1)
-        {
-            return Err(Error::oos(
-                "validity mask length must match the number of values",
-            ));
-        }
-
-        let child_data_type = Self::try_get_child(&data_type)?.data_type();
-        let values_data_type = values.data_type();
-        if child_data_type != values_data_type {
-            return Err(Error::oos(
-                format!("ListArray's child's DataType must match. However, the expected DataType is {child_data_type:?} while it got {values_data_type:?}."),
-            ));
-        }
-
-        Ok(Self {
-            data_type,
-            offsets,
-            values,
-            validity,
-        })
-    }
-
-    /// Creates a new [`ListArray`].
-    ///
-    /// # Panics
-    /// This function panics iff:
-    /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
-    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either [`crate::datatypes::PhysicalType::List`] or [`crate::datatypes::PhysicalType::LargeList`].
-    /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
-    /// # Safety
-    /// This function is unsafe iff:
-    /// * the offsets are not monotonically increasing
-    /// # Implementation
-    /// This function is `O(1)`
-    pub unsafe fn new_unchecked(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Box<dyn Array>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::try_new_unchecked(data_type, offsets, values, validity).unwrap()
     }
 }
 
@@ -259,14 +181,14 @@ impl<O: Offset> ListArray<O> {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.offsets.len()
     }
 
     /// Returns the element at index `i`
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
-        let offset = self.offsets[i];
-        let offset_1 = self.offsets[i + 1];
+        let offset = self.offsets.buffer()[i];
+        let offset_1 = self.offsets.buffer()[i + 1];
         let length = (offset_1 - offset).to_usize();
 
         // Safety:
@@ -280,8 +202,8 @@ impl<O: Offset> ListArray<O> {
     /// Assumes that the `i < self.len`.
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
-        let offset = *self.offsets.get_unchecked(i);
-        let offset_1 = *self.offsets.get_unchecked(i + 1);
+        let offset = *self.offsets.buffer().get_unchecked(i);
+        let offset_1 = *self.offsets.buffer().get_unchecked(i + 1);
         let length = (offset_1 - offset).to_usize();
 
         self.values.slice_unchecked(offset.to_usize(), length)
@@ -295,7 +217,7 @@ impl<O: Offset> ListArray<O> {
 
     /// The offsets [`Buffer`].
     #[inline]
-    pub fn offsets(&self) -> &Buffer<O> {
+    pub fn offsets(&self) -> &OffsetsBuffer<O> {
         &self.offsets
     }
 

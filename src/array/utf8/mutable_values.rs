@@ -2,13 +2,13 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
     array::{
-        specification::{check_offsets_minimal, try_check_offsets_and_utf8},
+        specification::{try_check_offsets_and_utf8, try_check_offsets_bounds},
         Array, ArrayValuesIter, MutableArray, TryExtend, TryExtendFromSelf, TryPush,
     },
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{Error, Result},
-    offset::Offset,
+    offset::{Offset, Offsets},
     trusted_len::TrustedLen,
 };
 
@@ -20,7 +20,7 @@ use crate::array::physical_binary::*;
 #[derive(Debug, Clone)]
 pub struct MutableUtf8ValuesArray<O: Offset> {
     data_type: DataType,
-    offsets: Vec<O>,
+    offsets: Offsets<O>,
     values: Vec<u8>,
 }
 
@@ -66,7 +66,7 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
     pub fn new() -> Self {
         Self {
             data_type: Self::default_data_type(),
-            offsets: vec![O::default()],
+            offsets: Offsets::new(),
             values: Vec::<u8>::new(),
         }
     }
@@ -75,14 +75,13 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
     ///
     /// # Errors
     /// This function returns an error iff:
-    /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the values' length.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
     /// * The `values` between two consecutive `offsets` are not valid utf8
     /// # Implementation
-    /// This function is `O(N)` - checking monotinicity and utf8 is `O(N)`
-    pub fn try_new(data_type: DataType, offsets: Vec<O>, values: Vec<u8>) -> Result<Self> {
-        try_check_offsets_and_utf8(&offsets, &values)?;
+    /// This function is `O(N)` - checking utf8 is `O(N)`
+    pub fn try_new(data_type: DataType, offsets: Offsets<O>, values: Vec<u8>) -> Result<Self> {
+        try_check_offsets_and_utf8(offsets.as_slice(), &values)?;
         if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
             return Err(Error::oos(
                 "MutableUtf8ValuesArray can only be initialized with DataType::Utf8 or DataType::LargeUtf8",
@@ -108,8 +107,9 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
     /// * The `values` between two consecutive `offsets` are not valid utf8
     /// # Implementation
     /// This function is `O(1)`
-    pub unsafe fn new_unchecked(data_type: DataType, offsets: Vec<O>, values: Vec<u8>) -> Self {
-        check_offsets_minimal(&offsets, values.len());
+    pub unsafe fn new_unchecked(data_type: DataType, offsets: Offsets<O>, values: Vec<u8>) -> Self {
+        try_check_offsets_bounds(offsets.as_slice(), values.len())
+            .expect("The length of the values must be equal to the last offset value");
 
         if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
             panic!("MutableUtf8ValuesArray can only be initialized with DataType::Utf8 or DataType::LargeUtf8")
@@ -135,12 +135,9 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
 
     /// Initializes a new [`MutableUtf8ValuesArray`] with a pre-allocated capacity of items and values.
     pub fn with_capacities(capacity: usize, values: usize) -> Self {
-        let mut offsets = Vec::<O>::with_capacity(capacity + 1);
-        offsets.push(O::default());
-
         Self {
             data_type: Self::default_data_type(),
-            offsets,
+            offsets: Offsets::<O>::with_capacity(capacity),
             values: Vec::<u8>::with_capacity(values),
         }
     }
@@ -153,7 +150,7 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
 
     /// returns its offsets.
     #[inline]
-    pub fn offsets(&self) -> &Vec<O> {
+    pub fn offsets(&self) -> &Offsets<O> {
         &self.offsets
     }
 
@@ -172,7 +169,7 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.offsets.len()
     }
 
     /// Pushes a new item to the array.
@@ -190,7 +187,7 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
             return None;
         }
         self.offsets.pop()?;
-        let start = self.offsets.last()?.to_usize();
+        let start = self.offsets.last().to_usize();
         let value = self.values.split_off(start);
         // Safety: utf8 is validated on initialization
         Some(unsafe { String::from_utf8_unchecked(value) })
@@ -211,8 +208,8 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> &str {
         // soundness: the invariant of the function
-        let start = self.offsets.get_unchecked(i).to_usize();
-        let end = self.offsets.get_unchecked(i + 1).to_usize();
+        let start = self.offsets.as_slice().get_unchecked(i).to_usize();
+        let end = self.offsets.as_slice().get_unchecked(i + 1).to_usize();
 
         // soundness: the invariant of the struct
         let slice = self.values.get_unchecked(start..end);
@@ -233,7 +230,7 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
     }
 
     /// Extract the low-end APIs from the [`MutableUtf8ValuesArray`].
-    pub fn into_inner(self) -> (DataType, Vec<O>, Vec<u8>) {
+    pub fn into_inner(self) -> (DataType, Offsets<O>, Vec<u8>) {
         (self.data_type, self.offsets, self.values)
     }
 }
@@ -401,17 +398,13 @@ impl<O: Offset, T: AsRef<str>> TryPush<T> for MutableUtf8ValuesArray<O> {
     fn try_push(&mut self, value: T) -> Result<()> {
         let bytes = value.as_ref().as_bytes();
         self.values.extend_from_slice(bytes);
-
-        let size = O::from_usize(self.values.len()).ok_or(Error::Overflow)?;
-
-        self.offsets.push(size);
-        Ok(())
+        self.offsets.try_push_usize(bytes.len())
     }
 }
 
 impl<O: Offset> TryExtendFromSelf for MutableUtf8ValuesArray<O> {
     fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
         self.values.extend_from_slice(&other.values);
-        try_extend_offsets(&mut self.offsets, &other.offsets)
+        self.offsets.try_extend_from_self(&other.offsets)
     }
 }

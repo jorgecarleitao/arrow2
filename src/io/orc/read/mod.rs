@@ -5,7 +5,7 @@ use crate::array::{Array, BinaryArray, BooleanArray, Int64Array, PrimitiveArray,
 use crate::bitmap::{Bitmap, MutableBitmap};
 use crate::datatypes::{DataType, Field, Schema};
 use crate::error::Error;
-use crate::offset::Offset;
+use crate::offset::{Offset, Offsets};
 use crate::types::NativeType;
 
 use orc_format::proto::stream::Kind;
@@ -250,23 +250,19 @@ where
 
 #[inline]
 fn try_extend<O: Offset + TryFrom<u64>, I: Iterator<Item = u64>>(
-    offsets: &mut Vec<O>,
-    length: &mut O,
+    offsets: &mut Offsets<O>,
     iter: I,
-) -> Result<(), orc_format::error::Error> {
+) -> Result<(), Error> {
     for item in iter {
-        let item: O = item
-            .try_into()
-            .map_err(|_| orc_format::error::Error::OutOfSpec)?;
-        *length += item;
-        offsets.push(*length)
+        let length: O = item.try_into().map_err(|_| Error::Overflow)?;
+        offsets.try_push(length)?
     }
     Ok(())
 }
 
 fn deserialize_binary_generic<O: Offset + TryFrom<u64>>(
     column: &Column,
-) -> Result<(Vec<O>, Vec<u8>, Option<Bitmap>), Error> {
+) -> Result<(Offsets<O>, Vec<u8>, Option<Bitmap>), Error> {
     let num_rows = column.number_of_rows();
     let mut scratch = vec![];
 
@@ -274,9 +270,7 @@ fn deserialize_binary_generic<O: Offset + TryFrom<u64>>(
 
     let lengths = column.get_stream(Kind::Length, scratch)?;
 
-    let mut offsets = Vec::with_capacity(num_rows + 1);
-    let mut length = O::default();
-    offsets.push(length);
+    let mut offsets = Offsets::with_capacity(num_rows);
     if let Some(validity) = &validity {
         let mut iter =
             decode::UnsignedRleV2Iter::new(lengths, validity.len() - validity.unset_bits(), vec![]);
@@ -286,34 +280,35 @@ fn deserialize_binary_generic<O: Offset + TryFrom<u64>>(
                     .next()
                     .transpose()?
                     .ok_or(orc_format::error::Error::OutOfSpec)?;
-                let item: O = item
+                let length: O = item
                     .try_into()
                     .map_err(|_| Error::ExternalFormat("value uncastable".to_string()))?;
-                length += item;
+                offsets.try_push(length)?;
+            } else {
+                offsets.extend_constant(1)
             }
-            offsets.push(length);
         }
         let (lengths, _) = iter.into_inner();
         scratch = std::mem::take(&mut lengths.into_inner());
     } else {
         let mut iter = decode::UnsignedRleV2RunIter::new(lengths, num_rows, vec![]);
         iter.try_for_each(|run| {
-            run.and_then(|run| match run {
+            run.map_err(Error::from).and_then(|run| match run {
                 decode::UnsignedRleV2Run::Direct(values_iter) => {
-                    try_extend(&mut offsets, &mut length, values_iter)
+                    try_extend(&mut offsets, values_iter)
                 }
                 decode::UnsignedRleV2Run::Delta(values_iter) => {
-                    try_extend(&mut offsets, &mut length, values_iter)
+                    try_extend(&mut offsets, values_iter)
                 }
                 decode::UnsignedRleV2Run::ShortRepeat(values_iter) => {
-                    try_extend(&mut offsets, &mut length, values_iter)
+                    try_extend(&mut offsets, values_iter)
                 }
             })
         })?;
         let (lengths, _) = iter.into_inner();
         scratch = std::mem::take(&mut lengths.into_inner());
     }
-    let length = length.to_usize();
+    let length = offsets.last().to_usize();
     let mut values = vec![0; length];
 
     let mut data = column.get_stream(Kind::Data, scratch)?;

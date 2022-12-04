@@ -1,4 +1,7 @@
-use arrow2::{array::*, bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::Result};
+use arrow2::{
+    array::*, bitmap::Bitmap, buffer::Buffer, datatypes::DataType, error::Result,
+    offset::OffsetsBuffer,
+};
 
 mod mutable;
 mod mutable_values;
@@ -60,8 +63,8 @@ fn from() {
 fn from_slice() {
     let b = Utf8Array::<i32>::from_slice(["a", "b", "cc"]);
 
-    let offsets = Buffer::from(vec![0, 1, 2, 4]);
-    let values = Buffer::from(b"abcc".to_vec());
+    let offsets = vec![0, 1, 2, 4].try_into().unwrap();
+    let values = b"abcc".to_vec().into();
     assert_eq!(
         b,
         Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
@@ -72,8 +75,8 @@ fn from_slice() {
 fn from_iter_values() {
     let b = Utf8Array::<i32>::from_iter_values(["a", "b", "cc"].iter());
 
-    let offsets = Buffer::from(vec![0, 1, 2, 4]);
-    let values = Buffer::from(b"abcc".to_vec());
+    let offsets = vec![0, 1, 2, 4].try_into().unwrap();
+    let values = b"abcc".to_vec().into();
     assert_eq!(
         b,
         Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
@@ -85,8 +88,8 @@ fn from_trusted_len_iter() {
     let b =
         Utf8Array::<i32>::from_trusted_len_iter(vec![Some("a"), Some("b"), Some("cc")].into_iter());
 
-    let offsets = Buffer::from(vec![0, 1, 2, 4]);
-    let values = Buffer::from(b"abcc".to_vec());
+    let offsets = vec![0, 1, 2, 4].try_into().unwrap();
+    let values = b"abcc".to_vec().into();
     assert_eq!(
         b,
         Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
@@ -102,8 +105,8 @@ fn try_from_trusted_len_iter() {
     )
     .unwrap();
 
-    let offsets = Buffer::from(vec![0, 1, 2, 4]);
-    let values = Buffer::from(b"abcc".to_vec());
+    let offsets = vec![0, 1, 2, 4].try_into().unwrap();
+    let values = b"abcc".to_vec().into();
     assert_eq!(
         b,
         Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
@@ -112,59 +115,38 @@ fn try_from_trusted_len_iter() {
 
 #[test]
 fn not_utf8() {
-    let offsets = Buffer::from(vec![0, 4]);
-    let values = Buffer::from(vec![0, 159, 146, 150]); // invalid utf8
+    let offsets = vec![0, 4].try_into().unwrap();
+    let values = vec![0, 159, 146, 150].into(); // invalid utf8
     assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
 }
 
 #[test]
 fn not_utf8_individually() {
-    let offsets = Buffer::from(vec![0, 1, 2]);
-    let values = Buffer::from(vec![207, 128]); // each is invalid utf8, but together is valid
-    assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
-}
-
-#[test]
-fn wrong_offsets() {
-    let offsets = Buffer::from(vec![0, 5, 4]); // invalid offsets
-    let values = Buffer::from(b"abbbbb".to_vec());
+    let offsets = vec![0, 1, 2].try_into().unwrap();
+    let values = vec![207, 128].into(); // each is invalid utf8, but together is valid
     assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
 }
 
 #[test]
 fn wrong_data_type() {
-    let offsets = Buffer::from(vec![0, 4]);
-    let values = Buffer::from(b"abbb".to_vec());
+    let offsets = vec![0, 4].try_into().unwrap();
+    let values = b"abbb".to_vec().into();
     assert!(Utf8Array::<i32>::try_new(DataType::Int32, offsets, values, None).is_err());
 }
 
 #[test]
 fn out_of_bounds_offsets_panics() {
     // the 10 is out of bounds
-    let offsets = Buffer::from(vec![0, 10, 11]);
-    let values = Buffer::from(b"abbb".to_vec());
-    assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
-}
-
-#[test]
-fn decreasing_offset_and_ascii_panics() {
-    let offsets = Buffer::from(vec![0, 2, 1]);
-    let values = Buffer::from(b"abbb".to_vec());
-    assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
-}
-
-#[test]
-fn decreasing_offset_and_utf8_panics() {
-    let offsets = Buffer::from(vec![0, 2, 4, 2]); // not increasing
-    let values = Buffer::from(vec![207, 128, 207, 128, 207, 128]); // valid utf8
+    let offsets = vec![0, 10, 11].try_into().unwrap();
+    let values = b"abbb".to_vec().into();
     assert!(Utf8Array::<i32>::try_new(DataType::Utf8, offsets, values, None).is_err());
 }
 
 #[test]
 #[should_panic]
 fn index_out_of_bounds_panics() {
-    let offsets = Buffer::from(vec![0, 1, 2, 4]);
-    let values = Buffer::from(b"abbb".to_vec());
+    let offsets = vec![0, 1, 2, 4].try_into().unwrap();
+    let values = b"abbb".to_vec().into();
     let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
 
     array.value(3);
@@ -179,7 +161,7 @@ fn debug() {
 
 #[test]
 fn into_mut_1() {
-    let offsets = Buffer::from(vec![0, 1]);
+    let offsets = vec![0, 1].try_into().unwrap();
     let values = Buffer::from(b"a".to_vec());
     let a = values.clone(); // cloned values
     assert_eq!(a, values);
@@ -189,8 +171,8 @@ fn into_mut_1() {
 
 #[test]
 fn into_mut_2() {
-    let offsets = Buffer::from(vec![0, 1]);
-    let values = Buffer::from(b"a".to_vec());
+    let offsets: OffsetsBuffer<i32> = vec![0, 1].try_into().unwrap();
+    let values = b"a".to_vec().into();
     let a = offsets.clone(); // cloned offsets
     assert_eq!(a, offsets);
     let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
@@ -199,8 +181,8 @@ fn into_mut_2() {
 
 #[test]
 fn into_mut_3() {
-    let offsets = Buffer::from(vec![0, 1]);
-    let values = Buffer::from(b"a".to_vec());
+    let offsets = vec![0, 1].try_into().unwrap();
+    let values = b"a".to_vec().into();
     let validity = Some([true].into());
     let a = validity.clone(); // cloned validity
     assert_eq!(a, validity);
@@ -210,8 +192,8 @@ fn into_mut_3() {
 
 #[test]
 fn into_mut_4() {
-    let offsets = Buffer::from(vec![0, 1]);
-    let values = Buffer::from(b"a".to_vec());
+    let offsets = vec![0, 1].try_into().unwrap();
+    let values = b"a".to_vec().into();
     let validity = Some([true].into());
     let array = Utf8Array::<i32>::new(DataType::Utf8, offsets, values, validity);
     assert!(array.into_mut().is_right());

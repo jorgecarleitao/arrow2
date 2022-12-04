@@ -2,14 +2,13 @@ use std::sync::Arc;
 
 use crate::{
     array::{
-        physical_binary::{extend_validity, try_extend_offsets},
-        specification::try_check_offsets,
-        Array, MutableArray, TryExtend, TryExtendFromSelf, TryPush,
+        physical_binary::extend_validity, Array, MutableArray, TryExtend, TryExtendFromSelf,
+        TryPush,
     },
     bitmap::MutableBitmap,
     datatypes::{DataType, Field},
     error::{Error, Result},
-    offset::Offset,
+    offset::{Offset, Offsets},
     trusted_len::TrustedLen,
 };
 
@@ -19,7 +18,7 @@ use super::ListArray;
 #[derive(Debug, Clone)]
 pub struct MutableListArray<O: Offset, M: MutableArray> {
     data_type: DataType,
-    offsets: Vec<O>,
+    offsets: Offsets<O>,
     values: M,
     validity: Option<MutableBitmap>,
 }
@@ -37,8 +36,7 @@ impl<O: Offset, M: MutableArray + Default> MutableListArray<O, M> {
         let values = M::default();
         let data_type = ListArray::<O>::default_datatype(values.data_type().clone());
 
-        let mut offsets = Vec::<O>::with_capacity(capacity + 1);
-        offsets.push(O::default());
+        let offsets = Offsets::<O>::with_capacity(capacity);
         Self {
             data_type,
             offsets,
@@ -56,16 +54,12 @@ impl<O: Offset, M: MutableArray + Default> Default for MutableListArray<O, M> {
 
 impl<O: Offset, M: MutableArray> From<MutableListArray<O, M>> for ListArray<O> {
     fn from(mut other: MutableListArray<O, M>) -> Self {
-        // Safety:
-        // MutableListArray has monotonically increasing offsets
-        unsafe {
-            ListArray::new_unchecked(
-                other.data_type,
-                other.offsets.into(),
-                other.values.as_box(),
-                other.validity.map(|x| x.into()),
-            )
-        }
+        ListArray::new(
+            other.data_type,
+            other.offsets.into(),
+            other.values.as_box(),
+            other.validity.map(|x| x.into()),
+        )
     }
 }
 
@@ -113,16 +107,14 @@ where
         extend_validity(self.len(), &mut self.validity, &other.validity);
 
         self.values.try_extend_from_self(&other.values)?;
-
-        try_extend_offsets(&mut self.offsets, &other.offsets)
+        self.offsets.try_extend_from_self(&other.offsets)
     }
 }
 
 impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// Creates a new [`MutableListArray`] from a [`MutableArray`] and capacity.
     pub fn new_from(values: M, data_type: DataType, capacity: usize) -> Self {
-        let mut offsets = Vec::<O>::with_capacity(capacity + 1);
-        offsets.push(O::default());
+        let offsets = Offsets::<O>::with_capacity(capacity);
         assert_eq!(values.len(), 0);
         ListArray::<O>::get_child_field(&data_type);
         Self {
@@ -154,11 +146,11 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// Needs to be called when a valid value was extended to this array.
     /// This is a relatively low level function, prefer `try_push` when you can.
     pub fn try_push_valid(&mut self) -> Result<()> {
-        let size = self.values.len();
-        let size = O::from_usize(size).ok_or(Error::Overflow)?;
-        assert!(size >= *self.offsets.last().unwrap());
+        let total_length = self.values.len();
+        let offset = self.offsets.last().to_usize();
+        let length = total_length.checked_sub(offset).ok_or(Error::Overflow)?;
 
-        self.offsets.push(size);
+        self.offsets.try_push_usize(length)?;
         if let Some(validity) = &mut self.validity {
             validity.push(true)
         }
@@ -167,7 +159,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
 
     #[inline]
     fn push_null(&mut self) {
-        self.offsets.push(self.last_offset());
+        self.offsets.extend_constant(1);
         match &mut self.validity {
             Some(validity) => validity.push(false),
             None => self.init_validity(),
@@ -176,79 +168,30 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
 
     /// Expand this array, using elements from the underlying backing array.
     /// Assumes the expansion begins at the highest previous offset, or zero if
-    /// this [MutableListArray] is currently empty.
+    /// this [`MutableListArray`] is currently empty.
     ///
     /// Panics if:
     /// - the new offsets are not in monotonic increasing order.
     /// - any new offset is not in bounds of the backing array.
     /// - the passed iterator has no upper bound.
     #[allow(dead_code)]
-    pub(crate) fn extend_offsets<II>(&mut self, expansion: II)
+    pub(crate) fn try_extend_from_lengths<II>(&mut self, iterator: II) -> Result<()>
     where
-        II: TrustedLen<Item = Option<O>>,
+        II: TrustedLen<Item = Option<usize>> + Clone,
     {
-        let current_len = self.offsets.len();
-        let (_, upper) = expansion.size_hint();
-        let upper = upper.expect("iterator must have upper bound");
-        if current_len == 0 && upper > 0 {
-            self.offsets.push(O::zero());
+        self.offsets
+            .try_extend_from_lengths(iterator.clone().map(|x| x.unwrap_or_default()))?;
+        if let Some(validity) = &mut self.validity {
+            validity.extend_from_trusted_len_iter(iterator.map(|x| x.is_some()))
         }
-        // safety: checked below
-        unsafe { self.unsafe_extend_offsets(expansion) };
-        if self.offsets.len() > current_len {
-            // check all inserted offsets
-            try_check_offsets(&self.offsets[current_len..], self.values.len())
-                .expect("invalid offsets");
-        }
-        // else expansion is empty, and this is trivially safe.
-    }
-
-    /// Expand this array, using elements from the underlying backing array.
-    /// Assumes the expansion begins at the highest previous offset, or zero if
-    /// this [MutableListArray] is currently empty.
-    ///
-    /// # Safety
-    ///
-    /// Assumes that `offsets` are in order, and do not overrun the underlying
-    /// `values` backing array.
-    ///
-    /// Also assumes the expansion begins at the highest previous offset, or
-    /// zero if the array is currently empty.
-    ///
-    /// Panics if the passed iterator has no upper bound.
-    #[allow(dead_code)]
-    pub(crate) unsafe fn unsafe_extend_offsets<II>(&mut self, expansion: II)
-    where
-        II: TrustedLen<Item = Option<O>>,
-    {
-        let (_, upper) = expansion.size_hint();
-        let upper = upper.expect("iterator must have upper bound");
-        let final_size = self.len() + upper;
-        self.offsets.reserve(upper);
-
-        for item in expansion {
-            match item {
-                Some(offset) => {
-                    self.offsets.push(offset);
-                    if let Some(validity) = &mut self.validity {
-                        validity.push(true);
-                    }
-                }
-                None => self.push_null(),
-            }
-
-            if let Some(validity) = &mut self.validity {
-                if validity.capacity() < final_size {
-                    validity.reserve(final_size - validity.capacity());
-                }
-            }
-        }
+        assert_eq!(self.offsets.last().to_usize(), self.values.len());
+        Ok(())
     }
 
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.offsets.len()
     }
 
     /// The values
@@ -257,7 +200,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     }
 
     /// The offsets
-    pub fn offsets(&self) -> &Vec<O> {
+    pub fn offsets(&self) -> &Offsets<O> {
         &self.offsets
     }
 
@@ -266,13 +209,8 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         &self.values
     }
 
-    #[inline]
-    fn last_offset(&self) -> O {
-        *self.offsets.last().unwrap()
-    }
-
     fn init_validity(&mut self) {
-        let len = self.offsets.len() - 1;
+        let len = self.offsets.len();
 
         let mut validity = MutableBitmap::with_capacity(self.offsets.capacity());
         validity.extend_constant(len, true);
@@ -320,29 +258,23 @@ impl<O: Offset, M: MutableArray + 'static> MutableArray for MutableListArray<O, 
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        // Safety:
-        // MutableListArray has monotonically increasing offsets
-        Box::new(unsafe {
-            ListArray::new_unchecked(
-                self.data_type.clone(),
-                std::mem::take(&mut self.offsets).into(),
-                self.values.as_box(),
-                std::mem::take(&mut self.validity).map(|x| x.into()),
-            )
-        })
+        ListArray::new(
+            self.data_type.clone(),
+            std::mem::take(&mut self.offsets).into(),
+            self.values.as_box(),
+            std::mem::take(&mut self.validity).map(|x| x.into()),
+        )
+        .boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        // Safety:
-        // MutableListArray has monotonically increasing offsets
-        Arc::new(unsafe {
-            ListArray::new_unchecked(
-                self.data_type.clone(),
-                std::mem::take(&mut self.offsets).into(),
-                self.values.as_box(),
-                std::mem::take(&mut self.validity).map(|x| x.into()),
-            )
-        })
+        ListArray::new(
+            self.data_type.clone(),
+            std::mem::take(&mut self.offsets).into(),
+            self.values.as_box(),
+            std::mem::take(&mut self.validity).map(|x| x.into()),
+        )
+        .arced()
     }
 
     fn data_type(&self) -> &DataType {

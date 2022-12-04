@@ -69,7 +69,7 @@ pub fn read_binary<O: Offset, R: Read + Seek>(
         scratch,
     )?;
 
-    BinaryArray::<O>::try_new(data_type, offsets, values, validity)
+    BinaryArray::<O>::try_new(data_type, offsets.try_into()?, values, validity)
 }
 
 pub fn skip_binary(

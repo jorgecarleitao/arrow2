@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use crate::{
     array::{Array, Utf8Array},
-    offset::Offset,
     bitmap::MutableBitmap,
+    offset::{Offset, Offsets},
 };
 
 use super::{
-    utils::{build_extend_null_bits, extend_offset_values, extend_offsets, ExtendNullBits},
+    utils::{build_extend_null_bits, extend_offset_values, ExtendNullBits},
     Growable,
 };
 
@@ -16,8 +16,7 @@ pub struct GrowableUtf8<'a, O: Offset> {
     arrays: Vec<&'a Utf8Array<O>>,
     validity: MutableBitmap,
     values: Vec<u8>,
-    offsets: Vec<O>,
-    length: O, // always equal to the last offset at `offsets`.
+    offsets: Offsets<O>,
     extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
@@ -37,15 +36,10 @@ impl<'a, O: Offset> GrowableUtf8<'a, O> {
             .map(|array| build_extend_null_bits(*array, use_validity))
             .collect();
 
-        let mut offsets = Vec::with_capacity(capacity + 1);
-        let length = O::default();
-        offsets.push(length);
-
         Self {
             arrays: arrays.to_vec(),
             values: Vec::with_capacity(0),
-            offsets,
-            length,
+            offsets: Offsets::with_capacity(capacity),
             validity: MutableBitmap::with_capacity(capacity),
             extend_null_bits,
         }
@@ -58,7 +52,8 @@ impl<'a, O: Offset> GrowableUtf8<'a, O> {
 
         #[cfg(debug_assertions)]
         {
-            crate::array::specification::try_check_offsets_and_utf8(&offsets, &values).unwrap();
+            crate::array::specification::try_check_offsets_and_utf8(offsets.as_slice(), &values)
+                .unwrap();
         }
 
         unsafe {
@@ -81,18 +76,16 @@ impl<'a, O: Offset> Growable<'a> for GrowableUtf8<'a, O> {
         let offsets = array.offsets();
         let values = array.values();
 
-        extend_offsets::<O>(
-            &mut self.offsets,
-            &mut self.length,
-            &offsets[start..start + len + 1],
-        );
+        self.offsets
+            .try_extend_from_slice(offsets, start, len)
+            .unwrap();
+
         // values
-        extend_offset_values::<O>(&mut self.values, offsets, values, start, len);
+        extend_offset_values::<O>(&mut self.values, offsets.as_slice(), values, start, len);
     }
 
     fn extend_validity(&mut self, additional: usize) {
-        self.offsets
-            .resize(self.offsets.len() + additional, self.length);
+        self.offsets.extend_constant(additional);
         self.validity.extend_constant(additional, false);
     }
 

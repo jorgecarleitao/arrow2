@@ -85,7 +85,7 @@ where
         version,
         scratch,
     )?;
-    ListArray::try_new(data_type, offsets, values, validity)
+    ListArray::try_new(data_type, offsets.try_into()?, values, validity)
 }
 
 pub fn skip_list<O: Offset>(

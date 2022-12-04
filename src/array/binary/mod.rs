@@ -6,16 +6,13 @@ use crate::{
     buffer::Buffer,
     datatypes::DataType,
     error::Error,
-    offset::Offset,
+    offset::{Offset, OffsetsBuffer},
     trusted_len::TrustedLen,
 };
 
 use either::Either;
 
-use super::{
-    specification::{try_check_offsets, try_check_offsets_bounds},
-    Array, GenericBinaryArray,
-};
+use super::{specification::try_check_offsets_bounds, Array, GenericBinaryArray};
 
 mod ffi;
 pub(super) mod fmt;
@@ -60,7 +57,7 @@ pub use mutable::*;
 #[derive(Clone)]
 pub struct BinaryArray<O: Offset> {
     data_type: DataType,
-    offsets: Buffer<O>,
+    offsets: OffsetsBuffer<O>,
     values: Buffer<u8>,
     validity: Option<Bitmap>,
 }
@@ -70,23 +67,22 @@ impl<O: Offset> BinaryArray<O> {
     ///
     /// # Errors
     /// This function returns an error iff:
-    /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * the validity's length is not equal to `offsets.len()`.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
     /// # Implementation
-    /// This function is `O(N)` - checking monotinicity is `O(N)`
+    /// This function is `O(1)`
     pub fn try_new(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: OffsetsBuffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
-        try_check_offsets(&offsets, values.len())?;
+        try_check_offsets_bounds(offsets.buffer(), values.len())?;
 
         if validity
             .as_ref()
-            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+            .map_or(false, |validity| validity.len() != offsets.len())
         {
             return Err(Error::oos(
                 "validity mask length must match the number of values",
@@ -131,7 +127,7 @@ impl<O: Offset> BinaryArray<O> {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.offsets.len()
     }
 
     /// Returns the element at index `i`
@@ -149,8 +145,8 @@ impl<O: Offset> BinaryArray<O> {
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
         // soundness: the invariant of the function
-        let start = self.offsets.get_unchecked(i).to_usize();
-        let end = self.offsets.get_unchecked(i + 1).to_usize();
+        let start = self.offsets.buffer().get_unchecked(i).to_usize();
+        let end = self.offsets.buffer().get_unchecked(i + 1).to_usize();
 
         // soundness: the invariant of the struct
         self.values.get_unchecked(start..end)
@@ -170,7 +166,7 @@ impl<O: Offset> BinaryArray<O> {
 
     /// Returns the offsets of this [`BinaryArray`].
     #[inline]
-    pub fn offsets(&self) -> &Buffer<O> {
+    pub fn offsets(&self) -> &OffsetsBuffer<O> {
         &self.offsets
     }
 
@@ -250,90 +246,78 @@ impl<O: Offset> BinaryArray<O> {
         if let Some(bitmap) = self.validity {
             match bitmap.into_mut() {
                 // Safety: invariants are preserved
-                Left(bitmap) => Left(unsafe {
-                    BinaryArray::new_unchecked(
+                Left(bitmap) => Left(BinaryArray::new(
+                    self.data_type,
+                    self.offsets,
+                    self.values,
+                    Some(bitmap),
+                )),
+                Right(mutable_bitmap) => match (
+                    self.values.get_mut().map(std::mem::take),
+                    self.offsets.get_mut(),
+                ) {
+                    (None, None) => Left(BinaryArray::new(
                         self.data_type,
                         self.offsets,
                         self.values,
-                        Some(bitmap),
-                    )
-                }),
-                Right(mutable_bitmap) => match (
-                    self.values.get_mut().map(std::mem::take),
-                    self.offsets.get_mut().map(std::mem::take),
-                ) {
-                    (None, None) => {
-                        // Safety: invariants are preserved
-                        Left(unsafe {
-                            BinaryArray::new_unchecked(
-                                self.data_type,
-                                self.offsets,
-                                self.values,
-                                Some(mutable_bitmap.into()),
-                            )
-                        })
-                    }
-                    (None, Some(offsets)) => {
-                        // Safety: invariants are preserved
-                        Left(unsafe {
-                            BinaryArray::new_unchecked(
-                                self.data_type,
-                                offsets.into(),
-                                self.values,
-                                Some(mutable_bitmap.into()),
-                            )
-                        })
-                    }
-                    (Some(mutable_values), None) => {
-                        // Safety: invariants are preserved
-                        Left(unsafe {
-                            BinaryArray::new_unchecked(
-                                self.data_type,
-                                self.offsets,
-                                mutable_values.into(),
-                                Some(mutable_bitmap.into()),
-                            )
-                        })
-                    }
-                    (Some(values), Some(offsets)) => Right(unsafe {
-                        MutableBinaryArray::from_data(
-                            self.data_type,
-                            offsets,
-                            values,
-                            Some(mutable_bitmap),
-                        )
-                    }),
+                        Some(mutable_bitmap.into()),
+                    )),
+                    (None, Some(offsets)) => Left(BinaryArray::new(
+                        self.data_type,
+                        offsets.into(),
+                        self.values,
+                        Some(mutable_bitmap.into()),
+                    )),
+                    (Some(mutable_values), None) => Left(BinaryArray::new(
+                        self.data_type,
+                        self.offsets,
+                        mutable_values.into(),
+                        Some(mutable_bitmap.into()),
+                    )),
+                    (Some(values), Some(offsets)) => Right(MutableBinaryArray::from_data(
+                        self.data_type,
+                        offsets,
+                        values,
+                        Some(mutable_bitmap),
+                    )),
                 },
             }
         } else {
             match (
                 self.values.get_mut().map(std::mem::take),
-                self.offsets.get_mut().map(std::mem::take),
+                self.offsets.get_mut(),
             ) {
-                (None, None) => Left(unsafe {
-                    BinaryArray::new_unchecked(self.data_type, self.offsets, self.values, None)
-                }),
-                (None, Some(offsets)) => Left(unsafe {
-                    BinaryArray::new_unchecked(self.data_type, offsets.into(), self.values, None)
-                }),
-                (Some(values), None) => Left(unsafe {
-                    BinaryArray::new_unchecked(self.data_type, self.offsets, values.into(), None)
-                }),
-                (Some(values), Some(offsets)) => Right(unsafe {
-                    MutableBinaryArray::from_data(self.data_type, offsets, values, None)
-                }),
+                (None, None) => Left(BinaryArray::new(
+                    self.data_type,
+                    self.offsets,
+                    self.values,
+                    None,
+                )),
+                (None, Some(offsets)) => Left(BinaryArray::new(
+                    self.data_type,
+                    offsets.into(),
+                    self.values,
+                    None,
+                )),
+                (Some(values), None) => Left(BinaryArray::new(
+                    self.data_type,
+                    self.offsets,
+                    values.into(),
+                    None,
+                )),
+                (Some(values), Some(offsets)) => Right(MutableBinaryArray::from_data(
+                    self.data_type,
+                    offsets,
+                    values,
+                    None,
+                )),
             }
         }
     }
 
     /// Creates an empty [`BinaryArray`], i.e. whose `.len` is zero.
     pub fn new_empty(data_type: DataType) -> Self {
-        Self::new(
-            data_type,
-            Buffer::from(vec![O::zero()]),
-            Buffer::new(),
-            None,
-        )
+        Self::new(data_type, OffsetsBuffer::new(), Buffer::new(), None)
     }
 
     /// Creates an null [`BinaryArray`], i.e. whose `.null_count() == .len()`.
@@ -341,7 +325,7 @@ impl<O: Offset> BinaryArray<O> {
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         Self::new(
             data_type,
-            vec![O::default(); 1 + length].into(),
+            vec![O::default(); 1 + length].try_into().unwrap(),
             Buffer::new(),
             Some(Bitmap::new_zeroed(length)),
         )
@@ -356,70 +340,14 @@ impl<O: Offset> BinaryArray<O> {
         }
     }
 
-    /// Creates a new [`BinaryArray`] without checking for offsets monotinicity.
-    ///
-    /// # Errors
-    /// This function returns an error iff:
-    /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
-    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
-    /// # Safety
-    /// This function is unsafe iff:
-    /// * the offsets are not monotonically increasing
-    /// # Implementation
-    /// This function is `O(1)`
-    pub unsafe fn try_new_unchecked(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Result<Self, Error> {
-        try_check_offsets_bounds(&offsets, values.len())?;
-
-        if validity
-            .as_ref()
-            .map_or(false, |validity| validity.len() != offsets.len() - 1)
-        {
-            return Err(Error::oos(
-                "validity mask length must match the number of values",
-            ));
-        }
-
-        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            return Err(Error::oos(
-                "BinaryArray can only be initialized with DataType::Binary or DataType::LargeBinary",
-            ));
-        }
-
-        Ok(Self {
-            data_type,
-            offsets,
-            values,
-            validity,
-        })
-    }
-
     /// Alias for unwrapping [`Self::try_new`]
     pub fn new(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: OffsetsBuffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Self {
         Self::try_new(data_type, offsets, values, validity).unwrap()
-    }
-
-    /// Alias for unwrapping [`Self::try_new_unchecked`]
-    /// # Safety
-    /// This function is unsafe iff:
-    /// * the offsets are not monotonically increasing
-    pub unsafe fn new_unchecked(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::try_new_unchecked(data_type, offsets, values, validity).unwrap()
     }
 
     /// Returns a [`BinaryArray`] from an iterator of trusted length.
@@ -487,23 +415,10 @@ impl<O: Offset> BinaryArray<O> {
         unsafe { Self::try_from_trusted_len_iter_unchecked(iter) }
     }
 
-    /// Alias for [`Self::new_unchecked`]
-    /// # Safety
-    /// This function is unsafe iff:
-    /// * the offsets are not monotonically increasing
-    pub unsafe fn from_data_unchecked(
-        data_type: DataType,
-        offsets: Buffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new_unchecked(data_type, offsets, values, validity)
-    }
-
     /// Alias for `new`
     pub fn from_data(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: OffsetsBuffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Self {
@@ -558,6 +473,6 @@ unsafe impl<O: Offset> GenericBinaryArray<O> for BinaryArray<O> {
 
     #[inline]
     fn offsets(&self) -> &[O] {
-        self.offsets()
+        self.offsets().buffer()
     }
 }

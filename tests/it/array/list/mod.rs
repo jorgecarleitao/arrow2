@@ -12,7 +12,7 @@ fn debug() {
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from(vec![0, 2, 2, 3, 5]),
+        vec![0, 2, 2, 3, 5].try_into().unwrap(),
         Box::new(values),
         None,
     );
@@ -29,7 +29,7 @@ fn test_nested_panic() {
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
         data_type.clone(),
-        Buffer::from(vec![0, 2, 2, 3, 5]),
+        vec![0, 2, 2, 3, 5].try_into().unwrap(),
         Box::new(values),
         None,
     );
@@ -38,7 +38,7 @@ fn test_nested_panic() {
     // the nested structure of the child data
     let _ = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from(vec![0, 2, 4]),
+        vec![0, 2, 4].try_into().unwrap(),
         Box::new(array),
         None,
     );
@@ -52,7 +52,7 @@ fn test_nested_display() {
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from(vec![0, 2, 4, 7, 7, 8, 10]),
+        vec![0, 2, 4, 7, 7, 8, 10].try_into().unwrap(),
         Box::new(values),
         None,
     );
@@ -60,7 +60,7 @@ fn test_nested_display() {
     let data_type = ListArray::<i32>::default_datatype(array.data_type().clone());
     let nested = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from(vec![0, 2, 5, 6]),
+        vec![0, 2, 5, 6].try_into().unwrap(),
         Box::new(array),
         None,
     );

@@ -18,7 +18,7 @@ use crate::{
     array::*,
     datatypes::*,
     error::{Error, Result},
-    offset::Offset,
+    offset::{Offset, Offsets},
 };
 
 /// options defining how Cast kernels behave
@@ -324,28 +324,18 @@ fn cast_list<O: Offset>(
 }
 
 fn cast_list_to_large_list(array: &ListArray<i32>, to_type: &DataType) -> ListArray<i64> {
-    let offets = array
-        .offsets()
-        .iter()
-        .map(|x| *x as i64)
-        .collect::<Vec<_>>()
-        .into();
+    let offsets = array.offsets().into();
 
     ListArray::<i64>::new(
         to_type.clone(),
-        offets,
+        offsets,
         array.values().clone(),
         array.validity().cloned(),
     )
 }
 
 fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i32> {
-    let offsets = array
-        .offsets()
-        .iter()
-        .map(|x| *x as i32)
-        .collect::<Vec<_>>()
-        .into();
+    let offsets = array.offsets().try_into().expect("Conver me to error");
 
     ListArray::<i32>::new(
         to_type.clone(),
@@ -366,14 +356,15 @@ fn cast_fixed_size_list_to_list(
         options,
     )?;
 
-    let offsets = (0..(fixed.len() + 1))
+    let offsets = (0..=fixed.len())
         .map(|ix| (ix * fixed.size()) as i32)
-        .collect::<Vec<_>>()
-        .into();
+        .collect::<Vec<_>>();
+    // Safety: offsets _are_ monotonically increasing
+    let offsets = unsafe { Offsets::new_unchecked(offsets) };
 
     Ok(ListArray::<i32>::new(
         to_type.clone(),
-        offsets,
+        offsets.into(),
         new_values,
         fixed.validity().cloned(),
     ))
@@ -385,7 +376,7 @@ fn cast_list_to_fixed_size_list(
     size: usize,
     options: CastOptions,
 ) -> Result<FixedSizeListArray> {
-    let offsets = list.offsets().iter();
+    let offsets = list.offsets().buffer().iter();
     let expected = (0..list.len()).map(|ix| (ix * size) as i32);
 
     match offsets
@@ -478,6 +469,8 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             let values = cast(array, &to.data_type, options)?;
             // create offsets, where if array.len() = 2, we have [0,1,2]
             let offsets = (0..=array.len() as i32).collect::<Vec<_>>();
+            // Safety: offsets _are_ monotonically increasing
+            let offsets = unsafe { Offsets::new_unchecked(offsets) };
 
             let list_array = ListArray::<i32>::new(to_type.clone(), offsets.into(), values, None);
 

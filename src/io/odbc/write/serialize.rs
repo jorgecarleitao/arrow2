@@ -160,6 +160,7 @@ fn fixed_binary(array: &FixedSizeBinaryArray, writer: &mut BinColumnWriter) {
 fn binary<O: Offset>(array: &BinaryArray<O>, writer: &mut BinColumnWriter) {
     let max_len = array
         .offsets()
+        .buffer()
         .windows(2)
         .map(|x| (x[1] - x[0]).to_usize())
         .max()
@@ -171,6 +172,7 @@ fn binary<O: Offset>(array: &BinaryArray<O>, writer: &mut BinColumnWriter) {
 fn utf8<O: Offset>(array: &Utf8Array<O>, writer: &mut TextColumnWriter<u8>) {
     let max_len = array
         .offsets()
+        .buffer()
         .windows(2)
         .map(|x| (x[1] - x[0]).to_usize())
         .max()

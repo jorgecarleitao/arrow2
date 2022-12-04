@@ -13,23 +13,6 @@ pub fn try_check_offsets_bounds<O: Offset>(offsets: &[O], values_len: usize) -> 
     }
 }
 
-pub fn check_offsets_minimal<O: Offset>(offsets: &[O], values_len: usize) -> usize {
-    assert!(
-        !offsets.is_empty(),
-        "The length of the offset buffer must be larger than 1"
-    );
-    let len = offsets.len() - 1;
-
-    let last_offset = offsets[len];
-    let last_offset = last_offset.to_usize();
-
-    assert_eq!(
-        values_len, last_offset,
-        "The length of the values must be equal to the last offset value"
-    );
-    len
-}
-
 /// # Panics iff:
 /// * the `offsets` is not monotonically increasing, or
 /// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or

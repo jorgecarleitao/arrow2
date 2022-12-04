@@ -2,26 +2,24 @@ use crate::array::*;
 use crate::bitmap::*;
 use crate::datatypes::*;
 use crate::error::*;
-use crate::offset::Offset;
+use crate::offset::{Offset, Offsets};
 
 /// Auxiliary struct
 #[derive(Debug)]
 pub struct DynMutableListArray<O: Offset> {
     data_type: DataType,
-    offsets: Vec<O>,
+    offsets: Offsets<O>,
     values: Box<dyn MutableArray>,
     validity: Option<MutableBitmap>,
 }
 
 impl<O: Offset> DynMutableListArray<O> {
     pub fn new_from(values: Box<dyn MutableArray>, data_type: DataType, capacity: usize) -> Self {
-        let mut offsets = Vec::<O>::with_capacity(capacity + 1);
-        offsets.push(O::default());
         assert_eq!(values.len(), 0);
         ListArray::<O>::get_child_field(&data_type);
         Self {
             data_type,
-            offsets,
+            offsets: Offsets::<O>::with_capacity(capacity),
             values,
             validity: None,
         }
@@ -34,11 +32,11 @@ impl<O: Offset> DynMutableListArray<O> {
 
     #[inline]
     pub fn try_push_valid(&mut self) -> Result<()> {
-        let size = self.values.len();
-        let size = O::from_usize(size).ok_or(Error::Overflow)?;
-        assert!(size >= *self.offsets.last().unwrap());
+        let total_length = self.values.len();
+        let offset = self.offsets.last().to_usize();
+        let length = total_length.checked_sub(offset).ok_or(Error::Overflow)?;
 
-        self.offsets.push(size);
+        self.offsets.try_push_usize(length)?;
         if let Some(validity) = &mut self.validity {
             validity.push(true)
         }
@@ -47,20 +45,15 @@ impl<O: Offset> DynMutableListArray<O> {
 
     #[inline]
     fn push_null(&mut self) {
-        self.offsets.push(self.last_offset());
+        self.offsets.extend_constant(1);
         match &mut self.validity {
             Some(validity) => validity.push(false),
             None => self.init_validity(),
         }
     }
 
-    #[inline]
-    fn last_offset(&self) -> O {
-        *self.offsets.last().unwrap()
-    }
-
     fn init_validity(&mut self) {
-        let len = self.offsets.len() - 1;
+        let len = self.offsets.len();
 
         let mut validity = MutableBitmap::new();
         validity.extend_constant(len, true);
@@ -71,7 +64,7 @@ impl<O: Offset> DynMutableListArray<O> {
 
 impl<O: Offset> MutableArray for DynMutableListArray<O> {
     fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.offsets.len()
     }
 
     fn validity(&self) -> Option<&MutableBitmap> {
@@ -79,21 +72,23 @@ impl<O: Offset> MutableArray for DynMutableListArray<O> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(ListArray::new(
+        ListArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.offsets).into(),
             self.values.as_box(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        )
+        .boxed()
     }
 
     fn as_arc(&mut self) -> std::sync::Arc<dyn Array> {
-        std::sync::Arc::new(ListArray::new(
+        ListArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.offsets).into(),
             self.values.as_box(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        )
+        .arced()
     }
 
     fn data_type(&self) -> &DataType {

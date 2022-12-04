@@ -2,13 +2,13 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::{
     array::{
-        specification::{check_offsets_minimal, try_check_offsets},
-        Array, ArrayAccessor, ArrayValuesIter, MutableArray, TryExtend, TryExtendFromSelf, TryPush,
+        specification::try_check_offsets_bounds, Array, ArrayAccessor, ArrayValuesIter,
+        MutableArray, TryExtend, TryExtendFromSelf, TryPush,
     },
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{Error, Result},
-    offset::Offset,
+    offset::{Offset, Offsets},
     trusted_len::TrustedLen,
 };
 
@@ -20,38 +20,24 @@ use crate::array::physical_binary::*;
 #[derive(Debug, Clone)]
 pub struct MutableBinaryValuesArray<O: Offset> {
     data_type: DataType,
-    offsets: Vec<O>,
+    offsets: Offsets<O>,
     values: Vec<u8>,
 }
 
 impl<O: Offset> From<MutableBinaryValuesArray<O>> for BinaryArray<O> {
     fn from(other: MutableBinaryValuesArray<O>) -> Self {
-        // Safety:
-        // `MutableBinaryValuesArray` has the same invariants as `BinaryArray` and thus
-        // `BinaryArray` can be safely created from `MutableBinaryValuesArray` without checks.
-        unsafe {
-            BinaryArray::<O>::from_data_unchecked(
-                other.data_type,
-                other.offsets.into(),
-                other.values.into(),
-                None,
-            )
-        }
+        BinaryArray::<O>::new(
+            other.data_type,
+            other.offsets.into(),
+            other.values.into(),
+            None,
+        )
     }
 }
 
 impl<O: Offset> From<MutableBinaryValuesArray<O>> for MutableBinaryArray<O> {
     fn from(other: MutableBinaryValuesArray<O>) -> Self {
-        // Safety:
-        // `MutableBinaryValuesArray` has the same invariants as `MutableBinaryArray`
-        unsafe {
-            MutableBinaryArray::<O>::new_unchecked(
-                other.data_type,
-                other.offsets,
-                other.values,
-                None,
-            )
-        }
+        MutableBinaryArray::<O>::from_data(other.data_type, other.offsets, other.values, None)
     }
 }
 
@@ -66,7 +52,7 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
     pub fn new() -> Self {
         Self {
             data_type: Self::default_data_type(),
-            offsets: vec![O::default()],
+            offsets: Offsets::new(),
             values: Vec::<u8>::new(),
         }
     }
@@ -75,13 +61,13 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
     ///
     /// # Errors
     /// This function returns an error iff:
-    /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the values' length.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
     /// # Implementation
-    /// This function is `O(N)` - checking monotinicity is `O(N)`
-    pub fn try_new(data_type: DataType, offsets: Vec<O>, values: Vec<u8>) -> Result<Self> {
-        try_check_offsets(&offsets, values.len())?;
+    /// This function is `O(1)`
+    pub fn try_new(data_type: DataType, offsets: Offsets<O>, values: Vec<u8>) -> Result<Self> {
+        try_check_offsets_bounds(offsets.as_slice(), values.len())?;
+
         if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
             return Err(Error::oos(
                 "MutableBinaryValuesArray can only be initialized with DataType::Binary or DataType::LargeBinary",
@@ -93,31 +79,6 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
             offsets,
             values,
         })
-    }
-
-    /// Returns a [`MutableBinaryValuesArray`] created from its internal representation.
-    ///
-    /// # Panic
-    /// This function does not panic iff:
-    /// * The last offset is equal to the values' length.
-    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is equal to either `Binary` or `LargeBinary`.
-    /// # Safety
-    /// This function is safe iff:
-    /// * the offsets are monotonically increasing
-    /// # Implementation
-    /// This function is `O(1)`
-    pub unsafe fn new_unchecked(data_type: DataType, offsets: Vec<O>, values: Vec<u8>) -> Self {
-        check_offsets_minimal(&offsets, values.len());
-
-        if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
-            panic!("MutableBinaryValuesArray can only be initialized with DataType::Binary or DataType::LargeBinary")
-        }
-
-        Self {
-            data_type,
-            offsets,
-            values,
-        }
     }
 
     /// Returns the default [`DataType`] of this container: [`DataType::Utf8`] or [`DataType::LargeUtf8`]
@@ -133,12 +94,9 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
 
     /// Initializes a new [`MutableBinaryValuesArray`] with a pre-allocated capacity of items and values.
     pub fn with_capacities(capacity: usize, values: usize) -> Self {
-        let mut offsets = Vec::<O>::with_capacity(capacity + 1);
-        offsets.push(O::default());
-
         Self {
             data_type: Self::default_data_type(),
-            offsets,
+            offsets: Offsets::<O>::with_capacity(capacity),
             values: Vec::<u8>::with_capacity(values),
         }
     }
@@ -151,26 +109,26 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
 
     /// returns its offsets.
     #[inline]
-    pub fn offsets(&self) -> &Vec<O> {
+    pub fn offsets(&self) -> &Offsets<O> {
         &self.offsets
     }
 
     /// Reserves `additional` elements and `additional_values` on the values.
     #[inline]
     pub fn reserve(&mut self, additional: usize, additional_values: usize) {
-        self.offsets.reserve(additional + 1);
+        self.offsets.reserve(additional);
         self.values.reserve(additional_values);
     }
 
     /// Returns the capacity in number of items
     pub fn capacity(&self) -> usize {
-        self.offsets.capacity() - 1
+        self.offsets.capacity()
     }
 
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.offsets.len()
     }
 
     /// Pushes a new item to the array.
@@ -188,7 +146,7 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
             return None;
         }
         self.offsets.pop()?;
-        let start = self.offsets.last()?.to_usize();
+        let start = self.offsets.last().to_usize();
         let value = self.values.split_off(start);
         Some(value.to_vec())
     }
@@ -208,8 +166,8 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
         // soundness: the invariant of the function
-        let start = self.offsets.get_unchecked(i).to_usize();
-        let end = self.offsets.get_unchecked(i + 1).to_usize();
+        let start = self.offsets.as_slice().get_unchecked(i).to_usize();
+        let end = self.offsets.as_slice().get_unchecked(i + 1).to_usize();
 
         // soundness: the invariant of the struct
         self.values.get_unchecked(start..end)
@@ -227,7 +185,7 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
     }
 
     /// Extract the low-end APIs from the [`MutableBinaryValuesArray`].
-    pub fn into_inner(self) -> (DataType, Vec<O>, Vec<u8>) {
+    pub fn into_inner(self) -> (DataType, Offsets<O>, Vec<u8>) {
         (self.data_type, self.offsets, self.values)
     }
 }
@@ -242,21 +200,13 @@ impl<O: Offset> MutableArray for MutableBinaryValuesArray<O> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        // Safety:
-        // `MutableBinaryValuesArray` has the same invariants as `BinaryArray` and thus
-        // `BinaryArray` can be safely created from `MutableBinaryValuesArray` without checks.
         let (data_type, offsets, values) = std::mem::take(self).into_inner();
-        unsafe { BinaryArray::from_data_unchecked(data_type, offsets.into(), values.into(), None) }
-            .boxed()
+        BinaryArray::new(data_type, offsets.into(), values.into(), None).boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        // Safety:
-        // `MutableBinaryValuesArray` has the same invariants as `BinaryArray` and thus
-        // `BinaryArray` can be safely created from `MutableBinaryValuesArray` without checks.
         let (data_type, offsets, values) = std::mem::take(self).into_inner();
-        unsafe { BinaryArray::from_data_unchecked(data_type, offsets.into(), values.into(), None) }
-            .arced()
+        BinaryArray::new(data_type, offsets.into(), values.into(), None).arced()
     }
 
     fn data_type(&self) -> &DataType {
@@ -288,8 +238,7 @@ impl<O: Offset> MutableArray for MutableBinaryValuesArray<O> {
 impl<O: Offset, P: AsRef<[u8]>> FromIterator<P> for MutableBinaryValuesArray<O> {
     fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
         let (offsets, values) = values_iter(iter.into_iter());
-        // soundness: T: AsRef<[u8]> and offsets are monotonically increasing
-        unsafe { Self::new_unchecked(Self::default_data_type(), offsets, values) }
+        Self::try_new(Self::default_data_type(), offsets, values).unwrap()
     }
 }
 
@@ -349,9 +298,7 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
         I: Iterator<Item = P>,
     {
         let (offsets, values) = trusted_len_values_iter(iterator);
-
-        // soundness: offsets are monotonically increasing
-        Self::new_unchecked(Self::default_data_type(), offsets, values)
+        Self::try_new(Self::default_data_type(), offsets, values).unwrap()
     }
 
     /// Returns a new [`MutableBinaryValuesArray`] from an iterator.
@@ -388,11 +335,7 @@ impl<O: Offset, T: AsRef<[u8]>> TryPush<T> for MutableBinaryValuesArray<O> {
     fn try_push(&mut self, value: T) -> Result<()> {
         let bytes = value.as_ref();
         self.values.extend_from_slice(bytes);
-
-        let size = O::from_usize(self.values.len()).ok_or(Error::Overflow)?;
-
-        self.offsets.push(size);
-        Ok(())
+        self.offsets.try_push_usize(bytes.len())
     }
 }
 
@@ -413,6 +356,6 @@ unsafe impl<'a, O: Offset> ArrayAccessor<'a> for MutableBinaryValuesArray<O> {
 impl<O: Offset> TryExtendFromSelf for MutableBinaryValuesArray<O> {
     fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
         self.values.extend_from_slice(&other.values);
-        try_extend_offsets(&mut self.offsets, &other.offsets)
+        self.offsets.try_extend_from_self(&other.offsets)
     }
 }

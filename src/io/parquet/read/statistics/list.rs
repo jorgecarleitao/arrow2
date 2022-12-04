@@ -1,6 +1,7 @@
 use crate::array::*;
 use crate::datatypes::DataType;
 use crate::error::Result;
+use crate::offset::Offsets;
 
 use super::make_mutable;
 
@@ -40,19 +41,21 @@ impl MutableArray for DynMutableListArray {
 
         match self.data_type.to_logical_type() {
             DataType::List(_) => {
-                let offsets = (0..=inner.len() as i32).collect::<Vec<_>>().into();
+                let offsets =
+                    Offsets::try_from_lengths(std::iter::repeat(1).take(inner.len())).unwrap();
                 Box::new(ListArray::<i32>::new(
                     self.data_type.clone(),
-                    offsets,
+                    offsets.into(),
                     inner,
                     None,
                 ))
             }
             DataType::LargeList(_) => {
-                let offsets = (0..=inner.len() as i64).collect::<Vec<_>>().into();
+                let offsets =
+                    Offsets::try_from_lengths(std::iter::repeat(1).take(inner.len())).unwrap();
                 Box::new(ListArray::<i64>::new(
                     self.data_type.clone(),
-                    offsets,
+                    offsets.into(),
                     inner,
                     None,
                 ))

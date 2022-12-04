@@ -1,6 +1,6 @@
 use crate::{array::FromFfi, bitmap::align, error::Result, ffi};
 
-use crate::offset::Offset;
+use crate::offset::{Offset, OffsetsBuffer};
 
 use super::super::{ffi::ToFfi, Array};
 use super::ListArray;
@@ -9,7 +9,7 @@ unsafe impl<O: Offset> ToFfi for ListArray<O> {
     fn buffers(&self) -> Vec<Option<*const u8>> {
         vec![
             self.validity.as_ref().map(|x| x.as_ptr()),
-            Some(self.offsets.as_ptr().cast::<u8>()),
+            Some(self.offsets.buffer().as_ptr().cast::<u8>()),
         ]
     }
 
@@ -18,7 +18,7 @@ unsafe impl<O: Offset> ToFfi for ListArray<O> {
     }
 
     fn offset(&self) -> Option<usize> {
-        let offset = self.offsets.offset();
+        let offset = self.offsets.buffer().offset();
         if let Some(bitmap) = self.validity.as_ref() {
             if bitmap.offset() == offset {
                 Some(offset)
@@ -31,7 +31,7 @@ unsafe impl<O: Offset> ToFfi for ListArray<O> {
     }
 
     fn to_ffi_aligned(&self) -> Self {
-        let offset = self.offsets.offset();
+        let offset = self.offsets.buffer().offset();
 
         let validity = self.validity.as_ref().map(|bitmap| {
             if bitmap.offset() == offset {
@@ -58,6 +58,9 @@ impl<O: Offset, A: ffi::ArrowArrayRef> FromFfi<A> for ListArray<O> {
         let child = unsafe { array.child(0)? };
         let values = ffi::try_from(child)?;
 
-        Ok(Self::from_data(data_type, offsets, values, validity))
+        // assumption that data from FFI is well constructed
+        let offsets = unsafe { OffsetsBuffer::new_unchecked(offsets) };
+
+        Ok(Self::new(data_type, offsets, values, validity))
     }
 }

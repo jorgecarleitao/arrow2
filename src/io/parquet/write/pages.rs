@@ -106,7 +106,7 @@ fn to_nested_recursive<'a>(
             };
 
             parents.push(Nested::List(ListNested::new(
-                array.offsets(),
+                array.offsets().buffer(),
                 array.validity(),
                 is_optional,
             )));
@@ -129,7 +129,7 @@ fn to_nested_recursive<'a>(
             };
 
             parents.push(Nested::LargeList(ListNested::new(
-                array.offsets(),
+                array.offsets().buffer(),
                 array.validity(),
                 is_optional,
             )));
@@ -418,7 +418,7 @@ mod tests {
 
         let array = ListArray::new(
             DataType::List(Box::new(Field::new("l", array.data_type().clone(), true))),
-            vec![0i32, 2, 4].into(),
+            vec![0i32, 2, 4].try_into().unwrap(),
             Box::new(array),
             None,
         );
