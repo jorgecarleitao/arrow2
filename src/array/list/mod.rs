@@ -264,14 +264,8 @@ impl<O: Offset> ListArray<O> {
     /// Returns the element at index `i`
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
-        let offset = self.offsets[i];
-        let offset_1 = self.offsets[i + 1];
-        let length = (offset_1 - offset).to_usize();
-
-        // Safety:
-        // One of the invariants of the struct
-        // is that offsets are in bounds
-        unsafe { self.values.slice_unchecked(offset.to_usize(), length) }
+        assert!(i < self.len());
+        unsafe { self.value_unchecked(i) }
     }
 
     /// Returns the element at index `i` as &str

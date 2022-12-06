@@ -6,7 +6,7 @@ mod private {
     impl<'a, T: super::ArrayAccessor<'a>> Sealed for T {}
 }
 
-/// Sealed trait representing assess to a value of an array.
+/// Sealed trait representing random access to a value of an array.
 /// # Safety
 /// Implementers of this trait guarantee that
 /// `value_unchecked` is safe when called up to `len`

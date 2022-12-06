@@ -1,7 +1,7 @@
 use std::{iter::FromIterator, sync::Arc};
 
 use crate::array::physical_binary::extend_validity;
-use crate::array::TryExtendFromSelf;
+use crate::array::{ArrayAccessor, TryExtendFromSelf};
 use crate::bitmap::Bitmap;
 use crate::{
     array::{Array, MutableArray, TryExtend, TryPush},
@@ -287,6 +287,11 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     /// Returns the capacity of this [`MutablePrimitiveArray`].
     pub fn capacity(&self) -> usize {
         self.values.capacity()
+    }
+
+    /// Returns the capacity of this [`MutablePrimitiveArray`].
+    pub fn len(&self) -> usize {
+        self.values.len()
     }
 }
 
@@ -665,5 +670,19 @@ impl<T: NativeType> TryExtendFromSelf for MutablePrimitiveArray<T> {
         let slice = other.values.as_slice();
         self.values.extend_from_slice(slice);
         Ok(())
+    }
+}
+
+unsafe impl<'a, T: NativeType> ArrayAccessor<'a> for MutablePrimitiveArray<T> {
+    type Item = T;
+
+    #[inline]
+    unsafe fn value_unchecked(&'a self, index: usize) -> Self::Item {
+        *self.values.get_unchecked(index)
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.len()
     }
 }

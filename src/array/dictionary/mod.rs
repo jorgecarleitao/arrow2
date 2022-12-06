@@ -316,9 +316,23 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     /// # Panic
     /// This function panics iff `index >= self.len()`
     #[inline]
-    pub fn value(&self, index: usize) -> Box<dyn Scalar> {
+    pub fn value(&self, i: usize) -> Box<dyn Scalar> {
+        assert!(i < self.len());
+        unsafe { self.value_unchecked(i) }
+    }
+
+    /// Returns the value of the [`DictionaryArray`] at position `i`.
+    /// # Implementation
+    /// This function will allocate a new [`Scalar`] and is usually not performant.
+    /// Consider calling `keys` and `values`, downcasting `values`, and iterating over that.
+    /// # Safety
+    /// This function is safe iff `index < self.len()`
+    #[inline]
+    pub unsafe fn value_unchecked(&self, index: usize) -> Box<dyn Scalar> {
+        // safety - invariant of this function
+        let index = unsafe { self.keys.value_unchecked(index) };
         // safety - invariant of this struct
-        let index = unsafe { self.keys.value(index).as_usize() };
+        let index = unsafe { index.as_usize() };
         new_scalar(self.values.as_ref(), index)
     }
 
