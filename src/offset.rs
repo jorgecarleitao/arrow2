@@ -144,6 +144,27 @@ impl<O: Offset> Offsets<O> {
         }
     }
 
+    /// Returns a range (start, end) corresponding to the position `index`
+    /// # Panic
+    /// This function panics iff `index >= self.len()`
+    #[inline]
+    pub fn start_end(&self, index: usize) -> (usize, usize) {
+        // soundness: the invariant of the function
+        assert!(index < self.len());
+        unsafe { self.start_end_unchecked(index) }
+    }
+
+    /// Returns a range (start, end) corresponding to the position `index`
+    /// # Safety
+    /// `index` must be `< self.len()`
+    #[inline]
+    pub unsafe fn start_end_unchecked(&self, index: usize) -> (usize, usize) {
+        // soundness: the invariant of the function
+        let start = self.0.get_unchecked(index).to_usize();
+        let end = self.0.get_unchecked(index + 1).to_usize();
+        (start, end)
+    }
+
     /// Returns the length of this container
     #[inline]
     pub fn len(&self) -> usize {
@@ -302,6 +323,7 @@ fn try_check_offsets<O: Offset>(offsets: &[O]) -> Result<(), Error> {
 
 /// A wrapper type of [`Buffer<O>`] that is guaranteed to:
 /// * Always contain an element
+/// * Every element is `>0`
 /// * element at position `i` is >= than element at position `i-1`.
 #[derive(Clone, PartialEq, Debug)]
 pub struct OffsetsBuffer<O: Offset>(Buffer<O>);
@@ -366,6 +388,27 @@ impl<O: Offset> OffsetsBuffer<O> {
             Some(element) => element,
             None => unsafe { unreachable_unchecked() },
         }
+    }
+
+    /// Returns a range (start, end) corresponding to the position `index`
+    /// # Panic
+    /// This function panics iff `index >= self.len()`
+    #[inline]
+    pub fn start_end(&self, index: usize) -> (usize, usize) {
+        // soundness: the invariant of the function
+        assert!(index < self.len());
+        unsafe { self.start_end_unchecked(index) }
+    }
+
+    /// Returns a range (start, end) corresponding to the position `index`
+    /// # Safety
+    /// `index` must be `< self.len()`
+    #[inline]
+    pub unsafe fn start_end_unchecked(&self, index: usize) -> (usize, usize) {
+        // soundness: the invariant of the function
+        let start = self.0.get_unchecked(index).to_usize();
+        let end = self.0.get_unchecked(index + 1).to_usize();
+        (start, end)
     }
 
     /// Returns a new [`OffsetsBuffer`] that is a slice of this buffer starting at `offset`.

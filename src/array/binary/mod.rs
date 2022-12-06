@@ -78,7 +78,7 @@ impl<O: Offset> BinaryArray<O> {
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
-        try_check_offsets_bounds(offsets.buffer(), values.len())?;
+        try_check_offsets_bounds(&offsets, values.len())?;
 
         if validity
             .as_ref()
@@ -145,8 +145,7 @@ impl<O: Offset> BinaryArray<O> {
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
         // soundness: the invariant of the function
-        let start = self.offsets.buffer().get_unchecked(i).to_usize();
-        let end = self.offsets.buffer().get_unchecked(i + 1).to_usize();
+        let (start, end) = self.offsets.start_end_unchecked(i);
 
         // soundness: the invariant of the struct
         self.values.get_unchecked(start..end)

@@ -1,93 +1,77 @@
 use crate::error::{Error, Result};
-use crate::types::Offset;
+use crate::offset::{Offset, Offsets, OffsetsBuffer};
 
-pub fn try_check_offsets_bounds<O: Offset>(offsets: &[O], values_len: usize) -> Result<usize> {
-    if let Some(last_offset) = offsets.last() {
-        if last_offset.to_usize() > values_len {
-            Err(Error::oos("offsets must not exceed the values length"))
-        } else {
-            Ok(last_offset.to_usize())
-        }
-    } else {
-        Err(Error::oos("offsets must have at least one element"))
+/// Helper trait to support `Offset` and `OffsetBuffer`
+pub(crate) trait OffsetsContainer<O> {
+    fn last(&self) -> usize;
+    fn starts(&self) -> &[O];
+}
+
+impl<O: Offset> OffsetsContainer<O> for OffsetsBuffer<O> {
+    #[inline]
+    fn last(&self) -> usize {
+        self.last().to_usize()
+    }
+
+    #[inline]
+    fn starts(&self) -> &[O] {
+        let last = self.buffer().len() - 1;
+        unsafe { self.buffer().get_unchecked(0..last) }
     }
 }
 
-/// # Panics iff:
-/// * the `offsets` is not monotonically increasing, or
-/// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
-/// * any offset is larger or equal to `values_len`.
-pub fn try_check_offsets_and_utf8<O: Offset>(offsets: &[O], values: &[u8]) -> Result<()> {
-    if values.is_ascii() {
-        try_check_offsets(offsets, values.len())
+impl<O: Offset> OffsetsContainer<O> for Offsets<O> {
+    #[inline]
+    fn last(&self) -> usize {
+        self.last().to_usize()
+    }
+
+    #[inline]
+    fn starts(&self) -> &[O] {
+        let offsets = self.as_slice();
+        let last = offsets.len() - 1;
+        unsafe { offsets.get_unchecked(0..last) }
+    }
+}
+
+pub(crate) fn try_check_offsets_bounds<O: Offset, C: OffsetsContainer<O>>(
+    offsets: &C,
+    values_len: usize,
+) -> Result<()> {
+    if offsets.last() > values_len {
+        Err(Error::oos("offsets must not exceed the values length"))
     } else {
-        simdutf8::basic::from_utf8(values)?;
-
-        for window in offsets.windows(2) {
-            let start = window[0].to_usize();
-            let end = window[1].to_usize();
-
-            // check monotonicity
-            if start > end {
-                return Err(Error::oos("offsets must be monotonically increasing"));
-            }
-
-            let first = values.get(start);
-
-            if let Some(&b) = first {
-                // A valid code-point iff it does not start with 0b10xxxxxx
-                // Bit-magic taken from `std::str::is_char_boundary`
-                if (b as i8) < -0x40 {
-                    return Err(Error::oos("Non-valid char boundary detected"));
-                }
-            }
-        }
-        // check bounds
-        if offsets
-            .last()
-            .map_or(true, |last| last.to_usize() > values.len())
-        {
-            return Err(Error::oos(
-                "offsets must have at least one element and must not exceed values length",
-            ));
-        };
-
         Ok(())
     }
 }
 
-/// Checks that `offsets` is monotonically increasing, and all offsets are less than or equal to
-/// `values_len`.
-pub fn try_check_offsets<O: Offset>(offsets: &[O], values_len: usize) -> Result<()> {
-    // this code is carefully constructed to auto-vectorize, don't change naively!
-    match offsets.first() {
-        None => Err(Error::oos("offsets must have at least one element")),
-        Some(first) => {
-            let mut previous = *first;
-            let mut any_invalid = false;
+/// # Error
+/// * any offset is larger or equal to `values_len`.
+/// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
+pub(crate) fn try_check_utf8<O: Offset, C: OffsetsContainer<O>>(
+    offsets: &C,
+    values: &[u8],
+) -> Result<()> {
+    try_check_offsets_bounds(offsets, values.len())?;
 
-            // This loop will auto-vectorize because there is not any break,
-            // an invalid value will be returned once the whole offsets buffer is processed.
-            for offset in offsets {
-                if previous > *offset {
-                    any_invalid = true
-                }
-                previous = *offset;
-            }
+    if values.is_ascii() {
+        Ok(())
+    } else {
+        simdutf8::basic::from_utf8(values)?;
 
-            if any_invalid {
-                Err(Error::oos("offsets must be monotonically increasing"))
-            } else if offsets
-                .last()
-                .map_or(true, |last| last.to_usize() > values_len)
-            {
-                Err(Error::oos(
-                    "offsets must have at least one element and must not exceed values length",
-                ))
-            } else {
-                Ok(())
+        for start in offsets.starts() {
+            let start = start.to_usize();
+
+            // Safety: `try_check_offsets_bounds` just checked for bounds
+            let b = *unsafe { values.get_unchecked(start) };
+
+            // A valid code-point iff it does not start with 0b10xxxxxx
+            // Bit-magic taken from `std::str::is_char_boundary`
+            if (b as i8) < -0x40 {
+                return Err(Error::oos("Non-valid char boundary detected"));
             }
         }
+        Ok(())
     }
 }
 
@@ -125,12 +109,12 @@ mod tests {
         fn check_utf8_validation(values in binary_strategy()) {
 
             for offset in 0..values.len() - 1 {
-                let offsets = vec![0, offset as i32, values.len() as i32];
+                let offsets = vec![0, offset as i32, values.len() as i32].try_into().unwrap();
 
                 let mut is_valid = std::str::from_utf8(&values[..offset]).is_ok();
                 is_valid &= std::str::from_utf8(&values[offset..]).is_ok();
 
-                assert_eq!(try_check_offsets_and_utf8::<i32>(&offsets, &values).is_ok(), is_valid)
+                assert_eq!(try_check_utf8::<i32, Offsets<i32>>(&offsets, &values).is_ok(), is_valid)
             }
         }
     }

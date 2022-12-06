@@ -37,7 +37,7 @@ impl MapArray {
         field: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
-        try_check_offsets_bounds(offsets.buffer(), field.len())?;
+        try_check_offsets_bounds(&offsets, field.len())?;
 
         let inner_field = Self::try_get_field(&data_type)?;
         if let DataType::Struct(inner) = inner_field.data_type() {
@@ -213,14 +213,8 @@ impl MapArray {
     /// Returns the element at index `i`.
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
-        let offset = self.offsets.buffer()[i];
-        let offset_1 = self.offsets.buffer()[i + 1];
-        let length = (offset_1 - offset) as usize;
-
-        // Safety:
-        // One of the invariants of the struct
-        // is that offsets are in bounds
-        unsafe { self.field.slice_unchecked(offset as usize, length) }
+        assert!(i < self.len());
+        unsafe { self.value_unchecked(i) }
     }
 
     /// Returns the element at index `i`.
@@ -228,11 +222,12 @@ impl MapArray {
     /// Assumes that the `i < self.len`.
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
-        let offset = *self.offsets.buffer().get_unchecked(i);
-        let offset_1 = *self.offsets.buffer().get_unchecked(i + 1);
-        let length = (offset_1 - offset) as usize;
+        // soundness: the invariant of the function
+        let (start, end) = self.offsets.start_end_unchecked(i);
+        let length = end - start;
 
-        self.field.slice_unchecked(offset as usize, length)
+        // soundness: the invariant of the struct
+        self.field.slice_unchecked(start, length)
     }
 }
 

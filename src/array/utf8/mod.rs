@@ -13,7 +13,7 @@ use crate::{
 use either::Either;
 
 use super::{
-    specification::{try_check_offsets_and_utf8, try_check_offsets_bounds},
+    specification::{try_check_offsets_bounds, try_check_utf8},
     Array, GenericBinaryArray,
 };
 
@@ -92,7 +92,7 @@ impl<O: Offset> Utf8Array<O> {
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self> {
-        try_check_offsets_and_utf8(offsets.buffer(), &values)?;
+        try_check_utf8(&offsets, &values)?;
         if validity
             .as_ref()
             .map_or(false, |validity| validity.len() != offsets.len())
@@ -162,8 +162,7 @@ impl<O: Offset> Utf8Array<O> {
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> &str {
         // soundness: the invariant of the function
-        let start = self.offsets.buffer().get_unchecked(i).to_usize();
-        let end = self.offsets.buffer().get_unchecked(i + 1).to_usize();
+        let (start, end) = self.offsets.start_end_unchecked(i);
 
         // soundness: the invariant of the struct
         let slice = self.values.get_unchecked(start..end);
@@ -389,7 +388,7 @@ impl<O: Offset> Utf8Array<O> {
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self> {
-        try_check_offsets_bounds(offsets.buffer(), values.len())?;
+        try_check_offsets_bounds(&offsets, values.len())?;
 
         if validity
             .as_ref()

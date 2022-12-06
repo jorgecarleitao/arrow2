@@ -66,7 +66,7 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
     /// # Implementation
     /// This function is `O(1)`
     pub fn try_new(data_type: DataType, offsets: Offsets<O>, values: Vec<u8>) -> Result<Self> {
-        try_check_offsets_bounds(offsets.as_slice(), values.len())?;
+        try_check_offsets_bounds(&offsets, values.len())?;
 
         if data_type.to_physical_type() != Self::default_data_type().to_physical_type() {
             return Err(Error::oos(
@@ -166,8 +166,7 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> &[u8] {
         // soundness: the invariant of the function
-        let start = self.offsets.as_slice().get_unchecked(i).to_usize();
-        let end = self.offsets.as_slice().get_unchecked(i + 1).to_usize();
+        let (start, end) = self.offsets.start_end(i);
 
         // soundness: the invariant of the struct
         self.values.get_unchecked(start..end)

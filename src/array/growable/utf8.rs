@@ -52,8 +52,7 @@ impl<'a, O: Offset> GrowableUtf8<'a, O> {
 
         #[cfg(debug_assertions)]
         {
-            crate::array::specification::try_check_offsets_and_utf8(offsets.as_slice(), &values)
-                .unwrap();
+            crate::array::specification::try_check_utf8(&offsets, &values).unwrap();
         }
 
         unsafe {

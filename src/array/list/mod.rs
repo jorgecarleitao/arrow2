@@ -41,7 +41,7 @@ impl<O: Offset> ListArray<O> {
         values: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
-        try_check_offsets_bounds(offsets.buffer(), values.len())?;
+        try_check_offsets_bounds(&offsets, values.len())?;
 
         if validity
             .as_ref()
@@ -185,16 +185,13 @@ impl<O: Offset> ListArray<O> {
     }
 
     /// Returns the element at index `i`
+    /// # Panic
+    /// Panics iff `i >= self.len()`
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
-        let offset = self.offsets.buffer()[i];
-        let offset_1 = self.offsets.buffer()[i + 1];
-        let length = (offset_1 - offset).to_usize();
-
-        // Safety:
-        // One of the invariants of the struct
-        // is that offsets are in bounds
-        unsafe { self.values.slice_unchecked(offset.to_usize(), length) }
+        assert!(i < self.len());
+        // Safety: invariant of this function
+        unsafe { self.value_unchecked(i) }
     }
 
     /// Returns the element at index `i` as &str
@@ -202,11 +199,12 @@ impl<O: Offset> ListArray<O> {
     /// Assumes that the `i < self.len`.
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
-        let offset = *self.offsets.buffer().get_unchecked(i);
-        let offset_1 = *self.offsets.buffer().get_unchecked(i + 1);
-        let length = (offset_1 - offset).to_usize();
+        // safety: the invariant of the function
+        let (start, end) = self.offsets.start_end_unchecked(i);
+        let length = end - start;
 
-        self.values.slice_unchecked(offset.to_usize(), length)
+        // safety: the invariant of the struct
+        self.values.slice_unchecked(start, length)
     }
 
     /// The optional validity.
