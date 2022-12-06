@@ -383,6 +383,8 @@
 <a href="#383" id="383">383</a>
 <a href="#384" id="384">384</a>
 <a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::hint::unreachable_unchecked;
 
 <span class="kw">use crate</span>::{
@@ -504,7 +506,9 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         check_data_type(K::KEY_TYPE, <span class="kw-2">&amp;</span>data_type, values.data_type())<span class="question-mark">?</span>;
 
-        check_indexes(keys.values(), values.len())<span class="question-mark">?</span>;
+        <span class="kw">if </span>keys.null_count() != keys.len() {
+            check_indexes(keys.values(), values.len())<span class="question-mark">?</span>;
+        }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             data_type,
