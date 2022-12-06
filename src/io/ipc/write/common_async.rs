@@ -48,7 +48,6 @@ pub async fn write_continuation<W: AsyncWrite + Unpin + Send>(
 ) -> Result<usize> {
     writer.write_all(&CONTINUATION_MARKER).await?;
     writer.write_all(&total_len.to_le_bytes()[..]).await?;
-    writer.flush().await?;
     Ok(8)
 }
 
@@ -66,6 +65,5 @@ async fn write_body_buffers<W: AsyncWrite + Unpin + Send>(
         writer.write_all(&vec![0u8; pad_len][..]).await?;
     }
 
-    writer.flush().await?;
     Ok(total_len)
 }
