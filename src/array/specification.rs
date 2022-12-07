@@ -59,7 +59,18 @@ pub(crate) fn try_check_utf8<O: Offset, C: OffsetsContainer<O>>(
     } else {
         simdutf8::basic::from_utf8(values)?;
 
-        for start in offsets.starts() {
+        // offsets can be == values.len()
+        // let's find first offset from the end that is different
+        let starts = offsets.starts();
+        let last = starts
+            .iter()
+            .rev()
+            .enumerate()
+            .find_map(|(i, offset)| (offset.to_usize() != values.len()).then(|| i + 1))
+            .unwrap_or(starts.len() - 1);
+
+        let mut any_invalid = false;
+        for start in &starts[..=last] {
             let start = start.to_usize();
 
             // Safety: `try_check_offsets_bounds` just checked for bounds
@@ -68,8 +79,11 @@ pub(crate) fn try_check_utf8<O: Offset, C: OffsetsContainer<O>>(
             // A valid code-point iff it does not start with 0b10xxxxxx
             // Bit-magic taken from `std::str::is_char_boundary`
             if (b as i8) < -0x40 {
-                return Err(Error::oos("Non-valid char boundary detected"));
+                any_invalid = true
             }
+        }
+        if any_invalid {
+            return Err(Error::oos("Non-valid char boundary detected"));
         }
         Ok(())
     }
