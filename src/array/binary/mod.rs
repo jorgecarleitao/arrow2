@@ -40,7 +40,7 @@ pub use mutable::*;
 /// assert_eq!(array.values_iter().collect::<Vec<_>>(), vec![[1, 2].as_ref(), &[], &[3]]);
 /// // the underlying representation:
 /// assert_eq!(array.values(), &Buffer::from(vec![1, 2, 3]));
-/// assert_eq!(array.offsets(), &Buffer::from(vec![0, 2, 2, 3]));
+/// assert_eq!(array.offsets().buffer(), &Buffer::from(vec![0, 2, 2, 3]));
 /// assert_eq!(array.validity(), Some(&Bitmap::from([true, false, true])));
 /// ```
 ///

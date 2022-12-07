@@ -17,10 +17,10 @@ pub fn take_values<O: Offset>(
     let mut buffer = Vec::with_capacity(new_len);
     starts
         .iter()
-        .zip(offsets.buffer().windows(2))
-        .for_each(|(start_, window)| {
-            let start = start_.to_usize();
-            let end = (*start_ + (window[1] - window[0])).to_usize();
+        .map(|start| start.to_usize())
+        .zip(offsets.lengths())
+        .for_each(|(start, length)| {
+            let end = start + length;
             buffer.extend_from_slice(&values[start..end]);
         });
     buffer.into()
@@ -32,27 +32,16 @@ pub fn take_no_validity<O: Offset, I: Index>(
     values: &[u8],
     indices: &[I],
 ) -> (OffsetsBuffer<O>, Buffer<u8>, Option<Bitmap>) {
-    let mut length = O::zero();
     let mut buffer = Vec::<u8>::new();
-    let offsets = offsets.buffer();
-    let offsets = indices.iter().map(|index| {
-        let index = index.to_usize();
-        let start = offsets[index];
-        let length_h = offsets[index + 1] - start;
-        length += length_h;
-
-        let _start = start.to_usize();
-        let end = (start + length_h).to_usize();
-        buffer.extend_from_slice(&values[_start..end]);
-        length
+    let lengths = indices.iter().map(|index| index.to_usize()).map(|index| {
+        let (start, end) = offsets.start_end(index);
+        // todo: remove this bound check
+        buffer.extend_from_slice(&values[start..end]);
+        end - start
     });
-    let offsets = std::iter::once(O::zero())
-        .chain(offsets)
-        .collect::<Vec<_>>();
-    // Safety: offsets _are_ monotonically increasing
-    let offsets = unsafe { Offsets::new_unchecked(offsets) }.into();
+    let offsets = Offsets::try_from_lengths(lengths).expect("");
 
-    (offsets, buffer.into(), None)
+    (offsets.into(), buffer.into(), None)
 }
 
 // take implementation when only values contain nulls

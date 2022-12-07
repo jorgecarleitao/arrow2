@@ -51,7 +51,7 @@ impl<T: AsRef<str>> AsRef<[u8]> for StrAsBytes<T> {
 /// // the underlying representation
 /// assert_eq!(array.validity(), Some(&Bitmap::from([true, false, true])));
 /// assert_eq!(array.values(), &Buffer::from(b"hithere".to_vec()));
-/// assert_eq!(array.offsets(), &Buffer::from(vec![0, 2, 2, 2 + 5]));
+/// assert_eq!(array.offsets().buffer(), &Buffer::from(vec![0, 2, 2, 2 + 5]));
 /// # }
 /// ```
 ///

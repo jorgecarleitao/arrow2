@@ -4,7 +4,7 @@ use crate::offset::{Offset, Offsets, OffsetsBuffer};
 /// Helper trait to support `Offset` and `OffsetBuffer`
 pub(crate) trait OffsetsContainer<O> {
     fn last(&self) -> usize;
-    fn starts(&self) -> &[O];
+    fn as_slice(&self) -> &[O];
 }
 
 impl<O: Offset> OffsetsContainer<O> for OffsetsBuffer<O> {
@@ -14,9 +14,8 @@ impl<O: Offset> OffsetsContainer<O> for OffsetsBuffer<O> {
     }
 
     #[inline]
-    fn starts(&self) -> &[O] {
-        let last = self.buffer().len() - 1;
-        unsafe { self.buffer().get_unchecked(0..last) }
+    fn as_slice(&self) -> &[O] {
+        self.buffer()
     }
 }
 
@@ -27,10 +26,8 @@ impl<O: Offset> OffsetsContainer<O> for Offsets<O> {
     }
 
     #[inline]
-    fn starts(&self) -> &[O] {
-        let offsets = self.as_slice();
-        let last = offsets.len() - 1;
-        unsafe { offsets.get_unchecked(0..last) }
+    fn as_slice(&self) -> &[O] {
+        self.as_slice()
     }
 }
 
@@ -52,6 +49,10 @@ pub(crate) fn try_check_utf8<O: Offset, C: OffsetsContainer<O>>(
     offsets: &C,
     values: &[u8],
 ) -> Result<()> {
+    if offsets.as_slice().len() == 1 {
+        return Ok(());
+    }
+
     try_check_offsets_bounds(offsets, values.len())?;
 
     if values.is_ascii() {
@@ -60,17 +61,34 @@ pub(crate) fn try_check_utf8<O: Offset, C: OffsetsContainer<O>>(
         simdutf8::basic::from_utf8(values)?;
 
         // offsets can be == values.len()
-        // let's find first offset from the end that is different
-        let starts = offsets.starts();
-        let last = starts
+        // find first offset from the end that is smaller
+        // Example:
+        // values.len() = 10
+        // offsets = [0, 5, 10, 10]
+        let offsets = offsets.as_slice();
+        let last = offsets
             .iter()
-            .rev()
             .enumerate()
-            .find_map(|(i, offset)| (offset.to_usize() != values.len()).then(|| i + 1))
-            .unwrap_or(starts.len() - 1);
+            .skip(1)
+            .rev()
+            .find_map(|(i, offset)| (offset.to_usize() < values.len()).then(|| i));
+
+        let last = if let Some(last) = last {
+            // following the example: last = 1 (offset = 5)
+            last
+        } else {
+            // given `l = values.len()`, this branch is hit iff either:
+            // * `offsets = [0, l, l, ...]`, which was covered by `from_utf8(values)` above
+            // * `offsets = [0]`, which never happens because offsets.as_slice().len() == 1 is short-circuited above
+            return Ok(());
+        };
+
+        // trucate to relevant offsets. Note: `=last` because last was computed skipping the first item
+        // following the example: starts = [0, 5]
+        let starts = unsafe { offsets.get_unchecked(..=last) };
 
         let mut any_invalid = false;
-        for start in &starts[..=last] {
+        for start in starts {
             let start = start.to_usize();
 
             // Safety: `try_check_offsets_bounds` just checked for bounds
@@ -117,7 +135,7 @@ mod tests {
 
     proptest! {
         // a bit expensive, feel free to run it when changing the code above
-        //#![proptest_config(ProptestConfig::with_cases(100000))]
+        // #![proptest_config(ProptestConfig::with_cases(100000))]
         #[test]
         #[cfg_attr(miri, ignore)] // miri and proptest do not work well
         fn check_utf8_validation(values in binary_strategy()) {
