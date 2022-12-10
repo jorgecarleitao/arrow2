@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/specification.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>specification.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-389f8b4a37bc03c9.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-046227e470cd3629.css"><link rel="stylesheet" disabled href="../../../static.files/dark-800f2ee593c8e6f7.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-9edae3c387f5a5b3.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-287cecec4dbb45b0.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../arrow2/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/specification.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>specification.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-6827029ac823cab7.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-ebce58d0a40c3431.css"><link rel="stylesheet" disabled href="../../../static.files/dark-f23faae4a2daf9a6.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-8af5e100b21cd173.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-c55e1eb52e1886b4.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../arrow2/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -151,114 +151,112 @@
 <a href="#151" id="151">151</a>
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::error::{Error, <span class="prelude-ty">Result</span>};
-<span class="kw">use </span><span class="kw">crate</span>::types::Offset;
+<span class="kw">use </span><span class="kw">crate</span>::offset::{Offset, Offsets, OffsetsBuffer};
 
-<span class="kw">pub fn </span>try_check_offsets_bounds&lt;O: Offset&gt;(offsets: <span class="kw-2">&amp;</span>[O], values_len: usize) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(last_offset) = offsets.last() {
-        <span class="kw">if </span>last_offset.to_usize() &gt; values_len {
-            <span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;offsets must not exceed the values length&quot;</span>))
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Ok</span>(last_offset.to_usize())
-        }
-    } <span class="kw">else </span>{
-        <span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;offsets must have at least one element&quot;</span>))
+<span class="doccomment">/// Helper trait to support `Offset` and `OffsetBuffer`
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">trait </span>OffsetsContainer&lt;O&gt; {
+    <span class="kw">fn </span>last(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
+    <span class="kw">fn </span>as_slice(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[O];
+}
+
+<span class="kw">impl</span>&lt;O: Offset&gt; OffsetsContainer&lt;O&gt; <span class="kw">for </span>OffsetsBuffer&lt;O&gt; {
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>last(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.last().to_usize()
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>as_slice(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[O] {
+        <span class="self">self</span>.buffer()
     }
 }
 
-<span class="kw">pub fn </span>check_offsets_minimal&lt;O: Offset&gt;(offsets: <span class="kw-2">&amp;</span>[O], values_len: usize) -&gt; usize {
-    <span class="macro">assert!</span>(
-        !offsets.is_empty(),
-        <span class="string">&quot;The length of the offset buffer must be larger than 1&quot;
-    </span>);
-    <span class="kw">let </span>len = offsets.len() - <span class="number">1</span>;
+<span class="kw">impl</span>&lt;O: Offset&gt; OffsetsContainer&lt;O&gt; <span class="kw">for </span>Offsets&lt;O&gt; {
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>last(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.last().to_usize()
+    }
 
-    <span class="kw">let </span>last_offset = offsets[len];
-    <span class="kw">let </span>last_offset = last_offset.to_usize();
-
-    <span class="macro">assert_eq!</span>(
-        values_len, last_offset,
-        <span class="string">&quot;The length of the values must be equal to the last offset value&quot;
-    </span>);
-    len
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>as_slice(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[O] {
+        <span class="self">self</span>.as_slice()
+    }
 }
 
-<span class="doccomment">/// # Panics iff:
-/// * the `offsets` is not monotonically increasing, or
-/// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
-/// * any offset is larger or equal to `values_len`.
-</span><span class="kw">pub fn </span>try_check_offsets_and_utf8&lt;O: Offset&gt;(offsets: <span class="kw-2">&amp;</span>[O], values: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="kw">if </span>values.is_ascii() {
-        try_check_offsets(offsets, values.len())
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>try_check_offsets_bounds&lt;O: Offset, C: OffsetsContainer&lt;O&gt;&gt;(
+    offsets: <span class="kw-2">&amp;</span>C,
+    values_len: usize,
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    <span class="kw">if </span>offsets.last() &gt; values_len {
+        <span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;offsets must not exceed the values length&quot;</span>))
     } <span class="kw">else </span>{
-        simdutf8::basic::from_utf8(values)<span class="question-mark">?</span>;
-
-        <span class="kw">for </span>window <span class="kw">in </span>offsets.windows(<span class="number">2</span>) {
-            <span class="kw">let </span>start = window[<span class="number">0</span>].to_usize();
-            <span class="kw">let </span>end = window[<span class="number">1</span>].to_usize();
-
-            <span class="comment">// check monotonicity
-            </span><span class="kw">if </span>start &gt; end {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;offsets must be monotonically increasing&quot;</span>));
-            }
-
-            <span class="kw">let </span>first = values.get(start);
-
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>b) = first {
-                <span class="comment">// A valid code-point iff it does not start with 0b10xxxxxx
-                // Bit-magic taken from `std::str::is_char_boundary`
-                </span><span class="kw">if </span>(b <span class="kw">as </span>i8) &lt; -<span class="number">0x40 </span>{
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;Non-valid char boundary detected&quot;</span>));
-                }
-            }
-        }
-        <span class="comment">// check bounds
-        </span><span class="kw">if </span>offsets
-            .last()
-            .map_or(<span class="bool-val">true</span>, |last| last.to_usize() &gt; values.len())
-        {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-                <span class="string">&quot;offsets must have at least one element and must not exceed values length&quot;</span>,
-            ));
-        };
-
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="doccomment">/// Checks that `offsets` is monotonically increasing, and all offsets are less than or equal to
-/// `values_len`.
-</span><span class="kw">pub fn </span>try_check_offsets&lt;O: Offset&gt;(offsets: <span class="kw-2">&amp;</span>[O], values_len: usize) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="comment">// this code is carefully constructed to auto-vectorize, don&#39;t change naively!
-    </span><span class="kw">match </span>offsets.first() {
-        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;offsets must have at least one element&quot;</span>)),
-        <span class="prelude-val">Some</span>(first) =&gt; {
-            <span class="kw">let </span><span class="kw-2">mut </span>previous = <span class="kw-2">*</span>first;
-            <span class="kw">let </span><span class="kw-2">mut </span>any_invalid = <span class="bool-val">false</span>;
+<span class="doccomment">/// # Error
+/// * any offset is larger or equal to `values_len`.
+/// * any slice of `values` between two consecutive pairs from `offsets` is invalid `utf8`, or
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>try_check_utf8&lt;O: Offset, C: OffsetsContainer&lt;O&gt;&gt;(
+    offsets: <span class="kw-2">&amp;</span>C,
+    values: <span class="kw-2">&amp;</span>[u8],
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    <span class="kw">if </span>offsets.as_slice().len() == <span class="number">1 </span>{
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+    }
 
-            <span class="comment">// This loop will auto-vectorize because there is not any break,
-            // an invalid value will be returned once the whole offsets buffer is processed.
-            </span><span class="kw">for </span>offset <span class="kw">in </span>offsets {
-                <span class="kw">if </span>previous &gt; <span class="kw-2">*</span>offset {
-                    any_invalid = <span class="bool-val">true
-                </span>}
-                previous = <span class="kw-2">*</span>offset;
-            }
+    try_check_offsets_bounds(offsets, values.len())<span class="question-mark">?</span>;
 
-            <span class="kw">if </span>any_invalid {
-                <span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;offsets must be monotonically increasing&quot;</span>))
-            } <span class="kw">else if </span>offsets
-                .last()
-                .map_or(<span class="bool-val">true</span>, |last| last.to_usize() &gt; values_len)
-            {
-                <span class="prelude-val">Err</span>(Error::oos(
-                    <span class="string">&quot;offsets must have at least one element and must not exceed values length&quot;</span>,
-                ))
-            } <span class="kw">else </span>{
-                <span class="prelude-val">Ok</span>(())
-            }
+    <span class="kw">if </span>values.is_ascii() {
+        <span class="prelude-val">Ok</span>(())
+    } <span class="kw">else </span>{
+        simdutf8::basic::from_utf8(values)<span class="question-mark">?</span>;
+
+        <span class="comment">// offsets can be == values.len()
+        // find first offset from the end that is smaller
+        // Example:
+        // values.len() = 10
+        // offsets = [0, 5, 10, 10]
+        </span><span class="kw">let </span>offsets = offsets.as_slice();
+        <span class="kw">let </span>last = offsets
+            .iter()
+            .enumerate()
+            .skip(<span class="number">1</span>)
+            .rev()
+            .find_map(|(i, offset)| (offset.to_usize() &lt; values.len()).then(|| i));
+
+        <span class="kw">let </span>last = <span class="kw">if let </span><span class="prelude-val">Some</span>(last) = last {
+            <span class="comment">// following the example: last = 1 (offset = 5)
+            </span>last
+        } <span class="kw">else </span>{
+            <span class="comment">// given `l = values.len()`, this branch is hit iff either:
+            // * `offsets = [0, l, l, ...]`, which was covered by `from_utf8(values)` above
+            // * `offsets = [0]`, which never happens because offsets.as_slice().len() == 1 is short-circuited above
+            </span><span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        };
+
+        <span class="comment">// trucate to relevant offsets. Note: `=last` because last was computed skipping the first item
+        // following the example: starts = [0, 5]
+        </span><span class="kw">let </span>starts = <span class="kw">unsafe </span>{ offsets.get_unchecked(..=last) };
+
+        <span class="kw">let </span><span class="kw-2">mut </span>any_invalid = <span class="bool-val">false</span>;
+        <span class="kw">for </span>start <span class="kw">in </span>starts {
+            <span class="kw">let </span>start = start.to_usize();
+
+            <span class="comment">// Safety: `try_check_offsets_bounds` just checked for bounds
+            </span><span class="kw">let </span>b = <span class="kw-2">*</span><span class="kw">unsafe </span>{ values.get_unchecked(start) };
+
+            <span class="comment">// A valid code-point iff it does not start with 0b10xxxxxx
+            // Bit-magic taken from `std::str::is_char_boundary`
+            </span><span class="kw">if </span>(b <span class="kw">as </span>i8) &lt; -<span class="number">0x40 </span>{
+                any_invalid = <span class="bool-val">true
+            </span>}
         }
+        <span class="kw">if </span>any_invalid {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;Non-valid char boundary detected&quot;</span>));
+        }
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
@@ -290,21 +288,21 @@
 
     <span class="macro">proptest! </span>{
         <span class="comment">// a bit expensive, feel free to run it when changing the code above
-        //#![proptest_config(ProptestConfig::with_cases(100000))]
+        // #![proptest_config(ProptestConfig::with_cases(100000))]
         </span><span class="attr">#[test]
         #[cfg_attr(miri, ignore)] </span><span class="comment">// miri and proptest do not work well
         </span><span class="kw">fn </span>check_utf8_validation(values <span class="kw">in </span>binary_strategy()) {
 
             <span class="kw">for </span>offset <span class="kw">in </span><span class="number">0</span>..values.len() - <span class="number">1 </span>{
-                <span class="kw">let </span>offsets = <span class="macro">vec!</span>[<span class="number">0</span>, offset <span class="kw">as </span>i32, values.len() <span class="kw">as </span>i32];
+                <span class="kw">let </span>offsets = <span class="macro">vec!</span>[<span class="number">0</span>, offset <span class="kw">as </span>i32, values.len() <span class="kw">as </span>i32].try_into().unwrap();
 
                 <span class="kw">let </span><span class="kw-2">mut </span>is_valid = std::str::from_utf8(<span class="kw-2">&amp;</span>values[..offset]).is_ok();
                 is_valid &amp;= std::str::from_utf8(<span class="kw-2">&amp;</span>values[offset..]).is_ok();
 
-                <span class="macro">assert_eq!</span>(try_check_offsets_and_utf8::&lt;i32&gt;(<span class="kw-2">&amp;</span>offsets, <span class="kw-2">&amp;</span>values).is_ok(), is_valid)
+                <span class="macro">assert_eq!</span>(try_check_utf8::&lt;i32, Offsets&lt;i32&gt;&gt;(<span class="kw-2">&amp;</span>offsets, <span class="kw-2">&amp;</span>values).is_ok(), is_valid)
             }
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (b28d30e1e 2022-12-06)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (dfe3fe710 2022-12-09)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

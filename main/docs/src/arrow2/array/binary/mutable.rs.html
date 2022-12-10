@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/binary/mutable.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mutable.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-389f8b4a37bc03c9.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../static.files/light-046227e470cd3629.css"><link rel="stylesheet" disabled href="../../../../static.files/dark-800f2ee593c8e6f7.css"><link rel="stylesheet" disabled href="../../../../static.files/ayu-9edae3c387f5a5b3.css"><script id="default-settings" ></script><script src="../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-287cecec4dbb45b0.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../arrow2/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/binary/mutable.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mutable.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-6827029ac823cab7.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../static.files/light-ebce58d0a40c3431.css"><link rel="stylesheet" disabled href="../../../../static.files/dark-f23faae4a2daf9a6.css"><link rel="stylesheet" disabled href="../../../../static.files/ayu-8af5e100b21cd173.css"><script id="default-settings" ></script><script src="../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-c55e1eb52e1886b4.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../arrow2/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -481,46 +481,17 @@
 <a href="#481" id="481">481</a>
 <a href="#482" id="482">482</a>
 <a href="#483" id="483">483</a>
-<a href="#484" id="484">484</a>
-<a href="#485" id="485">485</a>
-<a href="#486" id="486">486</a>
-<a href="#487" id="487">487</a>
-<a href="#488" id="488">488</a>
-<a href="#489" id="489">489</a>
-<a href="#490" id="490">490</a>
-<a href="#491" id="491">491</a>
-<a href="#492" id="492">492</a>
-<a href="#493" id="493">493</a>
-<a href="#494" id="494">494</a>
-<a href="#495" id="495">495</a>
-<a href="#496" id="496">496</a>
-<a href="#497" id="497">497</a>
-<a href="#498" id="498">498</a>
-<a href="#499" id="499">499</a>
-<a href="#500" id="500">500</a>
-<a href="#501" id="501">501</a>
-<a href="#502" id="502">502</a>
-<a href="#503" id="503">503</a>
-<a href="#504" id="504">504</a>
-<a href="#505" id="505">505</a>
-<a href="#506" id="506">506</a>
-<a href="#507" id="507">507</a>
-<a href="#508" id="508">508</a>
-<a href="#509" id="509">509</a>
-<a href="#510" id="510">510</a>
-<a href="#511" id="511">511</a>
-<a href="#512" id="512">512</a>
-<a href="#513" id="513">513</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, sync::Arc};
 
 <span class="kw">use crate</span>::{
-    array::{Array, MutableArray, Offset, TryExtend, TryExtendFromSelf, TryPush},
+    array::{Array, MutableArray, TryExtend, TryExtendFromSelf, TryPush},
     bitmap::{
         utils::{BitmapIter, ZipValidity},
         Bitmap, MutableBitmap,
     },
     datatypes::DataType,
     error::{Error, <span class="prelude-ty">Result</span>},
+    offset::{Offset, Offsets},
     trusted_len::TrustedLen,
 };
 
@@ -566,15 +537,14 @@
     ///
     /// # Errors
     /// This function returns an error iff:
-    /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the values&#39; length.
-    /// * the validity&#39;s length is not equal to `offsets.len() - 1`.
+    /// * the validity&#39;s length is not equal to `offsets.len()`.
     /// * The `data_type`&#39;s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
     /// # Implementation
-    /// This function is `O(N)` - checking monotinicity is `O(N)`
+    /// This function is `O(1)`
     </span><span class="kw">pub fn </span>try_new(
         data_type: DataType,
-        offsets: Vec&lt;O&gt;,
+        offsets: Offsets&lt;O&gt;,
         values: Vec&lt;u8&gt;,
         validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
@@ -590,26 +560,6 @@
         }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ values, validity })
-    }
-
-    <span class="doccomment">/// Create a [`MutableBinaryArray`] out of its inner attributes.
-    /// # Safety
-    /// The caller must ensure that every value between offsets is a valid utf8.
-    /// # Panics
-    /// This function panics iff:
-    /// * The `offsets` and `values` are inconsistent
-    /// * The validity is not `None` and its length is different from `offsets`&#39;s length minus one.
-    </span><span class="kw">pub unsafe fn </span>new_unchecked(
-        data_type: DataType,
-        offsets: Vec&lt;O&gt;,
-        values: Vec&lt;u8&gt;,
-        validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
-    ) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>values = MutableBinaryValuesArray::new_unchecked(data_type, offsets, values);
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>validity) = validity {
-            <span class="macro">assert_eq!</span>(values.len(), validity.len());
-        }
-        <span class="self">Self </span>{ values, validity }
     }
 
     <span class="doccomment">/// Creates a new [`MutableBinaryArray`] from a slice of optional `&amp;[u8]`.
@@ -697,7 +647,7 @@
     <span class="doccomment">/// Equivalent to `Self::try_new(...).unwrap()`
     </span><span class="kw">pub fn </span>from_data(
         data_type: DataType,
-        offsets: Vec&lt;O&gt;,
+        offsets: Offsets&lt;O&gt;,
         values: Vec&lt;u8&gt;,
         validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;,
     ) -&gt; <span class="self">Self </span>{
@@ -712,7 +662,7 @@
     }
 
     <span class="doccomment">/// returns its offsets.
-    </span><span class="kw">pub fn </span>offsets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;O&gt; {
+    </span><span class="kw">pub fn </span>offsets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Offsets&lt;O&gt; {
         <span class="self">self</span>.values.offsets()
     }
 
@@ -737,34 +687,24 @@
     }
 
     <span class="kw">fn </span>as_box(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        <span class="comment">// Safety:
-        // `MutableBinaryArray` has the same invariants as `BinaryArray` and thus
-        // `BinaryArray` can be safely created from `MutableBinaryArray` without checks.
-        </span><span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into_inner();
-        <span class="kw">unsafe </span>{
-            BinaryArray::new_unchecked(
-                data_type,
-                offsets.into(),
-                values.into(),
-                std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity).map(|x| x.into()),
-            )
-        }
+        <span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into_inner();
+        BinaryArray::new(
+            data_type,
+            offsets.into(),
+            values.into(),
+            std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity).map(|x| x.into()),
+        )
         .boxed()
     }
 
     <span class="kw">fn </span>as_arc(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Array&gt; {
-        <span class="comment">// Safety:
-        // `MutableBinaryArray` has the same invariants as `BinaryArray` and thus
-        // `BinaryArray` can be safely created from `MutableBinaryArray` without checks.
-        </span><span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into_inner();
-        <span class="kw">unsafe </span>{
-            BinaryArray::new_unchecked(
-                data_type,
-                offsets.into(),
-                values.into(),
-                std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity).map(|x| x.into()),
-            )
-        }
+        <span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values).into_inner();
+        BinaryArray::new(
+            data_type,
+            offsets.into(),
+            values.into(),
+            std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity).map(|x| x.into()),
+        )
         .arced()
     }
 
@@ -835,7 +775,7 @@
     </span><span class="kw">pub unsafe fn </span>from_trusted_len_values_iter_unchecked&lt;T: AsRef&lt;[u8]&gt;, I: Iterator&lt;Item = T&gt;&gt;(
         iterator: I,
     ) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>(offsets, values) = <span class="kw">unsafe </span>{ trusted_len_values_iter(iterator) };
+        <span class="kw">let </span>(offsets, values) = trusted_len_values_iter(iterator);
         <span class="self">Self</span>::from_data(<span class="self">Self</span>::default_data_type(), offsets, values, <span class="prelude-val">None</span>)
     }
 
@@ -1025,4 +965,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (b28d30e1e 2022-12-06)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (dfe3fe710 2022-12-09)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

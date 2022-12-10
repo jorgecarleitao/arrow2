@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/binary/mutable_values.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mutable_values.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-389f8b4a37bc03c9.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../static.files/light-046227e470cd3629.css"><link rel="stylesheet" disabled href="../../../../static.files/dark-800f2ee593c8e6f7.css"><link rel="stylesheet" disabled href="../../../../static.files/ayu-9edae3c387f5a5b3.css"><script id="default-settings" ></script><script src="../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-287cecec4dbb45b0.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../arrow2/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/binary/mutable_values.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mutable_values.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-6827029ac823cab7.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../static.files/light-ebce58d0a40c3431.css"><link rel="stylesheet" disabled href="../../../../static.files/dark-f23faae4a2daf9a6.css"><link rel="stylesheet" disabled href="../../../../static.files/ayu-8af5e100b21cd173.css"><script id="default-settings" ></script><script src="../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-c55e1eb52e1886b4.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../arrow2/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -358,75 +358,17 @@
 <a href="#358" id="358">358</a>
 <a href="#359" id="359">359</a>
 <a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
-<a href="#417" id="417">417</a>
-<a href="#418" id="418">418</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, sync::Arc};
 
 <span class="kw">use crate</span>::{
     array::{
-        specification::{check_offsets_minimal, try_check_offsets},
-        Array, ArrayAccessor, ArrayValuesIter, MutableArray, Offset, TryExtend, TryExtendFromSelf,
-        TryPush,
+        specification::try_check_offsets_bounds, Array, ArrayAccessor, ArrayValuesIter,
+        MutableArray, TryExtend, TryExtendFromSelf, TryPush,
     },
     bitmap::MutableBitmap,
     datatypes::DataType,
     error::{Error, <span class="prelude-ty">Result</span>},
+    offset::{Offset, Offsets},
     trusted_len::TrustedLen,
 };
 
@@ -438,38 +380,24 @@
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>MutableBinaryValuesArray&lt;O: Offset&gt; {
     data_type: DataType,
-    offsets: Vec&lt;O&gt;,
+    offsets: Offsets&lt;O&gt;,
     values: Vec&lt;u8&gt;,
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; From&lt;MutableBinaryValuesArray&lt;O&gt;&gt; <span class="kw">for </span>BinaryArray&lt;O&gt; {
     <span class="kw">fn </span>from(other: MutableBinaryValuesArray&lt;O&gt;) -&gt; <span class="self">Self </span>{
-        <span class="comment">// Safety:
-        // `MutableBinaryValuesArray` has the same invariants as `BinaryArray` and thus
-        // `BinaryArray` can be safely created from `MutableBinaryValuesArray` without checks.
-        </span><span class="kw">unsafe </span>{
-            BinaryArray::&lt;O&gt;::from_data_unchecked(
-                other.data_type,
-                other.offsets.into(),
-                other.values.into(),
-                <span class="prelude-val">None</span>,
-            )
-        }
+        BinaryArray::&lt;O&gt;::new(
+            other.data_type,
+            other.offsets.into(),
+            other.values.into(),
+            <span class="prelude-val">None</span>,
+        )
     }
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; From&lt;MutableBinaryValuesArray&lt;O&gt;&gt; <span class="kw">for </span>MutableBinaryArray&lt;O&gt; {
     <span class="kw">fn </span>from(other: MutableBinaryValuesArray&lt;O&gt;) -&gt; <span class="self">Self </span>{
-        <span class="comment">// Safety:
-        // `MutableBinaryValuesArray` has the same invariants as `MutableBinaryArray`
-        </span><span class="kw">unsafe </span>{
-            MutableBinaryArray::&lt;O&gt;::new_unchecked(
-                other.data_type,
-                other.offsets,
-                other.values,
-                <span class="prelude-val">None</span>,
-            )
-        }
+        MutableBinaryArray::&lt;O&gt;::from_data(other.data_type, other.offsets, other.values, <span class="prelude-val">None</span>)
     }
 }
 
@@ -484,7 +412,7 @@
     </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             data_type: <span class="self">Self</span>::default_data_type(),
-            offsets: <span class="macro">vec!</span>[O::default()],
+            offsets: Offsets::new(),
             values: Vec::&lt;u8&gt;::new(),
         }
     }
@@ -493,13 +421,13 @@
     ///
     /// # Errors
     /// This function returns an error iff:
-    /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the values&#39; length.
     /// * The `data_type`&#39;s [`crate::datatypes::PhysicalType`] is not equal to either `Binary` or `LargeBinary`.
     /// # Implementation
-    /// This function is `O(N)` - checking monotinicity is `O(N)`
-    </span><span class="kw">pub fn </span>try_new(data_type: DataType, offsets: Vec&lt;O&gt;, values: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-        try_check_offsets(<span class="kw-2">&amp;</span>offsets, values.len())<span class="question-mark">?</span>;
+    /// This function is `O(1)`
+    </span><span class="kw">pub fn </span>try_new(data_type: DataType, offsets: Offsets&lt;O&gt;, values: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        try_check_offsets_bounds(<span class="kw-2">&amp;</span>offsets, values.len())<span class="question-mark">?</span>;
+
         <span class="kw">if </span>data_type.to_physical_type() != <span class="self">Self</span>::default_data_type().to_physical_type() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
                 <span class="string">&quot;MutableBinaryValuesArray can only be initialized with DataType::Binary or DataType::LargeBinary&quot;</span>,
@@ -511,31 +439,6 @@
             offsets,
             values,
         })
-    }
-
-    <span class="doccomment">/// Returns a [`MutableBinaryValuesArray`] created from its internal representation.
-    ///
-    /// # Panic
-    /// This function does not panic iff:
-    /// * The last offset is equal to the values&#39; length.
-    /// * The `data_type`&#39;s [`crate::datatypes::PhysicalType`] is equal to either `Binary` or `LargeBinary`.
-    /// # Safety
-    /// This function is safe iff:
-    /// * the offsets are monotonically increasing
-    /// # Implementation
-    /// This function is `O(1)`
-    </span><span class="kw">pub unsafe fn </span>new_unchecked(data_type: DataType, offsets: Vec&lt;O&gt;, values: Vec&lt;u8&gt;) -&gt; <span class="self">Self </span>{
-        check_offsets_minimal(<span class="kw-2">&amp;</span>offsets, values.len());
-
-        <span class="kw">if </span>data_type.to_physical_type() != <span class="self">Self</span>::default_data_type().to_physical_type() {
-            <span class="macro">panic!</span>(<span class="string">&quot;MutableBinaryValuesArray can only be initialized with DataType::Binary or DataType::LargeBinary&quot;</span>)
-        }
-
-        <span class="self">Self </span>{
-            data_type,
-            offsets,
-            values,
-        }
     }
 
     <span class="doccomment">/// Returns the default [`DataType`] of this container: [`DataType::Utf8`] or [`DataType::LargeUtf8`]
@@ -551,12 +454,9 @@
 
     <span class="doccomment">/// Initializes a new [`MutableBinaryValuesArray`] with a pre-allocated capacity of items and values.
     </span><span class="kw">pub fn </span>with_capacities(capacity: usize, values: usize) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>offsets = Vec::&lt;O&gt;::with_capacity(capacity + <span class="number">1</span>);
-        offsets.push(O::default());
-
         <span class="self">Self </span>{
             data_type: <span class="self">Self</span>::default_data_type(),
-            offsets,
+            offsets: Offsets::&lt;O&gt;::with_capacity(capacity),
             values: Vec::&lt;u8&gt;::with_capacity(values),
         }
     }
@@ -569,27 +469,27 @@
 
     <span class="doccomment">/// returns its offsets.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>offsets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;O&gt; {
+    </span><span class="kw">pub fn </span>offsets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Offsets&lt;O&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.offsets
     }
 
     <span class="doccomment">/// Reserves `additional` elements and `additional_values` on the values.
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>reserve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize, additional_values: usize) {
-        <span class="self">self</span>.offsets.reserve(additional + <span class="number">1</span>);
+        <span class="self">self</span>.offsets.reserve(additional);
         <span class="self">self</span>.values.reserve(additional_values);
     }
 
     <span class="doccomment">/// Returns the capacity in number of items
     </span><span class="kw">pub fn </span>capacity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.offsets.capacity() - <span class="number">1
-    </span>}
+        <span class="self">self</span>.offsets.capacity()
+    }
 
     <span class="doccomment">/// Returns the length of this array
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.offsets.len() - <span class="number">1
-    </span>}
+        <span class="self">self</span>.offsets.len()
+    }
 
     <span class="doccomment">/// Pushes a new item to the array.
     /// # Panic
@@ -606,7 +506,7 @@
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
         <span class="self">self</span>.offsets.pop()<span class="question-mark">?</span>;
-        <span class="kw">let </span>start = <span class="self">self</span>.offsets.last()<span class="question-mark">?</span>.to_usize();
+        <span class="kw">let </span>start = <span class="self">self</span>.offsets.last().to_usize();
         <span class="kw">let </span>value = <span class="self">self</span>.values.split_off(start);
         <span class="prelude-val">Some</span>(value.to_vec())
     }
@@ -626,8 +526,7 @@
     </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>value_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;</span>[u8] {
         <span class="comment">// soundness: the invariant of the function
-        </span><span class="kw">let </span>start = <span class="self">self</span>.offsets.get_unchecked(i).to_usize();
-        <span class="kw">let </span>end = <span class="self">self</span>.offsets.get_unchecked(i + <span class="number">1</span>).to_usize();
+        </span><span class="kw">let </span>(start, end) = <span class="self">self</span>.offsets.start_end(i);
 
         <span class="comment">// soundness: the invariant of the struct
         </span><span class="self">self</span>.values.get_unchecked(start..end)
@@ -645,7 +544,7 @@
     }
 
     <span class="doccomment">/// Extract the low-end APIs from the [`MutableBinaryValuesArray`].
-    </span><span class="kw">pub fn </span>into_inner(<span class="self">self</span>) -&gt; (DataType, Vec&lt;O&gt;, Vec&lt;u8&gt;) {
+    </span><span class="kw">pub fn </span>into_inner(<span class="self">self</span>) -&gt; (DataType, Offsets&lt;O&gt;, Vec&lt;u8&gt;) {
         (<span class="self">self</span>.data_type, <span class="self">self</span>.offsets, <span class="self">self</span>.values)
     }
 }
@@ -660,21 +559,13 @@
     </span>}
 
     <span class="kw">fn </span>as_box(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        <span class="comment">// Safety:
-        // `MutableBinaryValuesArray` has the same invariants as `BinaryArray` and thus
-        // `BinaryArray` can be safely created from `MutableBinaryValuesArray` without checks.
-        </span><span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="self">self</span>).into_inner();
-        <span class="kw">unsafe </span>{ BinaryArray::from_data_unchecked(data_type, offsets.into(), values.into(), <span class="prelude-val">None</span>) }
-            .boxed()
+        <span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="self">self</span>).into_inner();
+        BinaryArray::new(data_type, offsets.into(), values.into(), <span class="prelude-val">None</span>).boxed()
     }
 
     <span class="kw">fn </span>as_arc(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Array&gt; {
-        <span class="comment">// Safety:
-        // `MutableBinaryValuesArray` has the same invariants as `BinaryArray` and thus
-        // `BinaryArray` can be safely created from `MutableBinaryValuesArray` without checks.
-        </span><span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="self">self</span>).into_inner();
-        <span class="kw">unsafe </span>{ BinaryArray::from_data_unchecked(data_type, offsets.into(), values.into(), <span class="prelude-val">None</span>) }
-            .arced()
+        <span class="kw">let </span>(data_type, offsets, values) = std::mem::take(<span class="self">self</span>).into_inner();
+        BinaryArray::new(data_type, offsets.into(), values.into(), <span class="prelude-val">None</span>).arced()
     }
 
     <span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
@@ -706,8 +597,7 @@
 <span class="kw">impl</span>&lt;O: Offset, P: AsRef&lt;[u8]&gt;&gt; FromIterator&lt;P&gt; <span class="kw">for </span>MutableBinaryValuesArray&lt;O&gt; {
     <span class="kw">fn </span>from_iter&lt;I: IntoIterator&lt;Item = P&gt;&gt;(iter: I) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>(offsets, values) = values_iter(iter.into_iter());
-        <span class="comment">// soundness: T: AsRef&lt;[u8]&gt; and offsets are monotonically increasing
-        </span><span class="kw">unsafe </span>{ <span class="self">Self</span>::new_unchecked(<span class="self">Self</span>::default_data_type(), offsets, values) }
+        <span class="self">Self</span>::try_new(<span class="self">Self</span>::default_data_type(), offsets, values).unwrap()
     }
 }
 
@@ -767,9 +657,7 @@
         I: Iterator&lt;Item = P&gt;,
     {
         <span class="kw">let </span>(offsets, values) = trusted_len_values_iter(iterator);
-
-        <span class="comment">// soundness: offsets are monotonically increasing
-        </span><span class="self">Self</span>::new_unchecked(<span class="self">Self</span>::default_data_type(), offsets, values)
+        <span class="self">Self</span>::try_new(<span class="self">Self</span>::default_data_type(), offsets, values).unwrap()
     }
 
     <span class="doccomment">/// Returns a new [`MutableBinaryValuesArray`] from an iterator.
@@ -806,11 +694,7 @@
     </span><span class="kw">fn </span>try_push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">let </span>bytes = value.as_ref();
         <span class="self">self</span>.values.extend_from_slice(bytes);
-
-        <span class="kw">let </span>size = O::from_usize(<span class="self">self</span>.values.len()).ok_or(Error::Overflow)<span class="question-mark">?</span>;
-
-        <span class="self">self</span>.offsets.push(size);
-        <span class="prelude-val">Ok</span>(())
+        <span class="self">self</span>.offsets.try_push_usize(bytes.len())
     }
 }
 
@@ -831,8 +715,8 @@
 <span class="kw">impl</span>&lt;O: Offset&gt; TryExtendFromSelf <span class="kw">for </span>MutableBinaryValuesArray&lt;O&gt; {
     <span class="kw">fn </span>try_extend_from_self(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="self">self</span>.values.extend_from_slice(<span class="kw-2">&amp;</span>other.values);
-        try_extend_offsets(<span class="kw-2">&amp;mut </span><span class="self">self</span>.offsets, <span class="kw-2">&amp;</span>other.offsets)
+        <span class="self">self</span>.offsets.try_extend_from_self(<span class="kw-2">&amp;</span>other.offsets)
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (b28d30e1e 2022-12-06)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (dfe3fe710 2022-12-09)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
