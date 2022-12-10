@@ -480,7 +480,7 @@ pub(super) fn finish<O: Offset, A: TraitBinaryArray<O>>(
     mut values: Binary<O>,
     mut validity: MutableBitmap,
 ) -> Result<A> {
-    values.offsets.0.shrink_to_fit();
+    values.offsets.shrink_to_fit();
     values.values.shrink_to_fit();
     validity.shrink_to_fit();
 
