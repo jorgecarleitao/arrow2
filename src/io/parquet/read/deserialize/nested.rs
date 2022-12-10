@@ -295,7 +295,7 @@ where
                     let (nested, inner) = x?;
                     let array = MapArray::new(
                         field.data_type().clone(),
-                        vec![0, inner.len() as i32].into(),
+                        vec![0, inner.len() as i32].try_into().unwrap(),
                         inner,
                         None,
                     );

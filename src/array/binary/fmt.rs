@@ -1,7 +1,8 @@
 use std::fmt::{Debug, Formatter, Result, Write};
 
+use crate::offset::Offset;
+
 use super::super::fmt::write_vec;
-use super::super::Offset;
 use super::BinaryArray;
 
 pub fn write_value<O: Offset, W: Write>(array: &BinaryArray<O>, index: usize, f: &mut W) -> Result {

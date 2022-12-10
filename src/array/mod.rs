@@ -439,7 +439,6 @@ pub use iterator::ArrayValuesIter;
 pub use equal::equal;
 pub use fmt::{get_display, get_value_display};
 
-pub use crate::types::Offset;
 pub use binary::{BinaryArray, BinaryValueIter, MutableBinaryArray, MutableBinaryValuesArray};
 pub use boolean::{BooleanArray, MutableBooleanArray};
 pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};
@@ -483,7 +482,7 @@ pub trait TryExtendFromSelf {
 /// 1. `offsets.len() > 0`
 /// 2. `offsets[i] >= offsets[i-1] for all i`
 /// 3. `offsets[i] < values.len() for all i`
-pub unsafe trait GenericBinaryArray<O: Offset>: Array {
+pub unsafe trait GenericBinaryArray<O: crate::offset::Offset>: Array {
     /// The values of the array
     fn values(&self) -> &[u8];
     /// The offsets of the array

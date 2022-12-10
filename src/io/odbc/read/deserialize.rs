@@ -6,6 +6,7 @@ use crate::array::{Array, BinaryArray, BooleanArray, PrimitiveArray, Utf8Array};
 use crate::bitmap::{Bitmap, MutableBitmap};
 use crate::buffer::Buffer;
 use crate::datatypes::{DataType, TimeUnit};
+use crate::offset::{Offsets, OffsetsBuffer};
 use crate::types::NativeType;
 
 use super::super::api::buffers::AnyColumnView;
@@ -118,22 +119,23 @@ fn bool_optional(data_type: DataType, values: &[Bit], indicators: &[isize]) -> B
 
 fn binary_generic<'a>(
     iter: impl Iterator<Item = Option<&'a [u8]>>,
-) -> (Buffer<i32>, Buffer<u8>, Option<Bitmap>) {
+) -> (OffsetsBuffer<i32>, Buffer<u8>, Option<Bitmap>) {
     let length = iter.size_hint().0;
     let mut validity = MutableBitmap::with_capacity(length);
     let mut values = Vec::<u8>::with_capacity(0);
 
-    let mut offsets = Vec::with_capacity(length + 1);
-    offsets.push(0i32);
-
+    let mut offsets = Offsets::<i32>::with_capacity(length);
     for item in iter {
         if let Some(item) = item {
             values.extend_from_slice(item);
+            offsets
+                .try_push_usize(item.len())
+                .expect("List to contain less than i32::MAX items.");
             validity.push(true);
         } else {
+            offsets.extend_constant(1);
             validity.push(false);
         }
-        offsets.push(values.len() as i32)
     }
 
     (offsets.into(), values.into(), validity.into())

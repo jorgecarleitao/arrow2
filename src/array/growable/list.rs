@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use crate::{
-    array::{Array, ListArray, Offset},
+    array::{Array, ListArray},
     bitmap::MutableBitmap,
+    offset::{Offset, Offsets},
 };
 
 use super::{
     make_growable,
-    utils::{build_extend_null_bits, extend_offsets, ExtendNullBits},
+    utils::{build_extend_null_bits, ExtendNullBits},
     Growable,
 };
 
@@ -20,37 +21,15 @@ fn extend_offset_values<O: Offset>(
     let array = growable.arrays[index];
     let offsets = array.offsets();
 
-    if array.null_count() == 0 {
-        // offsets
-        extend_offsets::<O>(
-            &mut growable.offsets,
-            &mut growable.last_offset,
-            &offsets[start..start + len + 1],
-        );
+    growable
+        .offsets
+        .try_extend_from_slice(offsets, start, len)
+        .unwrap();
 
-        let end = offsets[start + len].to_usize();
-        let start = offsets[start].to_usize();
-        let len = end - start;
-        growable.values.extend(index, start, len)
-    } else {
-        growable.offsets.reserve(len);
-
-        let new_offsets = &mut growable.offsets;
-        let inner_values = &mut growable.values;
-        let last_offset = &mut growable.last_offset;
-        (start..start + len).for_each(|i| {
-            if array.is_valid(i) {
-                let len = offsets[i + 1] - offsets[i];
-                // compute the new offset
-                *last_offset += len;
-
-                // append value
-                inner_values.extend(index, offsets[i].to_usize(), len.to_usize());
-            }
-            // append offset
-            new_offsets.push(*last_offset);
-        })
-    }
+    let end = offsets.buffer()[start + len].to_usize();
+    let start = offsets.buffer()[start].to_usize();
+    let len = end - start;
+    growable.values.extend(index, start, len);
 }
 
 /// Concrete [`Growable`] for the [`ListArray`].
@@ -58,8 +37,7 @@ pub struct GrowableList<'a, O: Offset> {
     arrays: Vec<&'a ListArray<O>>,
     validity: MutableBitmap,
     values: Box<dyn Growable<'a> + 'a>,
-    offsets: Vec<O>,
-    last_offset: O, // always equal to the last offset at `offsets`.
+    offsets: Offsets<O>,
     extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
@@ -85,16 +63,11 @@ impl<'a, O: Offset> GrowableList<'a, O> {
             .collect::<Vec<_>>();
         let values = make_growable(&inner, use_validity, 0);
 
-        let mut offsets = Vec::with_capacity(capacity + 1);
-        let length = O::default();
-        offsets.push(length);
-
         Self {
             arrays,
-            offsets,
+            offsets: Offsets::with_capacity(capacity),
             values,
             validity: MutableBitmap::with_capacity(capacity),
-            last_offset: O::default(),
             extend_null_bits,
         }
     }
@@ -104,20 +77,12 @@ impl<'a, O: Offset> GrowableList<'a, O> {
         let offsets = std::mem::take(&mut self.offsets);
         let values = self.values.as_box();
 
-        #[cfg(debug_assertions)]
-        {
-            crate::array::specification::try_check_offsets(&offsets, values.len()).unwrap();
-        }
-
-        // Safety - the invariant of this struct ensures that this is up-held
-        unsafe {
-            ListArray::<O>::new_unchecked(
-                self.arrays[0].data_type().clone(),
-                offsets.into(),
-                values,
-                validity.into(),
-            )
-        }
+        ListArray::<O>::new(
+            self.arrays[0].data_type().clone(),
+            offsets.into(),
+            values,
+            validity.into(),
+        )
     }
 }
 
@@ -128,8 +93,7 @@ impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
     }
 
     fn extend_validity(&mut self, additional: usize) {
-        self.offsets
-            .resize(self.offsets.len() + additional, self.last_offset);
+        self.offsets.extend_constant(additional);
         self.validity.extend_constant(additional, false);
     }
 

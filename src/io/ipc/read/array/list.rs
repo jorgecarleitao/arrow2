@@ -2,10 +2,11 @@ use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::io::{Read, Seek};
 
-use crate::array::{ListArray, Offset};
+use crate::array::ListArray;
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::{Error, Result};
+use crate::offset::Offset;
 
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
@@ -84,7 +85,7 @@ where
         version,
         scratch,
     )?;
-    ListArray::try_new(data_type, offsets, values, validity)
+    ListArray::try_new(data_type, offsets.try_into()?, values, validity)
 }
 
 pub fn skip_list<O: Offset>(

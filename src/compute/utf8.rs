@@ -1,9 +1,10 @@
 //! Defines common maps to a [`Utf8Array`]
 
 use crate::{
-    array::{Array, Offset, Utf8Array},
+    array::{Array, Utf8Array},
     datatypes::DataType,
     error::{Error, Result},
+    offset::Offset,
 };
 
 /// utf8_apply will apply `Fn(&str) -> String` to every value in Utf8Array.

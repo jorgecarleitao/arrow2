@@ -3,6 +3,7 @@ use arrow2::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::DataType,
+    offset::OffsetsBuffer,
 };
 
 mod mutable;
@@ -98,7 +99,7 @@ fn with_validity() {
 #[test]
 #[should_panic]
 fn wrong_offsets() {
-    let offsets = Buffer::from(vec![0, 5, 4]); // invalid offsets
+    let offsets = vec![0, 5, 4].try_into().unwrap(); // invalid offsets
     let values = Buffer::from(b"abbbbb".to_vec());
     BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
 }
@@ -106,7 +107,7 @@ fn wrong_offsets() {
 #[test]
 #[should_panic]
 fn wrong_data_type() {
-    let offsets = Buffer::from(vec![0, 4]);
+    let offsets = vec![0, 4].try_into().unwrap();
     let values = Buffer::from(b"abbb".to_vec());
     BinaryArray::<i32>::from_data(DataType::Int8, offsets, values, None);
 }
@@ -114,7 +115,7 @@ fn wrong_data_type() {
 #[test]
 #[should_panic]
 fn value_with_wrong_offsets_panics() {
-    let offsets = Buffer::from(vec![0, 10, 11, 4]);
+    let offsets = vec![0, 10, 11, 4].try_into().unwrap();
     let values = Buffer::from(b"abbb".to_vec());
     // the 10-11 is not checked
     let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
@@ -127,7 +128,7 @@ fn value_with_wrong_offsets_panics() {
 #[test]
 #[should_panic]
 fn index_out_of_bounds_panics() {
-    let offsets = Buffer::from(vec![0, 1, 2, 4]);
+    let offsets = vec![0, 1, 2, 4].try_into().unwrap();
     let values = Buffer::from(b"abbb".to_vec());
     let array = BinaryArray::<i32>::from_data(DataType::Utf8, offsets, values, None);
 
@@ -137,7 +138,7 @@ fn index_out_of_bounds_panics() {
 #[test]
 #[should_panic]
 fn value_unchecked_with_wrong_offsets_panics() {
-    let offsets = Buffer::from(vec![0, 10, 11, 4]);
+    let offsets = vec![0, 10, 11, 4].try_into().unwrap();
     let values = Buffer::from(b"abbb".to_vec());
     // the 10-11 is not checked
     let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
@@ -157,7 +158,7 @@ fn debug() {
 
 #[test]
 fn into_mut_1() {
-    let offsets = Buffer::from(vec![0, 1]);
+    let offsets = vec![0, 1].try_into().unwrap();
     let values = Buffer::from(b"a".to_vec());
     let a = values.clone(); // cloned values
     assert_eq!(a, values);
@@ -167,7 +168,7 @@ fn into_mut_1() {
 
 #[test]
 fn into_mut_2() {
-    let offsets = Buffer::from(vec![0, 1]);
+    let offsets: OffsetsBuffer<i32> = vec![0, 1].try_into().unwrap();
     let values = Buffer::from(b"a".to_vec());
     let a = offsets.clone(); // cloned offsets
     assert_eq!(a, offsets);
@@ -177,7 +178,7 @@ fn into_mut_2() {
 
 #[test]
 fn into_mut_3() {
-    let offsets = Buffer::from(vec![0, 1]);
+    let offsets = vec![0, 1].try_into().unwrap();
     let values = Buffer::from(b"a".to_vec());
     let validity = Some([true].into());
     let a = validity.clone(); // cloned validity
@@ -188,7 +189,7 @@ fn into_mut_3() {
 
 #[test]
 fn into_mut_4() {
-    let offsets = Buffer::from(vec![0, 1]);
+    let offsets = vec![0, 1].try_into().unwrap();
     let values = Buffer::from(b"a".to_vec());
     let validity = Some([true].into());
     let array = BinaryArray::<i32>::new(DataType::Binary, offsets, values, validity);

@@ -1,20 +1,26 @@
 use crate::{
-    array::{GenericBinaryArray, Offset, PrimitiveArray},
+    array::{GenericBinaryArray, PrimitiveArray},
     bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
+    offset::{Offset, Offsets, OffsetsBuffer},
 };
 
 use super::Index;
 
-pub fn take_values<O: Offset>(length: O, starts: &[O], offsets: &[O], values: &[u8]) -> Buffer<u8> {
+pub fn take_values<O: Offset>(
+    length: O,
+    starts: &[O],
+    offsets: &OffsetsBuffer<O>,
+    values: &[u8],
+) -> Buffer<u8> {
     let new_len = length.to_usize();
     let mut buffer = Vec::with_capacity(new_len);
     starts
         .iter()
-        .zip(offsets.windows(2))
-        .for_each(|(start_, window)| {
-            let start = start_.to_usize();
-            let end = (*start_ + (window[1] - window[0])).to_usize();
+        .map(|start| start.to_usize())
+        .zip(offsets.lengths())
+        .for_each(|(start, length)| {
+            let end = start + length;
             buffer.extend_from_slice(&values[start..end]);
         });
     buffer.into()
@@ -22,36 +28,27 @@ pub fn take_values<O: Offset>(length: O, starts: &[O], offsets: &[O], values: &[
 
 // take implementation when neither values nor indices contain nulls
 pub fn take_no_validity<O: Offset, I: Index>(
-    offsets: &[O],
+    offsets: &OffsetsBuffer<O>,
     values: &[u8],
     indices: &[I],
-) -> (Buffer<O>, Buffer<u8>, Option<Bitmap>) {
-    let mut length = O::default();
+) -> (OffsetsBuffer<O>, Buffer<u8>, Option<Bitmap>) {
     let mut buffer = Vec::<u8>::new();
-    let offsets = indices.iter().map(|index| {
-        let index = index.to_usize();
-        let start = offsets[index];
-        let length_h = offsets[index + 1] - start;
-        length += length_h;
-
-        let _start = start.to_usize();
-        let end = (start + length_h).to_usize();
-        buffer.extend_from_slice(&values[_start..end]);
-        length
+    let lengths = indices.iter().map(|index| index.to_usize()).map(|index| {
+        let (start, end) = offsets.start_end(index);
+        // todo: remove this bound check
+        buffer.extend_from_slice(&values[start..end]);
+        end - start
     });
-    let offsets = std::iter::once(O::default())
-        .chain(offsets)
-        .collect::<Vec<_>>()
-        .into();
+    let offsets = Offsets::try_from_lengths(lengths).expect("");
 
-    (offsets, buffer.into(), None)
+    (offsets.into(), buffer.into(), None)
 }
 
 // take implementation when only values contain nulls
 pub fn take_values_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
     values: &A,
     indices: &[I],
-) -> (Buffer<O>, Buffer<u8>, Option<Bitmap>) {
+) -> (OffsetsBuffer<O>, Buffer<u8>, Option<Bitmap>) {
     let validity_values = values.validity().unwrap();
     let validity = indices
         .iter()
@@ -74,19 +71,23 @@ pub fn take_values_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
     let offsets = std::iter::once(O::default())
         .chain(offsets)
         .collect::<Vec<_>>();
+    // Safety: by construction offsets are monotonically increasing
+    let offsets = unsafe { Offsets::new_unchecked(offsets) }.into();
 
-    let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values);
+    let buffer = take_values(length, starts.as_slice(), &offsets, values_values);
 
-    (offsets.into(), buffer, validity.into())
+    (offsets, buffer, validity.into())
 }
 
 // take implementation when only indices contain nulls
 pub fn take_indices_validity<O: Offset, I: Index>(
-    offsets: &[O],
+    offsets: &OffsetsBuffer<O>,
     values: &[u8],
     indices: &PrimitiveArray<I>,
-) -> (Buffer<O>, Buffer<u8>, Option<Bitmap>) {
+) -> (OffsetsBuffer<O>, Buffer<u8>, Option<Bitmap>) {
     let mut length = O::default();
+
+    let offsets = offsets.buffer();
 
     let mut starts = Vec::<O>::with_capacity(indices.len());
     let offsets = indices.values().iter().map(|index| {
@@ -104,18 +105,19 @@ pub fn take_indices_validity<O: Offset, I: Index>(
     let offsets = std::iter::once(O::default())
         .chain(offsets)
         .collect::<Vec<_>>();
-    let starts: Buffer<O> = starts.into();
+    // Safety: by construction offsets are monotonically increasing
+    let offsets = unsafe { Offsets::new_unchecked(offsets) }.into();
 
-    let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values);
+    let buffer = take_values(length, &starts, &offsets, values);
 
-    (offsets.into(), buffer, indices.validity().cloned())
+    (offsets, buffer, indices.validity().cloned())
 }
 
 // take implementation when both indices and values contain nulls
 pub fn take_values_indices_validity<O: Offset, I: Index, A: GenericBinaryArray<O>>(
     values: &A,
     indices: &PrimitiveArray<I>,
-) -> (Buffer<O>, Buffer<u8>, Option<Bitmap>) {
+) -> (OffsetsBuffer<O>, Buffer<u8>, Option<Bitmap>) {
     let mut length = O::default();
     let mut validity = MutableBitmap::with_capacity(indices.len());
 
@@ -147,10 +149,10 @@ pub fn take_values_indices_validity<O: Offset, I: Index, A: GenericBinaryArray<O
     let offsets = std::iter::once(O::default())
         .chain(offsets)
         .collect::<Vec<_>>();
+    // Safety: by construction offsets are monotonically increasing
+    let offsets = unsafe { Offsets::new_unchecked(offsets) }.into();
 
-    let starts: Buffer<O> = starts.into();
+    let buffer = take_values(length, &starts, &offsets, values_values);
 
-    let buffer = take_values(length, starts.as_slice(), offsets.as_slice(), values_values);
-
-    (offsets.into(), buffer, validity.into())
+    (offsets, buffer, validity.into())
 }

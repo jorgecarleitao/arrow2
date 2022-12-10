@@ -21,7 +21,7 @@ fn basics() {
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let expected = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from(vec![0, 3, 3, 6]),
+        vec![0, 3, 3, 6].try_into().unwrap(),
         Box::new(values),
         Some(Bitmap::from([true, false, true])),
     );
@@ -32,7 +32,7 @@ fn basics() {
 fn with_capacity() {
     let array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::with_capacity(10);
     assert!(array.offsets().capacity() >= 10);
-    assert_eq!(array.offsets().len(), 1);
+    assert_eq!(array.offsets().len(), 0);
     assert_eq!(array.values().values().capacity(), 0);
     assert_eq!(array.validity(), None);
 }
@@ -45,7 +45,7 @@ fn push() {
         .unwrap();
     assert_eq!(array.len(), 1);
     assert_eq!(array.values().values().as_ref(), [1, 2, 3]);
-    assert_eq!(array.offsets().as_ref(), [0, 3]);
+    assert_eq!(array.offsets().as_slice(), [0, 3]);
     assert_eq!(array.validity(), None);
 }
 

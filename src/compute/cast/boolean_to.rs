@@ -1,6 +1,7 @@
 use crate::{
-    array::{Array, BinaryArray, BooleanArray, Offset, PrimitiveArray, Utf8Array},
+    array::{Array, BinaryArray, BooleanArray, PrimitiveArray, Utf8Array},
     error::Result,
+    offset::Offset,
     types::NativeType,
 };
 

@@ -1,4 +1,4 @@
-use crate::array::Offset;
+use crate::offset::{Offset, Offsets};
 
 use super::super::utils::Pushable;
 
@@ -7,70 +7,51 @@ use super::super::utils::Pushable;
 pub struct Binary<O: Offset> {
     pub offsets: Offsets<O>,
     pub values: Vec<u8>,
-    pub last_offset: O,
 }
 
-#[derive(Debug)]
-pub struct Offsets<O: Offset>(pub Vec<O>);
-
-impl<O: Offset> Offsets<O> {
-    #[inline]
-    pub fn extend_lengths<I: Iterator<Item = usize>>(&mut self, lengths: I) {
-        let mut last_offset = *self.0.last().unwrap();
-        self.0.extend(lengths.map(|length| {
-            last_offset += O::from_usize(length).unwrap();
-            last_offset
-        }));
-    }
-}
-
-impl<O: Offset> Pushable<O> for Offsets<O> {
+impl<O: Offset> Pushable<usize> for Offsets<O> {
     fn reserve(&mut self, additional: usize) {
-        self.0.reserve(additional)
+        self.reserve(additional)
     }
     #[inline]
     fn len(&self) -> usize {
-        self.0.len() - 1
+        self.len()
     }
 
     #[inline]
-    fn push(&mut self, value: O) {
-        self.0.push(value)
+    fn push(&mut self, value: usize) {
+        self.try_push_usize(value).unwrap()
     }
 
     #[inline]
     fn push_null(&mut self) {
-        self.0.push(*self.0.last().unwrap())
+        self.extend_constant(1);
     }
 
     #[inline]
-    fn extend_constant(&mut self, additional: usize, value: O) {
-        self.0.extend_constant(additional, value)
+    fn extend_constant(&mut self, additional: usize, _: usize) {
+        self.extend_constant(additional)
     }
 }
 
 impl<O: Offset> Binary<O> {
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
-        let mut offsets = Vec::with_capacity(1 + capacity);
-        offsets.push(O::default());
         Self {
-            offsets: Offsets(offsets),
+            offsets: Offsets::with_capacity(capacity),
             values: Vec::with_capacity(capacity * 24),
-            last_offset: O::default(),
         }
     }
 
     #[inline]
     pub fn push(&mut self, v: &[u8]) {
         self.values.extend(v);
-        self.last_offset += O::from_usize(v.len()).unwrap();
-        self.offsets.push(self.last_offset)
+        self.offsets.try_push_usize(v.len()).unwrap()
     }
 
     #[inline]
     pub fn extend_constant(&mut self, additional: usize) {
-        self.offsets.extend_constant(additional, self.last_offset);
+        self.offsets.extend_constant(additional);
     }
 
     #[inline]
@@ -80,10 +61,10 @@ impl<O: Offset> Binary<O> {
 
     #[inline]
     pub fn extend_lengths<I: Iterator<Item = usize>>(&mut self, lengths: I, values: &mut &[u8]) {
-        let current_offset = self.last_offset;
-        self.offsets.extend_lengths(lengths);
-        self.last_offset = *self.offsets.0.last().unwrap(); // guaranteed to have one
-        let length = self.last_offset.to_usize() - current_offset.to_usize();
+        let current_offset = *self.offsets.last();
+        self.offsets.try_extend_from_lengths(lengths).unwrap();
+        let new_offset = *self.offsets.last();
+        let length = new_offset.to_usize() - current_offset.to_usize();
         let (consumed, remaining) = values.split_at(length);
         *values = remaining;
         self.values.extend_from_slice(consumed);
@@ -93,7 +74,7 @@ impl<O: Offset> Binary<O> {
 impl<'a, O: Offset> Pushable<&'a [u8]> for Binary<O> {
     #[inline]
     fn reserve(&mut self, additional: usize) {
-        let avg_len = self.values.len() / std::cmp::max(self.last_offset.to_usize(), 1);
+        let avg_len = self.values.len() / std::cmp::max(self.offsets.last().to_usize(), 1);
         self.values.reserve(additional * avg_len);
         self.offsets.reserve(additional);
     }

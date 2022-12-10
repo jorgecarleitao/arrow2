@@ -1,5 +1,6 @@
-use crate::array::{ArrayAccessor, ArrayValuesIter, Offset};
+use crate::array::{ArrayAccessor, ArrayValuesIter};
 use crate::bitmap::utils::{BitmapIter, ZipValidity};
+use crate::offset::Offset;
 
 use super::{MutableUtf8Array, MutableUtf8ValuesArray, Utf8Array};
 

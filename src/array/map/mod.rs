@@ -1,11 +1,11 @@
 use crate::{
     bitmap::Bitmap,
-    buffer::Buffer,
     datatypes::{DataType, Field},
     error::Error,
+    offset::OffsetsBuffer,
 };
 
-use super::{new_empty_array, specification::try_check_offsets, Array};
+use super::{new_empty_array, specification::try_check_offsets_bounds, Array};
 
 mod ffi;
 mod fmt;
@@ -16,8 +16,8 @@ pub use iterator::*;
 #[derive(Clone)]
 pub struct MapArray {
     data_type: DataType,
-    // invariant: field.len() == offsets.len() - 1
-    offsets: Buffer<i32>,
+    // invariant: field.len() == offsets.len()
+    offsets: OffsetsBuffer<i32>,
     field: Box<dyn Array>,
     // invariant: offsets.len() - 1 == Bitmap::len()
     validity: Option<Bitmap>,
@@ -27,18 +27,17 @@ impl MapArray {
     /// Returns a new [`MapArray`].
     /// # Errors
     /// This function errors iff:
-    /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the field' length
     /// * The `data_type`'s physical type is not [`crate::datatypes::PhysicalType::Map`]
     /// * The fields' `data_type` is not equal to the inner field of `data_type`
     /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
     pub fn try_new(
         data_type: DataType,
-        offsets: Buffer<i32>,
+        offsets: OffsetsBuffer<i32>,
         field: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
-        try_check_offsets(&offsets, field.len())?;
+        try_check_offsets_bounds(&offsets, field.len())?;
 
         let inner_field = Self::try_get_field(&data_type)?;
         if let DataType::Struct(inner) = inner_field.data_type() {
@@ -60,7 +59,7 @@ impl MapArray {
 
         if validity
             .as_ref()
-            .map_or(false, |validity| validity.len() != offsets.len() - 1)
+            .map_or(false, |validity| validity.len() != offsets.len())
         {
             return Err(Error::oos(
                 "validity mask length must match the number of values",
@@ -77,13 +76,12 @@ impl MapArray {
 
     /// Creates a new [`MapArray`].
     /// # Panics
-    /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the field' length.
     /// * The `data_type`'s physical type is not [`crate::datatypes::PhysicalType::Map`],
     /// * The validity is not `None` and its length is different from `offsets.len() - 1`.
     pub fn new(
         data_type: DataType,
-        offsets: Buffer<i32>,
+        offsets: OffsetsBuffer<i32>,
         field: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
@@ -93,7 +91,7 @@ impl MapArray {
     /// Alias for `new`
     pub fn from_data(
         data_type: DataType,
-        offsets: Buffer<i32>,
+        offsets: OffsetsBuffer<i32>,
         field: Box<dyn Array>,
         validity: Option<Bitmap>,
     ) -> Self {
@@ -105,7 +103,7 @@ impl MapArray {
         let field = new_empty_array(Self::get_field(&data_type).data_type().clone());
         Self::new(
             data_type,
-            vec![0i32; 1 + length].into(),
+            vec![0i32; 1 + length].try_into().unwrap(),
             field,
             Some(Bitmap::new_zeroed(length)),
         )
@@ -114,7 +112,7 @@ impl MapArray {
     /// Returns a new empty [`MapArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         let field = new_empty_array(Self::get_field(&data_type).data_type().clone());
-        Self::new(data_type, Buffer::from(vec![0i32]), field, None)
+        Self::new(data_type, OffsetsBuffer::default(), field, None)
     }
 
     /// Returns this [`MapArray`] with a new validity.
@@ -197,12 +195,12 @@ impl MapArray {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len() - 1
+        self.offsets.len()
     }
 
     /// returns the offsets
     #[inline]
-    pub fn offsets(&self) -> &Buffer<i32> {
+    pub fn offsets(&self) -> &OffsetsBuffer<i32> {
         &self.offsets
     }
 
@@ -215,14 +213,8 @@ impl MapArray {
     /// Returns the element at index `i`.
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
-        let offset = self.offsets[i];
-        let offset_1 = self.offsets[i + 1];
-        let length = (offset_1 - offset) as usize;
-
-        // Safety:
-        // One of the invariants of the struct
-        // is that offsets are in bounds
-        unsafe { self.field.slice_unchecked(offset as usize, length) }
+        assert!(i < self.len());
+        unsafe { self.value_unchecked(i) }
     }
 
     /// Returns the element at index `i`.
@@ -230,11 +222,12 @@ impl MapArray {
     /// Assumes that the `i < self.len`.
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
-        let offset = *self.offsets.get_unchecked(i);
-        let offset_1 = *self.offsets.get_unchecked(i + 1);
-        let length = (offset_1 - offset) as usize;
+        // soundness: the invariant of the function
+        let (start, end) = self.offsets.start_end_unchecked(i);
+        let length = end - start;
 
-        self.field.slice_unchecked(offset as usize, length)
+        // soundness: the invariant of the struct
+        self.field.slice_unchecked(start, length)
     }
 }
 

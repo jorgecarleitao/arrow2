@@ -7,8 +7,9 @@ use chrono::{
 
 use crate::error::Result;
 use crate::{
-    array::{Offset, PrimitiveArray, Utf8Array},
+    array::{PrimitiveArray, Utf8Array},
     error::Error,
+    offset::Offset,
 };
 use crate::{
     datatypes::{DataType, TimeUnit},

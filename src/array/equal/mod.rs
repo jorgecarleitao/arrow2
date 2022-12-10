@@ -1,3 +1,4 @@
+use crate::offset::Offset;
 use crate::types::NativeType;
 
 use super::*;

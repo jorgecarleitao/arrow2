@@ -9,11 +9,12 @@ use parquet2::{
 };
 
 use crate::{
-    array::{Array, BinaryArray, Offset, Utf8Array},
+    array::{Array, BinaryArray, Utf8Array},
     bitmap::{Bitmap, MutableBitmap},
     buffer::Buffer,
     datatypes::DataType,
     error::{Error, Result},
+    offset::{Offset, OffsetsBuffer},
 };
 
 use super::super::utils::{
@@ -227,7 +228,7 @@ impl<'a> utils::PageState<'a> for State<'a> {
 pub trait TraitBinaryArray<O: Offset>: Array + 'static {
     fn try_new(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: OffsetsBuffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self>
@@ -238,7 +239,7 @@ pub trait TraitBinaryArray<O: Offset>: Array + 'static {
 impl<O: Offset> TraitBinaryArray<O> for BinaryArray<O> {
     fn try_new(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: OffsetsBuffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self> {
@@ -249,7 +250,7 @@ impl<O: Offset> TraitBinaryArray<O> for BinaryArray<O> {
 impl<O: Offset> TraitBinaryArray<O> for Utf8Array<O> {
     fn try_new(
         data_type: DataType,
-        offsets: Buffer<O>,
+        offsets: OffsetsBuffer<O>,
         values: Buffer<u8>,
         validity: Option<Bitmap>,
     ) -> Result<Self> {
@@ -372,22 +373,18 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                 let Binary {
                     offsets,
                     values: values_,
-                    last_offset,
                 } = values;
 
-                let offset = *last_offset;
+                let last_offset = *offsets.last();
                 extend_from_decoder(
                     validity,
                     page_validity,
                     Some(additional),
                     offsets,
-                    page_values.lengths.by_ref().map(|x| {
-                        *last_offset += O::from_usize(x).unwrap();
-                        *last_offset
-                    }),
+                    page_values.lengths.by_ref(),
                 );
 
-                let length = *last_offset - offset;
+                let length = *offsets.last() - last_offset;
 
                 let (consumed, remaining) = page_values.values.split_at(length.to_usize());
                 page_values.values = remaining;
@@ -485,7 +482,7 @@ pub(super) fn finish<O: Offset, A: TraitBinaryArray<O>>(
 ) -> Result<A> {
     A::try_new(
         data_type.clone(),
-        values.offsets.0.into(),
+        values.offsets.into(),
         values.values.into(),
         validity.into(),
     )

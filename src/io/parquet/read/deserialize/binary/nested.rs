@@ -7,8 +7,8 @@ use parquet2::{
 };
 
 use crate::{
-    array::Offset, bitmap::MutableBitmap, datatypes::DataType, error::Result,
-    io::parquet::read::Pages,
+    bitmap::MutableBitmap, datatypes::DataType, error::Result, io::parquet::read::Pages,
+    offset::Offset,
 };
 
 use super::super::utils::MaybeNext;

@@ -3,13 +3,13 @@ use std::io::{Cursor, Read, Seek};
 use arrow2::{
     array::*,
     bitmap::Bitmap,
-    buffer::Buffer,
     chunk::Chunk,
     datatypes::*,
     error::Result,
     io::parquet::read as p_read,
     io::parquet::read::statistics::*,
     io::parquet::write::*,
+    offset::Offset,
     types::{days_ms, NativeType},
 };
 
@@ -74,7 +74,7 @@ pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
             // [["a", "b", None, "c"]]
             let a = ListArray::<i32>::new(
                 DataType::List(Box::new(Field::new("item", DataType::Utf8, true))),
-                vec![0, 4].into(),
+                vec![0, 4].try_into().unwrap(),
                 Utf8Array::<i32>::from([Some("a"), Some("b"), None, Some("c")]).boxed(),
                 None,
             );
@@ -90,7 +90,7 @@ pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
 }
 
 pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
-    let offsets = Buffer::from(vec![0, 2, 2, 5, 8, 8, 11, 11, 12]);
+    let offsets = vec![0, 2, 2, 5, 8, 8, 11, 11, 12].try_into().unwrap();
 
     let values = match column {
         "list_int64" => {
@@ -581,7 +581,7 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
                 array.data_type().clone(),
                 nullable,
             ))),
-            vec![0, array.len() as i32].into(),
+            vec![0, array.len() as i32].try_into().unwrap(),
             array,
             None,
         )
@@ -684,7 +684,7 @@ pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
                 array.data_type().clone(),
                 true,
             ))),
-            vec![0, array.len() as i32].into(),
+            vec![0, array.len() as i32].try_into().unwrap(),
             array,
             None,
         )
@@ -989,7 +989,7 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
             ]);
             MapArray::try_new(
                 DataType::Map(Box::new(Field::new("entries", dt.clone(), false)), false),
-                vec![0, 2].into(),
+                vec![0, 2].try_into().unwrap(),
                 StructArray::try_new(
                     dt,
                     vec![
@@ -1014,7 +1014,7 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
             ]);
             MapArray::try_new(
                 DataType::Map(Box::new(Field::new("entries", dt.clone(), false)), false),
-                vec![0, 2].into(),
+                vec![0, 2].try_into().unwrap(),
                 StructArray::try_new(
                     dt,
                     vec![
@@ -1046,7 +1046,7 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
                 Box::new(Field::new("items", DataType::Struct(fields.clone()), false)),
                 false,
             ),
-            vec![0, arrays[0].len() as i32].into(),
+            vec![0, arrays[0].len() as i32].try_into().unwrap(),
             StructArray::new(DataType::Struct(fields), arrays, None).boxed(),
             None,
         )
@@ -1510,7 +1510,7 @@ fn nested_dict_data(data_type: DataType) -> Result<(Schema, Chunk<Box<dyn Array>
             values.data_type().clone(),
             false,
         ))),
-        vec![0i32, 0, 0, 2, 3].into(),
+        vec![0i32, 0, 0, 2, 3].try_into().unwrap(),
         values.boxed(),
         Some([true, false, true, true].into()),
     )?;

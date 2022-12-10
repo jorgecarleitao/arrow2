@@ -21,6 +21,9 @@ pub trait Index:
     /// Convert itself from [`usize`].
     fn from_usize(index: usize) -> Option<Self>;
 
+    /// Convert itself from [`usize`].
+    fn from_as_usize(index: usize) -> Self;
+
     /// An iterator from (inclusive) `start` to (exclusive) `end`.
     fn range(start: usize, end: usize) -> Option<IndexRange<Self>> {
         let start = Self::from_usize(start);
@@ -43,6 +46,11 @@ macro_rules! index {
             #[inline]
             fn from_usize(value: usize) -> Option<Self> {
                 Self::try_from(value).ok()
+            }
+
+            #[inline]
+            fn from_as_usize(value: usize) -> Self {
+                value as $t
             }
         }
     };

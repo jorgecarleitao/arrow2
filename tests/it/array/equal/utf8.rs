@@ -1,4 +1,5 @@
 use arrow2::array::*;
+use arrow2::offset::Offset;
 
 use super::{binary_cases, test_equal};
 

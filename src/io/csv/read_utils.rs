@@ -1,22 +1,23 @@
 use chrono::Datelike;
 
+use crate::{
+    array::*,
+    chunk::Chunk,
+    datatypes::*,
+    error::{Error, Result},
+    offset::Offset,
+    temporal_conversions,
+    types::NativeType,
+};
+
+use super::utils::RFC3339;
+
 // Ideally this trait should not be needed and both `csv` and `csv_async` crates would share
 // the same `ByteRecord` struct. Unfortunately, they do not and thus we must use generics
 // over this trait and materialize the generics for each struct.
 pub(crate) trait ByteRecordGeneric {
     fn get(&self, index: usize) -> Option<&[u8]>;
 }
-
-use crate::{
-    array::*,
-    chunk::Chunk,
-    datatypes::*,
-    error::{Error, Result},
-    temporal_conversions,
-    types::NativeType,
-};
-
-use super::utils::RFC3339;
 
 #[inline]
 fn to_utf8(bytes: &[u8]) -> Option<&str> {

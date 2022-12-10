@@ -1,4 +1,4 @@
-use arrow2::{array::*, compute::utf8::*, error::Result};
+use arrow2::{array::*, compute::utf8::*, error::Result, offset::Offset};
 
 fn with_nulls_utf8_lower<O: Offset>() -> Result<()> {
     let cases = vec![

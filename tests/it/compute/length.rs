@@ -1,6 +1,7 @@
 use arrow2::array::*;
 use arrow2::compute::length::*;
 use arrow2::datatypes::*;
+use arrow2::offset::Offset;
 
 fn length_test_string<O: Offset>() {
     vec![

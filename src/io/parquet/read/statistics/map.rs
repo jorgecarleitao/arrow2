@@ -40,7 +40,7 @@ impl MutableArray for DynMutableMapArray {
     fn as_box(&mut self) -> Box<dyn Array> {
         Box::new(MapArray::new(
             self.data_type.clone(),
-            vec![0, self.inner.len() as i32].into(),
+            vec![0, self.inner.len() as i32].try_into().unwrap(),
             self.inner.as_box(),
             None,
         ))

@@ -1,10 +1,11 @@
 //! Declares the [`contains`] operator
 
 use crate::{
-    array::{Array, BinaryArray, BooleanArray, ListArray, Offset, PrimitiveArray, Utf8Array},
+    array::{Array, BinaryArray, BooleanArray, ListArray, PrimitiveArray, Utf8Array},
     bitmap::Bitmap,
     datatypes::DataType,
     error::{Error, Result},
+    offset::Offset,
     types::NativeType,
 };
 

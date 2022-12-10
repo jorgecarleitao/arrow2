@@ -157,15 +157,12 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
     }
 
     fn take_into(&mut self) -> DictionaryArray<K> {
-        // Safety - the invariant of this struct ensures that this is up-held
-        unsafe {
-            DictionaryArray::<K>::try_new(
-                self.data_type.clone(),
-                std::mem::take(&mut self.keys).into(),
-                self.values.as_box(),
-            )
-            .unwrap()
-        }
+        DictionaryArray::<K>::try_new(
+            self.data_type.clone(),
+            std::mem::take(&mut self.keys).into(),
+            self.values.as_box(),
+        )
+        .unwrap()
     }
 }
 
