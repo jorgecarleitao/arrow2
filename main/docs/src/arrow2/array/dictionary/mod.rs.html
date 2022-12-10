@@ -385,6 +385,39 @@
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
 <a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::hint::unreachable_unchecked;
 
 <span class="kw">use crate</span>::{
@@ -403,6 +436,7 @@
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>fmt;
 <span class="kw">mod </span>iterator;
 <span class="kw">mod </span>mutable;
+<span class="kw">use </span><span class="kw">crate</span>::array::specification::check_indexes_unchecked;
 <span class="kw">pub use </span>iterator::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>mutable::<span class="kw-2">*</span>;
 
@@ -410,7 +444,11 @@
 <span class="kw">use super</span>::{new_null_array, specification::check_indexes};
 
 <span class="doccomment">/// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
-</span><span class="kw">pub trait </span>DictionaryKey: NativeType + TryInto&lt;usize&gt; + TryFrom&lt;usize&gt; {
+/// # Safety
+///
+/// Any implementation of this trait must ensure that `always_fits_usize` only
+/// returns `true` if all values succeeds on `value::try_into::&lt;usize&gt;().unwrap()`.
+</span><span class="kw">pub unsafe trait </span>DictionaryKey: NativeType + TryInto&lt;usize&gt; + TryFrom&lt;usize&gt; {
     <span class="doccomment">/// The corresponding [`IntegerType`] of this key
     </span><span class="kw">const </span>KEY_TYPE: IntegerType;
 
@@ -424,31 +462,53 @@
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; unreachable_unchecked(),
         }
     }
+
+    <span class="doccomment">/// If the key type always can be converted to `usize`.
+    </span><span class="kw">fn </span>always_fits_usize() -&gt; bool {
+        <span class="bool-val">false
+    </span>}
 }
 
-<span class="kw">impl </span>DictionaryKey <span class="kw">for </span>i8 {
+<span class="kw">unsafe impl </span>DictionaryKey <span class="kw">for </span>i8 {
     <span class="kw">const </span>KEY_TYPE: IntegerType = IntegerType::Int8;
 }
-<span class="kw">impl </span>DictionaryKey <span class="kw">for </span>i16 {
+<span class="kw">unsafe impl </span>DictionaryKey <span class="kw">for </span>i16 {
     <span class="kw">const </span>KEY_TYPE: IntegerType = IntegerType::Int16;
 }
-<span class="kw">impl </span>DictionaryKey <span class="kw">for </span>i32 {
+<span class="kw">unsafe impl </span>DictionaryKey <span class="kw">for </span>i32 {
     <span class="kw">const </span>KEY_TYPE: IntegerType = IntegerType::Int32;
 }
-<span class="kw">impl </span>DictionaryKey <span class="kw">for </span>i64 {
+<span class="kw">unsafe impl </span>DictionaryKey <span class="kw">for </span>i64 {
     <span class="kw">const </span>KEY_TYPE: IntegerType = IntegerType::Int64;
 }
-<span class="kw">impl </span>DictionaryKey <span class="kw">for </span>u8 {
+<span class="kw">unsafe impl </span>DictionaryKey <span class="kw">for </span>u8 {
     <span class="kw">const </span>KEY_TYPE: IntegerType = IntegerType::UInt8;
+
+    <span class="kw">fn </span>always_fits_usize() -&gt; bool {
+        <span class="bool-val">true
+    </span>}
 }
-<span class="kw">impl </span>DictionaryKey <span class="kw">for </span>u16 {
+<span class="kw">unsafe impl </span>DictionaryKey <span class="kw">for </span>u16 {
     <span class="kw">const </span>KEY_TYPE: IntegerType = IntegerType::UInt16;
+
+    <span class="kw">fn </span>always_fits_usize() -&gt; bool {
+        <span class="bool-val">true
+    </span>}
 }
-<span class="kw">impl </span>DictionaryKey <span class="kw">for </span>u32 {
+<span class="kw">unsafe impl </span>DictionaryKey <span class="kw">for </span>u32 {
     <span class="kw">const </span>KEY_TYPE: IntegerType = IntegerType::UInt32;
+
+    <span class="kw">fn </span>always_fits_usize() -&gt; bool {
+        <span class="bool-val">true
+    </span>}
 }
-<span class="kw">impl </span>DictionaryKey <span class="kw">for </span>u64 {
+<span class="kw">unsafe impl </span>DictionaryKey <span class="kw">for </span>u64 {
     <span class="kw">const </span>KEY_TYPE: IntegerType = IntegerType::UInt64;
+
+    <span class="attr">#[cfg(target_pointer_width = <span class="string">&quot;64&quot;</span>)]
+    </span><span class="kw">fn </span>always_fits_usize() -&gt; bool {
+        <span class="bool-val">true
+    </span>}
 }
 
 <span class="doccomment">/// An [`Array`] whose values are stored as indices. This [`Array`] is useful when the cardinality of
@@ -507,7 +567,13 @@
         check_data_type(K::KEY_TYPE, <span class="kw-2">&amp;</span>data_type, values.data_type())<span class="question-mark">?</span>;
 
         <span class="kw">if </span>keys.null_count() != keys.len() {
-            check_indexes(keys.values(), values.len())<span class="question-mark">?</span>;
+            <span class="kw">if </span>K::always_fits_usize() {
+                <span class="comment">// safety: we just checked that conversion to `usize` always
+                // succeeds
+                </span><span class="kw">unsafe </span>{ check_indexes_unchecked(keys.values(), values.len()) }<span class="question-mark">?</span>;
+            } <span class="kw">else </span>{
+                check_indexes(keys.values(), values.len())<span class="question-mark">?</span>;
+            }
         }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
