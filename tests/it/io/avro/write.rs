@@ -86,7 +86,7 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
         ])),
         Box::new(ListArray::<i32>::new(
             list_dt,
-            vec![0, 2, 5].into(),
+            vec![0, 2, 5].try_into().unwrap(),
             Box::new(PrimitiveArray::<i32>::from([
                 None,
                 Some(1),
@@ -98,7 +98,7 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
         )),
         Box::new(ListArray::<i32>::new(
             list_dt1,
-            vec![0, 2, 2].into(),
+            vec![0, 2, 2].try_into().unwrap(),
             Box::new(PrimitiveArray::<i32>::from([None, Some(1)])),
             Some([true, false].into()),
         )),

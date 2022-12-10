@@ -51,7 +51,7 @@ regex-syntax = { version = "^0.6", optional = true }
 streaming-iterator = { version = "0.1", optional = true }
 fallible-streaming-iterator = { version = "0.1", optional = true }
 
-json-deserializer = { version = "0.4.2", optional = true, features = ["preserve_order"] }
+json-deserializer = { version = "0.4.4", optional = true, features = ["preserve_order"] }
 indexmap = { version = "^1.6", optional = true }
 
 # used to print columns in a nice columnar format
@@ -76,9 +76,6 @@ futures = { version = "0.3", optional = true }
 
 # to read IPC as a stream
 async-stream = { version = "0.3.2", optional = true }
-
-# parquet support
-parquet2 = { version = "0.16", optional = true, default_features = false, features = ["async"] }
 
 # avro support
 avro-schema = { version = "0.3", optional = true }
@@ -107,6 +104,13 @@ getrandom = { version = "0.2", features = ["js"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ahash = { version = "0.8", features=["runtime-rng"] }
+
+# parquet support
+[dependencies.parquet2]
+version = "0.17"
+optional = true
+default_features = false
+features = ["async"]
 
 [dev-dependencies]
 criterion = "0.3"

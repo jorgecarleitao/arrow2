@@ -10,12 +10,12 @@ fn new() {
 
     let a = MutableBinaryArray::<i32>::with_capacity(2);
     assert_eq!(a.len(), 0);
-    assert!(a.offsets().capacity() >= 3);
+    assert!(a.offsets().capacity() >= 2);
     assert_eq!(a.values().capacity(), 0);
 
     let a = MutableBinaryArray::<i32>::with_capacities(2, 60);
     assert_eq!(a.len(), 0);
-    assert!(a.offsets().capacity() >= 3);
+    assert!(a.offsets().capacity() >= 2);
     assert!(a.values().capacity() >= 60);
 }
 
@@ -24,12 +24,12 @@ fn from_iter() {
     let iter = (0..3u8).map(|x| Some(vec![x; x as usize]));
     let a: MutableBinaryArray<i32> = iter.clone().collect();
     assert_eq!(a.values().deref(), &[1u8, 2, 2]);
-    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.offsets().as_slice(), &[0, 0, 1, 3]);
     assert_eq!(a.validity(), None);
 
     let a = unsafe { MutableBinaryArray::<i32>::from_trusted_len_iter_unchecked(iter) };
     assert_eq!(a.values().deref(), &[1u8, 2, 2]);
-    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.offsets().as_slice(), &[0, 0, 1, 3]);
     assert_eq!(a.validity(), None);
 }
 
@@ -38,12 +38,12 @@ fn from_trusted_len_iter() {
     let data = vec![vec![0; 0], vec![1; 1], vec![2; 2]];
     let a: MutableBinaryArray<i32> = data.iter().cloned().map(Some).collect();
     assert_eq!(a.values().deref(), &[1u8, 2, 2]);
-    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.offsets().as_slice(), &[0, 0, 1, 3]);
     assert_eq!(a.validity(), None);
 
     let a = MutableBinaryArray::<i32>::from_trusted_len_iter(data.iter().cloned().map(Some));
     assert_eq!(a.values().deref(), &[1u8, 2, 2]);
-    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.offsets().as_slice(), &[0, 0, 1, 3]);
     assert_eq!(a.validity(), None);
 
     let a = MutableBinaryArray::<i32>::try_from_trusted_len_iter::<Error, _, _>(
@@ -51,12 +51,12 @@ fn from_trusted_len_iter() {
     )
     .unwrap();
     assert_eq!(a.values().deref(), &[1u8, 2, 2]);
-    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.offsets().as_slice(), &[0, 0, 1, 3]);
     assert_eq!(a.validity(), None);
 
     let a = MutableBinaryArray::<i32>::from_trusted_len_values_iter(data.iter().cloned());
     assert_eq!(a.values().deref(), &[1u8, 2, 2]);
-    assert_eq!(a.offsets().deref(), &[0, 0, 1, 3]);
+    assert_eq!(a.offsets().as_slice(), &[0, 0, 1, 3]);
     assert_eq!(a.validity(), None);
 }
 

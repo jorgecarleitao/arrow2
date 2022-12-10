@@ -1,5 +1,5 @@
-use crate::array::{DictionaryArray, DictionaryKey};
-use crate::array::{Offset, PrimitiveArray, Utf8Array};
+use crate::array::{DictionaryArray, DictionaryKey, PrimitiveArray, Utf8Array};
+use crate::offset::Offset;
 use crate::types::Index;
 
 use super::common;

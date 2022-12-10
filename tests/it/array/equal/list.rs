@@ -1,6 +1,5 @@
 use arrow2::array::{Int32Array, ListArray, MutableListArray, MutablePrimitiveArray, TryExtend};
 use arrow2::bitmap::Bitmap;
-use arrow2::buffer::Buffer;
 use arrow2::datatypes::DataType;
 
 use super::test_equal;
@@ -67,7 +66,7 @@ fn test_list_offsets() {
 
 #[test]
 fn test_bla() {
-    let offsets = Buffer::from(vec![0, 3, 3, 6]);
+    let offsets = vec![0, 3, 3, 6].try_into().unwrap();
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let values = Box::new(Int32Array::from([
         Some(1),
@@ -81,7 +80,7 @@ fn test_bla() {
     let lhs = ListArray::<i32>::from_data(data_type, offsets, values, Some(validity));
     let lhs = lhs.slice(1, 2);
 
-    let offsets = Buffer::from(vec![0, 0, 3]);
+    let offsets = vec![0, 0, 3].try_into().unwrap();
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let values = Box::new(Int32Array::from([Some(4), None, Some(6)]));
     let validity = Bitmap::from([false, true]);

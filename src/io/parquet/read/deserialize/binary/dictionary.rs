@@ -3,11 +3,12 @@ use std::collections::VecDeque;
 use parquet2::page::DictPage;
 
 use crate::{
-    array::{Array, BinaryArray, DictionaryArray, DictionaryKey, Offset, Utf8Array},
+    array::{Array, BinaryArray, DictionaryArray, DictionaryKey, Utf8Array},
     bitmap::MutableBitmap,
     datatypes::{DataType, PhysicalType},
     error::Result,
     io::parquet::read::deserialize::nested_utils::{InitNested, NestedState},
+    offset::Offset,
 };
 
 use super::super::Pages;
@@ -66,11 +67,10 @@ fn read_dict<O: Offset>(data_type: DataType, dict: &DictPage) -> Box<dyn Array> 
 
     match data_type.to_physical_type() {
         PhysicalType::Utf8 | PhysicalType::LargeUtf8 => {
-            Utf8Array::<O>::new(data_type, data.offsets.0.into(), data.values.into(), None).boxed()
+            Utf8Array::<O>::new(data_type, data.offsets.into(), data.values.into(), None).boxed()
         }
         PhysicalType::Binary | PhysicalType::LargeBinary => {
-            BinaryArray::<O>::new(data_type, data.offsets.0.into(), data.values.into(), None)
-                .boxed()
+            BinaryArray::<O>::new(data_type, data.offsets.into(), data.values.into(), None).boxed()
         }
         _ => unreachable!(),
     }

@@ -80,7 +80,7 @@ pub fn read_map<R: Read + Seek>(
         version,
         scratch,
     )?;
-    MapArray::try_new(data_type, offsets, field, validity)
+    MapArray::try_new(data_type, offsets.try_into()?, field, validity)
 }
 
 pub fn skip_map(

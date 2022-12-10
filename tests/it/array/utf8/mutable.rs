@@ -7,7 +7,7 @@ fn capacities() {
     let b = MutableUtf8Array::<i32>::with_capacities(1, 10);
 
     assert!(b.values().capacity() >= 10);
-    assert!(b.offsets().capacity() >= 2);
+    assert!(b.offsets().capacity() >= 1);
 }
 
 #[test]
@@ -69,24 +69,15 @@ fn pop_all_some() {
 #[test]
 #[should_panic]
 fn not_utf8() {
-    let offsets = vec![0, 4];
+    let offsets = vec![0, 4].try_into().unwrap();
     let values = vec![0, 159, 146, 150]; // invalid utf8
-    MutableUtf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
-}
-
-/// Safety guarantee
-#[test]
-#[should_panic]
-fn wrong_offsets() {
-    let offsets = vec![0, 5, 4]; // invalid offsets
-    let values = vec![0, 1, 2, 3, 4, 5];
     MutableUtf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
 }
 
 #[test]
 #[should_panic]
 fn wrong_data_type() {
-    let offsets = vec![0, 4]; // invalid offsets
+    let offsets = vec![0, 4].try_into().unwrap();
     let values = vec![1, 2, 3, 4];
     MutableUtf8Array::<i32>::from_data(DataType::Int8, offsets, values, None);
 }

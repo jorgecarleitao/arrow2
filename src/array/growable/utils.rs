@@ -1,17 +1,4 @@
-use crate::{
-    array::{Array, Offset},
-    bitmap::MutableBitmap,
-};
-
-pub(super) fn extend_offsets<T: Offset>(buffer: &mut Vec<T>, last_offset: &mut T, offsets: &[T]) {
-    buffer.reserve(offsets.len() - 1);
-    offsets.windows(2).for_each(|offsets| {
-        // compute the new offset
-        let length = offsets[1] - offsets[0];
-        *last_offset += length;
-        buffer.push(*last_offset);
-    });
-}
+use crate::{array::Array, bitmap::MutableBitmap, offset::Offset};
 
 // function used to extend nulls from arrays. This function's lifetime is bound to the array
 // because it reads nulls from it.

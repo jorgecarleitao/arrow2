@@ -20,7 +20,12 @@ fn basics() {
         None,
     );
 
-    let array = MapArray::new(data_type, vec![0, 1, 2].into(), Box::new(field), None);
+    let array = MapArray::new(
+        data_type,
+        vec![0, 1, 2].try_into().unwrap(),
+        Box::new(field),
+        None,
+    );
 
     assert_eq!(
         array.value(0),

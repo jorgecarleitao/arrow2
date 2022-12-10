@@ -5,6 +5,7 @@ use crate::array::ord;
 use crate::compute::take;
 use crate::datatypes::*;
 use crate::error::{Error, Result};
+use crate::offset::Offset;
 use crate::{
     array::*,
     types::{Index, NativeType},

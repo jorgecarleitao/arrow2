@@ -2,7 +2,12 @@
 use arrow_format::ipc;
 
 use crate::{
-    array::*, bitmap::Bitmap, datatypes::PhysicalType, trusted_len::TrustedLen, types::NativeType,
+    array::*,
+    bitmap::Bitmap,
+    datatypes::PhysicalType,
+    offset::{Offset, OffsetsBuffer},
+    trusted_len::TrustedLen,
+    types::NativeType,
 };
 
 use super::super::compression;
@@ -65,7 +70,7 @@ fn write_boolean(
 #[allow(clippy::too_many_arguments)]
 fn write_generic_binary<O: Offset>(
     validity: Option<&Bitmap>,
-    offsets: &[O],
+    offsets: &OffsetsBuffer<O>,
     values: &[u8],
     buffers: &mut Vec<ipc::Buffer>,
     arrow_data: &mut Vec<u8>,
@@ -73,6 +78,7 @@ fn write_generic_binary<O: Offset>(
     is_little_endian: bool,
     compression: Option<Compression>,
 ) {
+    let offsets = offsets.buffer();
     write_bitmap(
         validity,
         offsets.len() - 1,
@@ -181,7 +187,7 @@ fn write_list<O: Offset>(
     is_little_endian: bool,
     compression: Option<Compression>,
 ) {
-    let offsets = array.offsets();
+    let offsets = array.offsets().buffer();
     let validity = array.validity();
 
     write_bitmap(
@@ -195,7 +201,7 @@ fn write_list<O: Offset>(
 
     let first = *offsets.first().unwrap();
     let last = *offsets.last().unwrap();
-    if first == O::default() {
+    if first == O::zero() {
         write_buffer(
             offsets,
             buffers,
@@ -309,7 +315,7 @@ fn write_map(
     is_little_endian: bool,
     compression: Option<Compression>,
 ) {
-    let offsets = array.offsets();
+    let offsets = array.offsets().buffer();
     let validity = array.validity();
 
     write_bitmap(

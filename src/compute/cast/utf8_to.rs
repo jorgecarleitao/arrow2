@@ -1,11 +1,10 @@
-use std::convert::TryFrom;
-
 use chrono::Datelike;
 
 use crate::{
     array::*,
     datatypes::DataType,
-    error::{Error, Result},
+    error::Result,
+    offset::Offset,
     temporal_conversions::{
         utf8_to_naive_timestamp_ns as utf8_to_naive_timestamp_ns_,
         utf8_to_timestamp_ns as utf8_to_timestamp_ns_, EPOCH_DAYS_FROM_CE,
@@ -149,13 +148,9 @@ pub fn utf8_to_large_utf8(from: &Utf8Array<i32>) -> Utf8Array<i64> {
     let data_type = Utf8Array::<i64>::default_data_type();
     let validity = from.validity().cloned();
     let values = from.values().clone();
-    let offsets = from
-        .offsets()
-        .iter()
-        .map(|x| *x as i64)
-        .collect::<Vec<_>>()
-        .into();
-    // Safety: sound because `offsets` fulfills the same invariants as `from.offsets()`
+
+    let offsets = from.offsets().into();
+    // Safety: sound because `values` fulfills the same invariants as `from.values()`
     unsafe { Utf8Array::<i64>::from_data_unchecked(data_type, offsets, values, validity) }
 }
 
@@ -164,22 +159,17 @@ pub fn utf8_large_to_utf8(from: &Utf8Array<i64>) -> Result<Utf8Array<i32>> {
     let data_type = Utf8Array::<i32>::default_data_type();
     let validity = from.validity().cloned();
     let values = from.values().clone();
-    let _ = i32::try_from(*from.offsets().last().unwrap()).map_err(Error::from_external_error)?;
+    let offsets = from.offsets().try_into()?;
 
-    let offsets = from
-        .offsets()
-        .iter()
-        .map(|x| *x as i32)
-        .collect::<Vec<_>>()
-        .into();
-    // Safety: sound because `offsets` fulfills the same invariants as `from.offsets()`
+    // Safety: sound because `values` fulfills the same invariants as `from.values()`
     Ok(unsafe { Utf8Array::<i32>::from_data_unchecked(data_type, offsets, values, validity) })
 }
 
 /// Conversion to binary
 pub fn utf8_to_binary<O: Offset>(from: &Utf8Array<O>, to_data_type: DataType) -> BinaryArray<O> {
+    // Safety: erasure of an invariant is always safe
     unsafe {
-        BinaryArray::<O>::new_unchecked(
+        BinaryArray::<O>::new(
             to_data_type,
             from.offsets().clone(),
             from.values().clone(),

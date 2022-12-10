@@ -47,7 +47,6 @@ fn write_body_buffers<W: Write>(mut writer: W, data: &[u8]) -> Result<usize> {
         writer.write_all(&vec![0u8; pad_len][..])?;
     }
 
-    writer.flush()?;
     Ok(total_len)
 }
 
@@ -56,6 +55,5 @@ fn write_body_buffers<W: Write>(mut writer: W, data: &[u8]) -> Result<usize> {
 pub fn write_continuation<W: Write>(writer: &mut W, total_len: i32) -> Result<usize> {
     writer.write_all(&CONTINUATION_MARKER)?;
     writer.write_all(&total_len.to_le_bytes()[..])?;
-    writer.flush()?;
     Ok(8)
 }

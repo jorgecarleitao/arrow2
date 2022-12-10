@@ -12,6 +12,7 @@ use crate::{
     chunk::Chunk,
     datatypes::{DataType, Field, IntervalUnit, Schema},
     error::Error,
+    offset::{Offset, Offsets},
     types::{f16, NativeType},
 };
 
@@ -226,24 +227,19 @@ fn deserialize_list<'a, O: Offset, A: Borrow<Value<'a>>>(
     let child = ListArray::<O>::get_child_type(&data_type);
 
     let mut validity = MutableBitmap::with_capacity(rows.len());
-    let mut offsets = Vec::<O>::with_capacity(rows.len() + 1);
+    let mut offsets = Offsets::<O>::with_capacity(rows.len());
     let mut inner = vec![];
-    offsets.push(O::zero());
-    rows.iter().fold(O::zero(), |mut length, row| {
-        match row.borrow() {
-            Value::Array(value) => {
-                inner.extend(value.iter());
-                validity.push(true);
-                // todo make this an Err
-                length += O::from_usize(value.len()).expect("List offset is too large :/");
-                offsets.push(length);
-                length
-            }
-            _ => {
-                validity.push(false);
-                offsets.push(length);
-                length
-            }
+    rows.iter().for_each(|row| match row.borrow() {
+        Value::Array(value) => {
+            inner.extend(value.iter());
+            validity.push(true);
+            offsets
+                .try_push_usize(value.len())
+                .expect("List offset is too large :/");
+        }
+        _ => {
+            validity.push(false);
+            offsets.extend_constant(1);
         }
     });
 
@@ -258,39 +254,25 @@ fn deserialize_list_into<'a, O: Offset, A: Borrow<Value<'a>>>(
     target: &mut MutableListArray<O, Box<dyn MutableArray>>,
     rows: &[A],
 ) {
-    let start = {
-        let empty = vec![];
-        let inner: Vec<_> = rows
-            .iter()
-            .flat_map(|row| match row.borrow() {
-                Value::Array(value) => value.iter(),
-                _ => empty.iter(),
-            })
-            .collect();
+    let empty = vec![];
+    let inner: Vec<_> = rows
+        .iter()
+        .flat_map(|row| match row.borrow() {
+            Value::Array(value) => value.iter(),
+            _ => empty.iter(),
+        })
+        .collect();
 
-        let child = target.mut_values();
-        let start_len = child.len();
-        deserialize_into(child, &inner);
+    deserialize_into(target.mut_values(), &inner);
 
-        // todo make this an Err
-        O::from_usize(start_len).expect("Child list size too large")
-    };
-
-    let mut position = start;
-    let arrays = rows.iter().map(|row| {
-        match row.borrow() {
-            Value::Array(value) => {
-                // todo make this an Err
-                position += O::from_usize(value.len()).expect("List offset is too large :/");
-                Some(position)
-            }
-            _ => None,
-        }
+    let lengths = rows.iter().map(|row| match row.borrow() {
+        Value::Array(value) => Some(value.len()),
+        _ => None,
     });
 
-    // though this will always be safe, we cannot use unsafe_extend_offsets here
-    // due to `#![forbid(unsafe_code)]` on the io module
-    target.extend_offsets(arrays);
+    target
+        .try_extend_from_lengths(lengths)
+        .expect("Offsets overflow");
 }
 
 fn deserialize_fixed_size_list_into<'a, A: Borrow<Value<'a>>>(
@@ -301,10 +283,7 @@ fn deserialize_fixed_size_list_into<'a, A: Borrow<Value<'a>>>(
         match row.borrow() {
             Value::Array(value) => {
                 if value.len() == target.size() {
-                    {
-                        let child = target.mut_values();
-                        deserialize_into(child, value);
-                    }
+                    deserialize_into(target.mut_values(), value);
                     // unless alignment is already off, the if above should
                     // prevent this from ever happening.
                     target.try_push_valid().expect("unaligned backing array");

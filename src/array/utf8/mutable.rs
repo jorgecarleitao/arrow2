@@ -2,13 +2,14 @@ use std::{iter::FromIterator, sync::Arc};
 
 use crate::array::{physical_binary::*, TryExtendFromSelf};
 use crate::{
-    array::{Array, MutableArray, Offset, TryExtend, TryPush},
+    array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::{
         utils::{BitmapIter, ZipValidity},
         Bitmap, MutableBitmap,
     },
     datatypes::DataType,
     error::{Error, Result},
+    offset::{Offset, Offsets},
     trusted_len::TrustedLen,
 };
 
@@ -52,16 +53,15 @@ impl<O: Offset> MutableUtf8Array<O> {
     ///
     /// # Errors
     /// This function returns an error iff:
-    /// * the offsets are not monotonically increasing
     /// * The last offset is not equal to the values' length.
-    /// * the validity's length is not equal to `offsets.len() - 1`.
+    /// * the validity's length is not equal to `offsets.len()`.
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either `Utf8` or `LargeUtf8`.
     /// * The `values` between two consecutive `offsets` are not valid utf8
     /// # Implementation
-    /// This function is `O(N)` - checking monotinicity and utf8 is `O(N)`
+    /// This function is `O(N)` - checking utf8 is `O(N)`
     pub fn try_new(
         data_type: DataType,
-        offsets: Vec<O>,
+        offsets: Offsets<O>,
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Result<Self> {
@@ -88,7 +88,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
     pub unsafe fn new_unchecked(
         data_type: DataType,
-        offsets: Vec<O>,
+        offsets: Offsets<O>,
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
@@ -104,7 +104,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     /// The caller must ensure that every value between offsets is a valid utf8.
     pub unsafe fn from_data_unchecked(
         data_type: DataType,
-        offsets: Vec<O>,
+        offsets: Offsets<O>,
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
@@ -119,7 +119,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
     pub fn from_data(
         data_type: DataType,
-        offsets: Vec<O>,
+        offsets: Offsets<O>,
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
     ) -> Self {
@@ -230,7 +230,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     }
 
     /// Extract the low-end APIs from the [`MutableUtf8Array`].
-    pub fn into_data(self) -> (DataType, Vec<O>, Vec<u8>, Option<MutableBitmap>) {
+    pub fn into_data(self) -> (DataType, Offsets<O>, Vec<u8>, Option<MutableBitmap>) {
         let (data_type, offsets, values) = self.values.into_inner();
         (data_type, offsets, values, self.validity)
     }
@@ -248,7 +248,7 @@ impl<O: Offset> MutableUtf8Array<O> {
     }
 
     /// returns its offsets.
-    pub fn offsets(&self) -> &Vec<O> {
+    pub fn offsets(&self) -> &Offsets<O> {
         self.values.offsets()
     }
 }

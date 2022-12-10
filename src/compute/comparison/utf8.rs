@@ -1,9 +1,10 @@
 //! Comparison functions for [`Utf8Array`]
 use crate::compute::comparison::{finish_eq_validities, finish_neq_validities};
 use crate::{
-    array::{BooleanArray, Offset, Utf8Array},
+    array::{BooleanArray, Utf8Array},
     bitmap::Bitmap,
     datatypes::DataType,
+    offset::Offset,
 };
 
 use super::super::utils::combine_validities;

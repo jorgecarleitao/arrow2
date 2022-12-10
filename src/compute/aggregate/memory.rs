@@ -9,7 +9,7 @@ fn validity_size(validity: Option<&Bitmap>) -> usize {
 macro_rules! dyn_binary {
     ($array:expr, $ty:ty, $o:ty) => {{
         let array = $array.as_any().downcast_ref::<$ty>().unwrap();
-        let offsets = array.offsets();
+        let offsets = array.offsets().buffer();
 
         // in case of Binary/Utf8/List the offsets are sliced,
         // not the values buffer

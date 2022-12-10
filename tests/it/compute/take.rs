@@ -176,7 +176,7 @@ fn list_with_no_none() {
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from(vec![0, 2, 2, 6, 9, 10]),
+        vec![0, 2, 2, 6, 9, 10].try_into().unwrap(),
         Box::new(values),
         None,
     );
@@ -189,7 +189,7 @@ fn list_with_no_none() {
     let expected_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let expected = ListArray::<i32>::from_data(
         expected_type,
-        Buffer::from(vec![0, 1, 1, 4]),
+        vec![0, 1, 1, 4].try_into().unwrap(),
         Box::new(expected_values),
         None,
     );
@@ -208,7 +208,7 @@ fn list_with_none() {
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from(vec![0, 2, 2, 6, 9, 10]),
+        vec![0, 2, 2, 6, 9, 10].try_into().unwrap(),
         Box::new(values),
         Some(validity),
     );
@@ -267,7 +267,7 @@ fn test_nested() {
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let array = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from(vec![0, 2, 4, 7, 7, 8, 10]),
+        vec![0, 2, 4, 7, 7, 8, 10].try_into().unwrap(),
         Box::new(values),
         None,
     );
@@ -275,7 +275,7 @@ fn test_nested() {
     let data_type = ListArray::<i32>::default_datatype(array.data_type().clone());
     let nested = ListArray::<i32>::from_data(
         data_type,
-        Buffer::from(vec![0, 2, 5, 6]),
+        vec![0, 2, 5, 6].try_into().unwrap(),
         Box::new(array),
         None,
     );
@@ -290,7 +290,7 @@ fn test_nested() {
     let expected_data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let expected_array = ListArray::<i32>::from_data(
         expected_data_type,
-        Buffer::from(vec![0, 2, 4, 7, 7, 8]),
+        vec![0, 2, 4, 7, 7, 8].try_into().unwrap(),
         Box::new(expected_values),
         None,
     );
@@ -298,7 +298,7 @@ fn test_nested() {
     let expected_data_type = ListArray::<i32>::default_datatype(expected_array.data_type().clone());
     let expected = ListArray::<i32>::from_data(
         expected_data_type,
-        Buffer::from(vec![0, 2, 5]),
+        vec![0, 2, 5].try_into().unwrap(),
         Box::new(expected_array),
         None,
     );

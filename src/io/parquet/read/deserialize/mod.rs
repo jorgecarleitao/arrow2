@@ -18,6 +18,7 @@ use crate::{
     array::{Array, DictionaryKey, FixedSizeListArray, ListArray},
     datatypes::{DataType, Field, IntervalUnit},
     error::Result,
+    offset::Offsets,
 };
 
 use self::nested_utils::{InitNested, NestedArrayIter, NestedState};
@@ -53,6 +54,11 @@ fn create_list(
             offsets.push(values.len() as i64);
 
             let offsets = offsets.iter().map(|x| *x as i32).collect::<Vec<_>>();
+
+            let offsets: Offsets<i32> = offsets
+                .try_into()
+                .expect("i64 offsets do not fit in i32 offsets");
+
             Box::new(ListArray::<i32>::new(
                 data_type,
                 offsets.into(),
@@ -65,7 +71,7 @@ fn create_list(
 
             Box::new(ListArray::<i64>::new(
                 data_type,
-                offsets.into(),
+                offsets.try_into().expect("List too large"),
                 values,
                 validity.and_then(|x| x.into()),
             ))

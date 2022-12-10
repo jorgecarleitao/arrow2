@@ -10,6 +10,7 @@ use crate::{
     datatypes::{DataType, PhysicalType, PrimitiveType, Schema},
     error::{Error, Result},
     io::ipc::IpcField,
+    offset::Offset,
     types::{days_ms, i256, months_days_ns, NativeType},
 };
 
@@ -189,7 +190,7 @@ fn to_binary<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Box<
         .iter()
         .flat_map(|value| value.as_str().map(|x| hex::decode(x).unwrap()).unwrap())
         .collect();
-    Box::new(BinaryArray::new(data_type, offsets, values, validity))
+    BinaryArray::new(data_type, offsets.try_into().unwrap(), values, validity).boxed()
 }
 
 fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Box<dyn Array> {
@@ -202,7 +203,7 @@ fn to_utf8<O: Offset>(json_col: &ArrowJsonColumn, data_type: DataType) -> Box<dy
         .iter()
         .flat_map(|value| value.as_str().unwrap().as_bytes().to_vec())
         .collect();
-    Box::new(Utf8Array::new(data_type, offsets, values, validity))
+    Utf8Array::new(data_type, offsets.try_into().unwrap(), values, validity).boxed()
 }
 
 fn to_list<O: Offset>(
@@ -222,9 +223,7 @@ fn to_list<O: Offset>(
         dictionaries,
     )?;
     let offsets = to_offsets::<O>(json_col.offset.as_ref());
-    Ok(Box::new(ListArray::<O>::new(
-        data_type, offsets, values, validity,
-    )))
+    Ok(ListArray::<O>::new(data_type, offsets.try_into()?, values, validity).boxed())
 }
 
 fn to_map(
@@ -244,7 +243,12 @@ fn to_map(
         dictionaries,
     )?;
     let offsets = to_offsets::<i32>(json_col.offset.as_ref());
-    Ok(Box::new(MapArray::new(data_type, offsets, field, validity)))
+    Ok(Box::new(MapArray::new(
+        data_type,
+        offsets.try_into().unwrap(),
+        field,
+        validity,
+    )))
 }
 
 fn to_dictionary<K: DictionaryKey + NumCast>(

@@ -12,7 +12,7 @@ fn shared_validity() {
     let validity = Bitmap::from([true]);
     let array = BinaryArray::<i32>::new(
         DataType::Binary,
-        vec![0, 1].into(),
+        vec![0, 1].try_into().unwrap(),
         b"a".to_vec().into(),
         Some(validity.clone()),
     );
@@ -25,7 +25,7 @@ fn shared_values() {
     let values: Buffer<u8> = b"a".to_vec().into();
     let array = BinaryArray::<i32>::new(
         DataType::Binary,
-        vec![0, 1].into(),
+        vec![0, 1].try_into().unwrap(),
         values.clone(),
         Some(Bitmap::from([true])),
     );
@@ -39,7 +39,7 @@ fn shared_offsets_values() {
     let values: Buffer<u8> = b"a".to_vec().into();
     let array = BinaryArray::<i32>::new(
         DataType::Binary,
-        offsets.clone(),
+        offsets.clone().try_into().unwrap(),
         values.clone(),
         Some(Bitmap::from([true])),
     );
@@ -52,7 +52,7 @@ fn shared_offsets() {
     let offsets: Buffer<i32> = vec![0, 1].into();
     let array = BinaryArray::<i32>::new(
         DataType::Binary,
-        offsets.clone(),
+        offsets.clone().try_into().unwrap(),
         b"a".to_vec().into(),
         Some(Bitmap::from([true])),
     );

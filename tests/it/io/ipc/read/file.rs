@@ -107,6 +107,12 @@ fn read_generated_100_decimal() -> Result<()> {
 }
 
 #[test]
+fn read_generated_duplicate_fieldnames() -> Result<()> {
+    test_file("1.0.0-littleendian", "generated_duplicate_fieldnames")?;
+    test_file("1.0.0-bigendian", "generated_duplicate_fieldnames")
+}
+
+#[test]
 fn read_generated_100_interval() -> Result<()> {
     test_file("1.0.0-littleendian", "generated_interval")?;
     test_file("1.0.0-bigendian", "generated_interval")

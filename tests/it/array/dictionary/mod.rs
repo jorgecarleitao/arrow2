@@ -41,6 +41,20 @@ fn try_new_incorrect_key() {
 }
 
 #[test]
+fn try_new_nulls() {
+    let key: Option<u32> = None;
+    let keys = PrimitiveArray::from_iter([key]);
+    let value: &[&str] = &[];
+    let values = Utf8Array::<i32>::from_slice(value);
+
+    let data_type =
+        DataType::Dictionary(u32::KEY_TYPE, Box::new(values.data_type().clone()), false);
+    let r = DictionaryArray::try_new(data_type, keys, values.boxed()).is_ok();
+
+    assert!(r);
+}
+
+#[test]
 fn try_new_incorrect_dt() {
     let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
     let data_type = DataType::Int32;

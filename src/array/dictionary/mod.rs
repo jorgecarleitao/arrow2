@@ -16,6 +16,7 @@ mod ffi;
 pub(super) mod fmt;
 mod iterator;
 mod mutable;
+use crate::array::specification::check_indexes_unchecked;
 pub use iterator::*;
 pub use mutable::*;
 
@@ -23,7 +24,11 @@ use super::{new_empty_array, primitive::PrimitiveArray, Array};
 use super::{new_null_array, specification::check_indexes};
 
 /// Trait denoting [`NativeType`]s that can be used as keys of a dictionary.
-pub trait DictionaryKey: NativeType + TryInto<usize> + TryFrom<usize> {
+/// # Safety
+///
+/// Any implementation of this trait must ensure that `always_fits_usize` only
+/// returns `true` if all values succeeds on `value::try_into::<usize>().unwrap()`.
+pub unsafe trait DictionaryKey: NativeType + TryInto<usize> + TryFrom<usize> {
     /// The corresponding [`IntegerType`] of this key
     const KEY_TYPE: IntegerType;
 
@@ -37,31 +42,53 @@ pub trait DictionaryKey: NativeType + TryInto<usize> + TryFrom<usize> {
             Err(_) => unreachable_unchecked(),
         }
     }
+
+    /// If the key type always can be converted to `usize`.
+    fn always_fits_usize() -> bool {
+        false
+    }
 }
 
-impl DictionaryKey for i8 {
+unsafe impl DictionaryKey for i8 {
     const KEY_TYPE: IntegerType = IntegerType::Int8;
 }
-impl DictionaryKey for i16 {
+unsafe impl DictionaryKey for i16 {
     const KEY_TYPE: IntegerType = IntegerType::Int16;
 }
-impl DictionaryKey for i32 {
+unsafe impl DictionaryKey for i32 {
     const KEY_TYPE: IntegerType = IntegerType::Int32;
 }
-impl DictionaryKey for i64 {
+unsafe impl DictionaryKey for i64 {
     const KEY_TYPE: IntegerType = IntegerType::Int64;
 }
-impl DictionaryKey for u8 {
+unsafe impl DictionaryKey for u8 {
     const KEY_TYPE: IntegerType = IntegerType::UInt8;
+
+    fn always_fits_usize() -> bool {
+        true
+    }
 }
-impl DictionaryKey for u16 {
+unsafe impl DictionaryKey for u16 {
     const KEY_TYPE: IntegerType = IntegerType::UInt16;
+
+    fn always_fits_usize() -> bool {
+        true
+    }
 }
-impl DictionaryKey for u32 {
+unsafe impl DictionaryKey for u32 {
     const KEY_TYPE: IntegerType = IntegerType::UInt32;
+
+    fn always_fits_usize() -> bool {
+        true
+    }
 }
-impl DictionaryKey for u64 {
+unsafe impl DictionaryKey for u64 {
     const KEY_TYPE: IntegerType = IntegerType::UInt64;
+
+    #[cfg(target_pointer_width = "64")]
+    fn always_fits_usize() -> bool {
+        true
+    }
 }
 
 /// An [`Array`] whose values are stored as indices. This [`Array`] is useful when the cardinality of
@@ -119,7 +146,15 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     ) -> Result<Self, Error> {
         check_data_type(K::KEY_TYPE, &data_type, values.data_type())?;
 
-        check_indexes(keys.values(), values.len())?;
+        if keys.null_count() != keys.len() {
+            if K::always_fits_usize() {
+                // safety: we just checked that conversion to `usize` always
+                // succeeds
+                unsafe { check_indexes_unchecked(keys.values(), values.len()) }?;
+            } else {
+                check_indexes(keys.values(), values.len())?;
+            }
+        }
 
         Ok(Self {
             data_type,

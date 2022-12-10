@@ -2,7 +2,6 @@ mod read;
 
 use arrow2::array::*;
 use arrow2::bitmap::Bitmap;
-use arrow2::buffer::Buffer;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
 use arrow2::io::ndjson::write as ndjson_write;
@@ -286,7 +285,7 @@ fn case_nested_list() -> (String, Box<dyn Array>) {
     );
     let expected = ListArray::from_data(
         a_list_data_type,
-        Buffer::from(vec![0i32, 2, 3, 6, 6, 6]),
+        vec![0i32, 2, 3, 6, 6, 6].try_into().unwrap(),
         a_struct.boxed(),
         Some(Bitmap::from_u8_slice([0b00010111], 5)),
     );

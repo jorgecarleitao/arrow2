@@ -115,7 +115,7 @@ fn utf8_sliced() -> Result<()> {
     let bitmap = Bitmap::from([true, false, false, true]).slice(1, 3);
     let data = Utf8Array::<i32>::try_new(
         DataType::Utf8,
-        vec![0, 1, 1, 2].into(),
+        vec![0, 1, 1, 2].try_into().unwrap(),
         b"ab".to_vec().into(),
         Some(bitmap),
     )?;
@@ -146,7 +146,7 @@ fn binary_sliced() -> Result<()> {
     let bitmap = Bitmap::from([true, false, false, true]).slice(1, 3);
     let data = BinaryArray::<i32>::try_new(
         DataType::Binary,
-        vec![0, 1, 1, 2].into(),
+        vec![0, 1, 1, 2].try_into().unwrap(),
         b"ab".to_vec().into(),
         Some(bitmap),
     )?;
@@ -213,7 +213,7 @@ fn list_sliced() -> Result<()> {
 
     let array = ListArray::<i32>::try_new(
         DataType::List(Box::new(Field::new("a", DataType::Int32, true))),
-        vec![0, 1, 1, 2].into(),
+        vec![0, 1, 1, 2].try_into().unwrap(),
         Box::new(PrimitiveArray::<i32>::from_vec(vec![1, 2])),
         Some(bitmap),
     )?;

@@ -16,8 +16,7 @@ fn add_benchmark(c: &mut Criterion) {
         let values = Buffer::from_iter(0..size as i32);
         let values = PrimitiveArray::<i32>::from_data(DataType::Int32, values, None);
 
-        let mut offsets = (0..size as i32).step_by(2).collect::<Vec<_>>();
-        offsets.push(size as i32);
+        let offsets = (0..=size as i32).step_by(2).collect::<Vec<_>>();
 
         let validity = (0..(offsets.len() - 1))
             .map(|i| i % 4 == 0)
@@ -26,7 +25,7 @@ fn add_benchmark(c: &mut Criterion) {
         let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
         let array = ListArray::<i32>::from_data(
             data_type,
-            offsets.into(),
+            offsets.try_into().unwrap(),
             Box::new(values),
             Some(validity),
         );

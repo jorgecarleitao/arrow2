@@ -1,10 +1,11 @@
 use std::collections::VecDeque;
 use std::io::{Read, Seek};
 
-use crate::array::{Offset, Utf8Array};
+use crate::array::Utf8Array;
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use crate::error::{Error, Result};
+use crate::offset::Offset;
 
 use super::super::read_basic::*;
 use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
@@ -69,7 +70,7 @@ pub fn read_utf8<O: Offset, R: Read + Seek>(
         scratch,
     )?;
 
-    Utf8Array::<O>::try_new(data_type, offsets, values, validity)
+    Utf8Array::<O>::try_new(data_type, offsets.try_into()?, values, validity)
 }
 
 pub fn skip_utf8(

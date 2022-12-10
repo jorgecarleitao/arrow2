@@ -15,7 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::array::{Array, BinaryArray, Offset, PrimitiveArray};
+use crate::array::{Array, BinaryArray, PrimitiveArray};
+use crate::offset::Offset;
 
 use super::generic_binary::*;
 use super::Index;

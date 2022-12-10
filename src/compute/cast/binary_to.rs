@@ -1,6 +1,5 @@
-use std::convert::TryFrom;
-
-use crate::error::{Error, Result};
+use crate::error::Result;
+use crate::offset::Offset;
 use crate::{array::*, datatypes::DataType, types::NativeType};
 
 use super::CastOptions;
@@ -8,11 +7,9 @@ use super::CastOptions;
 /// Conversion of binary
 pub fn binary_to_large_binary(from: &BinaryArray<i32>, to_data_type: DataType) -> BinaryArray<i64> {
     let values = from.values().clone();
-    let offsets = from.offsets().iter().map(|x| *x as i64).collect::<Vec<_>>();
-    // todo: use `new_unchecked` since all invariants are preserved
     BinaryArray::<i64>::new(
         to_data_type,
-        offsets.into(),
+        from.offsets().into(),
         values,
         from.validity().cloned(),
     )
@@ -24,13 +21,10 @@ pub fn binary_large_to_binary(
     to_data_type: DataType,
 ) -> Result<BinaryArray<i32>> {
     let values = from.values().clone();
-    let _ = i32::try_from(*from.offsets().last().unwrap()).map_err(Error::from_external_error)?;
-
-    let offsets = from.offsets().iter().map(|x| *x as i32).collect::<Vec<_>>();
-    // todo: use `new_unchecked` since all invariants are preserved
+    let offsets = from.offsets().try_into()?;
     Ok(BinaryArray::<i32>::new(
         to_data_type,
-        offsets.into(),
+        offsets,
         values,
         from.validity().cloned(),
     ))
@@ -57,12 +51,7 @@ pub fn binary_to_large_utf8(
     to_data_type: DataType,
 ) -> Result<Utf8Array<i64>> {
     let values = from.values().clone();
-    let offsets = from
-        .offsets()
-        .iter()
-        .map(|x| *x as i64)
-        .collect::<Vec<_>>()
-        .into();
+    let offsets = from.offsets().into();
 
     Utf8Array::<i64>::try_new(to_data_type, offsets, values, from.validity().cloned())
 }
