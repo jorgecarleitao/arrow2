@@ -6,7 +6,7 @@ use parquet2::{
     write::DynIter,
 };
 
-use crate::io::parquet::write::utils;
+use crate::io::parquet::write::{slice_nested_leaf, utils};
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey},
     io::parquet::read::schema::is_nullable,
@@ -75,6 +75,7 @@ fn serialize_levels(
     nested: &[Nested],
     options: WriteOptions,
     buffer: &mut Vec<u8>,
+    offset: usize,
 ) -> Result<(usize, usize)> {
     if nested.len() == 1 {
         let is_optional = is_nullable(&type_.field_info);
@@ -82,7 +83,7 @@ fn serialize_levels(
         let definition_levels_byte_length = buffer.len();
         Ok((0, definition_levels_byte_length))
     } else {
-        nested::write_rep_and_def(options.version, nested, buffer)
+        nested::write_rep_and_def(options.version, nested, buffer, offset)
     }
 }
 
@@ -112,6 +113,7 @@ fn serialize_keys<K: DictionaryKey>(
     // parquet only accepts a single validity - we "&" the validities into a single one
     // and ignore keys whole _value_ is null.
     let validity = normalized_validity(array);
+    let (start, len) = slice_nested_leaf(nested);
 
     let (repetition_levels_byte_length, definition_levels_byte_length) = serialize_levels(
         validity.as_ref(),
@@ -120,9 +122,11 @@ fn serialize_keys<K: DictionaryKey>(
         nested,
         options,
         &mut buffer,
+        start,
     )?;
+    let array = array.slice(start, len);
 
-    serialize_keys_values(array, validity.as_ref(), &mut buffer)?;
+    serialize_keys_values(&array, validity.as_ref(), &mut buffer)?;
 
     let (num_values, num_rows) = if nested.len() == 1 {
         (array.len(), array.len())

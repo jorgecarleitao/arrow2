@@ -86,10 +86,13 @@ pub struct DefLevelsIter<'a> {
 }
 
 impl<'a> DefLevelsIter<'a> {
-    pub fn new(nested: &'a [Nested]) -> Self {
+    pub fn new(nested: &'a [Nested], offset: usize) -> Self {
         let remaining_values = num_values(nested);
 
-        let primitive_validity = iter(&nested[nested.len() - 1..]).pop().unwrap();
+        let mut primitive_validity = iter(&nested[nested.len() - 1..]).pop().unwrap();
+        if offset > 0 {
+            primitive_validity.nth(offset - 1);
+        }
 
         let iter = iter(&nested[..nested.len() - 1]);
         let remaining = std::iter::repeat(0).take(iter.len()).collect();
@@ -164,7 +167,7 @@ mod tests {
     use super::*;
 
     fn test(nested: Vec<Nested>, expected: Vec<u32>) {
-        let mut iter = DefLevelsIter::new(&nested);
+        let mut iter = DefLevelsIter::new(&nested, 0);
         assert_eq!(iter.size_hint().0, expected.len());
         let result = iter.by_ref().collect::<Vec<_>>();
         assert_eq!(result, expected);

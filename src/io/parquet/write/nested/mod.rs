@@ -53,14 +53,19 @@ fn write_rep_levels(buffer: &mut Vec<u8>, nested: &[Nested], version: Version) -
 }
 
 /// writes the rep levels to a `Vec<u8>`.
-fn write_def_levels(buffer: &mut Vec<u8>, nested: &[Nested], version: Version) -> Result<()> {
+fn write_def_levels(
+    buffer: &mut Vec<u8>,
+    nested: &[Nested],
+    version: Version,
+    offset: usize,
+) -> Result<()> {
     let max_level = max_def_level(nested) as i16;
     if max_level == 0 {
         return Ok(());
     }
     let num_bits = get_bit_width(max_level);
 
-    let levels = def::DefLevelsIter::new(nested);
+    let levels = def::DefLevelsIter::new(nested, offset);
 
     match version {
         Version::V1 => write_levels_v1(buffer, move |buffer: &mut Vec<u8>| {
@@ -105,11 +110,14 @@ pub fn write_rep_and_def(
     page_version: Version,
     nested: &[Nested],
     buffer: &mut Vec<u8>,
+    // needed to take offset the validity iterator in case
+    // the list was sliced.
+    offset: usize,
 ) -> Result<(usize, usize)> {
     write_rep_levels(buffer, nested, page_version)?;
     let repetition_levels_byte_length = buffer.len();
 
-    write_def_levels(buffer, nested, page_version)?;
+    write_def_levels(buffer, nested, page_version, offset)?;
     let definition_levels_byte_length = buffer.len() - repetition_levels_byte_length;
 
     Ok((repetition_levels_byte_length, definition_levels_byte_length))
