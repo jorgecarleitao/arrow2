@@ -187,23 +187,17 @@ fn slice_parquet_array<'a>(
 }
 
 fn get_max_length(array: &dyn Array, nested: &[Nested]) -> usize {
-    let mut sum = 0;
-    for nested in nested.iter() {
+    // get the length that should be sliced.
+    // that is the inner nested structure that
+    // dictates how often the primitive should be repeated
+    for nested in nested.iter().rev() {
         match nested {
-            Nested::LargeList(l_nested) => {
-                sum += l_nested.offsets.len() - 1;
-            }
-            Nested::List(l_nested) => {
-                sum += l_nested.offsets.len() - 1;
-            }
+            Nested::LargeList(l_nested) => return l_nested.offsets.len() - 1,
+            Nested::List(l_nested) => return l_nested.offsets.len() - 1,
             _ => {}
         }
     }
-    if sum > 0 {
-        sum
-    } else {
-        array.len()
-    }
+    array.len()
 }
 
 /// Returns an iterator of [`Page`].
