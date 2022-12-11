@@ -69,6 +69,30 @@ pub use sink::FileSink;
 pub use pages::array_to_columns;
 pub use pages::Nested;
 
+/// returns offset and length to slice the leaf values
+pub(self) fn slice_nested_leaf(nested: &[Nested]) -> (usize, usize) {
+    // find the deepest recursive dremel structure as that one determines how many values we must
+    // take
+    let mut out = (0, 0);
+    for nested in nested.iter().rev() {
+        match nested {
+            Nested::LargeList(l_nested) => {
+                let start = *l_nested.offsets.first().unwrap();
+                let end = *l_nested.offsets.last().unwrap();
+                return (start as usize, (end - start) as usize);
+            }
+            Nested::List(l_nested) => {
+                let start = *l_nested.offsets.first().unwrap();
+                let end = *l_nested.offsets.last().unwrap();
+                return (start as usize, (end - start) as usize);
+            }
+            Nested::Primitive(_, _, len) => out = (0, *len),
+            _ => {}
+        }
+    }
+    out
+}
+
 pub(self) fn decimal_length_from_precision(precision: usize) -> usize {
     // digits = floor(log_10(2^(8*n - 1) - 1))
     // ceil(digits) = log10(2^(8*n - 1) - 1)
@@ -130,6 +154,58 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
     )
 }
 
+fn slice_parquet_array<'a>(
+    array: &'a dyn Array,
+    nested: &'a [Nested<'a>],
+    offset: usize,
+    length: usize,
+) -> (Box<dyn Array>, Vec<Nested<'a>>) {
+    let mut nested = nested.to_vec();
+
+    let mut is_nested = false;
+    for nested in nested.iter_mut() {
+        match nested {
+            Nested::LargeList(l_nested) => {
+                is_nested = true;
+                // the slice is a bit awkward because we always want the latest value to compute the next length;
+                l_nested.offsets = &l_nested.offsets
+                    [offset..offset + std::cmp::min(length + 1, l_nested.offsets.len())];
+            }
+            Nested::List(l_nested) => {
+                is_nested = true;
+                l_nested.offsets = &l_nested.offsets
+                    [offset..offset + std::cmp::min(length + 1, l_nested.offsets.len())];
+            }
+            _ => {}
+        }
+    }
+    if is_nested {
+        (array.to_boxed(), nested)
+    } else {
+        (array.slice(offset, length), nested)
+    }
+}
+
+fn get_max_length(array: &dyn Array, nested: &[Nested]) -> usize {
+    let mut sum = 0;
+    for nested in nested.iter() {
+        match nested {
+            Nested::LargeList(l_nested) => {
+                sum += l_nested.offsets.len() - 1;
+            }
+            Nested::List(l_nested) => {
+                sum += l_nested.offsets.len() - 1;
+            }
+            _ => {}
+        }
+    }
+    if sum > 0 {
+        sum
+    } else {
+        array.len()
+    }
+}
+
 /// Returns an iterator of [`Page`].
 #[allow(clippy::needless_collect)]
 pub fn array_to_pages(
@@ -147,13 +223,27 @@ pub fn array_to_pages(
 
     let array_byte_size = estimated_bytes_size(array);
     if array_byte_size >= (2u32.pow(31) - 2u32.pow(25)) as usize && array.len() > 3 {
-        let split_at = array.len() / 2;
-        let left = array.slice(0, split_at);
-        let right = array.slice(split_at, array.len() - split_at);
+        let length = get_max_length(array, nested);
+        let split_at = length / 2;
+        let (sub_array_left, subnested_left) = slice_parquet_array(array, nested, 0, split_at);
+        let (sub_array_right, subnested_right) =
+            slice_parquet_array(array, nested, split_at, length - split_at);
 
         Ok(DynIter::new(
-            array_to_pages(&*left, type_.clone(), nested, options, encoding)?
-                .chain(array_to_pages(&*right, type_, nested, options, encoding)?),
+            array_to_pages(
+                sub_array_left.as_ref(),
+                type_.clone(),
+                subnested_left.as_ref(),
+                options,
+                encoding,
+            )?
+            .chain(array_to_pages(
+                sub_array_right.as_ref(),
+                type_,
+                subnested_right.as_ref(),
+                options,
+                encoding,
+            )?),
         ))
     } else {
         match array.data_type() {
@@ -175,17 +265,25 @@ pub fn array_to_pages(
                     ((array_byte_size as f64) / ((array.len() + 1) as f64)) as usize;
                 let rows_per_page = (page_size / (bytes_per_row + 1)).max(1);
 
-                let vs: Vec<Result<Page>> = (0..array.len())
+                let length = get_max_length(array, nested);
+                let vs: Vec<Result<Page>> = (0..length)
                     .step_by(rows_per_page)
                     .map(|offset| {
-                        let length = if offset + rows_per_page > array.len() {
-                            array.len() - offset
+                        let length = if offset + rows_per_page > length {
+                            length - offset
                         } else {
                             rows_per_page
                         };
 
-                        let sub_array = array.slice(offset, length);
-                        array_to_page(sub_array.as_ref(), type_.clone(), nested, options, encoding)
+                        let (sub_array, subnested) =
+                            slice_parquet_array(array, nested, offset, length);
+                        array_to_page(
+                            sub_array.as_ref(),
+                            type_.clone(),
+                            &subnested,
+                            options,
+                            encoding,
+                        )
                     })
                     .collect();
 

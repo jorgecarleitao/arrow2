@@ -4,7 +4,7 @@ use parquet2::{encoding::Encoding, page::DataPage};
 use super::super::{nested, utils, WriteOptions};
 use super::basic::{build_statistics, encode_plain};
 use crate::io::parquet::read::schema::is_nullable;
-use crate::io::parquet::write::Nested;
+use crate::io::parquet::write::{slice_nested_leaf, Nested};
 use crate::{
     array::{Array, BinaryArray},
     error::Result,
@@ -26,10 +26,15 @@ where
     let (repetition_levels_byte_length, definition_levels_byte_length) =
         nested::write_rep_and_def(options.version, nested, &mut buffer)?;
 
-    encode_plain(array, is_optional, &mut buffer);
+    // we slice the leaf by the offsets as dremel only computes lengths and thus
+    // does NOT take the starting offset into account.
+    // By slicing the leaf array we also don't write too many values.
+    let (start, len) = slice_nested_leaf(nested);
+    let array = array.slice(start, len);
+    encode_plain(&array, is_optional, &mut buffer);
 
     let statistics = if options.write_statistics {
-        Some(build_statistics(array, type_.clone()))
+        Some(build_statistics(&array, type_.clone()))
     } else {
         None
     };
