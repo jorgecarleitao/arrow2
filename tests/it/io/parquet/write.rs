@@ -362,6 +362,17 @@ fn list_large_binary_optional_v1() -> Result<()> {
 }
 
 #[test]
+fn list_nested_inner_required_required_i64() -> Result<()> {
+    round_trip(
+        "list_nested_inner_required_required_i64",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+    )
+}
+
+#[test]
 fn utf8_optional_v2_delta() -> Result<()> {
     round_trip(
         "string",
