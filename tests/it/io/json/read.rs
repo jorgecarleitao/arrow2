@@ -108,8 +108,8 @@ fn read_json_records() -> Result<()> {
     let c_iter = c_iter.into_iter().map(Some);
     let mut c = MutableListArray::<i32, MutableUtf8Array<i32>>::new_with_field(
         MutableUtf8Array::<i32>::new(),
-        "c",
-        false,
+        "item",
+        true,
     );
 
     c.try_extend(c_iter).unwrap();
@@ -123,8 +123,8 @@ fn read_json_records() -> Result<()> {
     let d_iter = d_iter.into_iter().map(Some);
     let mut d = MutableListArray::<i32, MutableBooleanArray>::new_with_field(
         MutableBooleanArray::new(),
-        "d",
-        false,
+        "item",
+        true,
     );
 
     d.try_extend(d_iter).unwrap();
