@@ -39,12 +39,20 @@ impl<O: Offset> Binary<O> {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             offsets: Offsets::with_capacity(capacity),
-            values: Vec::with_capacity(capacity * 24),
+            values: Vec::with_capacity(capacity.min(100) * 24),
         }
     }
 
     #[inline]
     pub fn push(&mut self, v: &[u8]) {
+        if self.offsets.len() == 100 && self.offsets.capacity() > 100 {
+            let bytes_per_row = self.values.len() / 100 + 1;
+            let bytes_estimate = bytes_per_row * self.offsets.capacity();
+            if bytes_estimate > self.values.capacity() {
+                self.values.reserve(bytes_estimate - self.values.capacity());
+            }
+        }
+
         self.values.extend(v);
         self.offsets.try_push_usize(v.len()).unwrap()
     }
