@@ -100,10 +100,7 @@ fn read_json_records() -> Result<()> {
     b.try_extend(b_iter).unwrap();
     let b_expected: ListArray<i32> = b.into();
 
-    let c_iter = vec![
-        vec![Some("test")],
-        vec![Some("string")],
-    ];
+    let c_iter = vec![vec![Some("test")], vec![Some("string")]];
 
     let c_iter = c_iter.into_iter().map(Some);
     let mut c = MutableListArray::<i32, MutableUtf8Array<i32>>::new_with_field(
@@ -115,10 +112,7 @@ fn read_json_records() -> Result<()> {
     c.try_extend(c_iter).unwrap();
     let c_expected: ListArray<i32> = c.into();
 
-    let d_iter = vec![
-        vec![Some(true)],
-        vec![Some(false)],
-    ];
+    let d_iter = vec![vec![Some(true)], vec![Some(false)]];
 
     let d_iter = d_iter.into_iter().map(Some);
     let mut d = MutableListArray::<i32, MutableBooleanArray>::new_with_field(
@@ -129,7 +123,6 @@ fn read_json_records() -> Result<()> {
 
     d.try_extend(d_iter).unwrap();
     let d_expected: ListArray<i32> = d.into();
-
 
     let json = json_deserializer::parse(data)?;
 
