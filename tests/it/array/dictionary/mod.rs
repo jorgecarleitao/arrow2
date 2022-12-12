@@ -173,11 +173,11 @@ fn iter_values_typed() {
         DictionaryArray::try_from_keys(PrimitiveArray::from_vec(vec![1, 0, 0]), values.boxed())
             .unwrap();
 
-    let mut iter = array.values_iter_typed::<Utf8Array<i32>>().unwrap();
+    let iter = array.values_iter_typed::<Utf8Array<i32>>().unwrap();
     assert_eq!(iter.size_hint(), (3, Some(3)));
     assert_eq!(iter.collect::<Vec<_>>(), vec!["aa", "a", "a"]);
 
-    let mut iter = array.iter_typed::<Utf8Array<i32>>().unwrap();
+    let iter = array.iter_typed::<Utf8Array<i32>>().unwrap();
     assert_eq!(iter.size_hint(), (3, Some(3)));
     assert_eq!(
         iter.collect::<Vec<_>>(),
@@ -194,7 +194,7 @@ fn iter_values_typed_panic() {
             .unwrap();
 
     // should not be iterating values
-    let mut iter = array.values_iter_typed::<Utf8Array<i32>>().unwrap();
+    let iter = array.values_iter_typed::<Utf8Array<i32>>().unwrap();
     let _ = iter.collect::<Vec<_>>();
 }
 
@@ -207,6 +207,6 @@ fn iter_values_typed_panic_2() {
             .unwrap();
 
     // should not be iterating values
-    let mut iter = array.iter_typed::<Utf8Array<i32>>().unwrap();
+    let iter = array.iter_typed::<Utf8Array<i32>>().unwrap();
     let _ = iter.collect::<Vec<_>>();
 }
