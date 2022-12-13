@@ -191,7 +191,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len()
+        self.offsets.len_proxy()
     }
 
     /// The values
@@ -210,7 +210,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     }
 
     fn init_validity(&mut self) {
-        let len = self.offsets.len();
+        let len = self.offsets.len_proxy();
 
         let mut validity = MutableBitmap::with_capacity(self.offsets.capacity());
         validity.extend_constant(len, true);

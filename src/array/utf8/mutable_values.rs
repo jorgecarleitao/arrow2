@@ -169,7 +169,7 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len()
+        self.offsets.len_proxy()
     }
 
     /// Pushes a new item to the array.

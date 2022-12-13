@@ -150,7 +150,7 @@ impl<O: Offset> Offsets<O> {
     #[inline]
     pub fn start_end(&self, index: usize) -> (usize, usize) {
         // soundness: the invariant of the function
-        assert!(index < self.len());
+        assert!(index < self.len_proxy());
         unsafe { self.start_end_unchecked(index) }
     }
 
@@ -165,10 +165,16 @@ impl<O: Offset> Offsets<O> {
         (start, end)
     }
 
-    /// Returns the length of this container
+    /// Returns the length an array with these offsets would be.
     #[inline]
-    pub fn len(&self) -> usize {
+    pub fn len_proxy(&self) -> usize {
         self.0.len() - 1
+    }
+
+    #[inline]
+    /// Returns the number of offsets in this container.
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 
     /// Returns the byte slice stored in this buffer
@@ -180,7 +186,7 @@ impl<O: Offset> Offsets<O> {
     /// Pops the last element
     #[inline]
     pub fn pop(&mut self) -> Option<O> {
-        if self.len() == 0 {
+        if self.len_proxy() == 0 {
             None
         } else {
             self.0.pop()

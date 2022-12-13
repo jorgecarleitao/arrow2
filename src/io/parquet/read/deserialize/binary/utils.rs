@@ -15,7 +15,7 @@ impl<O: Offset> Pushable<usize> for Offsets<O> {
     }
     #[inline]
     fn len(&self) -> usize {
-        self.len()
+        self.len_proxy()
     }
 
     #[inline]
@@ -45,7 +45,7 @@ impl<O: Offset> Binary<O> {
 
     #[inline]
     pub fn push(&mut self, v: &[u8]) {
-        if self.offsets.len() == 100 && self.offsets.capacity() > 100 {
+        if self.offsets.len_proxy() == 100 && self.offsets.capacity() > 100 {
             let bytes_per_row = self.values.len() / 100 + 1;
             let bytes_estimate = bytes_per_row * self.offsets.capacity();
             if bytes_estimate > self.values.capacity() {
@@ -64,7 +64,7 @@ impl<O: Offset> Binary<O> {
 
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len()
+        self.offsets.len_proxy()
     }
 
     #[inline]

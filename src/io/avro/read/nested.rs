@@ -53,7 +53,7 @@ impl<O: Offset> DynMutableListArray<O> {
     }
 
     fn init_validity(&mut self) {
-        let len = self.offsets.len();
+        let len = self.offsets.len_proxy();
 
         let mut validity = MutableBitmap::new();
         validity.extend_constant(len, true);
@@ -64,7 +64,7 @@ impl<O: Offset> DynMutableListArray<O> {
 
 impl<O: Offset> MutableArray for DynMutableListArray<O> {
     fn len(&self) -> usize {
-        self.offsets.len()
+        self.offsets.len_proxy()
     }
 
     fn validity(&self) -> Option<&MutableBitmap> {

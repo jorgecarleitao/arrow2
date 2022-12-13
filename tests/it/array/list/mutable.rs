@@ -32,7 +32,7 @@ fn basics() {
 fn with_capacity() {
     let array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::with_capacity(10);
     assert!(array.offsets().capacity() >= 10);
-    assert_eq!(array.offsets().len(), 0);
+    assert_eq!(array.offsets().len_proxy(), 0);
     assert_eq!(array.values().values().capacity(), 0);
     assert_eq!(array.validity(), None);
 }
