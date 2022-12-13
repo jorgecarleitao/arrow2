@@ -201,9 +201,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
         ])),
         "list_nested_i64"
         | "list_nested_inner_required_i64"
-        | "list_nested_inner_required_required_i64" => {
-            Box::new(NullArray::from_data(DataType::Null, 1))
-        }
+        | "list_nested_inner_required_required_i64" => Box::new(NullArray::new(DataType::Null, 1)),
         other => unreachable!("{}", other),
     };
 
@@ -211,16 +209,12 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
         "list_int64_required_required" => {
             // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
             let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, false)));
-            Box::new(ListArray::<i32>::from_data(
-                data_type, offsets, values, None,
-            ))
+            ListArray::<i32>::new(data_type, offsets, values, None).boxed()
         }
         "list_int64_optional_required" => {
             // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
             let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, true)));
-            Box::new(ListArray::<i32>::from_data(
-                data_type, offsets, values, None,
-            ))
+            ListArray::<i32>::new(data_type, offsets, values, None).boxed()
         }
         "list_nested_i64" => {
             // [[0, 1]], None, [[2, None], [3]], [[4, 5], [6]], [], [[7], None, [9]], [[], [None], None], [[10]]
@@ -295,9 +289,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             // [0, 2, 2, 5, 8, 8, 11, 11, 12]
             // [[a1, a2], None, [a3, a4, a5], [a6, a7, a8], [], [a9, a10, a11], None, [a12]]
             let data_type = DataType::List(Box::new(field));
-            Box::new(ListArray::<i32>::from_data(
-                data_type, offsets, values, validity,
-            ))
+            ListArray::<i32>::new(data_type, offsets, values, validity).boxed()
         }
     }
 }
@@ -1197,7 +1189,7 @@ fn generic_data() -> Result<(Schema, Chunk<Box<dyn Array>>)> {
     let values = BinaryArray::<i32>::from_slice([b"ab", b"ac"]).boxed();
     let array4 = DictionaryArray::try_from_keys(indices.clone(), values).unwrap();
 
-    let values = FixedSizeBinaryArray::from_data(
+    let values = FixedSizeBinaryArray::new(
         DataType::FixedSizeBinary(2),
         vec![b'a', b'b', b'a', b'c'].into(),
         None,

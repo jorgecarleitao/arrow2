@@ -47,7 +47,7 @@ impl<'a> Iterator for StructIterator<'a> {
 
         Some(Ok((
             nested,
-            Box::new(StructArray::from_data(
+            Box::new(StructArray::new(
                 DataType::Struct(self.fields.clone()),
                 new_values,
                 validity.and_then(|x| x.into()),

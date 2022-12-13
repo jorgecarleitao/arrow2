@@ -19,7 +19,7 @@ fn sparse() -> Result<()> {
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
         Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
     ];
-    let array = UnionArray::from_data(data_type, types, fields, None);
+    let array = UnionArray::new(data_type, types, fields, None);
 
     for length in 1..2 {
         for index in 0..(array.len() - length + 1) {
@@ -51,7 +51,7 @@ fn dense() -> Result<()> {
     ];
     let offsets = Some(vec![0, 1, 0].into());
 
-    let array = UnionArray::from_data(data_type, types, fields, offsets);
+    let array = UnionArray::new(data_type, types, fields, offsets);
 
     for length in 1..2 {
         for index in 0..(array.len() - length + 1) {

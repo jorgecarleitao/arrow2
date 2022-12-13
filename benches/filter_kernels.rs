@@ -37,7 +37,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         let filter_array = create_boolean_array(size, 0.0, 0.9);
         let filter_array =
-            BooleanArray::from_data(DataType::Boolean, filter_array.values().clone(), None);
+            BooleanArray::new(DataType::Boolean, filter_array.values().clone(), None);
 
         let arr_a = create_primitive_array::<f32>(size, 0.0);
         c.bench_function(&format!("filter 2^{} f32", log2_size), |b| {

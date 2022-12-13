@@ -174,11 +174,10 @@ fn make_mutable(data_type: &DataType, capacity: usize) -> Result<Box<dyn Mutable
         PhysicalType::LargeUtf8 => {
             Box::new(MutableUtf8Array::<i64>::with_capacity(capacity)) as Box<dyn MutableArray>
         }
-        PhysicalType::FixedSizeBinary => Box::new(MutableFixedSizeBinaryArray::from_data(
-            data_type.clone(),
-            vec![],
-            None,
-        )) as _,
+        PhysicalType::FixedSizeBinary => {
+            Box::new(MutableFixedSizeBinaryArray::try_new(data_type.clone(), vec![], None).unwrap())
+                as _
+        }
         PhysicalType::LargeList | PhysicalType::List => Box::new(
             DynMutableListArray::try_with_capacity(data_type.clone(), capacity)?,
         ) as Box<dyn MutableArray>,

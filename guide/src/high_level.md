@@ -253,7 +253,7 @@ where
     let values = array.values().iter().map(|v| op(*v)).collect::<Vec<_>>();
 
     // create the new array, cloning its validity
-    PrimitiveArray::<O>::from_data(data_type.clone(), values.into(), array.validity().cloned())
+    PrimitiveArray::<O>::new(data_type.clone(), values.into(), array.validity().cloned())
 }
 ```
 

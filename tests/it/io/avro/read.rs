@@ -116,24 +116,24 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
         BooleanArray::from_slice([true, false]).boxed(),
         Utf8Array::<i32>::from([Some("foo"), None]).boxed(),
         array.into_box(),
-        StructArray::from_data(
+        StructArray::new(
             DataType::Struct(vec![Field::new("e", DataType::Float64, false)]),
-            vec![Box::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0]))],
+            vec![PrimitiveArray::<f64>::from_slice([1.0, 2.0]).boxed()],
             None,
         )
         .boxed(),
         DictionaryArray::try_from_keys(
             Int32Array::from_slice([1, 0]),
-            Box::new(Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"])),
+            Utf8Array::<i32>::from_slice(["SPADES", "HEARTS"]).boxed(),
         )
         .unwrap()
         .boxed(),
         PrimitiveArray::<i128>::from_slice([12345678i128, -12345678i128])
             .to(DataType::Decimal(18, 5))
             .boxed(),
-        StructArray::from_data(
+        StructArray::new(
             DataType::Struct(vec![Field::new("e", DataType::Float64, false)]),
-            vec![Box::new(PrimitiveArray::<f64>::from_slice([1.0, 0.0]))],
+            vec![PrimitiveArray::<f64>::from_slice([1.0, 0.0]).boxed()],
             Some([true, false].into()),
         )
         .boxed(),

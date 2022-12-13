@@ -27,7 +27,7 @@ fn basics() {
     assert!(!array.is_valid(1));
     assert!(array.is_valid(2));
 
-    let array2 = BooleanArray::from_data(
+    let array2 = BooleanArray::new(
         DataType::Boolean,
         array.values().clone(),
         array.validity().cloned(),
@@ -51,7 +51,7 @@ fn try_new_invalid() {
 #[test]
 fn with_validity() {
     let bitmap = Bitmap::from([true, false, true]);
-    let a = BooleanArray::from_data(DataType::Boolean, bitmap, None);
+    let a = BooleanArray::new(DataType::Boolean, bitmap, None);
     let a = a.with_validity(Some(Bitmap::from([true, false, true])));
     assert!(a.validity().is_some());
 }
@@ -65,12 +65,12 @@ fn debug() {
 #[test]
 fn into_mut_valid() {
     let bitmap = Bitmap::from([true, false, true]);
-    let a = BooleanArray::from_data(DataType::Boolean, bitmap, None);
+    let a = BooleanArray::new(DataType::Boolean, bitmap, None);
     let _ = a.into_mut().right().unwrap();
 
     let bitmap = Bitmap::from([true, false, true]);
     let validity = Bitmap::from([true, false, true]);
-    let a = BooleanArray::from_data(DataType::Boolean, bitmap, Some(validity));
+    let a = BooleanArray::new(DataType::Boolean, bitmap, Some(validity));
     let _ = a.into_mut().right().unwrap();
 }
 
@@ -78,13 +78,13 @@ fn into_mut_valid() {
 fn into_mut_invalid() {
     let bitmap = Bitmap::from([true, false, true]);
     let _other = bitmap.clone(); // values is shared
-    let a = BooleanArray::from_data(DataType::Boolean, bitmap, None);
+    let a = BooleanArray::new(DataType::Boolean, bitmap, None);
     let _ = a.into_mut().left().unwrap();
 
     let bitmap = Bitmap::from([true, false, true]);
     let validity = Bitmap::from([true, false, true]);
     let _other = validity.clone(); // validity is shared
-    let a = BooleanArray::from_data(DataType::Boolean, bitmap, Some(validity));
+    let a = BooleanArray::new(DataType::Boolean, bitmap, Some(validity));
     let _ = a.into_mut().left().unwrap();
 }
 

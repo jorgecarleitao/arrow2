@@ -82,7 +82,7 @@ fn case_list() -> (String, Box<dyn Array>) {
 
     let d = Utf8Array::<i32>::from([Some("4"), None, Some("text")]);
 
-    let array = StructArray::from_data(
+    let array = StructArray::new(
         data_type,
         vec![a.boxed(), b.boxed(), c.boxed(), d.boxed()],
         None,
@@ -130,11 +130,7 @@ fn case_dict() -> (String, Box<dyn Array>) {
 
     (
         data,
-        Box::new(StructArray::from_data(
-            DataType::Struct(fields),
-            vec![array.boxed()],
-            None,
-        )),
+        StructArray::new(DataType::Struct(fields), vec![array.boxed()], None).boxed(),
     )
 }
 
@@ -149,7 +145,7 @@ fn case_basics() -> (String, Box<dyn Array>) {
         Field::new("c", DataType::Boolean, true),
         Field::new("d", DataType::Utf8, true),
     ]);
-    let array = StructArray::from_data(
+    let array = StructArray::new(
         data_type,
         vec![
             Int64Array::from_slice([1, -10, 100000000]).boxed(),
@@ -159,7 +155,7 @@ fn case_basics() -> (String, Box<dyn Array>) {
         ],
         None,
     );
-    (data, Box::new(array))
+    (data, array.boxed())
 }
 
 fn case_projection() -> (String, Box<dyn Array>) {
@@ -174,7 +170,7 @@ fn case_projection() -> (String, Box<dyn Array>) {
         // note how "d" is not here
         Field::new("e", DataType::Binary, true),
     ]);
-    let array = StructArray::from_data(
+    let array = StructArray::new(
         data_type,
         vec![
             UInt32Array::from_slice([1, 10, 100000000]).boxed(),
@@ -184,7 +180,7 @@ fn case_projection() -> (String, Box<dyn Array>) {
         ],
         None,
     );
-    (data, Box::new(array))
+    (data, array.boxed())
 }
 
 fn case_struct() -> (String, Box<dyn Array>) {
@@ -208,29 +204,25 @@ fn case_struct() -> (String, Box<dyn Array>) {
 
     // build expected output
     let d = Utf8Array::<i32>::from(&vec![Some("text"), None, Some("text"), None]);
-    let c = StructArray::from_data(
+    let c = StructArray::new(
         DataType::Struct(vec![d_field]),
-        vec![Box::new(d)],
-        Some(Bitmap::from_u8_slice([0b11111101], 4)),
+        vec![d.boxed()],
+        Some([true, false, true, true].into()),
     );
 
     let b = BooleanArray::from(vec![Some(true), Some(false), Some(true), None]);
     let inner = DataType::Struct(vec![Field::new("b", DataType::Boolean, true), c_field]);
-    let expected = StructArray::from_data(
+    let expected = StructArray::new(
         inner,
-        vec![Box::new(b), Box::new(c)],
-        Some(Bitmap::from_u8_slice([0b11110111], 4)),
+        vec![b.boxed(), c.boxed()],
+        Some([true, true, true, false].into()),
     );
 
     let data_type = DataType::Struct(fields);
 
     (
         data,
-        Box::new(StructArray::from_data(
-            data_type,
-            vec![expected.boxed()],
-            None,
-        )),
+        StructArray::new(data_type, vec![expected.boxed()], None).boxed(),
     )
 }
 
@@ -264,7 +256,7 @@ fn case_nested_list() -> (String, Box<dyn Array>) {
         None,
     ]);
 
-    let c = StructArray::from_data(
+    let c = StructArray::new(
         DataType::Struct(vec![d_field]),
         vec![d.boxed()],
         Some(Bitmap::from_u8_slice([0b11111011], 6)),
@@ -278,23 +270,24 @@ fn case_nested_list() -> (String, Box<dyn Array>) {
         None,
         Some(true),
     ]);
-    let a_struct = StructArray::from_data(
+    let a_struct = StructArray::new(
         DataType::Struct(vec![b_field, c_field]),
         vec![b.boxed(), c.boxed()],
         None,
     );
-    let expected = ListArray::from_data(
+    let expected = ListArray::new(
         a_list_data_type,
         vec![0i32, 2, 3, 6, 6, 6].try_into().unwrap(),
         a_struct.boxed(),
-        Some(Bitmap::from_u8_slice([0b00010111], 5)),
+        Some([true, true, true, false, true].into()),
     );
 
-    let array = Box::new(StructArray::from_data(
+    let array = StructArray::new(
         DataType::Struct(vec![a_field]),
-        vec![Box::new(expected)],
+        vec![expected.boxed()],
         None,
-    ));
+    )
+    .boxed();
 
     (data, array)
 }

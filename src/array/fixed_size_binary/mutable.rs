@@ -4,7 +4,7 @@ use crate::{
     array::{physical_binary::extend_validity, Array, MutableArray, TryExtendFromSelf},
     bitmap::MutableBitmap,
     datatypes::DataType,
-    error::{Error, Result},
+    error::Error,
 };
 
 use super::{FixedSizeBinaryArray, FixedSizeBinaryValues};
@@ -32,31 +32,44 @@ impl From<MutableFixedSizeBinaryArray> for FixedSizeBinaryArray {
 }
 
 impl MutableFixedSizeBinaryArray {
-    /// Canonical method to create a new [`MutableFixedSizeBinaryArray`].
-    pub fn from_data(
+    /// Creates a new [`MutableFixedSizeBinaryArray`].
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The `data_type`'s physical type is not [`crate::datatypes::PhysicalType::FixedSizeBinary`]
+    /// * The length of `values` is not a multiple of `size` in `data_type`
+    /// * the validity's length is not equal to `values.len() / size`.
+    pub fn try_new(
         data_type: DataType,
         values: Vec<u8>,
         validity: Option<MutableBitmap>,
-    ) -> Self {
-        let size = FixedSizeBinaryArray::get_size(&data_type);
-        assert_eq!(
-            values.len() % size,
-            0,
-            "The len of values must be a multiple of size"
-        );
-        if let Some(validity) = &validity {
-            assert_eq!(
-                validity.len(),
-                values.len() / size,
-                "The len of the validity must be equal to values / size"
-            );
+    ) -> Result<Self, Error> {
+        let size = FixedSizeBinaryArray::maybe_get_size(&data_type)?;
+
+        if values.len() % size != 0 {
+            return Err(Error::oos(format!(
+                "values (of len {}) must be a multiple of size ({}) in FixedSizeBinaryArray.",
+                values.len(),
+                size
+            )));
         }
-        Self {
-            data_type,
+        let len = values.len() / size;
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != len)
+        {
+            return Err(Error::oos(
+                "validity mask length must be equal to the number of values divided by size",
+            ));
+        }
+
+        Ok(Self {
             size,
+            data_type,
             values,
             validity,
-        }
+        })
     }
 
     /// Creates a new empty [`MutableFixedSizeBinaryArray`].
@@ -66,11 +79,12 @@ impl MutableFixedSizeBinaryArray {
 
     /// Creates a new [`MutableFixedSizeBinaryArray`] with capacity for `capacity` entries.
     pub fn with_capacity(size: usize, capacity: usize) -> Self {
-        Self::from_data(
+        Self::try_new(
             DataType::FixedSizeBinary(size),
             Vec::<u8>::with_capacity(capacity * size),
             None,
         )
+        .unwrap()
     }
 
     /// Creates a new [`MutableFixedSizeBinaryArray`] from a slice of optional `[u8]`.
@@ -87,14 +101,14 @@ impl MutableFixedSizeBinaryArray {
             .iter()
             .map(|x| x.is_some())
             .collect::<MutableBitmap>();
-        Self::from_data(DataType::FixedSizeBinary(N), values, validity.into())
+        Self::try_new(DataType::FixedSizeBinary(N), values, validity.into()).unwrap()
     }
 
     /// tries to push a new entry to [`MutableFixedSizeBinaryArray`].
     /// # Error
     /// Errors iff the size of `value` is not equal to its own size.
     #[inline]
-    pub fn try_push<P: AsRef<[u8]>>(&mut self, value: Option<P>) -> Result<()> {
+    pub fn try_push<P: AsRef<[u8]>>(&mut self, value: Option<P>) -> Result<(), Error> {
         match value {
             Some(bytes) => {
                 let bytes = bytes.as_ref();
@@ -156,7 +170,7 @@ impl MutableFixedSizeBinaryArray {
     pub fn try_from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = Option<P>>>(
         iter: I,
         size: usize,
-    ) -> Result<Self> {
+    ) -> Result<Self, Error> {
         let iterator = iter.into_iter();
         let (lower, _) = iterator.size_hint();
         let mut primitive = Self::with_capacity(size, lower);
@@ -238,19 +252,21 @@ impl MutableArray for MutableFixedSizeBinaryArray {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(FixedSizeBinaryArray::new(
+        FixedSizeBinaryArray::new(
             DataType::FixedSizeBinary(self.size),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        )
+        .boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(FixedSizeBinaryArray::new(
+        FixedSizeBinaryArray::new(
             DataType::FixedSizeBinary(self.size),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        )
+        .arced()
     }
 
     fn data_type(&self) -> &DataType {
@@ -297,7 +313,7 @@ impl PartialEq for MutableFixedSizeBinaryArray {
 }
 
 impl TryExtendFromSelf for MutableFixedSizeBinaryArray {
-    fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<(), Error> {
         extend_validity(self.len(), &mut self.validity, &other.validity);
 
         let slice = other.values.as_slice();

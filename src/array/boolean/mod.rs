@@ -85,6 +85,11 @@ impl BooleanArray {
         })
     }
 
+    /// Alias to `Self::try_new().unwrap()`
+    pub fn new(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
+        Self::try_new(data_type, values, validity).unwrap()
+    }
+
     /// Returns an iterator over the optional values of this [`BooleanArray`].
     #[inline]
     pub fn iter(&self) -> ZipValidity<bool, BitmapIter, BitmapIter> {
@@ -246,21 +251,18 @@ impl BooleanArray {
                         immutable,
                         Some(mutable_bitmap.into()),
                     )),
-                    Right(mutable) => Right(MutableBooleanArray::from_data(
-                        self.data_type,
-                        mutable,
-                        Some(mutable_bitmap),
-                    )),
+                    Right(mutable) => Right(
+                        MutableBooleanArray::try_new(self.data_type, mutable, Some(mutable_bitmap))
+                            .unwrap(),
+                    ),
                 },
             }
         } else {
             match self.values.into_mut() {
                 Left(immutable) => Left(BooleanArray::new(self.data_type, immutable, None)),
-                Right(mutable) => Right(MutableBooleanArray::from_data(
-                    self.data_type,
-                    mutable,
-                    None,
-                )),
+                Right(mutable) => {
+                    Right(MutableBooleanArray::try_new(self.data_type, mutable, None).unwrap())
+                }
             }
         }
     }
@@ -368,20 +370,6 @@ impl BooleanArray {
             validity,
         } = self;
         (data_type, values, validity)
-    }
-
-    /// The canonical method to create a [`BooleanArray`]
-    /// # Panics
-    /// This function errors iff:
-    /// * The validity is not `None` and its length is different from `values`'s length
-    /// * The `data_type`'s [`PhysicalType`] is not equal to [`PhysicalType::Boolean`].
-    pub fn new(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
-        Self::try_new(data_type, values, validity).unwrap()
-    }
-
-    /// Alias for `new`
-    pub fn from_data(data_type: DataType, values: Bitmap, validity: Option<Bitmap>) -> Self {
-        Self::new(data_type, values, validity)
     }
 }
 

@@ -32,7 +32,7 @@ pub fn to_rust_iterator(ob: PyObject, py: Python) -> PyResult<Vec<PyObject>> {
 pub fn from_rust_iterator(py: Python) -> PyResult<PyObject> {
     // initialize an array
     let array = Int32Array::from(&[Some(2), None, Some(1), None]);
-    let array = StructArray::from_data(
+    let array = StructArray::new(
         DataType::Struct(vec![Field::new("a", array.data_type().clone(), true)]),
         vec![array.boxed()],
         None,

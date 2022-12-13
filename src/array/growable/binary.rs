@@ -82,11 +82,11 @@ impl<'a, O: Offset> Growable<'a> for GrowableBinary<'a, O> {
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(self.to())
+        self.to().arced()
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(self.to())
+        self.to().boxed()
     }
 }
 

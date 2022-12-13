@@ -74,13 +74,7 @@ impl FixedSizeListArray {
         })
     }
 
-    /// Creates a new [`FixedSizeListArray`].
-    /// # Panics
-    /// This function panics iff:
-    /// * The `data_type`'s physical type is not [`crate::datatypes::PhysicalType::FixedSizeList`]
-    /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
-    /// * The length of `values` is not a multiple of `size` in `data_type`
-    /// * the validity's length is not equal to `values.len() / size`.
+    /// Alias to `Self::try_new(...).unwrap()`
     pub fn new(data_type: DataType, values: Box<dyn Array>, validity: Option<Bitmap>) -> Self {
         Self::try_new(data_type, values, validity).unwrap()
     }
@@ -88,15 +82,6 @@ impl FixedSizeListArray {
     /// Returns the size (number of elements per slot) of this [`FixedSizeListArray`].
     pub const fn size(&self) -> usize {
         self.size
-    }
-
-    /// Alias for `new`
-    pub fn from_data(
-        data_type: DataType,
-        values: Box<dyn Array>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new(data_type, values, validity)
     }
 
     /// Returns a new empty [`FixedSizeListArray`].

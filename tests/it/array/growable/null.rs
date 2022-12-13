@@ -15,6 +15,6 @@ fn null() {
 
     let result: NullArray = mutable.into();
 
-    let expected = NullArray::from_data(DataType::Null, 3);
+    let expected = NullArray::new(DataType::Null, 3);
     assert_eq!(result, expected);
 }

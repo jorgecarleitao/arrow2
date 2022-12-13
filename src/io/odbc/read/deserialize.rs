@@ -92,7 +92,7 @@ fn bitmap(values: &[isize]) -> Option<Bitmap> {
 }
 
 fn primitive<T: NativeType>(data_type: DataType, values: &[T]) -> PrimitiveArray<T> {
-    PrimitiveArray::from_data(data_type, values.to_vec().into(), None)
+    PrimitiveArray::new(data_type, values.to_vec().into(), None)
 }
 
 fn primitive_optional<T: NativeType>(
@@ -101,20 +101,20 @@ fn primitive_optional<T: NativeType>(
     indicators: &[isize],
 ) -> PrimitiveArray<T> {
     let validity = bitmap(indicators);
-    PrimitiveArray::from_data(data_type, values.to_vec().into(), validity)
+    PrimitiveArray::new(data_type, values.to_vec().into(), validity)
 }
 
 fn bool(data_type: DataType, values: &[Bit]) -> BooleanArray {
     let values = values.iter().map(|x| x.as_bool());
     let values = Bitmap::from_trusted_len_iter(values);
-    BooleanArray::from_data(data_type, values, None)
+    BooleanArray::new(data_type, values, None)
 }
 
 fn bool_optional(data_type: DataType, values: &[Bit], indicators: &[isize]) -> BooleanArray {
     let validity = bitmap(indicators);
     let values = values.iter().map(|x| x.as_bool());
     let values = Bitmap::from_trusted_len_iter(values);
-    BooleanArray::from_data(data_type, values, validity)
+    BooleanArray::new(data_type, values, validity)
 }
 
 fn binary_generic<'a>(
@@ -143,21 +143,19 @@ fn binary_generic<'a>(
 
 fn binary(data_type: DataType, view: BinColumnView) -> BinaryArray<i32> {
     let (offsets, values, validity) = binary_generic(view.iter());
-
-    // this O(N) check is not necessary
-    BinaryArray::from_data(data_type, offsets, values, validity)
+    BinaryArray::new(data_type, offsets, values, validity)
 }
 
 fn utf8(data_type: DataType, view: TextColumnView<u8>) -> Utf8Array<i32> {
     let (offsets, values, validity) = binary_generic(view.iter());
 
     // this O(N) check is necessary for the utf8 validity
-    Utf8Array::from_data(data_type, offsets, values, validity)
+    Utf8Array::new(data_type, offsets, values, validity)
 }
 
 fn date(data_type: DataType, values: &[odbc_api::sys::Date]) -> PrimitiveArray<i32> {
     let values = values.iter().map(days_since_epoch).collect::<Vec<_>>();
-    PrimitiveArray::from_data(data_type, values.into(), None)
+    PrimitiveArray::new(data_type, values.into(), None)
 }
 
 fn date_optional(
@@ -167,7 +165,7 @@ fn date_optional(
 ) -> PrimitiveArray<i32> {
     let values = values.iter().map(days_since_epoch).collect::<Vec<_>>();
     let validity = bitmap(indicators);
-    PrimitiveArray::from_data(data_type, values.into(), validity)
+    PrimitiveArray::new(data_type, values.into(), validity)
 }
 
 fn days_since_epoch(date: &odbc_api::sys::Date) -> i32 {
@@ -180,7 +178,7 @@ fn days_since_epoch(date: &odbc_api::sys::Date) -> i32 {
 
 fn time(data_type: DataType, values: &[odbc_api::sys::Time]) -> PrimitiveArray<i32> {
     let values = values.iter().map(time_since_midnight).collect::<Vec<_>>();
-    PrimitiveArray::from_data(data_type, values.into(), None)
+    PrimitiveArray::new(data_type, values.into(), None)
 }
 
 fn time_since_midnight(date: &odbc_api::sys::Time) -> i32 {
@@ -194,7 +192,7 @@ fn time_optional(
 ) -> PrimitiveArray<i32> {
     let values = values.iter().map(time_since_midnight).collect::<Vec<_>>();
     let validity = bitmap(indicators);
-    PrimitiveArray::from_data(data_type, values.into(), validity)
+    PrimitiveArray::new(data_type, values.into(), validity)
 }
 
 fn timestamp(data_type: DataType, values: &[odbc_api::sys::Timestamp]) -> PrimitiveArray<i64> {
@@ -209,7 +207,7 @@ fn timestamp(data_type: DataType, values: &[odbc_api::sys::Timestamp]) -> Primit
         TimeUnit::Microsecond => values.iter().map(timestamp_us).collect::<Vec<_>>(),
         TimeUnit::Nanosecond => values.iter().map(timestamp_ns).collect::<Vec<_>>(),
     };
-    PrimitiveArray::from_data(data_type, values.into(), None)
+    PrimitiveArray::new(data_type, values.into(), None)
 }
 
 fn timestamp_optional(
@@ -229,7 +227,7 @@ fn timestamp_optional(
         TimeUnit::Nanosecond => values.iter().map(timestamp_ns).collect::<Vec<_>>(),
     };
     let validity = bitmap(indicators);
-    PrimitiveArray::from_data(data_type, values.into(), validity)
+    PrimitiveArray::new(data_type, values.into(), validity)
 }
 
 fn timestamp_to_naive(timestamp: &odbc_api::sys::Timestamp) -> Option<NaiveDateTime> {

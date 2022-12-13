@@ -53,15 +53,12 @@ pub struct PrimitiveArray<T: NativeType> {
     validity: Option<Bitmap>,
 }
 
-fn check<T: NativeType>(
+pub(super) fn check<T: NativeType>(
     data_type: &DataType,
     values: &[T],
-    validity: &Option<Bitmap>,
+    validity_len: Option<usize>,
 ) -> Result<(), Error> {
-    if validity
-        .as_ref()
-        .map_or(false, |validity| validity.len() != values.len())
-    {
+    if validity_len.map_or(false, |len| len != values.len()) {
         return Err(Error::oos(
             "validity mask length must match the number of values",
         ));
@@ -89,7 +86,7 @@ impl<T: NativeType> PrimitiveArray<T> {
         values: Buffer<T>,
         validity: Option<Bitmap>,
     ) -> Result<Self, Error> {
-        check(&data_type, &values, &validity)?;
+        check(&data_type, &values, validity.as_ref().map(|v| v.len()))?;
         Ok(Self {
             data_type,
             values,
@@ -117,7 +114,12 @@ impl<T: NativeType> PrimitiveArray<T> {
     #[inline]
     #[must_use]
     pub fn to(self, data_type: DataType) -> Self {
-        check(&data_type, &self.values, &self.validity).unwrap();
+        check(
+            &data_type,
+            &self.values,
+            self.validity.as_ref().map(|v| v.len()),
+        )
+        .unwrap();
         Self {
             data_type,
             values: self.values,
@@ -325,11 +327,14 @@ impl<T: NativeType> PrimitiveArray<T> {
                     Some(bitmap),
                 )),
                 Right(mutable_bitmap) => match self.values.get_mut().map(std::mem::take) {
-                    Some(values) => Right(MutablePrimitiveArray::from_data(
-                        self.data_type,
-                        values,
-                        Some(mutable_bitmap),
-                    )),
+                    Some(values) => Right(
+                        MutablePrimitiveArray::try_new(
+                            self.data_type,
+                            values,
+                            Some(mutable_bitmap),
+                        )
+                        .unwrap(),
+                    ),
                     None => Left(PrimitiveArray::new(
                         self.data_type,
                         self.values,
@@ -339,11 +344,9 @@ impl<T: NativeType> PrimitiveArray<T> {
             }
         } else {
             match self.values.get_mut().map(std::mem::take) {
-                Some(values) => Right(MutablePrimitiveArray::from_data(
-                    self.data_type,
-                    values,
-                    None,
-                )),
+                Some(values) => {
+                    Right(MutablePrimitiveArray::try_new(self.data_type, values, None).unwrap())
+                }
                 None => Left(PrimitiveArray::new(self.data_type, self.values, None)),
             }
         }
@@ -427,11 +430,6 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// * The `data_type`'s [`PhysicalType`] is not equal to [`PhysicalType::Primitive`].
     pub fn new(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
         Self::try_new(data_type, values, validity).unwrap()
-    }
-
-    /// Alias for `Self::try_new(..).unwrap()`.
-    pub fn from_data(data_type: DataType, values: Buffer<T>, validity: Option<Bitmap>) -> Self {
-        Self::new(data_type, values, validity)
     }
 }
 

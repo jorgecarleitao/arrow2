@@ -99,11 +99,12 @@ fn try_from_trusted_len_iter() {
 
 #[test]
 fn reserve() {
-    let mut a = MutableBooleanArray::from_data(
+    let mut a = MutableBooleanArray::try_new(
         DataType::Boolean,
         MutableBitmap::new(),
         Some(MutableBitmap::new()),
-    );
+    )
+    .unwrap();
 
     a.reserve(10);
     assert!(a.validity().unwrap().capacity() > 0);

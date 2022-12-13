@@ -63,6 +63,12 @@ impl<O: Offset> Offsets<O> {
         Self(vec![O::zero()])
     }
 
+    /// Returns an [`Offsets`] whose all lengths are zero.
+    #[inline]
+    pub fn new_zeroed(length: usize) -> Self {
+        Self(vec![O::zero(); length + 1])
+    }
+
     /// Creates a new [`Offsets`] from an iterator of lengths
     #[inline]
     pub fn try_from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Result<Self, Error> {

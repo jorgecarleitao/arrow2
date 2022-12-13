@@ -8,7 +8,7 @@ use crate::{
     },
     bitmap::MutableBitmap,
     datatypes::{DataType, PhysicalType},
-    error::Result,
+    error::Error,
     trusted_len::TrustedLen,
 };
 
@@ -54,6 +54,38 @@ impl MutableBooleanArray {
         Self::with_capacity(0)
     }
 
+    /// The canonical method to create a [`MutableBooleanArray`] out of low-end APIs.
+    /// # Errors
+    /// This function errors iff:
+    /// * The validity is not `None` and its length is different from `values`'s length
+    /// * The `data_type`'s [`PhysicalType`] is not equal to [`PhysicalType::Boolean`].
+    pub fn try_new(
+        data_type: DataType,
+        values: MutableBitmap,
+        validity: Option<MutableBitmap>,
+    ) -> Result<Self, Error> {
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != values.len())
+        {
+            return Err(Error::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        if data_type.to_physical_type() != PhysicalType::Boolean {
+            return Err(Error::oos(
+                "MutableBooleanArray can only be initialized with a DataType whose physical type is Boolean",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            values,
+            validity,
+        })
+    }
+
     /// Creates an new [`MutableBooleanArray`] with a capacity of values.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
@@ -68,22 +100,6 @@ impl MutableBooleanArray {
         self.values.reserve(additional);
         if let Some(x) = self.validity.as_mut() {
             x.reserve(additional)
-        }
-    }
-
-    /// Canonical method to create a new [`MutableBooleanArray`].
-    pub fn from_data(
-        data_type: DataType,
-        values: MutableBitmap,
-        validity: Option<MutableBitmap>,
-    ) -> Self {
-        if data_type.to_physical_type() != PhysicalType::Boolean {
-            panic!("MutableBooleanArray can only be initialized with DataType::Boolean")
-        }
-        Self {
-            data_type,
-            values,
-            validity,
         }
     }
 
@@ -232,11 +248,12 @@ impl MutableBooleanArray {
     /// Creates a new [`MutableBooleanArray`] from an [`TrustedLen`] of `bool`.
     #[inline]
     pub fn from_trusted_len_values_iter<I: TrustedLen<Item = bool>>(iterator: I) -> Self {
-        Self::from_data(
+        Self::try_new(
             DataType::Boolean,
             MutableBitmap::from_trusted_len_iter(iterator),
             None,
         )
+        .unwrap()
     }
 
     /// Creates a new [`MutableBooleanArray`] from an [`TrustedLen`] of `bool`.
@@ -251,7 +268,7 @@ impl MutableBooleanArray {
     ) -> Self {
         let mut mutable = MutableBitmap::new();
         mutable.extend_from_trusted_len_iter_unchecked(iterator);
-        MutableBooleanArray::from_data(DataType::Boolean, mutable, None)
+        MutableBooleanArray::try_new(DataType::Boolean, mutable, None).unwrap()
     }
 
     /// Creates a new [`MutableBooleanArray`] from a slice of `bool`.
@@ -274,7 +291,7 @@ impl MutableBooleanArray {
     {
         let (validity, values) = trusted_len_unzip(iterator);
 
-        Self::from_data(DataType::Boolean, values, validity)
+        Self::try_new(DataType::Boolean, values, validity).unwrap()
     }
 
     /// Creates a [`BooleanArray`] from a [`TrustedLen`].
@@ -308,7 +325,7 @@ impl MutableBooleanArray {
             None
         };
 
-        Ok(Self::from_data(DataType::Boolean, values, validity))
+        Ok(Self::try_new(DataType::Boolean, values, validity).unwrap())
     }
 
     /// Creates a [`BooleanArray`] from a [`TrustedLen`].
@@ -452,7 +469,13 @@ impl<Ptr: std::borrow::Borrow<Option<bool>>> FromIterator<Ptr> for MutableBoolea
             })
             .collect();
 
-        MutableBooleanArray::from_data(DataType::Boolean, values, validity.into())
+        let validity = if validity.unset_bits() > 0 {
+            Some(validity)
+        } else {
+            None
+        };
+
+        MutableBooleanArray::try_new(DataType::Boolean, values, validity).unwrap()
     }
 }
 
@@ -466,19 +489,13 @@ impl MutableArray for MutableBooleanArray {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(BooleanArray::from_data(
-            self.data_type.clone(),
-            std::mem::take(&mut self.values).into(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        let array: BooleanArray = std::mem::take(self).into();
+        array.boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(BooleanArray::from_data(
-            self.data_type.clone(),
-            std::mem::take(&mut self.values).into(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        let array: BooleanArray = std::mem::take(self).into();
+        array.arced()
     }
 
     fn data_type(&self) -> &DataType {
@@ -517,7 +534,7 @@ impl Extend<Option<bool>> for MutableBooleanArray {
 
 impl TryExtend<Option<bool>> for MutableBooleanArray {
     /// This is infalible and is implemented for consistency with all other types
-    fn try_extend<I: IntoIterator<Item = Option<bool>>>(&mut self, iter: I) -> Result<()> {
+    fn try_extend<I: IntoIterator<Item = Option<bool>>>(&mut self, iter: I) -> Result<(), Error> {
         self.extend(iter);
         Ok(())
     }
@@ -525,7 +542,7 @@ impl TryExtend<Option<bool>> for MutableBooleanArray {
 
 impl TryPush<Option<bool>> for MutableBooleanArray {
     /// This is infalible and is implemented for consistency with all other types
-    fn try_push(&mut self, item: Option<bool>) -> Result<()> {
+    fn try_push(&mut self, item: Option<bool>) -> Result<(), Error> {
         self.push(item);
         Ok(())
     }
@@ -538,7 +555,7 @@ impl PartialEq for MutableBooleanArray {
 }
 
 impl TryExtendFromSelf for MutableBooleanArray {
-    fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<(), Error> {
         extend_validity(self.len(), &mut self.validity, &other.validity);
 
         let slice = other.values.as_slice();

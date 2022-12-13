@@ -160,16 +160,6 @@ impl<O: Offset> MutableBinaryArray<O> {
             validity.shrink_to_fit()
         }
     }
-
-    /// Equivalent to `Self::try_new(...).unwrap()`
-    pub fn from_data(
-        data_type: DataType,
-        offsets: Offsets<O>,
-        values: Vec<u8>,
-        validity: Option<MutableBitmap>,
-    ) -> Self {
-        Self::try_new(data_type, offsets, values, validity).unwrap()
-    }
 }
 
 impl<O: Offset> MutableBinaryArray<O> {
@@ -204,25 +194,13 @@ impl<O: Offset> MutableArray for MutableBinaryArray<O> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
-        BinaryArray::new(
-            data_type,
-            offsets.into(),
-            values.into(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        )
-        .boxed()
+        let array: BinaryArray<O> = std::mem::take(self).into();
+        array.boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
-        BinaryArray::new(
-            data_type,
-            offsets.into(),
-            values.into(),
-            std::mem::take(&mut self.validity).map(|x| x.into()),
-        )
-        .arced()
+        let array: BinaryArray<O> = std::mem::take(self).into();
+        array.arced()
     }
 
     fn data_type(&self) -> &DataType {
@@ -270,7 +248,7 @@ impl<O: Offset> MutableBinaryArray<O> {
     {
         let (validity, offsets, values) = trusted_len_unzip(iterator);
 
-        Self::from_data(Self::default_data_type(), offsets, values, validity)
+        Self::try_new(Self::default_data_type(), offsets, values, validity).unwrap()
     }
 
     /// Creates a [`MutableBinaryArray`] from an iterator of trusted length.
@@ -293,7 +271,7 @@ impl<O: Offset> MutableBinaryArray<O> {
         iterator: I,
     ) -> Self {
         let (offsets, values) = trusted_len_values_iter(iterator);
-        Self::from_data(Self::default_data_type(), offsets, values, None)
+        Self::try_new(Self::default_data_type(), offsets, values, None).unwrap()
     }
 
     /// Creates a new [`BinaryArray`] from a [`TrustedLen`] of `&[u8]`.
@@ -326,12 +304,7 @@ impl<O: Offset> MutableBinaryArray<O> {
             validity = None;
         }
 
-        Ok(Self::from_data(
-            Self::default_data_type(),
-            offsets,
-            values,
-            validity,
-        ))
+        Ok(Self::try_new(Self::default_data_type(), offsets, values, validity).unwrap())
     }
 
     /// Creates a [`MutableBinaryArray`] from an falible iterator of trusted length.
@@ -427,7 +400,7 @@ impl<O: Offset> MutableBinaryArray<O> {
     /// Creates a new [`MutableBinaryArray`] from a [`Iterator`] of `&[u8]`.
     pub fn from_iter_values<T: AsRef<[u8]>, I: Iterator<Item = T>>(iterator: I) -> Self {
         let (offsets, values) = values_iter(iterator);
-        Self::from_data(Self::default_data_type(), offsets, values, None)
+        Self::try_new(Self::default_data_type(), offsets, values, None).unwrap()
     }
 }
 

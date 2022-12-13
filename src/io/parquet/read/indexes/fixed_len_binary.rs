@@ -43,11 +43,12 @@ fn deserialize_binary_iter<'a, I: TrustedLen<Item = Option<&'a Vec<u8>>>>(
             })))
         }
         _ => {
-            let mut a = MutableFixedSizeBinaryArray::from_data(
+            let mut a = MutableFixedSizeBinaryArray::try_new(
                 data_type,
                 Vec::with_capacity(iter.size_hint().0),
                 None,
-            );
+            )
+            .unwrap();
             for item in iter {
                 a.push(item);
             }

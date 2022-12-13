@@ -4,6 +4,7 @@ use crate::{
     array::{Array, MutableArray},
     bitmap::MutableBitmap,
     datatypes::DataType,
+    error::Error,
 };
 
 use super::StructArray;
@@ -16,6 +17,60 @@ pub struct MutableStructArray {
     validity: Option<MutableBitmap>,
 }
 
+fn check(
+    data_type: &DataType,
+    values: &[Box<dyn MutableArray>],
+    validity: Option<usize>,
+) -> Result<(), Error> {
+    let fields = StructArray::try_get_fields(data_type)?;
+    if fields.is_empty() {
+        return Err(Error::oos("A StructArray must contain at least one field"));
+    }
+    if fields.len() != values.len() {
+        return Err(Error::oos(
+                "A StructArray must have a number of fields in its DataType equal to the number of child values",
+            ));
+    }
+
+    fields
+            .iter().map(|a| &a.data_type)
+            .zip(values.iter().map(|a| a.data_type()))
+            .enumerate()
+            .try_for_each(|(index, (data_type, child))| {
+                if data_type != child {
+                    Err(Error::oos(format!(
+                        "The children DataTypes of a StructArray must equal the children data types. 
+                         However, the field {index} has data type {data_type:?} but the value has data type {child:?}"
+                    )))
+                } else {
+                    Ok(())
+                }
+            })?;
+
+    let len = values[0].len();
+    values
+            .iter()
+            .map(|a| a.len())
+            .enumerate()
+            .try_for_each(|(index, a_len)| {
+                if a_len != len {
+                    Err(Error::oos(format!(
+                        "The children must have an equal number of values.
+                         However, the values at index {index} have a length of {a_len}, which is different from values at index 0, {len}."
+                    )))
+                } else {
+                    Ok(())
+                }
+            })?;
+
+    if validity.map_or(false, |validity| validity != len) {
+        return Err(Error::oos(
+            "The validity length of a StructArray must match its number of elements",
+        ));
+    }
+    Ok(())
+}
+
 impl From<MutableStructArray> for StructArray {
     fn from(other: MutableStructArray) -> Self {
         let validity = if other.validity.as_ref().map(|x| x.unset_bits()).unwrap_or(0) > 0 {
@@ -24,7 +79,7 @@ impl From<MutableStructArray> for StructArray {
             None
         };
 
-        StructArray::from_data(
+        StructArray::new(
             other.data_type,
             other.values.into_iter().map(|mut v| v.as_box()).collect(),
             validity,
@@ -35,51 +90,30 @@ impl From<MutableStructArray> for StructArray {
 impl MutableStructArray {
     /// Creates a new [`MutableStructArray`].
     pub fn new(data_type: DataType, values: Vec<Box<dyn MutableArray>>) -> Self {
-        Self::from_data(data_type, values, None)
+        Self::try_new(data_type, values, None).unwrap()
     }
 
     /// Create a [`MutableStructArray`] out of low-end APIs.
-    /// # Panics
-    /// This function panics iff:
+    /// # Errors
+    /// This function errors iff:
     /// * `data_type` is not [`DataType::Struct`]
     /// * The inner types of `data_type` are not equal to those of `values`
     /// * `validity` is not `None` and its length is different from the `values`'s length
-    pub fn from_data(
+    pub fn try_new(
         data_type: DataType,
         values: Vec<Box<dyn MutableArray>>,
         validity: Option<MutableBitmap>,
-    ) -> Self {
-        match data_type.to_logical_type() {
-            DataType::Struct(ref fields) => assert!(fields
-                .iter()
-                .map(|f| f.data_type())
-                .eq(values.iter().map(|f| f.data_type()))),
-            _ => panic!("StructArray must be initialized with DataType::Struct"),
-        };
-        let self_ = Self {
+    ) -> Result<Self, Error> {
+        check(&data_type, &values, validity.as_ref().map(|x| x.len()))?;
+        Ok(Self {
             data_type,
             values,
             validity,
-        };
-        self_.assert_lengths();
-        self_
-    }
-
-    fn assert_lengths(&self) {
-        let first_len = self.values.first().map(|v| v.len());
-        if let Some(len) = first_len {
-            if !self.values.iter().all(|x| x.len() == len) {
-                let lengths: Vec<_> = self.values.iter().map(|v| v.len()).collect();
-                panic!("StructArray child lengths differ: {:?}", lengths);
-            }
-        }
-        if let Some(validity) = &self.validity {
-            assert_eq!(first_len.unwrap_or(0), validity.len());
-        }
+        })
     }
 
     /// Extract the low-end APIs from the [`MutableStructArray`].
-    pub fn into_data(self) -> (DataType, Vec<Box<dyn MutableArray>>, Option<MutableBitmap>) {
+    pub fn into_inner(self) -> (DataType, Vec<Box<dyn MutableArray>>, Option<MutableBitmap>) {
         (self.data_type, self.values, self.validity)
     }
 
@@ -165,25 +199,27 @@ impl MutableArray for MutableStructArray {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(StructArray::from_data(
+        StructArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.values)
                 .into_iter()
                 .map(|mut v| v.as_box())
                 .collect(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        )
+        .boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(StructArray::from_data(
+        StructArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.values)
                 .into_iter()
                 .map(|mut v| v.as_box())
                 .collect(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        )
+        .arced()
     }
 
     fn data_type(&self) -> &DataType {

@@ -4,11 +4,12 @@ use arrow2::datatypes::DataType;
 
 #[test]
 fn basic() {
-    let a = MutableFixedSizeBinaryArray::from_data(
+    let a = MutableFixedSizeBinaryArray::try_new(
         DataType::FixedSizeBinary(2),
         Vec::from([1, 2, 3, 4]),
         None,
-    );
+    )
+    .unwrap();
     assert_eq!(a.len(), 2);
     assert_eq!(a.data_type(), &DataType::FixedSizeBinary(2));
     assert_eq!(a.values(), &Vec::from([1, 2, 3, 4]));
@@ -20,29 +21,30 @@ fn basic() {
 #[allow(clippy::eq_op)]
 #[test]
 fn equal() {
-    let a = MutableFixedSizeBinaryArray::from_data(
+    let a = MutableFixedSizeBinaryArray::try_new(
         DataType::FixedSizeBinary(2),
         Vec::from([1, 2, 3, 4]),
         None,
-    );
+    )
+    .unwrap();
     assert_eq!(a, a);
-    let b = MutableFixedSizeBinaryArray::from_data(
-        DataType::FixedSizeBinary(2),
-        Vec::from([1, 2]),
-        None,
-    );
+    let b =
+        MutableFixedSizeBinaryArray::try_new(DataType::FixedSizeBinary(2), Vec::from([1, 2]), None)
+            .unwrap();
     assert_eq!(b, b);
     assert!(a != b);
-    let a = MutableFixedSizeBinaryArray::from_data(
+    let a = MutableFixedSizeBinaryArray::try_new(
         DataType::FixedSizeBinary(2),
         Vec::from([1, 2, 3, 4]),
         Some(MutableBitmap::from([true, false])),
-    );
-    let b = MutableFixedSizeBinaryArray::from_data(
+    )
+    .unwrap();
+    let b = MutableFixedSizeBinaryArray::try_new(
         DataType::FixedSizeBinary(2),
         Vec::from([1, 2, 3, 4]),
         Some(MutableBitmap::from([false, true])),
-    );
+    )
+    .unwrap();
     assert_eq!(a, a);
     assert_eq!(b, b);
     assert!(a != b);

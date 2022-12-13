@@ -120,15 +120,6 @@ impl StructArray {
         Self::try_new(data_type, values, validity).unwrap()
     }
 
-    /// Alias for `new`
-    pub fn from_data(
-        data_type: DataType,
-        values: Vec<Box<dyn Array>>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new(data_type, values, validity)
-    }
-
     /// Creates an empty [`StructArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         if let DataType::Struct(fields) = &data_type {

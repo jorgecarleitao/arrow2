@@ -164,7 +164,7 @@ fn finish<T: NativeType>(
     values: Vec<T>,
     validity: MutableBitmap,
 ) -> PrimitiveArray<T> {
-    PrimitiveArray::from_data(data_type.clone(), values.into(), validity.into())
+    PrimitiveArray::new(data_type.clone(), values.into(), validity.into())
 }
 
 /// An iterator adapter over [`Pages`] assumed to be encoded as boolean arrays

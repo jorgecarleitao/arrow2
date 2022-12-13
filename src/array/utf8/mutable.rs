@@ -99,33 +99,6 @@ impl<O: Offset> MutableUtf8Array<O> {
         Self { values, validity }
     }
 
-    /// Alias of `new_unchecked`
-    /// # Safety
-    /// The caller must ensure that every value between offsets is a valid utf8.
-    pub unsafe fn from_data_unchecked(
-        data_type: DataType,
-        offsets: Offsets<O>,
-        values: Vec<u8>,
-        validity: Option<MutableBitmap>,
-    ) -> Self {
-        Self::new_unchecked(data_type, offsets, values, validity)
-    }
-
-    /// The canonical method to create a [`MutableUtf8Array`] out of low-end APIs.
-    /// # Panics
-    /// This function panics iff:
-    /// * The `offsets` and `values` are inconsistent
-    /// * The `values` between `offsets` are not utf8 encoded
-    /// * The validity is not `None` and its length is different from `offsets`'s length minus one.
-    pub fn from_data(
-        data_type: DataType,
-        offsets: Offsets<O>,
-        values: Vec<u8>,
-        validity: Option<MutableBitmap>,
-    ) -> Self {
-        Self::try_new(data_type, offsets, values, validity).unwrap()
-    }
-
     /// Creates a new [`MutableUtf8Array`] from a slice of optional `&[u8]`.
     // Note: this can't be `impl From` because Rust does not allow double `AsRef` on it.
     pub fn from<T: AsRef<str>, P: AsRef<[Option<T>]>>(slice: P) -> Self {
@@ -263,35 +236,13 @@ impl<O: Offset> MutableArray for MutableUtf8Array<O> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        // Safety:
-        // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
-        // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
-        let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
-        unsafe {
-            Utf8Array::from_data_unchecked(
-                data_type,
-                offsets.into(),
-                values.into(),
-                std::mem::take(&mut self.validity).map(|x| x.into()),
-            )
-        }
-        .boxed()
+        let array: Utf8Array<O> = std::mem::take(self).into();
+        array.boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        // Safety:
-        // `MutableUtf8Array` has the same invariants as `Utf8Array` and thus
-        // `Utf8Array` can be safely created from `MutableUtf8Array` without checks.
-        let (data_type, offsets, values) = std::mem::take(&mut self.values).into_inner();
-        unsafe {
-            Utf8Array::from_data_unchecked(
-                data_type,
-                offsets.into(),
-                values.into(),
-                std::mem::take(&mut self.validity).map(|x| x.into()),
-            )
-        }
-        .arced()
+        let array: Utf8Array<O> = std::mem::take(self).into();
+        array.arced()
     }
 
     fn data_type(&self) -> &DataType {
@@ -422,7 +373,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         let (validity, offsets, values) = trusted_len_unzip(iterator);
 
         // soundness: P is `str`
-        Self::from_data_unchecked(Self::default_data_type(), offsets, values, validity)
+        Self::new_unchecked(Self::default_data_type(), offsets, values, validity)
     }
 
     /// Creates a [`MutableUtf8Array`] from an iterator of trusted length.
@@ -488,7 +439,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         let (validity, offsets, values) = try_trusted_len_unzip(iterator)?;
 
         // soundness: P is `str`
-        Ok(Self::from_data_unchecked(
+        Ok(Self::new_unchecked(
             Self::default_data_type(),
             offsets,
             values,
