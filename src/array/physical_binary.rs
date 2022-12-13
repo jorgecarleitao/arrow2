@@ -142,14 +142,14 @@ where
 
     offsets.reserve(size_hint);
 
-    let start_index = offsets.len();
+    let start_index = offsets.len_proxy();
 
     for item in iterator {
         let bytes = item.as_ref();
         values.extend_from_slice(bytes);
         offsets.try_push_usize(bytes.len()).unwrap();
     }
-    offsets.len() - start_index
+    offsets.len_proxy() - start_index
 }
 
 // Populates `offsets`, `values`, and `validity` [`Vec`]s with
