@@ -362,7 +362,7 @@
     }
 
     <span class="kw">fn </span>init_validity(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">let </span>len = <span class="self">self</span>.offsets.len();
+        <span class="kw">let </span>len = <span class="self">self</span>.offsets.len_proxy();
 
         <span class="kw">let </span><span class="kw-2">mut </span>validity = MutableBitmap::new();
         validity.extend_constant(len, <span class="bool-val">true</span>);
@@ -373,7 +373,7 @@
 
 <span class="kw">impl</span>&lt;O: Offset&gt; MutableArray <span class="kw">for </span>DynMutableListArray&lt;O&gt; {
     <span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.offsets.len()
+        <span class="self">self</span>.offsets.len_proxy()
     }
 
     <span class="kw">fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>MutableBitmap&gt; {
@@ -617,4 +617,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (bdb07a8ec 2022-12-11)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (37d7de337 2022-12-12)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

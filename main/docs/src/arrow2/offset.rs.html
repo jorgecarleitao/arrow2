@@ -494,6 +494,12 @@
 <a href="#494" id="494">494</a>
 <a href="#495" id="495">495</a>
 <a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains the declaration of [`Offset`]
 </span><span class="kw">use </span>std::hint::unreachable_unchecked;
 
@@ -646,7 +652,7 @@
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>start_end(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; (usize, usize) {
         <span class="comment">// soundness: the invariant of the function
-        </span><span class="macro">assert!</span>(index &lt; <span class="self">self</span>.len());
+        </span><span class="macro">assert!</span>(index &lt; <span class="self">self</span>.len_proxy());
         <span class="kw">unsafe </span>{ <span class="self">self</span>.start_end_unchecked(index) }
     }
 
@@ -661,11 +667,17 @@
         (start, end)
     }
 
-    <span class="doccomment">/// Returns the length of this container
+    <span class="doccomment">/// Returns the length an array with these offsets would be.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+    </span><span class="kw">pub fn </span>len_proxy(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.<span class="number">0</span>.len() - <span class="number">1
     </span>}
+
+    <span class="attr">#[inline]
+    </span><span class="doccomment">/// Returns the number of offsets in this container.
+    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.<span class="number">0</span>.len()
+    }
 
     <span class="doccomment">/// Returns the byte slice stored in this buffer
     </span><span class="attr">#[inline]
@@ -676,7 +688,7 @@
     <span class="doccomment">/// Pops the last element
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>pop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;O&gt; {
-        <span class="kw">if </span><span class="self">self</span>.len() == <span class="number">0 </span>{
+        <span class="kw">if </span><span class="self">self</span>.len_proxy() == <span class="number">0 </span>{
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
             <span class="self">self</span>.<span class="number">0</span>.pop()
@@ -991,4 +1003,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (bdb07a8ec 2022-12-11)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (37d7de337 2022-12-12)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

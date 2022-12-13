@@ -185,7 +185,7 @@
     }
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.len()
+        <span class="self">self</span>.len_proxy()
     }
 
     <span class="attr">#[inline]
@@ -215,7 +215,7 @@
 
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, v: <span class="kw-2">&amp;</span>[u8]) {
-        <span class="kw">if </span><span class="self">self</span>.offsets.len() == <span class="number">100 </span>&amp;&amp; <span class="self">self</span>.offsets.capacity() &gt; <span class="number">100 </span>{
+        <span class="kw">if </span><span class="self">self</span>.offsets.len_proxy() == <span class="number">100 </span>&amp;&amp; <span class="self">self</span>.offsets.capacity() &gt; <span class="number">100 </span>{
             <span class="kw">let </span>bytes_per_row = <span class="self">self</span>.values.len() / <span class="number">100 </span>+ <span class="number">1</span>;
             <span class="kw">let </span>bytes_estimate = bytes_per_row * <span class="self">self</span>.offsets.capacity();
             <span class="kw">if </span>bytes_estimate &gt; <span class="self">self</span>.values.capacity() {
@@ -234,7 +234,7 @@
 
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.offsets.len()
+        <span class="self">self</span>.offsets.len_proxy()
     }
 
     <span class="attr">#[inline]
@@ -339,4 +339,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-static-root-path="../../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (bdb07a8ec 2022-12-11)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-static-root-path="../../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (37d7de337 2022-12-12)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
