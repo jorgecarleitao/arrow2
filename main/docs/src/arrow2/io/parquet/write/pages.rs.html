@@ -502,8 +502,11 @@
 <a href="#502" id="502">502</a>
 <a href="#503" id="503">503</a>
 <a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
 </pre><pre class="rust"><code><span class="kw">use </span>parquet2::schema::types::{ParquetType, PrimitiveType <span class="kw">as </span>ParquetPrimitiveType};
 <span class="kw">use </span>parquet2::{page::Page, write::DynIter};
+<span class="kw">use </span>std::fmt::Debug;
 
 <span class="kw">use </span><span class="kw">crate</span>::array::{ListArray, StructArray};
 <span class="kw">use </span><span class="kw">crate</span>::bitmap::Bitmap;
@@ -538,6 +541,7 @@
 </span><span class="attr">#[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub enum </span>Nested&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="doccomment">/// a primitive (leaf or parquet column)
+    /// bitmap, _, length
     </span>Primitive(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt;, bool, usize),
     <span class="doccomment">/// a list
     </span>List(ListNested&lt;<span class="lifetime">&#39;a</span>, i32&gt;),
@@ -651,13 +655,13 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn </span>to_leafs(array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array) -&gt; Vec&lt;<span class="kw-2">&amp;</span><span class="kw">dyn </span>Array&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>leafs = <span class="macro">vec!</span>[];
-    to_leafs_recursive(array, <span class="kw-2">&amp;mut </span>leafs);
-    leafs
+<span class="kw">fn </span>to_leaves(array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array) -&gt; Vec&lt;<span class="kw-2">&amp;</span><span class="kw">dyn </span>Array&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>leaves = <span class="macro">vec!</span>[];
+    to_leaves_recursive(array, <span class="kw-2">&amp;mut </span>leaves);
+    leaves
 }
 
-<span class="kw">fn </span>to_leafs_recursive&lt;<span class="lifetime">&#39;a</span>&gt;(array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Array, leafs: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Array&gt;) {
+<span class="kw">fn </span>to_leaves_recursive&lt;<span class="lifetime">&#39;a</span>&gt;(array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Array, leaves: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Array&gt;) {
     <span class="kw">use </span>PhysicalType::<span class="kw-2">*</span>;
     <span class="kw">match </span>array.data_type().to_physical_type() {
         Struct =&gt; {
@@ -665,35 +669,35 @@
             array
                 .values()
                 .iter()
-                .for_each(|a| to_leafs_recursive(a.as_ref(), leafs));
+                .for_each(|a| to_leaves_recursive(a.as_ref(), leaves));
         }
         List =&gt; {
             <span class="kw">let </span>array = array.as_any().downcast_ref::&lt;ListArray&lt;i32&gt;&gt;().unwrap();
-            to_leafs_recursive(array.values().as_ref(), leafs);
+            to_leaves_recursive(array.values().as_ref(), leaves);
         }
         LargeList =&gt; {
             <span class="kw">let </span>array = array.as_any().downcast_ref::&lt;ListArray&lt;i64&gt;&gt;().unwrap();
-            to_leafs_recursive(array.values().as_ref(), leafs);
+            to_leaves_recursive(array.values().as_ref(), leaves);
         }
         Null | Boolean | Primitive(<span class="kw">_</span>) | Binary | FixedSizeBinary | LargeBinary | Utf8
-        | LargeUtf8 | Dictionary(<span class="kw">_</span>) =&gt; leafs.push(array),
+        | LargeUtf8 | Dictionary(<span class="kw">_</span>) =&gt; leaves.push(array),
         other =&gt; <span class="macro">todo!</span>(<span class="string">&quot;Writing {:?} to parquet not yet implemented&quot;</span>, other),
     }
 }
 
-<span class="kw">fn </span>to_parquet_leafs(type_: ParquetType) -&gt; Vec&lt;ParquetPrimitiveType&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>leafs = <span class="macro">vec!</span>[];
-    to_parquet_leafs_recursive(type_, <span class="kw-2">&amp;mut </span>leafs);
-    leafs
+<span class="kw">fn </span>to_parquet_leaves(type_: ParquetType) -&gt; Vec&lt;ParquetPrimitiveType&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>leaves = <span class="macro">vec!</span>[];
+    to_parquet_leaves_recursive(type_, <span class="kw-2">&amp;mut </span>leaves);
+    leaves
 }
 
-<span class="kw">fn </span>to_parquet_leafs_recursive(type_: ParquetType, leafs: <span class="kw-2">&amp;mut </span>Vec&lt;ParquetPrimitiveType&gt;) {
+<span class="kw">fn </span>to_parquet_leaves_recursive(type_: ParquetType, leaves: <span class="kw-2">&amp;mut </span>Vec&lt;ParquetPrimitiveType&gt;) {
     <span class="kw">match </span>type_ {
-        ParquetType::PrimitiveType(primitive) =&gt; leafs.push(primitive),
+        ParquetType::PrimitiveType(primitive) =&gt; leaves.push(primitive),
         ParquetType::GroupType { fields, .. } =&gt; {
             fields
                 .into_iter()
-                .for_each(|type_| to_parquet_leafs_recursive(type_, leafs));
+                .for_each(|type_| to_parquet_leaves_recursive(type_, leaves));
         }
     }
 }
@@ -708,9 +712,9 @@
     <span class="kw">let </span>array = array.as_ref();
     <span class="kw">let </span>nested = to_nested(array, <span class="kw-2">&amp;</span>type_)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>types = to_parquet_leafs(type_);
+    <span class="kw">let </span>types = to_parquet_leaves(type_);
 
-    <span class="kw">let </span>values = to_leafs(array);
+    <span class="kw">let </span>values = to_leaves(array);
 
     <span class="macro">assert_eq!</span>(encoding.len(), types.len());
 

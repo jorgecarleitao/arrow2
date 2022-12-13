@@ -55,6 +55,13 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
 </pre><pre class="rust"><code><span class="kw">use </span>parquet2::schema::types::PrimitiveType;
 <span class="kw">use </span>parquet2::statistics::serialize_statistics;
 <span class="kw">use </span>parquet2::{encoding::Encoding, page::DataPage, types::NativeType};
@@ -64,7 +71,7 @@
 <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::WriteOptions;
 <span class="kw">use </span><span class="kw">super</span>::basic::{build_statistics, encode_plain};
 <span class="kw">use </span><span class="kw">crate</span>::io::parquet::read::schema::is_nullable;
-<span class="kw">use </span><span class="kw">crate</span>::io::parquet::write::Nested;
+<span class="kw">use </span><span class="kw">crate</span>::io::parquet::write::{slice_nested_leaf, Nested};
 <span class="kw">use crate</span>::{
     array::{Array, PrimitiveArray},
     error::Result,
@@ -85,14 +92,21 @@
     <span class="kw">let </span>is_optional = is_nullable(<span class="kw-2">&amp;</span>type_.field_info);
 
     <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
-    <span class="kw">let </span>(repetition_levels_byte_length, definition_levels_byte_length) =
-        nested::write_rep_and_def(options.version, nested, <span class="kw-2">&amp;mut </span>buffer)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>buffer = encode_plain(array, is_optional, buffer);
+    <span class="comment">// we slice the leaf by the offsets as dremel only computes lengths and thus
+    // does NOT take the starting offset into account.
+    // By slicing the leaf array we also don&#39;t write too many values.
+    </span><span class="kw">let </span>(start, len) = slice_nested_leaf(nested);
+
+    <span class="kw">let </span>(repetition_levels_byte_length, definition_levels_byte_length) =
+        nested::write_rep_and_def(options.version, nested, <span class="kw-2">&amp;mut </span>buffer, start)<span class="question-mark">?</span>;
+
+    <span class="kw">let </span>array = array.slice(start, len);
+    <span class="kw">let </span>buffer = encode_plain(<span class="kw-2">&amp;</span>array, is_optional, buffer);
 
     <span class="kw">let </span>statistics = <span class="kw">if </span>options.write_statistics {
         <span class="prelude-val">Some</span>(serialize_statistics(<span class="kw-2">&amp;</span>build_statistics(
-            array,
+            <span class="kw-2">&amp;</span>array,
             type_.clone(),
         )))
     } <span class="kw">else </span>{

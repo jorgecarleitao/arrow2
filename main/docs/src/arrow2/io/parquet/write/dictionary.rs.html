@@ -243,6 +243,10 @@
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
 <a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
 </pre><pre class="rust"><code><span class="kw">use </span>parquet2::{
     encoding::{hybrid_rle::encode_u32, Encoding},
     page::{DictPage, Page},
@@ -251,7 +255,7 @@
     write::DynIter,
 };
 
-<span class="kw">use </span><span class="kw">crate</span>::io::parquet::write::utils;
+<span class="kw">use </span><span class="kw">crate</span>::io::parquet::write::{slice_nested_leaf, utils};
 <span class="kw">use crate</span>::{
     array::{Array, DictionaryArray, DictionaryKey},
     io::parquet::read::schema::is_nullable,
@@ -320,6 +324,7 @@
     nested: <span class="kw-2">&amp;</span>[Nested],
     options: WriteOptions,
     buffer: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;,
+    offset: usize,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(usize, usize)&gt; {
     <span class="kw">if </span>nested.len() == <span class="number">1 </span>{
         <span class="kw">let </span>is_optional = is_nullable(<span class="kw-2">&amp;</span>type_.field_info);
@@ -327,7 +332,7 @@
         <span class="kw">let </span>definition_levels_byte_length = buffer.len();
         <span class="prelude-val">Ok</span>((<span class="number">0</span>, definition_levels_byte_length))
     } <span class="kw">else </span>{
-        nested::write_rep_and_def(options.version, nested, buffer)
+        nested::write_rep_and_def(options.version, nested, buffer, offset)
     }
 }
 
@@ -357,6 +362,7 @@
     <span class="comment">// parquet only accepts a single validity - we &quot;&amp;&quot; the validities into a single one
     // and ignore keys whole _value_ is null.
     </span><span class="kw">let </span>validity = normalized_validity(array);
+    <span class="kw">let </span>(start, len) = slice_nested_leaf(nested);
 
     <span class="kw">let </span>(repetition_levels_byte_length, definition_levels_byte_length) = serialize_levels(
         validity.as_ref(),
@@ -365,9 +371,11 @@
         nested,
         options,
         <span class="kw-2">&amp;mut </span>buffer,
+        start,
     )<span class="question-mark">?</span>;
+    <span class="kw">let </span>array = array.slice(start, len);
 
-    serialize_keys_values(array, validity.as_ref(), <span class="kw-2">&amp;mut </span>buffer)<span class="question-mark">?</span>;
+    serialize_keys_values(<span class="kw-2">&amp;</span>array, validity.as_ref(), <span class="kw-2">&amp;mut </span>buffer)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>(num_values, num_rows) = <span class="kw">if </span>nested.len() == <span class="number">1 </span>{
         (array.len(), array.len())

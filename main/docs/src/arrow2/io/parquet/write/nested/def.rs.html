@@ -340,6 +340,9 @@
 <a href="#340" id="340">340</a>
 <a href="#341" id="341">341</a>
 <a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{bitmap::Bitmap, offset::Offset};
 
 <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::pages::{ListNested, Nested};
@@ -428,10 +431,13 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; DefLevelsIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub fn </span>new(nested: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Nested]) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(nested: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Nested], offset: usize) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>remaining_values = num_values(nested);
 
-        <span class="kw">let </span>primitive_validity = iter(<span class="kw-2">&amp;</span>nested[nested.len() - <span class="number">1</span>..]).pop().unwrap();
+        <span class="kw">let </span><span class="kw-2">mut </span>primitive_validity = iter(<span class="kw-2">&amp;</span>nested[nested.len() - <span class="number">1</span>..]).pop().unwrap();
+        <span class="kw">if </span>offset &gt; <span class="number">0 </span>{
+            primitive_validity.nth(offset - <span class="number">1</span>);
+        }
 
         <span class="kw">let </span>iter = iter(<span class="kw-2">&amp;</span>nested[..nested.len() - <span class="number">1</span>]);
         <span class="kw">let </span>remaining = std::iter::repeat(<span class="number">0</span>).take(iter.len()).collect();
@@ -506,7 +512,7 @@
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
     <span class="kw">fn </span>test(nested: Vec&lt;Nested&gt;, expected: Vec&lt;u32&gt;) {
-        <span class="kw">let </span><span class="kw-2">mut </span>iter = DefLevelsIter::new(<span class="kw-2">&amp;</span>nested);
+        <span class="kw">let </span><span class="kw-2">mut </span>iter = DefLevelsIter::new(<span class="kw-2">&amp;</span>nested, <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(iter.size_hint().<span class="number">0</span>, expected.len());
         <span class="kw">let </span>result = iter.by_ref().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
         <span class="macro">assert_eq!</span>(result, expected);

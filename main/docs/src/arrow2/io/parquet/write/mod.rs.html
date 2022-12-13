@@ -579,6 +579,98 @@
 <a href="#579" id="579">579</a>
 <a href="#580" id="580">580</a>
 <a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
 </pre><pre class="rust"><code><span class="doccomment">//! APIs to write to Parquet format.
 //!
 //! # Arrow/Parquet Interoperability
@@ -650,6 +742,30 @@
 <span class="kw">pub use </span>pages::array_to_columns;
 <span class="kw">pub use </span>pages::Nested;
 
+<span class="doccomment">/// returns offset and length to slice the leaf values
+</span><span class="kw">pub</span>(<span class="self">self</span>) <span class="kw">fn </span>slice_nested_leaf(nested: <span class="kw-2">&amp;</span>[Nested]) -&gt; (usize, usize) {
+    <span class="comment">// find the deepest recursive dremel structure as that one determines how many values we must
+    // take
+    </span><span class="kw">let </span><span class="kw-2">mut </span>out = (<span class="number">0</span>, <span class="number">0</span>);
+    <span class="kw">for </span>nested <span class="kw">in </span>nested.iter().rev() {
+        <span class="kw">match </span>nested {
+            Nested::LargeList(l_nested) =&gt; {
+                <span class="kw">let </span>start = <span class="kw-2">*</span>l_nested.offsets.first().unwrap();
+                <span class="kw">let </span>end = <span class="kw-2">*</span>l_nested.offsets.last().unwrap();
+                <span class="kw">return </span>(start <span class="kw">as </span>usize, (end - start) <span class="kw">as </span>usize);
+            }
+            Nested::List(l_nested) =&gt; {
+                <span class="kw">let </span>start = <span class="kw-2">*</span>l_nested.offsets.first().unwrap();
+                <span class="kw">let </span>end = <span class="kw-2">*</span>l_nested.offsets.last().unwrap();
+                <span class="kw">return </span>(start <span class="kw">as </span>usize, (end - start) <span class="kw">as </span>usize);
+            }
+            Nested::Primitive(<span class="kw">_</span>, <span class="kw">_</span>, len) =&gt; out = (<span class="number">0</span>, <span class="kw-2">*</span>len),
+            <span class="kw">_ </span>=&gt; {}
+        }
+    }
+    out
+}
+
 <span class="kw">pub</span>(<span class="self">self</span>) <span class="kw">fn </span>decimal_length_from_precision(precision: usize) -&gt; usize {
     <span class="comment">// digits = floor(log_10(2^(8*n - 1) - 1))
     // ceil(digits) = log10(2^(8*n - 1) - 1)
@@ -711,6 +827,52 @@
     )
 }
 
+<span class="kw">fn </span>slice_parquet_array&lt;<span class="lifetime">&#39;a</span>&gt;(
+    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Array,
+    nested: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Nested&lt;<span class="lifetime">&#39;a</span>&gt;],
+    offset: usize,
+    length: usize,
+) -&gt; (Box&lt;<span class="kw">dyn </span>Array&gt;, Vec&lt;Nested&lt;<span class="lifetime">&#39;a</span>&gt;&gt;) {
+    <span class="kw">let </span><span class="kw-2">mut </span>nested = nested.to_vec();
+
+    <span class="kw">let </span><span class="kw-2">mut </span>is_nested = <span class="bool-val">false</span>;
+    <span class="kw">for </span>nested <span class="kw">in </span>nested.iter_mut() {
+        <span class="kw">match </span>nested {
+            Nested::LargeList(l_nested) =&gt; {
+                is_nested = <span class="bool-val">true</span>;
+                <span class="comment">// the slice is a bit awkward because we always want the latest value to compute the next length;
+                </span>l_nested.offsets = <span class="kw-2">&amp;</span>l_nested.offsets
+                    [offset..offset + std::cmp::min(length + <span class="number">1</span>, l_nested.offsets.len())];
+            }
+            Nested::List(l_nested) =&gt; {
+                is_nested = <span class="bool-val">true</span>;
+                l_nested.offsets = <span class="kw-2">&amp;</span>l_nested.offsets
+                    [offset..offset + std::cmp::min(length + <span class="number">1</span>, l_nested.offsets.len())];
+            }
+            <span class="kw">_ </span>=&gt; {}
+        }
+    }
+    <span class="kw">if </span>is_nested {
+        (array.to_boxed(), nested)
+    } <span class="kw">else </span>{
+        (array.slice(offset, length), nested)
+    }
+}
+
+<span class="kw">fn </span>get_max_length(array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array, nested: <span class="kw-2">&amp;</span>[Nested]) -&gt; usize {
+    <span class="comment">// get the length that should be sliced.
+    // that is the inner nested structure that
+    // dictates how often the primitive should be repeated
+    </span><span class="kw">for </span>nested <span class="kw">in </span>nested.iter().rev() {
+        <span class="kw">match </span>nested {
+            Nested::LargeList(l_nested) =&gt; <span class="kw">return </span>l_nested.offsets.len() - <span class="number">1</span>,
+            Nested::List(l_nested) =&gt; <span class="kw">return </span>l_nested.offsets.len() - <span class="number">1</span>,
+            <span class="kw">_ </span>=&gt; {}
+        }
+    }
+    array.len()
+}
+
 <span class="doccomment">/// Returns an iterator of [`Page`].
 </span><span class="attr">#[allow(clippy::needless_collect)]
 </span><span class="kw">pub fn </span>array_to_pages(
@@ -728,13 +890,27 @@
 
     </span><span class="kw">let </span>array_byte_size = estimated_bytes_size(array);
     <span class="kw">if </span>array_byte_size &gt;= (<span class="number">2u32</span>.pow(<span class="number">31</span>) - <span class="number">2u32</span>.pow(<span class="number">25</span>)) <span class="kw">as </span>usize &amp;&amp; array.len() &gt; <span class="number">3 </span>{
-        <span class="kw">let </span>split_at = array.len() / <span class="number">2</span>;
-        <span class="kw">let </span>left = array.slice(<span class="number">0</span>, split_at);
-        <span class="kw">let </span>right = array.slice(split_at, array.len() - split_at);
+        <span class="kw">let </span>length = get_max_length(array, nested);
+        <span class="kw">let </span>split_at = length / <span class="number">2</span>;
+        <span class="kw">let </span>(sub_array_left, subnested_left) = slice_parquet_array(array, nested, <span class="number">0</span>, split_at);
+        <span class="kw">let </span>(sub_array_right, subnested_right) =
+            slice_parquet_array(array, nested, split_at, length - split_at);
 
         <span class="prelude-val">Ok</span>(DynIter::new(
-            array_to_pages(<span class="kw-2">&amp;*</span>left, type_.clone(), nested, options, encoding)<span class="question-mark">?
-                </span>.chain(array_to_pages(<span class="kw-2">&amp;*</span>right, type_, nested, options, encoding)<span class="question-mark">?</span>),
+            array_to_pages(
+                sub_array_left.as_ref(),
+                type_.clone(),
+                subnested_left.as_ref(),
+                options,
+                encoding,
+            )<span class="question-mark">?
+            </span>.chain(array_to_pages(
+                sub_array_right.as_ref(),
+                type_,
+                subnested_right.as_ref(),
+                options,
+                encoding,
+            )<span class="question-mark">?</span>),
         ))
     } <span class="kw">else </span>{
         <span class="kw">match </span>array.data_type() {
@@ -756,17 +932,25 @@
                     ((array_byte_size <span class="kw">as </span>f64) / ((array.len() + <span class="number">1</span>) <span class="kw">as </span>f64)) <span class="kw">as </span>usize;
                 <span class="kw">let </span>rows_per_page = (page_size / (bytes_per_row + <span class="number">1</span>)).max(<span class="number">1</span>);
 
-                <span class="kw">let </span>vs: Vec&lt;<span class="prelude-ty">Result</span>&lt;Page&gt;&gt; = (<span class="number">0</span>..array.len())
+                <span class="kw">let </span>length = get_max_length(array, nested);
+                <span class="kw">let </span>vs: Vec&lt;<span class="prelude-ty">Result</span>&lt;Page&gt;&gt; = (<span class="number">0</span>..length)
                     .step_by(rows_per_page)
                     .map(|offset| {
-                        <span class="kw">let </span>length = <span class="kw">if </span>offset + rows_per_page &gt; array.len() {
-                            array.len() - offset
+                        <span class="kw">let </span>length = <span class="kw">if </span>offset + rows_per_page &gt; length {
+                            length - offset
                         } <span class="kw">else </span>{
                             rows_per_page
                         };
 
-                        <span class="kw">let </span>sub_array = array.slice(offset, length);
-                        array_to_page(sub_array.as_ref(), type_.clone(), nested, options, encoding)
+                        <span class="kw">let </span>(sub_array, subnested) =
+                            slice_parquet_array(array, nested, offset, length);
+                        array_to_page(
+                            sub_array.as_ref(),
+                            type_.clone(),
+                            <span class="kw-2">&amp;</span>subnested,
+                            options,
+                            encoding,
+                        )
                     })
                     .collect();
 
