@@ -4,6 +4,7 @@ use crate::{
     array::{Array, MutableArray},
     bitmap::MutableBitmap,
     datatypes::DataType,
+    error::Error,
 };
 
 use super::StructArray;
@@ -38,6 +39,43 @@ impl MutableStructArray {
         Self::from_data(data_type, values, None)
     }
 
+    /// Fallibly create a [`MutableStructArray`] out of low-level APIs.
+    /// # Errors
+    /// This function returns an error if:
+    /// * `data_type` is not [`DataType::Struct`]
+    /// * The inner types of `data_type` are not equal to those of `values`
+    /// * `validity` is not `None` and its length is different from the `values`'s length
+    pub fn try_from_data(
+        data_type: DataType,
+        values: Vec<Box<dyn MutableArray>>,
+        validity: Option<MutableBitmap>,
+    ) -> Result<Self, Error> {
+        match data_type.to_logical_type() {
+            DataType::Struct(ref fields) => {
+                if !fields
+                    .iter()
+                    .map(|f| f.data_type())
+                    .eq(values.iter().map(|f| f.data_type()))
+                {
+                    Err(crate::error::Error::InvalidArgumentError(
+                        "DataType::Struct fields must match those found in `values`.".to_owned(),
+                    ))
+                } else {
+                    Ok(())
+                }
+            }
+            _ => Err(crate::error::Error::InvalidArgumentError(
+                "StructArray must be initialized with DataType::Struct".to_owned(),
+            )),
+        }?;
+        let self_ = Self {
+            data_type,
+            values,
+            validity,
+        };
+        self_.check_lengths().map(|_| self_)
+    }
+
     /// Create a [`MutableStructArray`] out of low-end APIs.
     /// # Panics
     /// This function panics iff:
@@ -49,33 +87,29 @@ impl MutableStructArray {
         values: Vec<Box<dyn MutableArray>>,
         validity: Option<MutableBitmap>,
     ) -> Self {
-        match data_type.to_logical_type() {
-            DataType::Struct(ref fields) => assert!(fields
-                .iter()
-                .map(|f| f.data_type())
-                .eq(values.iter().map(|f| f.data_type()))),
-            _ => panic!("StructArray must be initialized with DataType::Struct"),
-        };
-        let self_ = Self {
-            data_type,
-            values,
-            validity,
-        };
-        self_.assert_lengths();
-        self_
+        Self::try_from_data(data_type, values, validity).unwrap()
     }
 
-    fn assert_lengths(&self) {
+    fn check_lengths(&self) -> Result<(), Error> {
         let first_len = self.values.first().map(|v| v.len());
         if let Some(len) = first_len {
             if !self.values.iter().all(|x| x.len() == len) {
                 let lengths: Vec<_> = self.values.iter().map(|v| v.len()).collect();
-                panic!("StructArray child lengths differ: {:?}", lengths);
+                return Err(Error::InvalidArgumentError(format!(
+                    "StructArray child lengths differ: {lengths:?}"
+                )));
             }
         }
         if let Some(validity) = &self.validity {
-            assert_eq!(first_len.unwrap_or(0), validity.len());
+            let struct_len = first_len.unwrap_or(0);
+            let validity_len = validity.len();
+            if struct_len != validity_len {
+                return Err(Error::InvalidArgumentError(format!(
+                    "StructArray child lengths ({struct_len}) differ from validity ({validity_len})",
+                )));
+            }
         }
+        Ok(())
     }
 
     /// Extract the low-end APIs from the [`MutableStructArray`].

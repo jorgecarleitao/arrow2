@@ -1,3 +1,5 @@
+mod mutable;
+
 use arrow2::{
     array::*,
     datatypes::{DataType, Field},
