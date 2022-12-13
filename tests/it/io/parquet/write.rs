@@ -12,6 +12,17 @@ fn round_trip(
     compression: CompressionOptions,
     encodings: Vec<Encoding>,
 ) -> Result<()> {
+    round_trip_opt_stats(column, file, version, compression, encodings, true)
+}
+
+fn round_trip_opt_stats(
+    column: &str,
+    file: &str,
+    version: Version,
+    compression: CompressionOptions,
+    encodings: Vec<Encoding>,
+    check_stats: bool,
+) -> Result<()> {
     let (array, statistics) = match file {
         "nested" => (
             pyarrow_nested_nullable(column),
@@ -56,7 +67,9 @@ fn round_trip(
 
     let (result, stats) = read_column(&mut Cursor::new(data), "a1")?;
     assert_eq!(array.as_ref(), result.as_ref());
-    assert_eq!(statistics, stats);
+    if check_stats {
+        assert_eq!(statistics, stats);
+    }
     Ok(())
 }
 
@@ -358,6 +371,18 @@ fn list_large_binary_optional_v1() -> Result<()> {
         Version::V1,
         CompressionOptions::Uncompressed,
         vec![Encoding::Plain],
+    )
+}
+
+#[test]
+fn list_nested_inner_required_required_i64() -> Result<()> {
+    round_trip_opt_stats(
+        "list_nested_inner_required_required_i64",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        false,
     )
 }
 

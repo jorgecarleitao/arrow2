@@ -1,5 +1,6 @@
 use parquet2::schema::types::{ParquetType, PrimitiveType as ParquetPrimitiveType};
 use parquet2::{page::Page, write::DynIter};
+use std::fmt::Debug;
 
 use crate::array::{ListArray, StructArray};
 use crate::bitmap::Bitmap;
@@ -34,6 +35,7 @@ impl<'a, O: Offset> ListNested<'a, O> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Nested<'a> {
     /// a primitive (leaf or parquet column)
+    /// bitmap, _, length
     Primitive(Option<&'a Bitmap>, bool, usize),
     /// a list
     List(ListNested<'a, i32>),
@@ -147,13 +149,13 @@ fn to_nested_recursive<'a>(
     Ok(())
 }
 
-fn to_leafs(array: &dyn Array) -> Vec<&dyn Array> {
-    let mut leafs = vec![];
-    to_leafs_recursive(array, &mut leafs);
-    leafs
+fn to_leaves(array: &dyn Array) -> Vec<&dyn Array> {
+    let mut leaves = vec![];
+    to_leaves_recursive(array, &mut leaves);
+    leaves
 }
 
-fn to_leafs_recursive<'a>(array: &'a dyn Array, leafs: &mut Vec<&'a dyn Array>) {
+fn to_leaves_recursive<'a>(array: &'a dyn Array, leaves: &mut Vec<&'a dyn Array>) {
     use PhysicalType::*;
     match array.data_type().to_physical_type() {
         Struct => {
@@ -161,35 +163,35 @@ fn to_leafs_recursive<'a>(array: &'a dyn Array, leafs: &mut Vec<&'a dyn Array>) 
             array
                 .values()
                 .iter()
-                .for_each(|a| to_leafs_recursive(a.as_ref(), leafs));
+                .for_each(|a| to_leaves_recursive(a.as_ref(), leaves));
         }
         List => {
             let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
-            to_leafs_recursive(array.values().as_ref(), leafs);
+            to_leaves_recursive(array.values().as_ref(), leaves);
         }
         LargeList => {
             let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
-            to_leafs_recursive(array.values().as_ref(), leafs);
+            to_leaves_recursive(array.values().as_ref(), leaves);
         }
         Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
-        | LargeUtf8 | Dictionary(_) => leafs.push(array),
+        | LargeUtf8 | Dictionary(_) => leaves.push(array),
         other => todo!("Writing {:?} to parquet not yet implemented", other),
     }
 }
 
-fn to_parquet_leafs(type_: ParquetType) -> Vec<ParquetPrimitiveType> {
-    let mut leafs = vec![];
-    to_parquet_leafs_recursive(type_, &mut leafs);
-    leafs
+fn to_parquet_leaves(type_: ParquetType) -> Vec<ParquetPrimitiveType> {
+    let mut leaves = vec![];
+    to_parquet_leaves_recursive(type_, &mut leaves);
+    leaves
 }
 
-fn to_parquet_leafs_recursive(type_: ParquetType, leafs: &mut Vec<ParquetPrimitiveType>) {
+fn to_parquet_leaves_recursive(type_: ParquetType, leaves: &mut Vec<ParquetPrimitiveType>) {
     match type_ {
-        ParquetType::PrimitiveType(primitive) => leafs.push(primitive),
+        ParquetType::PrimitiveType(primitive) => leaves.push(primitive),
         ParquetType::GroupType { fields, .. } => {
             fields
                 .into_iter()
-                .for_each(|type_| to_parquet_leafs_recursive(type_, leafs));
+                .for_each(|type_| to_parquet_leaves_recursive(type_, leaves));
         }
     }
 }
@@ -204,9 +206,9 @@ pub fn array_to_columns<A: AsRef<dyn Array> + Send + Sync>(
     let array = array.as_ref();
     let nested = to_nested(array, &type_)?;
 
-    let types = to_parquet_leafs(type_);
+    let types = to_parquet_leaves(type_);
 
-    let values = to_leafs(array);
+    let values = to_leaves(array);
 
     assert_eq!(encoding.len(), types.len());
 
