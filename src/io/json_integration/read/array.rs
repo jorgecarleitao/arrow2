@@ -414,7 +414,8 @@ pub fn to_array(
                                 }
                                 _ => panic!(),
                             })
-                            .collect(),
+                            .collect::<Vec<_>>()
+                            .into(),
                     )
                 })
                 .unwrap_or_default();
