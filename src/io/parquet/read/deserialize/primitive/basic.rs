@@ -281,7 +281,7 @@ pub(super) fn finish<T: NativeType>(
     } else {
         Some(validity)
     };
-    MutablePrimitiveArray::from_data(data_type.clone(), values, validity)
+    MutablePrimitiveArray::try_new(data_type.clone(), values, validity).unwrap()
 }
 
 /// An [`Iterator`] adapter over [`Pages`] assumed to be encoded as primitive arrays

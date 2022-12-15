@@ -117,16 +117,6 @@ impl UnionArray {
         Self::try_new(data_type, types, fields, offsets).unwrap()
     }
 
-    /// Alias for `new`
-    pub fn from_data(
-        data_type: DataType,
-        types: Buffer<i8>,
-        fields: Vec<Box<dyn Array>>,
-        offsets: Option<Buffer<i32>>,
-    ) -> Self {
-        Self::new(data_type, types, fields, offsets)
-    }
-
     /// Creates a new null [`UnionArray`].
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         if let DataType::Union(f, _, mode) = &data_type {

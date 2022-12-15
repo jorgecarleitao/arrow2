@@ -27,7 +27,7 @@ fn basics() {
     assert!(!array.is_valid(1));
     assert!(array.is_valid(2));
 
-    let array2 = Utf8Array::<i32>::from_data(
+    let array2 = Utf8Array::<i32>::new(
         DataType::Utf8,
         array.offsets().clone(),
         array.values().clone(),
@@ -67,7 +67,7 @@ fn from_slice() {
     let values = b"abcc".to_vec().into();
     assert_eq!(
         b,
-        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+        Utf8Array::<i32>::new(DataType::Utf8, offsets, values, None)
     );
 }
 
@@ -79,7 +79,7 @@ fn from_iter_values() {
     let values = b"abcc".to_vec().into();
     assert_eq!(
         b,
-        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+        Utf8Array::<i32>::new(DataType::Utf8, offsets, values, None)
     );
 }
 
@@ -92,7 +92,7 @@ fn from_trusted_len_iter() {
     let values = b"abcc".to_vec().into();
     assert_eq!(
         b,
-        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+        Utf8Array::<i32>::new(DataType::Utf8, offsets, values, None)
     );
 }
 
@@ -109,7 +109,7 @@ fn try_from_trusted_len_iter() {
     let values = b"abcc".to_vec().into();
     assert_eq!(
         b,
-        Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None)
+        Utf8Array::<i32>::new(DataType::Utf8, offsets, values, None)
     );
 }
 
@@ -147,7 +147,7 @@ fn out_of_bounds_offsets_panics() {
 fn index_out_of_bounds_panics() {
     let offsets = vec![0, 1, 2, 4].try_into().unwrap();
     let values = b"abbb".to_vec().into();
-    let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    let array = Utf8Array::<i32>::new(DataType::Utf8, offsets, values, None);
 
     array.value(3);
 }
@@ -165,7 +165,7 @@ fn into_mut_1() {
     let values = Buffer::from(b"a".to_vec());
     let a = values.clone(); // cloned values
     assert_eq!(a, values);
-    let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    let array = Utf8Array::<i32>::new(DataType::Utf8, offsets, values, None);
     assert!(array.into_mut().is_left());
 }
 
@@ -175,7 +175,7 @@ fn into_mut_2() {
     let values = b"a".to_vec().into();
     let a = offsets.clone(); // cloned offsets
     assert_eq!(a, offsets);
-    let array = Utf8Array::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    let array = Utf8Array::<i32>::new(DataType::Utf8, offsets, values, None);
     assert!(array.into_mut().is_left());
 }
 

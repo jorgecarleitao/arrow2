@@ -30,7 +30,7 @@ fn basics() {
     assert!(!array.is_valid(1));
     assert!(array.is_valid(2));
 
-    let array2 = BinaryArray::<i32>::from_data(
+    let array2 = BinaryArray::<i32>::new(
         DataType::Binary,
         array.offsets().clone(),
         array.values().clone(),
@@ -101,7 +101,7 @@ fn with_validity() {
 fn wrong_offsets() {
     let offsets = vec![0, 5, 4].try_into().unwrap(); // invalid offsets
     let values = Buffer::from(b"abbbbb".to_vec());
-    BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
+    BinaryArray::<i32>::new(DataType::Binary, offsets, values, None);
 }
 
 #[test]
@@ -109,7 +109,7 @@ fn wrong_offsets() {
 fn wrong_data_type() {
     let offsets = vec![0, 4].try_into().unwrap();
     let values = Buffer::from(b"abbb".to_vec());
-    BinaryArray::<i32>::from_data(DataType::Int8, offsets, values, None);
+    BinaryArray::<i32>::new(DataType::Int8, offsets, values, None);
 }
 
 #[test]
@@ -118,7 +118,7 @@ fn value_with_wrong_offsets_panics() {
     let offsets = vec![0, 10, 11, 4].try_into().unwrap();
     let values = Buffer::from(b"abbb".to_vec());
     // the 10-11 is not checked
-    let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
+    let array = BinaryArray::<i32>::new(DataType::Binary, offsets, values, None);
 
     // but access is still checked (and panics)
     // without checks, this would result in reading beyond bounds
@@ -130,7 +130,7 @@ fn value_with_wrong_offsets_panics() {
 fn index_out_of_bounds_panics() {
     let offsets = vec![0, 1, 2, 4].try_into().unwrap();
     let values = Buffer::from(b"abbb".to_vec());
-    let array = BinaryArray::<i32>::from_data(DataType::Utf8, offsets, values, None);
+    let array = BinaryArray::<i32>::new(DataType::Utf8, offsets, values, None);
 
     array.value(3);
 }
@@ -141,7 +141,7 @@ fn value_unchecked_with_wrong_offsets_panics() {
     let offsets = vec![0, 10, 11, 4].try_into().unwrap();
     let values = Buffer::from(b"abbb".to_vec());
     // the 10-11 is not checked
-    let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
+    let array = BinaryArray::<i32>::new(DataType::Binary, offsets, values, None);
 
     // but access is still checked (and panics)
     // without checks, this would result in reading beyond bounds,
@@ -162,7 +162,7 @@ fn into_mut_1() {
     let values = Buffer::from(b"a".to_vec());
     let a = values.clone(); // cloned values
     assert_eq!(a, values);
-    let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
+    let array = BinaryArray::<i32>::new(DataType::Binary, offsets, values, None);
     assert!(array.into_mut().is_left());
 }
 
@@ -172,7 +172,7 @@ fn into_mut_2() {
     let values = Buffer::from(b"a".to_vec());
     let a = offsets.clone(); // cloned offsets
     assert_eq!(a, offsets);
-    let array = BinaryArray::<i32>::from_data(DataType::Binary, offsets, values, None);
+    let array = BinaryArray::<i32>::new(DataType::Binary, offsets, values, None);
     assert!(array.into_mut().is_left());
 }
 

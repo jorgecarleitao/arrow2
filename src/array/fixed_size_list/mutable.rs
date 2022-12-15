@@ -140,19 +140,21 @@ impl<M: MutableArray + 'static> MutableArray for MutableFixedSizeListArray<M> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(FixedSizeListArray::new(
+        FixedSizeListArray::new(
             self.data_type.clone(),
             self.values.as_box(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        )
+        .boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(FixedSizeListArray::new(
+        FixedSizeListArray::new(
             self.data_type.clone(),
             self.values.as_box(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        )
+        .arced()
     }
 
     fn data_type(&self) -> &DataType {

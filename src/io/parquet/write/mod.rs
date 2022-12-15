@@ -450,7 +450,7 @@ pub fn array_to_page_simple(
                 values.extend_from_slice(&[0; 4]); // months
                 values.extend_from_slice(bytes); // days and seconds
             });
-            let array = FixedSizeBinaryArray::from_data(
+            let array = FixedSizeBinaryArray::new(
                 DataType::FixedSizeBinary(12),
                 values.into(),
                 array.validity().cloned(),
@@ -518,7 +518,7 @@ pub fn array_to_page_simple(
                     let bytes = &x.to_be_bytes()[16 - size..];
                     values.extend_from_slice(bytes)
                 });
-                let array = FixedSizeBinaryArray::from_data(
+                let array = FixedSizeBinaryArray::new(
                     DataType::FixedSizeBinary(size),
                     values.into(),
                     array.validity().cloned(),

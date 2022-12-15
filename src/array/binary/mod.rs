@@ -6,7 +6,7 @@ use crate::{
     buffer::Buffer,
     datatypes::DataType,
     error::Error,
-    offset::{Offset, OffsetsBuffer},
+    offset::{Offset, Offsets, OffsetsBuffer},
     trusted_len::TrustedLen,
 };
 
@@ -273,12 +273,15 @@ impl<O: Offset> BinaryArray<O> {
                         mutable_values.into(),
                         Some(mutable_bitmap.into()),
                     )),
-                    (Some(values), Some(offsets)) => Right(MutableBinaryArray::from_data(
-                        self.data_type,
-                        offsets,
-                        values,
-                        Some(mutable_bitmap),
-                    )),
+                    (Some(values), Some(offsets)) => Right(
+                        MutableBinaryArray::try_new(
+                            self.data_type,
+                            offsets,
+                            values,
+                            Some(mutable_bitmap),
+                        )
+                        .unwrap(),
+                    ),
                 },
             }
         } else {
@@ -304,12 +307,9 @@ impl<O: Offset> BinaryArray<O> {
                     values.into(),
                     None,
                 )),
-                (Some(values), Some(offsets)) => Right(MutableBinaryArray::from_data(
-                    self.data_type,
-                    offsets,
-                    values,
-                    None,
-                )),
+                (Some(values), Some(offsets)) => Right(
+                    MutableBinaryArray::try_new(self.data_type, offsets, values, None).unwrap(),
+                ),
             }
         }
     }
@@ -324,7 +324,7 @@ impl<O: Offset> BinaryArray<O> {
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         Self::new(
             data_type,
-            vec![O::default(); 1 + length].try_into().unwrap(),
+            Offsets::new_zeroed(length).into(),
             Buffer::new(),
             Some(Bitmap::new_zeroed(length)),
         )
@@ -412,16 +412,6 @@ impl<O: Offset> BinaryArray<O> {
     {
         // soundness: I: TrustedLen
         unsafe { Self::try_from_trusted_len_iter_unchecked(iter) }
-    }
-
-    /// Alias for `new`
-    pub fn from_data(
-        data_type: DataType,
-        offsets: OffsetsBuffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new(data_type, offsets, values, validity)
     }
 }
 

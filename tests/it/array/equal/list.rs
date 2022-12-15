@@ -77,14 +77,14 @@ fn test_bla() {
         Some(6),
     ]));
     let validity = Bitmap::from([true, false, true]);
-    let lhs = ListArray::<i32>::from_data(data_type, offsets, values, Some(validity));
+    let lhs = ListArray::<i32>::new(data_type, offsets, values, Some(validity));
     let lhs = lhs.slice(1, 2);
 
     let offsets = vec![0, 0, 3].try_into().unwrap();
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
     let values = Box::new(Int32Array::from([Some(4), None, Some(6)]));
     let validity = Bitmap::from([false, true]);
-    let rhs = ListArray::<i32>::from_data(data_type, offsets, values, Some(validity));
+    let rhs = ListArray::<i32>::new(data_type, offsets, values, Some(validity));
 
     assert_eq!(lhs, rhs);
 }

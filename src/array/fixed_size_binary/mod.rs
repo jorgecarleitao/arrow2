@@ -69,11 +69,6 @@ impl FixedSizeBinaryArray {
         Self::try_new(data_type, values, validity).unwrap()
     }
 
-    /// Alias for `new`
-    pub fn from_data(data_type: DataType, values: Buffer<u8>, validity: Option<Bitmap>) -> Self {
-        Self::new(data_type, values, validity)
-    }
-
     /// Returns a new empty [`FixedSizeBinaryArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         Self::new(data_type, Buffer::new(), None)

@@ -4,7 +4,7 @@ mod mutable;
 
 #[test]
 fn basics() {
-    let array = FixedSizeBinaryArray::from_data(
+    let array = FixedSizeBinaryArray::new(
         DataType::FixedSizeBinary(2),
         Buffer::from(vec![1, 2, 3, 4, 5, 6]),
         Some(Bitmap::from([true, false, true])),
@@ -23,18 +23,20 @@ fn basics() {
 
 #[test]
 fn with_validity() {
-    let values = Buffer::from(vec![1, 2, 3, 4, 5, 6]);
-    let a = FixedSizeBinaryArray::new(DataType::FixedSizeBinary(2), values, None);
+    let a = FixedSizeBinaryArray::new(
+        DataType::FixedSizeBinary(2),
+        vec![1, 2, 3, 4, 5, 6].into(),
+        None,
+    );
     let a = a.with_validity(Some(Bitmap::from([true, false, true])));
     assert!(a.validity().is_some());
 }
 
 #[test]
 fn debug() {
-    let values = Buffer::from(vec![1, 2, 3, 4, 5, 6]);
-    let a = FixedSizeBinaryArray::from_data(
+    let a = FixedSizeBinaryArray::new(
         DataType::FixedSizeBinary(2),
-        values,
+        vec![1, 2, 3, 4, 5, 6].into(),
         Some(Bitmap::from([true, false, true])),
     );
     assert_eq!(

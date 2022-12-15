@@ -12,14 +12,14 @@ fn basics() {
     array.try_extend(data).unwrap();
     let array: ListArray<i32> = array.into();
 
-    let values = PrimitiveArray::<i32>::from_data(
+    let values = PrimitiveArray::<i32>::new(
         DataType::Int32,
         Buffer::from(vec![1, 2, 3, 4, 0, 6]),
         Some(Bitmap::from([true, true, true, true, false, true])),
     );
 
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);
-    let expected = ListArray::<i32>::from_data(
+    let expected = ListArray::<i32>::new(
         data_type,
         vec![0, 3, 3, 6].try_into().unwrap(),
         Box::new(values),

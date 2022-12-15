@@ -12,7 +12,7 @@ fn test_simple_iter() {
         Field::new("c", DataType::Int32, false),
     ];
 
-    let array = StructArray::from_data(
+    let array = StructArray::new(
         DataType::Struct(fields),
         vec![boolean.clone(), int.clone()],
         None,

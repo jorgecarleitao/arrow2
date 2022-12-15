@@ -293,7 +293,7 @@ fn struct_() -> Result<()> {
     let values = vec![Int32Array::from([Some(1), None, Some(3)]).boxed()];
     let validity = Bitmap::from([true, false, true]);
 
-    let array = StructArray::from_data(data_type, values, validity.into());
+    let array = StructArray::new(data_type, values, validity.into());
 
     test_round_trip(array)
 }

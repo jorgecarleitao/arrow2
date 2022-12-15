@@ -24,7 +24,7 @@ fn basics() {
     assert!(!array.is_valid(1));
     assert!(array.is_valid(2));
 
-    let array2 = Int32Array::from_data(
+    let array2 = Int32Array::new(
         DataType::Int32,
         array.values().clone(),
         array.validity().cloned(),

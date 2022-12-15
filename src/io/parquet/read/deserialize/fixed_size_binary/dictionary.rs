@@ -54,7 +54,9 @@ fn read_dict(data_type: DataType, dict: &DictPage) -> Box<dyn Array> {
 
     let values = dict.buffer.clone();
 
-    FixedSizeBinaryArray::from_data(data_type, values.into(), None).boxed()
+    FixedSizeBinaryArray::try_new(data_type, values.into(), None)
+        .unwrap()
+        .boxed()
 }
 
 impl<K, I> Iterator for DictIter<K, I>

@@ -2,7 +2,7 @@ use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
     error::Error,
-    offset::{Offset, OffsetsBuffer},
+    offset::{Offset, Offsets, OffsetsBuffer},
 };
 use std::sync::Arc;
 
@@ -87,16 +87,6 @@ impl<O: Offset> ListArray<O> {
         Self::try_new(data_type, offsets, values, validity).unwrap()
     }
 
-    /// Alias of `new`
-    pub fn from_data(
-        data_type: DataType,
-        offsets: OffsetsBuffer<O>,
-        values: Box<dyn Array>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new(data_type, offsets, values, validity)
-    }
-
     /// Returns a new empty [`ListArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         let values = new_empty_array(Self::get_child_type(&data_type).clone());
@@ -109,7 +99,7 @@ impl<O: Offset> ListArray<O> {
         let child = Self::get_child_type(&data_type).clone();
         Self::new(
             data_type,
-            vec![O::zero(); 1 + length].try_into().unwrap(),
+            Offsets::new_zeroed(length).into(),
             new_empty_array(child),
             Some(Bitmap::new_zeroed(length)),
         )

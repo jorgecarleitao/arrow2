@@ -37,11 +37,6 @@ impl NullArray {
         Self::try_new(data_type, length).unwrap()
     }
 
-    /// Alias for `new`
-    pub fn from_data(data_type: DataType, length: usize) -> Self {
-        Self::new(data_type, length)
-    }
-
     /// Returns a new empty [`NullArray`].
     pub fn new_empty(data_type: DataType) -> Self {
         Self::new(data_type, 0)

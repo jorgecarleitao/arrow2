@@ -88,16 +88,6 @@ impl MapArray {
         Self::try_new(data_type, offsets, field, validity).unwrap()
     }
 
-    /// Alias for `new`
-    pub fn from_data(
-        data_type: DataType,
-        offsets: OffsetsBuffer<i32>,
-        field: Box<dyn Array>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new(data_type, offsets, field, validity)
-    }
-
     /// Returns a new null [`MapArray`] of `length`.
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         let field = new_empty_array(Self::get_field(&data_type).data_type().clone());

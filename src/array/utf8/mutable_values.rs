@@ -30,7 +30,7 @@ impl<O: Offset> From<MutableUtf8ValuesArray<O>> for Utf8Array<O> {
         // `MutableUtf8ValuesArray` has the same invariants as `Utf8Array` and thus
         // `Utf8Array` can be safely created from `MutableUtf8ValuesArray` without checks.
         unsafe {
-            Utf8Array::<O>::from_data_unchecked(
+            Utf8Array::<O>::new_unchecked(
                 other.data_type,
                 other.offsets.into(),
                 other.values.into(),
@@ -45,12 +45,7 @@ impl<O: Offset> From<MutableUtf8ValuesArray<O>> for MutableUtf8Array<O> {
         // Safety:
         // `MutableUtf8ValuesArray` has the same invariants as `MutableUtf8Array`
         unsafe {
-            MutableUtf8Array::<O>::from_data_unchecked(
-                other.data_type,
-                other.offsets,
-                other.values,
-                None,
-            )
+            MutableUtf8Array::<O>::new_unchecked(other.data_type, other.offsets, other.values, None)
         }
     }
 }
@@ -244,21 +239,13 @@ impl<O: Offset> MutableArray for MutableUtf8ValuesArray<O> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        // Safety:
-        // `MutableUtf8ValuesArray` has the same invariants as `Utf8Array` and thus
-        // `Utf8Array` can be safely created from `MutableUtf8ValuesArray` without checks.
-        let (data_type, offsets, values) = std::mem::take(self).into_inner();
-        unsafe { Utf8Array::from_data_unchecked(data_type, offsets.into(), values.into(), None) }
-            .boxed()
+        let array: Utf8Array<O> = std::mem::take(self).into();
+        array.boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        // Safety:
-        // `MutableUtf8ValuesArray` has the same invariants as `Utf8Array` and thus
-        // `Utf8Array` can be safely created from `MutableUtf8ValuesArray` without checks.
-        let (data_type, offsets, values) = std::mem::take(self).into_inner();
-        unsafe { Utf8Array::from_data_unchecked(data_type, offsets.into(), values.into(), None) }
-            .arced()
+        let array: Utf8Array<O> = std::mem::take(self).into();
+        array.arced()
     }
 
     fn data_type(&self) -> &DataType {

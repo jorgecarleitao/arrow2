@@ -32,7 +32,7 @@ fn sparse_debug() -> Result<()> {
         Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
-    let array = UnionArray::from_data(data_type, types, fields, None);
+    let array = UnionArray::new(data_type, types, fields, None);
 
     assert_eq!(format!("{:?}", array), "UnionArray[1, None, c]");
 
@@ -53,7 +53,7 @@ fn dense_debug() -> Result<()> {
     ];
     let offsets = Some(vec![0, 1, 0].into());
 
-    let array = UnionArray::from_data(data_type, types, fields, offsets);
+    let array = UnionArray::new(data_type, types, fields, offsets);
 
     assert_eq!(format!("{:?}", array), "UnionArray[1, None, c]");
 
@@ -73,7 +73,7 @@ fn slice() -> Result<()> {
         Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
-    let array = UnionArray::from_data(data_type.clone(), types, fields.clone(), None);
+    let array = UnionArray::new(data_type.clone(), types, fields.clone(), None);
 
     let result = array.slice(1, 2);
 
@@ -82,7 +82,7 @@ fn slice() -> Result<()> {
         Int32Array::from(&[None, Some(2)]).boxed(),
         Utf8Array::<i32>::from([Some("b"), Some("c")]).boxed(),
     ];
-    let expected = UnionArray::from_data(data_type, sliced_types, sliced_fields, None);
+    let expected = UnionArray::new(data_type, sliced_types, sliced_fields, None);
 
     assert_eq!(expected, result);
     Ok(())
@@ -101,7 +101,7 @@ fn iter_sparse() -> Result<()> {
         Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
-    let array = UnionArray::from_data(data_type, types, fields.clone(), None);
+    let array = UnionArray::new(data_type, types, fields.clone(), None);
     let mut iter = array.iter();
 
     assert_eq!(
@@ -135,7 +135,7 @@ fn iter_dense() -> Result<()> {
         Utf8Array::<i32>::from([Some("c")]).boxed(),
     ];
 
-    let array = UnionArray::from_data(data_type, types, fields.clone(), Some(offsets));
+    let array = UnionArray::new(data_type, types, fields.clone(), Some(offsets));
     let mut iter = array.iter();
 
     assert_eq!(
@@ -168,7 +168,7 @@ fn iter_sparse_slice() -> Result<()> {
         Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
     ];
 
-    let array = UnionArray::from_data(data_type, types, fields.clone(), None);
+    let array = UnionArray::new(data_type, types, fields.clone(), None);
     let array_slice = array.slice(1, 1);
     let mut iter = array_slice.iter();
 
@@ -195,7 +195,7 @@ fn iter_dense_slice() -> Result<()> {
         Utf8Array::<i32>::from([Some("c")]).boxed(),
     ];
 
-    let array = UnionArray::from_data(data_type, types, fields.clone(), Some(offsets));
+    let array = UnionArray::new(data_type, types, fields.clone(), Some(offsets));
     let array_slice = array.slice(1, 1);
     let mut iter = array_slice.iter();
 
@@ -222,7 +222,7 @@ fn scalar() -> Result<()> {
         Utf8Array::<i32>::from([Some("c")]).boxed(),
     ];
 
-    let array = UnionArray::from_data(data_type, types, fields.clone(), Some(offsets));
+    let array = UnionArray::new(data_type, types, fields.clone(), Some(offsets));
 
     let scalar = new_scalar(&array, 0);
     let union_scalar = scalar.as_any().downcast_ref::<UnionScalar>().unwrap();

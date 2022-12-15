@@ -6,7 +6,7 @@ use either::Either;
 #[test]
 fn array_to_mutable() {
     let data = vec![1, 2, 3];
-    let arr = PrimitiveArray::from_data(DataType::Int32, data.into(), None);
+    let arr = PrimitiveArray::new(DataType::Int32, data.into(), None);
 
     // to mutable push and freeze again
     let mut mut_arr = arr.into_mut().unwrap_right();
@@ -24,7 +24,7 @@ fn array_to_mutable() {
 #[test]
 fn array_to_mutable_not_owned() {
     let data = vec![1, 2, 3];
-    let arr = PrimitiveArray::from_data(DataType::Int32, data.into(), None);
+    let arr = PrimitiveArray::new(DataType::Int32, data.into(), None);
     let arr2 = arr.clone();
 
     // to the `to_mutable` should fail and we should get back the original array
@@ -43,11 +43,11 @@ fn array_to_mutable_validity() {
 
     // both have a single reference should be ok
     let bitmap = Bitmap::from_iter([true, false, true]);
-    let arr = PrimitiveArray::from_data(DataType::Int32, data.clone().into(), Some(bitmap));
+    let arr = PrimitiveArray::new(DataType::Int32, data.clone().into(), Some(bitmap));
     assert!(matches!(arr.into_mut(), Either::Right(_)));
 
     // now we clone the bitmap increasing the ref count
     let bitmap = Bitmap::from_iter([true, false, true]);
-    let arr = PrimitiveArray::from_data(DataType::Int32, data.into(), Some(bitmap.clone()));
+    let arr = PrimitiveArray::new(DataType::Int32, data.into(), Some(bitmap.clone()));
     assert!(matches!(arr.into_mut(), Either::Left(_)));
 }

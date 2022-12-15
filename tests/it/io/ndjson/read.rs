@@ -103,9 +103,9 @@ fn case_nested_struct() -> (String, Box<dyn Array>) {
         BooleanArray::from([None, None, Some(true), None]).boxed(),
     ];
 
-    let values = vec![StructArray::from_data(inner, values, None).boxed()];
+    let values = vec![StructArray::new(inner, values, None).boxed()];
 
-    let array = Box::new(StructArray::from_data(data_type, values, None));
+    let array = StructArray::new(data_type, values, None).boxed();
 
     (ndjson.to_string(), array)
 }

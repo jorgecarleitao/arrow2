@@ -31,14 +31,14 @@ fn some_values() -> (DataType, Vec<Box<dyn Array>>) {
 fn basic() {
     let (fields, values) = some_values();
 
-    let array = StructArray::from_data(fields.clone(), values.clone(), None);
+    let array = StructArray::new(fields.clone(), values.clone(), None);
 
     let mut a = GrowableStruct::new(vec![&array], false, 0);
 
     a.extend(0, 1, 2);
     let result: StructArray = a.into();
 
-    let expected = StructArray::from_data(
+    let expected = StructArray::new(
         fields,
         vec![values[0].slice(1, 2), values[1].slice(1, 2)],
         None,
@@ -50,14 +50,14 @@ fn basic() {
 fn offset() {
     let (fields, values) = some_values();
 
-    let array = StructArray::from_data(fields.clone(), values.clone(), None).slice(1, 3);
+    let array = StructArray::new(fields.clone(), values.clone(), None).slice(1, 3);
 
     let mut a = GrowableStruct::new(vec![&array], false, 0);
 
     a.extend(0, 1, 2);
     let result: StructArray = a.into();
 
-    let expected = StructArray::from_data(
+    let expected = StructArray::new(
         fields,
         vec![values[0].slice(2, 2), values[1].slice(2, 2)],
         None,
@@ -70,7 +70,7 @@ fn offset() {
 fn nulls() {
     let (fields, values) = some_values();
 
-    let array = StructArray::from_data(
+    let array = StructArray::new(
         fields.clone(),
         values.clone(),
         Some(Bitmap::from_u8_slice([0b00000010], 5)),
@@ -81,7 +81,7 @@ fn nulls() {
     a.extend(0, 1, 2);
     let result: StructArray = a.into();
 
-    let expected = StructArray::from_data(
+    let expected = StructArray::new(
         fields,
         vec![values[0].slice(1, 2), values[1].slice(1, 2)],
         Some(Bitmap::from_u8_slice([0b00000010], 5).slice(1, 2)),
@@ -94,7 +94,7 @@ fn nulls() {
 fn many() {
     let (fields, values) = some_values();
 
-    let array = StructArray::from_data(fields.clone(), values.clone(), None);
+    let array = StructArray::new(fields.clone(), values.clone(), None);
 
     let mut mutable = GrowableStruct::new(vec![&array, &array], true, 0);
 
@@ -118,7 +118,7 @@ fn many() {
         None,
     ]));
 
-    let expected = StructArray::from_data(
+    let expected = StructArray::new(
         fields,
         vec![expected_string, expected_int],
         Some(Bitmap::from([true, true, true, true, false])),

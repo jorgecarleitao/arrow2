@@ -37,7 +37,8 @@ impl<O: Offset> From<MutableBinaryValuesArray<O>> for BinaryArray<O> {
 
 impl<O: Offset> From<MutableBinaryValuesArray<O>> for MutableBinaryArray<O> {
     fn from(other: MutableBinaryValuesArray<O>) -> Self {
-        MutableBinaryArray::<O>::from_data(other.data_type, other.offsets, other.values, None)
+        MutableBinaryArray::<O>::try_new(other.data_type, other.offsets, other.values, None)
+            .expect("MutableBinaryValuesArray is consistent with MutableBinaryArray")
     }
 }
 

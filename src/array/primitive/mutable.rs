@@ -7,12 +7,12 @@ use crate::{
     array::{Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::DataType,
-    error::{Error, Result},
+    error::Error,
     trusted_len::TrustedLen,
     types::NativeType,
 };
 
-use super::PrimitiveArray;
+use super::{check, PrimitiveArray};
 
 /// The Arrow's equivalent to `Vec<Option<T>>` where `T` is byte-size (e.g. `i32`).
 /// Converting a [`MutablePrimitiveArray`] into a [`PrimitiveArray`] is `O(1)`.
@@ -55,32 +55,29 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
         Self::with_capacity_from(capacity, T::PRIMITIVE.into())
     }
 
-    /// Create a [`MutablePrimitiveArray`] out of low-end APIs.
-    /// # Panics
-    /// This function panics iff:
-    /// * `data_type` is not supported by the physical type
-    /// * The validity is not `None` and its length is different from the `values`'s length
-    pub fn from_data(data_type: DataType, values: Vec<T>, validity: Option<MutableBitmap>) -> Self {
-        if !data_type.to_physical_type().eq_primitive(T::PRIMITIVE) {
-            Err(Error::InvalidArgumentError(format!(
-                "Type {} does not support logical type {:?}",
-                std::any::type_name::<T>(),
-                data_type
-            )))
-            .unwrap()
-        }
-        if let Some(ref validity) = validity {
-            assert_eq!(values.len(), validity.len());
-        }
-        Self {
+    /// The canonical method to create a [`MutablePrimitiveArray`] out of its internal components.
+    /// # Implementation
+    /// This function is `O(1)`.
+    ///
+    /// # Errors
+    /// This function errors iff:
+    /// * The validity is not `None` and its length is different from `values`'s length
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to [`crate::datatypes::PhysicalType::Primitive(T::PRIMITIVE)`]
+    pub fn try_new(
+        data_type: DataType,
+        values: Vec<T>,
+        validity: Option<MutableBitmap>,
+    ) -> Result<Self, Error> {
+        check(&data_type, &values, validity.as_ref().map(|x| x.len()))?;
+        Ok(Self {
             data_type,
             values,
             validity,
-        }
+        })
     }
 
     /// Extract the low-end APIs from the [`MutablePrimitiveArray`].
-    pub fn into_data(self) -> (DataType, Vec<T>, Option<MutableBitmap>) {
+    pub fn into_inner(self) -> (DataType, Vec<T>, Option<MutableBitmap>) {
         (self.data_type, self.values, self.validity)
     }
 
@@ -267,7 +264,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     /// This operation is `O(1)`.
     #[inline]
     pub fn to(self, data_type: DataType) -> Self {
-        Self::from_data(data_type, self.values, self.validity)
+        Self::try_new(data_type, self.values, self.validity).unwrap()
     }
 
     /// Converts itself into an [`Array`].
@@ -366,7 +363,7 @@ impl<T: NativeType> Extend<Option<T>> for MutablePrimitiveArray<T> {
 
 impl<T: NativeType> TryExtend<Option<T>> for MutablePrimitiveArray<T> {
     /// This is infalible and is implemented for consistency with all other types
-    fn try_extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) -> Result<()> {
+    fn try_extend<I: IntoIterator<Item = Option<T>>>(&mut self, iter: I) -> Result<(), Error> {
         self.extend(iter);
         Ok(())
     }
@@ -374,7 +371,7 @@ impl<T: NativeType> TryExtend<Option<T>> for MutablePrimitiveArray<T> {
 
 impl<T: NativeType> TryPush<Option<T>> for MutablePrimitiveArray<T> {
     /// This is infalible and is implemented for consistency with all other types
-    fn try_push(&mut self, item: Option<T>) -> Result<()> {
+    fn try_push(&mut self, item: Option<T>) -> Result<(), Error> {
         self.push(item);
         Ok(())
     }
@@ -390,19 +387,21 @@ impl<T: NativeType> MutableArray for MutablePrimitiveArray<T> {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        Box::new(PrimitiveArray::new(
+        PrimitiveArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        )
+        .boxed()
     }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
-        Arc::new(PrimitiveArray::new(
+        PrimitiveArray::new(
             self.data_type.clone(),
             std::mem::take(&mut self.values).into(),
             std::mem::take(&mut self.validity).map(|x| x.into()),
-        ))
+        )
+        .arced()
     }
 
     fn data_type(&self) -> &DataType {
@@ -510,7 +509,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     /// Creates a (non-null) [`MutablePrimitiveArray`] from a vector of values.
     /// This does not have memcopy and is the fastest way to create a [`PrimitiveArray`].
     pub fn from_vec(values: Vec<T>) -> Self {
-        Self::from_data(T::PRIMITIVE.into(), values, None)
+        Self::try_new(T::PRIMITIVE.into(), values, None).unwrap()
     }
 
     /// Creates a new [`MutablePrimitiveArray`] from an iterator over values
@@ -659,7 +658,7 @@ impl<T: NativeType> PartialEq for MutablePrimitiveArray<T> {
 }
 
 impl<T: NativeType> TryExtendFromSelf for MutablePrimitiveArray<T> {
-    fn try_extend_from_self(&mut self, other: &Self) -> Result<()> {
+    fn try_extend_from_self(&mut self, other: &Self) -> Result<(), Error> {
         extend_validity(self.len(), &mut self.validity, &other.validity);
 
         let slice = other.values.as_slice();

@@ -6,7 +6,7 @@ use crate::{
     buffer::Buffer,
     datatypes::DataType,
     error::{Error, Result},
-    offset::{Offset, OffsetsBuffer},
+    offset::{Offset, Offsets, OffsetsBuffer},
     trusted_len::TrustedLen,
 };
 
@@ -312,7 +312,7 @@ impl<O: Offset> Utf8Array<O> {
                         })
                     }
                     (Some(values), Some(offsets)) => Right(unsafe {
-                        MutableUtf8Array::from_data_unchecked(
+                        MutableUtf8Array::new_unchecked(
                             self.data_type,
                             offsets,
                             values,
@@ -336,7 +336,7 @@ impl<O: Offset> Utf8Array<O> {
                     Utf8Array::new_unchecked(self.data_type, self.offsets, values.into(), None)
                 }),
                 (Some(values), Some(offsets)) => Right(unsafe {
-                    MutableUtf8Array::from_data_unchecked(self.data_type, offsets, values, None)
+                    MutableUtf8Array::new_unchecked(self.data_type, offsets, values, None)
                 }),
             }
         }
@@ -347,7 +347,7 @@ impl<O: Offset> Utf8Array<O> {
     /// The array is guaranteed to have no elements nor validity.
     #[inline]
     pub fn new_empty(data_type: DataType) -> Self {
-        unsafe { Self::from_data_unchecked(data_type, OffsetsBuffer::new(), Buffer::new(), None) }
+        unsafe { Self::new_unchecked(data_type, OffsetsBuffer::new(), Buffer::new(), None) }
     }
 
     /// Returns a new [`Utf8Array`] whose all slots are null / `None`.
@@ -355,7 +355,7 @@ impl<O: Offset> Utf8Array<O> {
     pub fn new_null(data_type: DataType, length: usize) -> Self {
         Self::new(
             data_type,
-            vec![O::default(); 1 + length].try_into().unwrap(),
+            Offsets::new_zeroed(length).into(),
             Buffer::new(),
             Some(Bitmap::new_zeroed(length)),
         )
@@ -514,29 +514,6 @@ impl<O: Offset> Utf8Array<O> {
         I: TrustedLen<Item = std::result::Result<Option<P>, E>>,
     {
         MutableUtf8Array::<O>::try_from_trusted_len_iter(iter).map(|x| x.into())
-    }
-
-    /// Alias for `new`
-    pub fn from_data(
-        data_type: DataType,
-        offsets: OffsetsBuffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new(data_type, offsets, values, validity)
-    }
-
-    /// Alias for [`Self::new_unchecked`]
-    /// # Safety
-    /// This function is unsafe iff:
-    /// * The `values` between two consecutive `offsets` are not valid utf8
-    pub unsafe fn from_data_unchecked(
-        data_type: DataType,
-        offsets: OffsetsBuffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Self {
-        Self::new_unchecked(data_type, offsets, values, validity)
     }
 }
 

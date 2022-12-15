@@ -245,7 +245,7 @@ mod tests {
             Field::new("c", DataType::Int32, false),
         ];
 
-        let array = StructArray::from_data(
+        let array = StructArray::new(
             DataType::Struct(fields),
             vec![boolean.clone(), int.clone()],
             Some(Bitmap::from([true, true, false, true])),
@@ -309,7 +309,7 @@ mod tests {
             Field::new("c", DataType::Int32, false),
         ];
 
-        let array = StructArray::from_data(
+        let array = StructArray::new(
             DataType::Struct(fields),
             vec![boolean.clone(), int.clone()],
             Some(Bitmap::from([true, true, false, true])),
@@ -320,7 +320,7 @@ mod tests {
             Field::new("c", array.data_type().clone(), true),
         ];
 
-        let array = StructArray::from_data(
+        let array = StructArray::new(
             DataType::Struct(fields),
             vec![Box::new(array.clone()), Box::new(array)],
             None,
@@ -412,7 +412,7 @@ mod tests {
             Field::new("c", DataType::Int32, false),
         ];
 
-        let array = StructArray::from_data(
+        let array = StructArray::new(
             DataType::Struct(fields),
             vec![boolean.clone(), int.clone()],
             Some(Bitmap::from([true, true, false, true])),
