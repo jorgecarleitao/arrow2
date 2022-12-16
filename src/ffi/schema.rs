@@ -46,7 +46,7 @@ impl ArrowSchema {
         let mut flags = field.is_nullable as i64 * 2;
 
         // allocate (and hold) the children
-        let children_vec = match field.data_type() {
+        let children_vec = match field.data_type().to_logical_type() {
             DataType::List(field) => {
                 vec![Box::new(ArrowSchema::new(field.as_ref()))]
             }
@@ -473,7 +473,7 @@ fn to_format(data_type: &DataType) -> String {
 }
 
 pub(super) fn get_child(data_type: &DataType, index: usize) -> Result<DataType> {
-    match (index, data_type) {
+    match (index, data_type.to_logical_type()) {
         (0, DataType::List(field)) => Ok(field.data_type().clone()),
         (0, DataType::FixedSizeList(field, _)) => Ok(field.data_type().clone()),
         (0, DataType::LargeList(field)) => Ok(field.data_type().clone()),

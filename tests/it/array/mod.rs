@@ -58,6 +58,11 @@ fn empty() {
         DataType::Utf8,
         DataType::Binary,
         DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
+        DataType::List(Box::new(Field::new(
+            "a",
+            DataType::Extension("ext".to_owned(), Box::new(DataType::Int32), None),
+            true,
+        ))),
         DataType::Union(
             vec![Field::new("a", DataType::Binary, true)],
             None,
@@ -68,8 +73,39 @@ fn empty() {
             None,
             UnionMode::Dense,
         ),
+        DataType::Struct(vec![Field::new("a", DataType::Int32, true)]),
     ];
     let a = datatypes.into_iter().all(|x| new_empty_array(x).len() == 0);
+    assert!(a);
+}
+
+#[test]
+fn empty_extension() {
+    let datatypes = vec![
+        DataType::Int32,
+        DataType::Float64,
+        DataType::Utf8,
+        DataType::Binary,
+        DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
+        DataType::Union(
+            vec![Field::new("a", DataType::Binary, true)],
+            None,
+            UnionMode::Sparse,
+        ),
+        DataType::Union(
+            vec![Field::new("a", DataType::Binary, true)],
+            None,
+            UnionMode::Dense,
+        ),
+        DataType::Struct(vec![Field::new("a", DataType::Int32, true)]),
+    ];
+    let a = datatypes
+        .into_iter()
+        .map(|dt| DataType::Extension("ext".to_owned(), Box::new(dt), None))
+        .all(|x| {
+            let a = new_empty_array(x);
+            a.len() == 0 && matches!(a.data_type(), DataType::Extension(_, _, _))
+        });
     assert!(a);
 }
 

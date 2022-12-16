@@ -1,5 +1,6 @@
 use arrow2::array::*;
 use arrow2::compute::concatenate::concatenate;
+use arrow2::datatypes::{DataType, Field};
 use arrow2::error::Result;
 
 #[test]
@@ -114,4 +115,25 @@ fn boolean_primitive_arrays() -> Result<()> {
     assert_eq!(expected_output, arr.as_ref());
 
     Ok(())
+}
+
+#[test]
+fn list_of_extensions_of_struct() {
+    let data_type = DataType::List(Box::new(Field::new(
+        "a",
+        DataType::Extension(
+            "ext".to_owned(),
+            Box::new(
+                DataType::Struct(vec![Field::new( "a", DataType::Int16, false,)])
+            ),
+            None,
+        ),
+        true,
+    )));
+
+    let empty0 = new_empty_array(data_type.clone());
+    let empty1 = new_empty_array(data_type.clone());
+
+    let c = concatenate(&[empty0.as_ref(), empty1.as_ref()]).unwrap();
+    dbg!(c.data_type());
 }

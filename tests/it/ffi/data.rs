@@ -346,3 +346,22 @@ fn extension() -> Result<()> {
     );
     test_round_trip_schema(field)
 }
+
+#[test]
+fn extension_struct() -> Result<()> {
+    let data_type = DataType::Extension(
+        "ext".to_owned(),
+        Box::new(DataType::Struct(vec![Field::new(
+            "a",
+            DataType::Int32,
+            true,
+        )])),
+        None,
+    );
+
+    let values = vec![Int32Array::from([Some(1), None, Some(3)]).boxed()];
+    let validity = Bitmap::from([true, false, true]);
+
+    let array = StructArray::from_data(data_type, values, validity.into());
+    test_round_trip(array)
+}

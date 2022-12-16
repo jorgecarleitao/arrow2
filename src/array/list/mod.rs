@@ -166,7 +166,7 @@ impl<O: Offset> ListArray<O> {
 
         let child_data_type = Self::try_get_child(&data_type)?.data_type();
         let values_data_type = values.data_type();
-        if child_data_type != values_data_type {
+        if child_data_type.to_logical_type() != values_data_type.to_logical_type() {
             return Err(Error::oos(
                 format!("ListArray's child's DataType must match. However, the expected DataType is {child_data_type:?} while it got {values_data_type:?}."),
             ));
