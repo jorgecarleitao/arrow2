@@ -33,7 +33,7 @@ pub(crate) use common::first_dict_field;
 pub(crate) use common::{read_dictionary, read_record_batch};
 pub use file::{read_batch, read_file_dictionaries, read_file_metadata, FileMetadata};
 pub use reader::FileReader;
-pub(crate) use schema::deserialize_schema;
+pub use schema::deserialize_schema;
 pub use stream::{read_stream_metadata, StreamMetadata, StreamReader, StreamState};
 
 /// how dictionaries are tracked in this crate
