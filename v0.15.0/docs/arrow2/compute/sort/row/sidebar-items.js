@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Row","A comparable representation of a row"],["RowConverter","Converts `Box<dyn Array>` columns into a row-oriented format."],["Rows","A row-oriented representation of arrow data, that is normalized for comparison"],["RowsIter","An iterator over [`Rows`]"],["SortField","Configure the data type and sort order for a given column"]]};
