@@ -30,7 +30,7 @@ pub struct UnionArray {
     types: Buffer<i8>,
     // Invariant: `map.len() == fields.len()`
     // Invariant: every item in `map` is `> 0 && < fields.len()`
-    map: Option<Vec<usize>>,
+    map: Option<[usize; 127]>,
     fields: Vec<Box<dyn Array>>,
     // Invariant: when set, `offsets.len() == types.len()`
     offsets: Option<Buffer<i32>>,
@@ -99,28 +99,51 @@ impl UnionArray {
                     "In a union, when the ids are set, their length must be equal to the number of fields",
                 ));
             }
-            ids.iter().map(|&id| {
-                if id < 0 || id >= fields.len() as i32 {
-                    return Err(Error::oos("In a union, when the ids are set, each id must be smaller than the number of fields."));
+
+            // example:
+            // * types = [5, 7, 5, 7, 7, 7, 5, 7, 7, 5, 5]
+            // * ids = [5, 7]
+            // => hash = [0, 0, 0, 0, 0, 0, 1, 0, ...]
+            let mut hash = [0; 127];
+
+            for (pos, &id) in ids.iter().enumerate() {
+                if !(0..=127).contains(&id) {
+                    return Err(Error::oos(
+                        "In a union, when the ids are set, every id must belong to [0, 128[",
+                    ));
                 }
-                Ok(id as usize)
-            }).collect::<Result<Vec<_>, Error>>().map(Some)?
+                hash[id as usize] = pos;
+            }
+
+            types.iter().try_for_each(|&type_| {
+                if type_ < 0 {
+                    return Err(Error::oos("In a union, when the ids are set, every type must be >= 0"));
+                }
+                let id = hash[type_ as usize];
+                if id >= fields.len() {
+                    Err(Error::oos("In a union, when the ids are set, each id must be smaller than the number of fields."))
+                } else {
+                    Ok(())
+                }
+            })?;
+
+            Some(hash)
         } else {
+            // Safety: every type in types is smaller than number of fields
+            let mut is_valid = true;
+            for &type_ in types.iter() {
+                if type_ < 0 || type_ >= number_of_fields {
+                    is_valid = false
+                }
+            }
+            if !is_valid {
+                return Err(Error::oos(
+                    "Every type in `types` must be larger than 0 and smaller than the number of fields.",
+                ));
+            }
+
             None
         };
-
-        // Safety: every type in types is smaller than number of fields
-        let mut is_valid = true;
-        for &type_ in types.iter() {
-            if type_ < 0 || type_ >= number_of_fields {
-                is_valid = false
-            }
-        }
-        if !is_valid {
-            return Err(Error::oos(
-                "Every type in `types` must be larger than 0 and smaller than the number of fields.",
-            ));
-        }
 
         Ok(Self {
             data_type,
@@ -234,7 +257,7 @@ impl UnionArray {
         Self {
             data_type: self.data_type.clone(),
             fields: self.fields.clone(),
-            map: self.map.clone(),
+            map: self.map,
             types: self.types.clone().slice_unchecked(offset, length),
             offsets: self
                 .offsets
