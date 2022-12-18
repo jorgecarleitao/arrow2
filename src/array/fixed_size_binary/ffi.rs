@@ -16,7 +16,7 @@ unsafe impl ToFfi for FixedSizeBinaryArray {
     }
 
     fn offset(&self) -> Option<usize> {
-        let offset = self.values.offset() / self.size as usize;
+        let offset = self.values.offset() / self.size;
         if let Some(bitmap) = self.validity.as_ref() {
             if bitmap.offset() == offset {
                 Some(offset)

@@ -160,7 +160,7 @@ impl FixedSizeBinaryArray {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.values.len() / self.size as usize
+        self.values.len() / self.size
     }
 
     /// The optional validity.
@@ -329,6 +329,6 @@ impl FixedSizeBinaryValues for FixedSizeBinaryArray {
 
     #[inline]
     fn size(&self) -> usize {
-        self.size as usize
+        self.size
     }
 }

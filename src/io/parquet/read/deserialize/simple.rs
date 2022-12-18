@@ -127,7 +127,7 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
             data_type,
             num_rows,
             chunk_size,
-            |x: i32| x as i32,
+            |x: i32| x,
         ))),
 
         Timestamp(time_unit, _) => {
@@ -255,7 +255,7 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
             data_type,
             num_rows,
             chunk_size,
-            |x: i64| x as i64,
+            |x: i64| x,
         ))),
         UInt64 => dyn_iter(iden(primitive::IntegerIter::new(
             pages,
@@ -493,7 +493,7 @@ fn dict_read<'a, K: DictionaryKey, I: Pages + 'a>(
                 data_type,
                 num_rows,
                 chunk_size,
-                |x: i32| x as i32,
+                |x: i32| x,
             ))
         }
 

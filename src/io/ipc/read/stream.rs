@@ -48,7 +48,7 @@ pub fn read_stream_metadata<R: Read>(reader: &mut R) -> Result<StreamMetadata> {
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
     let mut buffer = vec![];
-    buffer.try_reserve(length as usize)?;
+    buffer.try_reserve(length)?;
     reader
         .by_ref()
         .take(length as u64)
@@ -135,7 +135,7 @@ fn read_next<R: Read>(
     }
 
     message_buffer.clear();
-    message_buffer.try_reserve(meta_length as usize)?;
+    message_buffer.try_reserve(meta_length)?;
     reader
         .by_ref()
         .take(meta_length as u64)
@@ -158,7 +158,7 @@ fn read_next<R: Read>(
     match header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
             data_buffer.clear();
-            data_buffer.try_reserve(block_length as usize)?;
+            data_buffer.try_reserve(block_length)?;
             reader
                 .by_ref()
                 .take(block_length as u64)
@@ -193,7 +193,7 @@ fn read_next<R: Read>(
         }
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
             data_buffer.clear();
-            data_buffer.try_reserve(block_length as usize)?;
+            data_buffer.try_reserve(block_length)?;
             reader
                 .by_ref()
                 .take(block_length as u64)

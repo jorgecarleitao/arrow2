@@ -117,7 +117,7 @@ impl<'a> Iterator for DefLevelsIter<'a> {
         if *self.remaining.last().unwrap() > 0 {
             *self.remaining.last_mut().unwrap() -= 1;
 
-            let primitive = self.primitive_validity.next()?.0 as u32;
+            let primitive = self.primitive_validity.next()?.0;
             let r = Some(self.total + primitive);
 
             for level in 0..self.current_level - 1 {
@@ -130,7 +130,7 @@ impl<'a> Iterator for DefLevelsIter<'a> {
             }
             if self.remaining[0] == 0 {
                 self.current_level -= 1;
-                self.total -= self.validity[0] as u32;
+                self.total -= self.validity[0];
             }
             self.remaining_values -= 1;
             return r;

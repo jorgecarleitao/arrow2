@@ -51,10 +51,10 @@ fn make_mutable(
                     capacity,
                 )) as Box<dyn MutableArray>
             }
-            DataType::FixedSizeBinary(size) => Box::new(MutableFixedSizeBinaryArray::with_capacity(
-                *size as usize,
-                capacity,
-            )) as Box<dyn MutableArray>,
+            DataType::FixedSizeBinary(size) => {
+                Box::new(MutableFixedSizeBinaryArray::with_capacity(*size, capacity))
+                    as Box<dyn MutableArray>
+            }
             DataType::Struct(fields) => {
                 let values = fields
                     .iter()
@@ -195,7 +195,7 @@ fn deserialize_value<'a>(
                     array.push(Some(value))
                 }
                 PrimitiveType::Int64 => {
-                    let value = util::zigzag_i64(&mut block)? as i64;
+                    let value = util::zigzag_i64(&mut block)?;
                     let array = array
                         .as_mut_any()
                         .downcast_mut::<MutablePrimitiveArray<i64>>()
@@ -274,7 +274,7 @@ fn deserialize_value<'a>(
                         .as_mut_any()
                         .downcast_mut::<MutablePrimitiveArray<i128>>()
                         .unwrap();
-                    array.push(Some(data as i128))
+                    array.push(Some(data))
                 }
                 _ => unreachable!(),
             },

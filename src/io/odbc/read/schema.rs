@@ -23,7 +23,7 @@ pub fn infer_schema(resut_set_metadata: &impl ResultSetMetadata) -> Result<Vec<F
 
 fn column_to_field(column_description: &api::ColumnDescription) -> Field {
     Field::new(
-        &column_description
+        column_description
             .name_to_string()
             .expect("Column name must be representable in utf8"),
         column_to_data_type(&column_description.data_type),

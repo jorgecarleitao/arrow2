@@ -52,7 +52,7 @@ pub fn shift(array: &dyn Array, offset: i64) -> Result<Box<dyn Array>> {
     let slice = array.slice(slice_offset, length);
 
     // Generate array with remaining `null` items
-    let nulls = abs(offset as i64) as usize;
+    let nulls = abs(offset) as usize;
 
     let null_array = new_null_array(array.data_type().clone(), nulls);
 
