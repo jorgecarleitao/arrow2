@@ -130,11 +130,11 @@ fn without_nulls_utf8<O: Offset>() -> Result<()> {
     cases
         .into_iter()
         .try_for_each::<_, Result<()>>(|(array, start, length, expected)| {
-            let array = Utf8Array::<O>::from_slice(&array);
+            let array = Utf8Array::<O>::from_slice(array);
             let result = substring(&array, start, &length)?;
             assert_eq!(array.len(), result.len());
             let result = result.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
-            let expected = Utf8Array::<O>::from_slice(&expected);
+            let expected = Utf8Array::<O>::from_slice(expected);
             assert_eq!(&expected, result);
             Ok(())
         })?;
