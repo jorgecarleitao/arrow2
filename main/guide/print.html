@@ -1863,8 +1863,8 @@ fn main() -&gt; Result&lt;()&gt; {
         Field::new(&quot;b&quot;, DataType::Utf8, false),
     ]);
 
-    let a = Int32Array::from_slice(&amp;[1, 2, 3, 4, 5]);
-    let b = Utf8Array::&lt;i32&gt;::from_slice(&amp;[&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;, &quot;e&quot;]);
+    let a = Int32Array::from_slice([1, 2, 3, 4, 5]);
+    let b = Utf8Array::&lt;i32&gt;::from_slice([&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;, &quot;e&quot;]);
 
     let chunk = Chunk::try_new(vec![a.boxed(), b.boxed()])?;
 
