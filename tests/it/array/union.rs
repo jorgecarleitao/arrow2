@@ -6,7 +6,7 @@ use arrow2::{
     scalar::{new_scalar, PrimitiveScalar, Scalar, UnionScalar, Utf8Scalar},
 };
 
-fn next_unchecked<T, I>(iter: &mut I) -> T
+fn next_unwrap<T, I>(iter: &mut I) -> T
 where
     I: Iterator<Item = Box<dyn Scalar>>,
     T: Clone + 'static,
@@ -105,15 +105,15 @@ fn iter_sparse() -> Result<()> {
     let mut iter = array.iter();
 
     assert_eq!(
-        next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
+        next_unwrap::<PrimitiveScalar<i32>, _>(&mut iter).value(),
         &Some(1)
     );
     assert_eq!(
-        next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
+        next_unwrap::<PrimitiveScalar<i32>, _>(&mut iter).value(),
         &None
     );
     assert_eq!(
-        next_unchecked::<Utf8Scalar<i32>, _>(&mut iter).value(),
+        next_unwrap::<Utf8Scalar<i32>, _>(&mut iter).value(),
         Some("c")
     );
     assert_eq!(iter.next(), None);
@@ -139,15 +139,15 @@ fn iter_dense() -> Result<()> {
     let mut iter = array.iter();
 
     assert_eq!(
-        next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
+        next_unwrap::<PrimitiveScalar<i32>, _>(&mut iter).value(),
         &Some(1)
     );
     assert_eq!(
-        next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
+        next_unwrap::<PrimitiveScalar<i32>, _>(&mut iter).value(),
         &None
     );
     assert_eq!(
-        next_unchecked::<Utf8Scalar<i32>, _>(&mut iter).value(),
+        next_unwrap::<Utf8Scalar<i32>, _>(&mut iter).value(),
         Some("c")
     );
     assert_eq!(iter.next(), None);
@@ -173,7 +173,7 @@ fn iter_sparse_slice() -> Result<()> {
     let mut iter = array_slice.iter();
 
     assert_eq!(
-        next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
+        next_unwrap::<PrimitiveScalar<i32>, _>(&mut iter).value(),
         &Some(3)
     );
     assert_eq!(iter.next(), None);
@@ -200,7 +200,7 @@ fn iter_dense_slice() -> Result<()> {
     let mut iter = array_slice.iter();
 
     assert_eq!(
-        next_unchecked::<PrimitiveScalar<i32>, _>(&mut iter).value(),
+        next_unwrap::<PrimitiveScalar<i32>, _>(&mut iter).value(),
         &Some(3)
     );
     assert_eq!(iter.next(), None);
@@ -262,5 +262,112 @@ fn scalar() -> Result<()> {
     );
     assert_eq!(union_scalar.type_(), 1);
 
+    Ok(())
+}
+
+#[test]
+fn dense_without_offsets_is_error() {
+    let fields = vec![
+        Field::new("a", DataType::Int32, true),
+        Field::new("b", DataType::Utf8, true),
+    ];
+    let data_type = DataType::Union(fields, None, UnionMode::Dense);
+    let types = vec![0, 0, 1].into();
+    let fields = vec![
+        Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
+    ];
+
+    assert!(UnionArray::try_new(data_type, types, fields.clone(), None).is_err());
+}
+
+#[test]
+fn fields_must_match() {
+    let fields = vec![
+        Field::new("a", DataType::Int64, true),
+        Field::new("b", DataType::Utf8, true),
+    ];
+    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let types = vec![0, 0, 1].into();
+    let fields = vec![
+        Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
+    ];
+
+    assert!(UnionArray::try_new(data_type, types, fields.clone(), None).is_err());
+}
+
+#[test]
+fn sparse_with_offsets_is_error() {
+    let fields = vec![
+        Field::new("a", DataType::Int32, true),
+        Field::new("b", DataType::Utf8, true),
+    ];
+    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let fields = vec![
+        Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
+    ];
+
+    let types = vec![0, 0, 1].into();
+    let offsets = vec![0, 1, 0].into();
+
+    assert!(UnionArray::try_new(data_type, types, fields.clone(), Some(offsets)).is_err());
+}
+
+#[test]
+fn offsets_must_be_in_bounds() {
+    let fields = vec![
+        Field::new("a", DataType::Int32, true),
+        Field::new("b", DataType::Utf8, true),
+    ];
+    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let fields = vec![
+        Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
+    ];
+
+    let types = vec![0, 0, 1].into();
+    // it must be equal to length og types
+    let offsets = vec![0, 1].into();
+
+    assert!(UnionArray::try_new(data_type, types, fields.clone(), Some(offsets)).is_err());
+}
+
+#[test]
+fn sparse_with_wrong_offsets1_is_error() {
+    let fields = vec![
+        Field::new("a", DataType::Int32, true),
+        Field::new("b", DataType::Utf8, true),
+    ];
+    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let fields = vec![
+        Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
+    ];
+
+    let types = vec![0, 0, 1].into();
+    // it must be equal to length of types
+    let offsets = vec![0, 1, 10].into();
+
+    assert!(UnionArray::try_new(data_type, types, fields.clone(), Some(offsets)).is_err());
+}
+
+#[test]
+fn types_must_be_in_bounds() -> Result<()> {
+    let fields = vec![
+        Field::new("a", DataType::Int32, true),
+        Field::new("b", DataType::Utf8, true),
+    ];
+    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let fields = vec![
+        Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
+        Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
+    ];
+
+    // 10 > num fields
+    let types = vec![0, 10].into();
+
+    assert!(UnionArray::try_new(data_type, types, fields.clone(), None).is_err());
     Ok(())
 }

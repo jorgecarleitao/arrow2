@@ -647,9 +647,9 @@ mod tests {
     #[test]
     fn test_fixed_width() {
         let cols = [
-            Int16Array::from_iter([Some(1), Some(2), None, Some(-5), Some(2), Some(2), Some(0)])
+            Int16Array::from([Some(1), Some(2), None, Some(-5), Some(2), Some(2), Some(0)])
                 .to_boxed(),
-            Float32Array::from_iter([
+            Float32Array::from([
                 Some(1.3),
                 Some(2.5),
                 None,

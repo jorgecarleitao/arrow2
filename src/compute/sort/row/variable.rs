@@ -76,10 +76,9 @@ pub fn encode<'a, I: Iterator<Item = Option<&'a [u8]>>>(out: &mut Rows, i: I, op
                 // Write `2_u8` to demarcate as non-empty, non-null string
                 to_write[0] = NON_EMPTY_SENTINEL;
 
-                let chunks = val.chunks_exact(BLOCK_SIZE);
-                let remainder = chunks.remainder();
+                let mut chunks = val.chunks_exact(BLOCK_SIZE);
                 for (input, output) in chunks
-                    .clone()
+                    .by_ref()
                     .zip(to_write[1..].chunks_exact_mut(BLOCK_SIZE + 1))
                 {
                     let input: &[u8; BLOCK_SIZE] = input.try_into().unwrap();
@@ -92,6 +91,7 @@ pub fn encode<'a, I: Iterator<Item = Option<&'a [u8]>>>(out: &mut Rows, i: I, op
                     output[BLOCK_SIZE] = BLOCK_CONTINUATION;
                 }
 
+                let remainder = chunks.remainder();
                 if !remainder.is_empty() {
                     let start_offset = 1 + (block_count - 1) * (BLOCK_SIZE + 1);
                     to_write[start_offset..start_offset + remainder.len()]

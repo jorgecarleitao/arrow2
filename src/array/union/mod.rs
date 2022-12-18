@@ -1,5 +1,3 @@
-use ahash::AHashMap;
-
 use crate::{
     bitmap::Bitmap,
     buffer::Buffer,
@@ -14,7 +12,6 @@ mod ffi;
 pub(super) mod fmt;
 mod iterator;
 
-type FieldEntry = (usize, Box<dyn Array>);
 type UnionComponents<'a> = (&'a [Field], Option<&'a [i32]>, UnionMode);
 
 /// [`UnionArray`] represents an array whose each slot can contain different values.
@@ -29,10 +26,13 @@ type UnionComponents<'a> = (&'a [Field], Option<&'a [i32]>, UnionMode);
 // ```
 #[derive(Clone)]
 pub struct UnionArray {
+    // Invariant: every item in `types` is `> 0 && < fields.len()`
     types: Buffer<i8>,
-    // None represents when there is no typeid
-    fields_hash: Option<AHashMap<i8, FieldEntry>>,
+    // Invariant: `map.len() == fields.len()`
+    // Invariant: every item in `map` is `> 0 && < fields.len()`
+    map: Option<[usize; 127]>,
     fields: Vec<Box<dyn Array>>,
+    // Invariant: when set, `offsets.len() == types.len()`
     offsets: Option<Buffer<i32>>,
     data_type: DataType,
     offset: usize,
@@ -44,6 +44,7 @@ impl UnionArray {
     /// This function errors iff:
     /// * `data_type`'s physical type is not [`crate::datatypes::PhysicalType::Union`].
     /// * the fields's len is different from the `data_type`'s children's length
+    /// * The number of `fields` is larger than `i8::MAX`
     /// * any of the values's data type is different from its corresponding children' data type
     pub fn try_new(
         data_type: DataType,
@@ -58,6 +59,10 @@ impl UnionArray {
                 "The number of `fields` must equal the number of children fields in DataType::Union",
             ));
         };
+        let number_of_fields: i8 = fields
+            .len()
+            .try_into()
+            .map_err(|_| Error::oos("The number of `fields` cannot be larger than i8::MAX"))?;
 
         f
             .iter().map(|a| a.data_type())
@@ -74,27 +79,75 @@ impl UnionArray {
                 }
             })?;
 
+        if let Some(offsets) = &offsets {
+            if offsets.len() != types.len() {
+                return Err(Error::oos(
+                    "In a UnionArray, the offsets' length must be equal to the number of types",
+                ));
+            }
+        }
         if offsets.is_none() != mode.is_sparse() {
             return Err(Error::oos(
-                "The offsets must be set when the Union is dense and vice-versa",
+                "In a sparse UnionArray, the offsets must be set (and vice-versa)",
             ));
         }
 
-        let fields_hash = ids.as_ref().map(|ids| {
-            ids.iter()
-                .map(|x| *x as i8)
-                .enumerate()
-                .zip(fields.iter().cloned())
-                .map(|((i, type_), field)| (type_, (i, field)))
-                .collect()
-        });
+        // build hash
+        let map = if let Some(&ids) = ids.as_ref() {
+            if ids.len() != fields.len() {
+                return Err(Error::oos(
+                    "In a union, when the ids are set, their length must be equal to the number of fields",
+                ));
+            }
 
-        // not validated:
-        // * `offsets` is valid
-        // * max id < fields.len()
+            // example:
+            // * types = [5, 7, 5, 7, 7, 7, 5, 7, 7, 5, 5]
+            // * ids = [5, 7]
+            // => hash = [0, 0, 0, 0, 0, 0, 1, 0, ...]
+            let mut hash = [0; 127];
+
+            for (pos, &id) in ids.iter().enumerate() {
+                if !(0..=127).contains(&id) {
+                    return Err(Error::oos(
+                        "In a union, when the ids are set, every id must belong to [0, 128[",
+                    ));
+                }
+                hash[id as usize] = pos;
+            }
+
+            types.iter().try_for_each(|&type_| {
+                if type_ < 0 {
+                    return Err(Error::oos("In a union, when the ids are set, every type must be >= 0"));
+                }
+                let id = hash[type_ as usize];
+                if id >= fields.len() {
+                    Err(Error::oos("In a union, when the ids are set, each id must be smaller than the number of fields."))
+                } else {
+                    Ok(())
+                }
+            })?;
+
+            Some(hash)
+        } else {
+            // Safety: every type in types is smaller than number of fields
+            let mut is_valid = true;
+            for &type_ in types.iter() {
+                if type_ < 0 || type_ >= number_of_fields {
+                    is_valid = false
+                }
+            }
+            if !is_valid {
+                return Err(Error::oos(
+                    "Every type in `types` must be larger than 0 and smaller than the number of fields.",
+                ));
+            }
+
+            None
+        };
+
         Ok(Self {
             data_type,
-            fields_hash,
+            map,
             fields,
             offsets,
             types,
@@ -128,7 +181,7 @@ impl UnionArray {
             let offsets = if mode.is_sparse() {
                 None
             } else {
-                Some((0..length as i32).collect::<Buffer<i32>>())
+                Some((0..length as i32).collect::<Vec<_>>().into())
             };
 
             // all from the same field
@@ -151,12 +204,12 @@ impl UnionArray {
             let offsets = if mode.is_sparse() {
                 None
             } else {
-                Some(Buffer::new())
+                Some(Buffer::default())
             };
 
             Self {
                 data_type,
-                fields_hash: None,
+                map: None,
                 fields,
                 offsets,
                 types: Buffer::new(),
@@ -186,17 +239,11 @@ impl UnionArray {
     /// This function panics iff `offset + length >= self.len()`.
     #[inline]
     pub fn slice(&self, offset: usize, length: usize) -> Self {
-        Self {
-            data_type: self.data_type.clone(),
-            fields: self.fields.clone(),
-            fields_hash: self.fields_hash.clone(),
-            types: self.types.clone().slice(offset, length),
-            offsets: self
-                .offsets
-                .clone()
-                .map(|offsets| offsets.slice(offset, length)),
-            offset: self.offset + offset,
-        }
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new array cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
     }
 
     /// Returns a slice of this [`UnionArray`].
@@ -206,10 +253,11 @@ impl UnionArray {
     /// The caller must ensure that `offset + length <= self.len()`.
     #[inline]
     pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+        debug_assert!(offset + length <= self.len());
         Self {
             data_type: self.data_type.clone(),
             fields: self.fields.clone(),
-            fields_hash: self.fields_hash.clone(),
+            map: self.map,
             types: self.types.clone().slice_unchecked(offset, length),
             offsets: self
                 .offsets
@@ -243,38 +291,57 @@ impl UnionArray {
     }
 
     #[inline]
-    fn field(&self, type_: i8) -> &dyn Array {
-        self.fields_hash
-            .as_ref()
-            .map(|x| x[&type_].1.as_ref())
-            .unwrap_or_else(|| self.fields[type_ as usize].as_ref())
-    }
-
-    #[inline]
-    fn field_slot(&self, index: usize) -> usize {
+    unsafe fn field_slot_unchecked(&self, index: usize) -> usize {
         self.offsets()
             .as_ref()
-            .map(|x| x[index] as usize)
+            .map(|x| *x.get_unchecked(index) as usize)
             .unwrap_or(index + self.offset)
     }
 
     /// Returns the index and slot of the field to select from `self.fields`.
+    #[inline]
     pub fn index(&self, index: usize) -> (usize, usize) {
-        let type_ = self.types()[index];
-        let field_index = self
-            .fields_hash
+        assert!(index < self.len());
+        unsafe { self.index_unchecked(index) }
+    }
+
+    /// Returns the index and slot of the field to select from `self.fields`.
+    /// The first value is guaranteed to be `< self.fields().len()`
+    /// # Safety
+    /// This function is safe iff `index < self.len`.
+    #[inline]
+    pub unsafe fn index_unchecked(&self, index: usize) -> (usize, usize) {
+        debug_assert!(index < self.len());
+        // Safety: assumption of the function
+        let type_ = unsafe { *self.types.get_unchecked(index) };
+        // Safety: assumption of the struct
+        let type_ = self
+            .map
             .as_ref()
-            .map(|x| x[&type_].0)
-            .unwrap_or_else(|| type_ as usize);
-        let index = self.field_slot(index);
-        (field_index, index)
+            .map(|map| unsafe { *map.get_unchecked(type_ as usize) })
+            .unwrap_or(type_ as usize);
+        // Safety: assumption of the function
+        let index = self.field_slot_unchecked(index);
+        (type_, index)
     }
 
     /// Returns the slot `index` as a [`Scalar`].
+    /// # Panics
+    /// iff `index >= self.len()`
     pub fn value(&self, index: usize) -> Box<dyn Scalar> {
-        let type_ = self.types()[index];
-        let field = self.field(type_);
-        let index = self.field_slot(index);
+        assert!(index < self.len());
+        unsafe { self.value_unchecked(index) }
+    }
+
+    /// Returns the slot `index` as a [`Scalar`].
+    /// # Safety
+    /// This function is safe iff `i < self.len`.
+    pub unsafe fn value_unchecked(&self, index: usize) -> Box<dyn Scalar> {
+        debug_assert!(index < self.len());
+        let (type_, index) = self.index_unchecked(index);
+        // Safety: assumption of the struct
+        debug_assert!(type_ < self.fields.len());
+        let field = self.fields.get_unchecked(type_).as_ref();
         new_scalar(field, index)
     }
 }
