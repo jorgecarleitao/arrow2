@@ -8,6 +8,7 @@ pub struct UnionIter<'a> {
 }
 
 impl<'a> UnionIter<'a> {
+    #[inline]
     pub fn new(array: &'a UnionArray) -> Self {
         Self { array, current: 0 }
     }
@@ -16,16 +17,18 @@ impl<'a> UnionIter<'a> {
 impl<'a> Iterator for UnionIter<'a> {
     type Item = Box<dyn Scalar>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.current == self.array.len() {
             None
         } else {
             let old = self.current;
             self.current += 1;
-            Some(self.array.value(old))
+            Some(unsafe { self.array.value_unchecked(old) })
         }
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         let len = self.array.len() - self.current;
         (len, Some(len))
