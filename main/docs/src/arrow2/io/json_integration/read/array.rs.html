@@ -450,6 +450,7 @@
 <a href="#450" id="450">450</a>
 <a href="#451" id="451">451</a>
 <a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
 </pre><pre class="rust"><code><span class="kw">use </span>ahash::AHashMap;
 <span class="kw">use </span>num_traits::NumCast;
 <span class="kw">use </span>serde_json::Value;
@@ -866,7 +867,8 @@
                                 }
                                 <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(),
                             })
-                            .collect(),
+                            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+                            .into(),
                     )
                 })
                 .unwrap_or_default();

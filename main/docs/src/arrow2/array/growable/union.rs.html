@@ -200,11 +200,11 @@
     <span class="kw">fn </span>extend_validity(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _additional: usize) {}
 
     <span class="kw">fn </span>as_arc(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Array&gt; {
-        Arc::new(<span class="self">self</span>.to())
+        <span class="self">self</span>.to().arced()
     }
 
     <span class="kw">fn </span>as_box(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        Box::new(<span class="self">self</span>.to())
+        <span class="self">self</span>.to().boxed()
     }
 }
 

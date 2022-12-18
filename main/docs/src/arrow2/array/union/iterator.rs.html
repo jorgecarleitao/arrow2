@@ -53,6 +53,9 @@
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::UnionArray;
 <span class="kw">use crate</span>::{scalar::Scalar, trusted_len::TrustedLen};
 
@@ -63,7 +66,8 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; UnionIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub fn </span>new(array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>UnionArray) -&gt; <span class="self">Self </span>{
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>new(array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>UnionArray) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ array, current: <span class="number">0 </span>}
     }
 }
@@ -71,17 +75,19 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>UnionIter&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">type </span>Item = Box&lt;<span class="kw">dyn </span>Scalar&gt;;
 
-    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">if </span><span class="self">self</span>.current == <span class="self">self</span>.array.len() {
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
             <span class="kw">let </span>old = <span class="self">self</span>.current;
             <span class="self">self</span>.current += <span class="number">1</span>;
-            <span class="prelude-val">Some</span>(<span class="self">self</span>.array.value(old))
+            <span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.array.value_unchecked(old) })
         }
     }
 
-    <span class="kw">fn </span>size_hint(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (usize, <span class="prelude-ty">Option</span>&lt;usize&gt;) {
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>size_hint(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (usize, <span class="prelude-ty">Option</span>&lt;usize&gt;) {
         <span class="kw">let </span>len = <span class="self">self</span>.array.len() - <span class="self">self</span>.current;
         (len, <span class="prelude-val">Some</span>(len))
     }

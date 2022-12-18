@@ -345,9 +345,74 @@
 <a href="#345" id="345">345</a>
 <a href="#346" id="346">346</a>
 <a href="#347" id="347">347</a>
-</pre><pre class="rust"><code><span class="kw">use </span>ahash::AHashMap;
-
-<span class="kw">use crate</span>::{
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+</pre><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::Bitmap,
     buffer::Buffer,
     datatypes::{DataType, Field, UnionMode},
@@ -361,7 +426,6 @@
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>fmt;
 <span class="kw">mod </span>iterator;
 
-<span class="kw">type </span>FieldEntry = (usize, Box&lt;<span class="kw">dyn </span>Array&gt;);
 <span class="kw">type </span>UnionComponents&lt;<span class="lifetime">&#39;a</span>&gt; = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Field], <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[i32]&gt;, UnionMode);
 
 <span class="doccomment">/// [`UnionArray`] represents an array whose each slot can contain different values.
@@ -376,11 +440,14 @@
 // ```
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>UnionArray {
-    types: Buffer&lt;i8&gt;,
-    <span class="comment">// None represents when there is no typeid
-    </span>fields_hash: <span class="prelude-ty">Option</span>&lt;AHashMap&lt;i8, FieldEntry&gt;&gt;,
+    <span class="comment">// Invariant: every item in `types` is `&gt; 0 &amp;&amp; &lt; fields.len()`
+    </span>types: Buffer&lt;i8&gt;,
+    <span class="comment">// Invariant: `map.len() == fields.len()`
+    // Invariant: every item in `map` is `&gt; 0 &amp;&amp; &lt; fields.len()`
+    </span>map: <span class="prelude-ty">Option</span>&lt;[usize; <span class="number">127</span>]&gt;,
     fields: Vec&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;,
-    offsets: <span class="prelude-ty">Option</span>&lt;Buffer&lt;i32&gt;&gt;,
+    <span class="comment">// Invariant: when set, `offsets.len() == types.len()`
+    </span>offsets: <span class="prelude-ty">Option</span>&lt;Buffer&lt;i32&gt;&gt;,
     data_type: DataType,
     offset: usize,
 }
@@ -391,6 +458,7 @@
     /// This function errors iff:
     /// * `data_type`&#39;s physical type is not [`crate::datatypes::PhysicalType::Union`].
     /// * the fields&#39;s len is different from the `data_type`&#39;s children&#39;s length
+    /// * The number of `fields` is larger than `i8::MAX`
     /// * any of the values&#39;s data type is different from its corresponding children&#39; data type
     </span><span class="kw">pub fn </span>try_new(
         data_type: DataType,
@@ -405,6 +473,10 @@
                 <span class="string">&quot;The number of `fields` must equal the number of children fields in DataType::Union&quot;</span>,
             ));
         };
+        <span class="kw">let </span>number_of_fields: i8 = fields
+            .len()
+            .try_into()
+            .map_err(|<span class="kw">_</span>| Error::oos(<span class="string">&quot;The number of `fields` cannot be larger than i8::MAX&quot;</span>))<span class="question-mark">?</span>;
 
         f
             .iter().map(|a| a.data_type())
@@ -421,27 +493,75 @@
                 }
             })<span class="question-mark">?</span>;
 
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(offsets) = <span class="kw-2">&amp;</span>offsets {
+            <span class="kw">if </span>offsets.len() != types.len() {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
+                    <span class="string">&quot;In a UnionArray, the offsets&#39; length must be equal to the number of types&quot;</span>,
+                ));
+            }
+        }
         <span class="kw">if </span>offsets.is_none() != mode.is_sparse() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-                <span class="string">&quot;The offsets must be set when the Union is dense and vice-versa&quot;</span>,
+                <span class="string">&quot;In a sparse UnionArray, the offsets must be set (and vice-versa)&quot;</span>,
             ));
         }
 
-        <span class="kw">let </span>fields_hash = ids.as_ref().map(|ids| {
-            ids.iter()
-                .map(|x| <span class="kw-2">*</span>x <span class="kw">as </span>i8)
-                .enumerate()
-                .zip(fields.iter().cloned())
-                .map(|((i, type_), field)| (type_, (i, field)))
-                .collect()
-        });
+        <span class="comment">// build hash
+        </span><span class="kw">let </span>map = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>ids) = ids.as_ref() {
+            <span class="kw">if </span>ids.len() != fields.len() {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
+                    <span class="string">&quot;In a union, when the ids are set, their length must be equal to the number of fields&quot;</span>,
+                ));
+            }
 
-        <span class="comment">// not validated:
-        // * `offsets` is valid
-        // * max id &lt; fields.len()
-        </span><span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            <span class="comment">// example:
+            // * types = [5, 7, 5, 7, 7, 7, 5, 7, 7, 5, 5]
+            // * ids = [5, 7]
+            // =&gt; hash = [0, 0, 0, 0, 0, 0, 1, 0, ...]
+            </span><span class="kw">let </span><span class="kw-2">mut </span>hash = [<span class="number">0</span>; <span class="number">127</span>];
+
+            <span class="kw">for </span>(pos, <span class="kw-2">&amp;</span>id) <span class="kw">in </span>ids.iter().enumerate() {
+                <span class="kw">if </span>!(<span class="number">0</span>..=<span class="number">127</span>).contains(<span class="kw-2">&amp;</span>id) {
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
+                        <span class="string">&quot;In a union, when the ids are set, every id must belong to [0, 128[&quot;</span>,
+                    ));
+                }
+                hash[id <span class="kw">as </span>usize] = pos;
+            }
+
+            types.iter().try_for_each(|<span class="kw-2">&amp;</span>type_| {
+                <span class="kw">if </span>type_ &lt; <span class="number">0 </span>{
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;In a union, when the ids are set, every type must be &gt;= 0&quot;</span>));
+                }
+                <span class="kw">let </span>id = hash[type_ <span class="kw">as </span>usize];
+                <span class="kw">if </span>id &gt;= fields.len() {
+                    <span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;In a union, when the ids are set, each id must be smaller than the number of fields.&quot;</span>))
+                } <span class="kw">else </span>{
+                    <span class="prelude-val">Ok</span>(())
+                }
+            })<span class="question-mark">?</span>;
+
+            <span class="prelude-val">Some</span>(hash)
+        } <span class="kw">else </span>{
+            <span class="comment">// Safety: every type in types is smaller than number of fields
+            </span><span class="kw">let </span><span class="kw-2">mut </span>is_valid = <span class="bool-val">true</span>;
+            <span class="kw">for </span><span class="kw-2">&amp;</span>type_ <span class="kw">in </span>types.iter() {
+                <span class="kw">if </span>type_ &lt; <span class="number">0 </span>|| type_ &gt;= number_of_fields {
+                    is_valid = <span class="bool-val">false
+                </span>}
+            }
+            <span class="kw">if </span>!is_valid {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
+                    <span class="string">&quot;Every type in `types` must be larger than 0 and smaller than the number of fields.&quot;</span>,
+                ));
+            }
+
+            <span class="prelude-val">None
+        </span>};
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             data_type,
-            fields_hash,
+            map,
             fields,
             offsets,
             types,
@@ -475,7 +595,7 @@
             <span class="kw">let </span>offsets = <span class="kw">if </span>mode.is_sparse() {
                 <span class="prelude-val">None
             </span>} <span class="kw">else </span>{
-                <span class="prelude-val">Some</span>((<span class="number">0</span>..length <span class="kw">as </span>i32).collect::&lt;Buffer&lt;i32&gt;&gt;())
+                <span class="prelude-val">Some</span>((<span class="number">0</span>..length <span class="kw">as </span>i32).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().into())
             };
 
             <span class="comment">// all from the same field
@@ -498,12 +618,12 @@
             <span class="kw">let </span>offsets = <span class="kw">if </span>mode.is_sparse() {
                 <span class="prelude-val">None
             </span>} <span class="kw">else </span>{
-                <span class="prelude-val">Some</span>(Buffer::new())
+                <span class="prelude-val">Some</span>(Buffer::default())
             };
 
             <span class="self">Self </span>{
                 data_type,
-                fields_hash: <span class="prelude-val">None</span>,
+                map: <span class="prelude-val">None</span>,
                 fields,
                 offsets,
                 types: Buffer::new(),
@@ -533,17 +653,11 @@
     /// This function panics iff `offset + length &gt;= self.len()`.
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            data_type: <span class="self">self</span>.data_type.clone(),
-            fields: <span class="self">self</span>.fields.clone(),
-            fields_hash: <span class="self">self</span>.fields_hash.clone(),
-            types: <span class="self">self</span>.types.clone().slice(offset, length),
-            offsets: <span class="self">self
-                </span>.offsets
-                .clone()
-                .map(|offsets| offsets.slice(offset, length)),
-            offset: <span class="self">self</span>.offset + offset,
-        }
+        <span class="macro">assert!</span>(
+            offset + length &lt;= <span class="self">self</span>.len(),
+            <span class="string">&quot;the offset of the new array cannot exceed the existing length&quot;
+        </span>);
+        <span class="kw">unsafe </span>{ <span class="self">self</span>.slice_unchecked(offset, length) }
     }
 
     <span class="doccomment">/// Returns a slice of this [`UnionArray`].
@@ -553,10 +667,11 @@
     /// The caller must ensure that `offset + length &lt;= self.len()`.
     </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
+        <span class="macro">debug_assert!</span>(offset + length &lt;= <span class="self">self</span>.len());
         <span class="self">Self </span>{
             data_type: <span class="self">self</span>.data_type.clone(),
             fields: <span class="self">self</span>.fields.clone(),
-            fields_hash: <span class="self">self</span>.fields_hash.clone(),
+            map: <span class="self">self</span>.map,
             types: <span class="self">self</span>.types.clone().slice_unchecked(offset, length),
             offsets: <span class="self">self
                 </span>.offsets
@@ -590,38 +705,57 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>field(<span class="kw-2">&amp;</span><span class="self">self</span>, type_: i8) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array {
-        <span class="self">self</span>.fields_hash
-            .as_ref()
-            .map(|x| x[<span class="kw-2">&amp;</span>type_].<span class="number">1</span>.as_ref())
-            .unwrap_or_else(|| <span class="self">self</span>.fields[type_ <span class="kw">as </span>usize].as_ref())
-    }
-
-    <span class="attr">#[inline]
-    </span><span class="kw">fn </span>field_slot(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; usize {
+    </span><span class="kw">unsafe fn </span>field_slot_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; usize {
         <span class="self">self</span>.offsets()
             .as_ref()
-            .map(|x| x[index] <span class="kw">as </span>usize)
+            .map(|x| <span class="kw-2">*</span>x.get_unchecked(index) <span class="kw">as </span>usize)
             .unwrap_or(index + <span class="self">self</span>.offset)
     }
 
     <span class="doccomment">/// Returns the index and slot of the field to select from `self.fields`.
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; (usize, usize) {
-        <span class="kw">let </span>type_ = <span class="self">self</span>.types()[index];
-        <span class="kw">let </span>field_index = <span class="self">self
-            </span>.fields_hash
+        <span class="macro">assert!</span>(index &lt; <span class="self">self</span>.len());
+        <span class="kw">unsafe </span>{ <span class="self">self</span>.index_unchecked(index) }
+    }
+
+    <span class="doccomment">/// Returns the index and slot of the field to select from `self.fields`.
+    /// The first value is guaranteed to be `&lt; self.fields().len()`
+    /// # Safety
+    /// This function is safe iff `index &lt; self.len`.
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub unsafe fn </span>index_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; (usize, usize) {
+        <span class="macro">debug_assert!</span>(index &lt; <span class="self">self</span>.len());
+        <span class="comment">// Safety: assumption of the function
+        </span><span class="kw">let </span>type_ = <span class="kw">unsafe </span>{ <span class="kw-2">*</span><span class="self">self</span>.types.get_unchecked(index) };
+        <span class="comment">// Safety: assumption of the struct
+        </span><span class="kw">let </span>type_ = <span class="self">self
+            </span>.map
             .as_ref()
-            .map(|x| x[<span class="kw-2">&amp;</span>type_].<span class="number">0</span>)
-            .unwrap_or_else(|| type_ <span class="kw">as </span>usize);
-        <span class="kw">let </span>index = <span class="self">self</span>.field_slot(index);
-        (field_index, index)
+            .map(|map| <span class="kw">unsafe </span>{ <span class="kw-2">*</span>map.get_unchecked(type_ <span class="kw">as </span>usize) })
+            .unwrap_or(type_ <span class="kw">as </span>usize);
+        <span class="comment">// Safety: assumption of the function
+        </span><span class="kw">let </span>index = <span class="self">self</span>.field_slot_unchecked(index);
+        (type_, index)
     }
 
     <span class="doccomment">/// Returns the slot `index` as a [`Scalar`].
+    /// # Panics
+    /// iff `index &gt;= self.len()`
     </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; Box&lt;<span class="kw">dyn </span>Scalar&gt; {
-        <span class="kw">let </span>type_ = <span class="self">self</span>.types()[index];
-        <span class="kw">let </span>field = <span class="self">self</span>.field(type_);
-        <span class="kw">let </span>index = <span class="self">self</span>.field_slot(index);
+        <span class="macro">assert!</span>(index &lt; <span class="self">self</span>.len());
+        <span class="kw">unsafe </span>{ <span class="self">self</span>.value_unchecked(index) }
+    }
+
+    <span class="doccomment">/// Returns the slot `index` as a [`Scalar`].
+    /// # Safety
+    /// This function is safe iff `i &lt; self.len`.
+    </span><span class="kw">pub unsafe fn </span>value_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; Box&lt;<span class="kw">dyn </span>Scalar&gt; {
+        <span class="macro">debug_assert!</span>(index &lt; <span class="self">self</span>.len());
+        <span class="kw">let </span>(type_, index) = <span class="self">self</span>.index_unchecked(index);
+        <span class="comment">// Safety: assumption of the struct
+        </span><span class="macro">debug_assert!</span>(type_ &lt; <span class="self">self</span>.fields.len());
+        <span class="kw">let </span>field = <span class="self">self</span>.fields.get_unchecked(type_).as_ref();
         new_scalar(field, index)
     }
 }
