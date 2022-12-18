@@ -142,11 +142,16 @@ where
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
-        (
-            Vec::<K>::with_capacity(capacity),
-            MutableBitmap::with_capacity(capacity),
-        )
+    fn with_capacity(&self, capacity: usize, page: &Self::State) -> Self::DecodedState {
+        match page {
+            State::Optional(_) | State::FilteredOptional(_, _) => (
+                Vec::<K>::with_capacity(capacity),
+                MutableBitmap::with_capacity(capacity),
+            ),
+            State::Required(_) | State::FilteredRequired(_) => {
+                (Vec::<K>::with_capacity(capacity), MutableBitmap::new())
+            }
+        }
     }
 
     fn extend_from_state(

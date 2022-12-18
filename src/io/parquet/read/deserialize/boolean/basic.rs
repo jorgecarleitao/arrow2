@@ -136,11 +136,16 @@ impl<'a> Decoder<'a> for BooleanDecoder {
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
-        (
-            MutableBitmap::with_capacity(capacity),
-            MutableBitmap::with_capacity(capacity),
-        )
+    fn with_capacity(&self, capacity: usize, page: &Self::State) -> Self::DecodedState {
+        match page {
+            State::Optional(_, _) | State::FilteredOptional(_, _) => (
+                MutableBitmap::with_capacity(capacity),
+                MutableBitmap::with_capacity(capacity),
+            ),
+            State::Required(_) | State::FilteredRequired(_) => {
+                (MutableBitmap::with_capacity(capacity), MutableBitmap::new())
+            }
+        }
     }
 
     fn extend_from_state(

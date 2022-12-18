@@ -85,7 +85,7 @@ impl<'a, O: Offset> NestedDecoder<'a> for BinaryDecoder<O> {
 
     fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
         (
-            Binary::<O>::with_capacity(capacity),
+            Binary::<O>::with_capacity(capacity, 0),
             MutableBitmap::with_capacity(capacity),
         )
     }

@@ -59,7 +59,7 @@ fn read_dict<O: Offset>(data_type: DataType, dict: &DictPage) -> Box<dyn Array> 
 
     let values = SizedBinaryIter::new(&dict.buffer, dict.num_values);
 
-    let mut data = Binary::<O>::with_capacity(dict.num_values);
+    let mut data = Binary::<O>::with_capacity(dict.num_values, 0);
     data.values = Vec::with_capacity(dict.buffer.len() - 4 * dict.num_values);
     for item in values {
         data.push(item)
