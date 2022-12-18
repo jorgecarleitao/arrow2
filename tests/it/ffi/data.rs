@@ -100,7 +100,7 @@ fn timestamp_tz() -> Result<()> {
 
 #[test]
 fn utf8_nullable() -> Result<()> {
-    let data = Utf8Array::<i32>::from(&vec![Some("a"), None, Some("bb"), None]);
+    let data = Utf8Array::<i32>::from([Some("a"), None, Some("bb"), None]);
     test_round_trip(data)
 }
 
@@ -124,14 +124,13 @@ fn utf8_sliced() -> Result<()> {
 
 #[test]
 fn large_utf8() -> Result<()> {
-    let data = Utf8Array::<i64>::from(&vec![Some("a"), None, Some("bb"), None]);
+    let data = Utf8Array::<i64>::from([Some("a"), None, Some("bb"), None]);
     test_round_trip(data)
 }
 
 #[test]
 fn binary_nullable() -> Result<()> {
-    let data =
-        BinaryArray::<i32>::from(&vec![Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
+    let data = BinaryArray::<i32>::from([Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
     test_round_trip(data)
 }
 
@@ -155,8 +154,7 @@ fn binary_sliced() -> Result<()> {
 
 #[test]
 fn large_binary() -> Result<()> {
-    let data =
-        BinaryArray::<i64>::from(&vec![Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
+    let data = BinaryArray::<i64>::from([Some(b"a".as_ref()), None, Some(b"bb".as_ref()), None]);
     test_round_trip(data)
 }
 
@@ -214,7 +212,7 @@ fn list_sliced() -> Result<()> {
     let array = ListArray::<i32>::try_new(
         DataType::List(Box::new(Field::new("a", DataType::Int32, true))),
         vec![0, 1, 1, 2].try_into().unwrap(),
-        Box::new(PrimitiveArray::<i32>::from_vec(vec![1, 2])),
+        Box::new(PrimitiveArray::<i32>::from_slice([1, 2])),
         Some(bitmap),
     )?;
 

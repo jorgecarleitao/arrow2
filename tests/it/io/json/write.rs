@@ -45,7 +45,7 @@ fn f64() -> Result<()> {
 
 #[test]
 fn utf8() -> Result<()> {
-    let array = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
+    let array = Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
     let expected = r#"["a","b","c","d",null]"#;
 
@@ -55,7 +55,7 @@ fn utf8() -> Result<()> {
 #[test]
 fn struct_() -> Result<()> {
     let c1 = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
-    let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c"), Some("d"), None]);
+    let c2 = Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
     let data_type = DataType::Struct(vec![
         Field::new("c1", c1.data_type().clone(), true),
@@ -86,7 +86,7 @@ fn nested_struct_with_validity() -> Result<()> {
             StructArray::new(
                 DataType::Struct(inner),
                 vec![
-                    Utf8Array::<i32>::from(&vec![None, Some("f"), Some("g")]).boxed(),
+                    Utf8Array::<i32>::from([None, Some("f"), Some("g")]).boxed(),
                     Int32Array::from(&[Some(20), None, Some(43)]).boxed(),
                 ],
                 Some(Bitmap::from([false, true, true])),
@@ -95,7 +95,7 @@ fn nested_struct_with_validity() -> Result<()> {
         ],
         Some(Bitmap::from([true, true, false])),
     );
-    let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
+    let c2 = Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]);
 
     let data_type = DataType::Struct(vec![
         Field::new("c1", c1.data_type().clone(), true),
@@ -122,7 +122,7 @@ fn nested_struct() -> Result<()> {
             Int32Array::from(&[Some(1), None, Some(5)]).boxed(),
             StructArray::new(
                 DataType::Struct(vec![c121]),
-                vec![Box::new(Utf8Array::<i32>::from(&vec![
+                vec![Box::new(Utf8Array::<i32>::from([
                     Some("e"),
                     Some("f"),
                     Some("g"),
@@ -134,7 +134,7 @@ fn nested_struct() -> Result<()> {
         None,
     );
 
-    let c2 = Utf8Array::<i32>::from(&vec![Some("a"), Some("b"), Some("c")]);
+    let c2 = Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]);
 
     let data_type = DataType::Struct(vec![
         Field::new("c1", c1.data_type().clone(), true),
@@ -198,7 +198,7 @@ fn nested_list() -> Result<()> {
     c1.try_extend(iter).unwrap();
     let c1: ListArray<i32> = c1.into();
 
-    let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None]);
+    let c2 = Utf8Array::<i32>::from([Some("foo"), Some("bar"), None]);
 
     let data_type = DataType::Struct(vec![
         Field::new("c1", c1.data_type().clone(), true),
@@ -234,7 +234,7 @@ fn nested_list_records() -> Result<()> {
     c1.try_extend(iter).unwrap();
     let c1: ListArray<i32> = c1.into();
 
-    let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None]);
+    let c2 = Utf8Array::<i32>::from([Some("foo"), Some("bar"), None]);
 
     let schema: Schema = vec![
         Field::new("c1", c1.data_type().clone(), true),
@@ -305,7 +305,7 @@ fn list_of_struct() -> Result<()> {
             Int32Array::from(&[Some(1), None, Some(5)]).boxed(),
             StructArray::new(
                 DataType::Struct(inner),
-                vec![Box::new(Utf8Array::<i32>::from(&vec![
+                vec![Box::new(Utf8Array::<i32>::from([
                     Some("e"),
                     Some("f"),
                     Some("g"),
@@ -343,7 +343,7 @@ fn list_of_struct() -> Result<()> {
 
 #[test]
 fn escaped_end_of_line_in_utf8() -> Result<()> {
-    let array = Utf8Array::<i32>::from(&vec![Some("a\na"), None]);
+    let array = Utf8Array::<i32>::from([Some("a\na"), None]);
 
     let expected = r#"["a\na",null]"#;
 
@@ -352,7 +352,7 @@ fn escaped_end_of_line_in_utf8() -> Result<()> {
 
 #[test]
 fn escaped_quotation_marks_in_utf8() -> Result<()> {
-    let array = Utf8Array::<i32>::from(&vec![Some("a\"a"), None]);
+    let array = Utf8Array::<i32>::from([Some("a\"a"), None]);
 
     let expected = r#"["a\"a",null]"#;
 

@@ -42,12 +42,12 @@ fn with_nulls_utf8<O: Offset>() -> Result<()> {
     cases
         .into_iter()
         .try_for_each::<_, Result<()>>(|(array, start, length, expected)| {
-            let array = Utf8Array::<O>::from(&array);
+            let array = Utf8Array::<O>::from(array);
             let result = substring(&array, start, &length)?;
             assert_eq!(array.len(), result.len());
 
             let result = result.as_any().downcast_ref::<Utf8Array<O>>().unwrap();
-            let expected = Utf8Array::<O>::from(&expected);
+            let expected = Utf8Array::<O>::from(expected);
 
             assert_eq!(&expected, result);
             Ok(())
@@ -194,12 +194,12 @@ fn with_null_binarys<O: Offset>() -> Result<()> {
     cases
         .into_iter()
         .try_for_each::<_, Result<()>>(|(array, start, length, expected)| {
-            let array = BinaryArray::<O>::from(&array);
+            let array = BinaryArray::<O>::from(array);
             let result = substring(&array, start, &length)?;
             assert_eq!(array.len(), result.len());
 
             let result = result.as_any().downcast_ref::<BinaryArray<O>>().unwrap();
-            let expected = BinaryArray::<O>::from(&expected);
+            let expected = BinaryArray::<O>::from(expected);
             assert_eq!(&expected, result);
             Ok(())
         })?;
@@ -274,11 +274,11 @@ fn without_null_binarys<O: Offset>() -> Result<()> {
     cases
         .into_iter()
         .try_for_each::<_, Result<()>>(|(array, start, length, expected)| {
-            let array = BinaryArray::<O>::from_slice(&array);
+            let array = BinaryArray::<O>::from_slice(array);
             let result = substring(&array, start, &length)?;
             assert_eq!(array.len(), result.len());
             let result = result.as_any().downcast_ref::<BinaryArray<O>>().unwrap();
-            let expected = BinaryArray::<O>::from_slice(&expected);
+            let expected = BinaryArray::<O>::from_slice(expected);
             assert_eq!(&expected, result);
             Ok(())
         })?;

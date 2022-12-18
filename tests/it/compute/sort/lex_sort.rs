@@ -40,18 +40,18 @@ fn test_lex_sort_mixed_types() {
             options: None,
         },
     ];
-    let c1 = Int64Array::from(&[Some(-1), Some(0), Some(0), Some(2)]);
-    let c2 = UInt32Array::from(&[Some(7), Some(101), Some(102), Some(8)]);
-    let c3 = Int64Array::from(&[Some(-3), Some(-1), Some(-4), Some(-2)]);
-    let expected = vec![Box::new(c1) as Box<dyn Array>, Box::new(c2), Box::new(c3)];
+    let c1 = Int64Array::from([Some(-1), Some(0), Some(0), Some(2)]);
+    let c2 = UInt32Array::from([Some(7), Some(101), Some(102), Some(8)]);
+    let c3 = Int64Array::from([Some(-3), Some(-1), Some(-4), Some(-2)]);
+    let expected = vec![c1.boxed(), c2.boxed(), c3.boxed()];
     test_lex_sort_arrays(input, expected);
 }
 
 #[test]
 fn test_lex_sort_mixed_types2() {
     // test mix of string and in64 with option
-    let c1 = Int64Array::from(&[Some(0), Some(2), Some(-1), Some(0)]);
-    let c2 = Utf8Array::<i32>::from(&vec![Some("foo"), Some("9"), Some("7"), Some("bar")]);
+    let c1 = Int64Array::from([Some(0), Some(2), Some(-1), Some(0)]);
+    let c2 = Utf8Array::<i32>::from([Some("foo"), Some("9"), Some("7"), Some("bar")]);
     let input = vec![
         SortColumn {
             values: &c1,
@@ -69,13 +69,8 @@ fn test_lex_sort_mixed_types2() {
         },
     ];
     let expected = vec![
-        Box::new(Int64Array::from(&[Some(2), Some(0), Some(0), Some(-1)])) as Box<dyn Array>,
-        Box::new(Utf8Array::<i32>::from(&vec![
-            Some("9"),
-            Some("foo"),
-            Some("bar"),
-            Some("7"),
-        ])) as Box<dyn Array>,
+        Int64Array::from([Some(2), Some(0), Some(0), Some(-1)]).boxed(),
+        Utf8Array::<i32>::from([Some("9"), Some("foo"), Some("bar"), Some("7")]).boxed(),
     ];
     test_lex_sort_arrays(input, expected);
 }
