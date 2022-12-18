@@ -146,7 +146,7 @@ impl MutableFixedSizeBinaryArray {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.values.len() / self.size as usize
+        self.values.len() / self.size
     }
 
     /// Pop the last entry from [`MutableFixedSizeBinaryArray`].

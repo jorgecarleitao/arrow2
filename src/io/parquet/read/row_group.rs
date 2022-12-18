@@ -134,10 +134,7 @@ where
 
     let mut chunk = vec![];
     chunk.try_reserve(length as usize)?;
-    reader
-        .by_ref()
-        .take(length as u64)
-        .read_to_end(&mut chunk)?;
+    reader.by_ref().take(length).read_to_end(&mut chunk)?;
     Ok((meta, chunk))
 }
 
@@ -155,7 +152,7 @@ where
 
     let mut chunk = vec![];
     chunk.try_reserve(length as usize)?;
-    reader.take(length as u64).read_to_end(&mut chunk).await?;
+    reader.take(length).read_to_end(&mut chunk).await?;
     Result::Ok((meta, chunk))
 }
 

@@ -13,7 +13,7 @@ fn length_test_string<O: Offset>() {
     ]
     .into_iter()
     .for_each(|(input, expected)| {
-        let array = Utf8Array::<O>::from(&input);
+        let array = Utf8Array::<O>::from(input);
         let result = length(&array).unwrap();
 
         let data_type = if O::IS_LARGE {

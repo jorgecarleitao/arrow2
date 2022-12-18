@@ -203,7 +203,7 @@ fn case_struct() -> (String, Box<dyn Array>) {
     let fields = vec![a_field];
 
     // build expected output
-    let d = Utf8Array::<i32>::from(&vec![Some("text"), None, Some("text"), None]);
+    let d = Utf8Array::<i32>::from([Some("text"), None, Some("text"), None]);
     let c = StructArray::new(
         DataType::Struct(vec![d_field]),
         vec![d.boxed()],
@@ -247,7 +247,7 @@ fn case_nested_list() -> (String, Box<dyn Array>) {
     "#.to_string();
 
     // build expected output
-    let d = Utf8Array::<i32>::from(&vec![
+    let d = Utf8Array::<i32>::from([
         Some("a_text"),
         Some("b_text"),
         None,

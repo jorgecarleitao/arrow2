@@ -82,8 +82,8 @@ fn primative_array_with_null() {
 
 #[test]
 fn string_array_with_null() {
-    let a = Utf8Array::<i32>::from(&vec![Some("hello"), None, Some("world"), None]);
-    let b = BooleanArray::from_slice(vec![true, false, false, true]);
+    let a = Utf8Array::<i32>::from([Some("hello"), None, Some("world"), None]);
+    let b = BooleanArray::from_slice([true, false, false, true]);
     let c = filter(&a, &b).unwrap();
     let d = c
         .as_ref()
@@ -99,7 +99,7 @@ fn string_array_with_null() {
 #[test]
 fn binary_array_with_null() {
     let data: Vec<Option<&[u8]>> = vec![Some(b"hello"), None, Some(b"world"), None];
-    let a = BinaryArray::<i32>::from(&data);
+    let a = BinaryArray::<i32>::from(data);
     let b = BooleanArray::from_slice(vec![true, false, false, true]);
     let c = filter(&a, &b).unwrap();
     let d = c

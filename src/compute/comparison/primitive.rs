@@ -335,10 +335,7 @@ mod tests {
         let b = Int64Array::from_slice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         let c = b.slice(5, 5);
         let d = eq(&c, &a);
-        assert_eq!(
-            d,
-            BooleanArray::from_slice(&vec![true, true, true, false, true])
-        );
+        assert_eq!(d, BooleanArray::from_slice([true, true, true, false, true]));
     }
 
     #[test]
@@ -584,11 +581,11 @@ mod tests {
     #[test]
     fn test_length_of_result_buffer() {
         // `item_count` is chosen to not be a multiple of 64.
-        let item_count = 130;
+        const ITEM_COUNT: usize = 130;
 
-        let array_a = Int8Array::from_slice(&vec![1; item_count]);
-        let array_b = Int8Array::from_slice(&vec![2; item_count]);
-        let expected = BooleanArray::from_slice(&vec![false; item_count]);
+        let array_a = Int8Array::from_slice([1; ITEM_COUNT]);
+        let array_b = Int8Array::from_slice([2; ITEM_COUNT]);
+        let expected = BooleanArray::from_slice([false; ITEM_COUNT]);
         let result = gt_eq(&array_a, &array_b);
 
         assert_eq!(result, expected)

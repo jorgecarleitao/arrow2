@@ -90,7 +90,7 @@ fn binary_substring<O: Offset>(
             } else {
                 length_i + start
             };
-        let start = start.max(windows[0]).min(windows[1]);
+        let start = start.clamp(windows[0], windows[1]);
 
         let length: O = length
             .unwrap_or(length_i)

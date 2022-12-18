@@ -40,7 +40,7 @@ impl<'a> GrowableFixedSizeList<'a> {
 
         let size =
             if let DataType::FixedSizeList(_, size) = &arrays[0].data_type().to_logical_type() {
-                *size as usize
+                *size
             } else {
                 unreachable!("`GrowableFixedSizeList` expects `DataType::FixedSizeList`")
             };

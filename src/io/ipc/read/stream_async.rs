@@ -58,7 +58,7 @@ pub async fn read_stream_metadata_async<R: AsyncRead + Unpin + Send>(
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
     let mut meta_buffer = vec![];
-    meta_buffer.try_reserve(meta_len as usize)?;
+    meta_buffer.try_reserve(meta_len)?;
     reader
         .take(meta_len as u64)
         .read_to_end(&mut meta_buffer)
@@ -109,7 +109,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
     }
 
     state.message_buffer.clear();
-    state.message_buffer.try_reserve(meta_length as usize)?;
+    state.message_buffer.try_reserve(meta_length)?;
     (&mut state.reader)
         .take(meta_length as u64)
         .read_to_end(&mut state.message_buffer)
@@ -132,7 +132,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
     match header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) => {
             state.data_buffer.clear();
-            state.data_buffer.try_reserve(block_length as usize)?;
+            state.data_buffer.try_reserve(block_length)?;
             (&mut state.reader)
                 .take(block_length as u64)
                 .read_to_end(&mut state.data_buffer)
@@ -155,7 +155,7 @@ async fn maybe_next<R: AsyncRead + Unpin + Send>(
         }
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) => {
             state.data_buffer.clear();
-            state.data_buffer.try_reserve(block_length as usize)?;
+            state.data_buffer.try_reserve(block_length)?;
             (&mut state.reader)
                 .take(block_length as u64)
                 .read_to_end(&mut state.data_buffer)

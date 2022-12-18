@@ -171,7 +171,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 [""],
             ]
         */
-        "list_utf8" => Box::new(Utf8Array::<i32>::from(&[
+        "list_utf8" => Box::new(Utf8Array::<i32>::from([
             Some("Hello".to_string()),
             Some("bbb".to_string()),
             Some("aa".to_string()),
@@ -185,7 +185,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             Some("bbb".to_string()),
             Some("".to_string()),
         ])),
-        "list_large_binary" => Box::new(BinaryArray::<i64>::from(&[
+        "list_large_binary" => Box::new(BinaryArray::<i64>::from([
             Some(b"Hello".to_vec()),
             Some(b"bbb".to_vec()),
             Some(b"aa".to_vec()),
@@ -334,7 +334,7 @@ pub fn pyarrow_nullable(column: &str) -> Box<dyn Array> {
             None,
             Some(9.0),
         ])),
-        "string" => Box::new(Utf8Array::<i32>::from(&[
+        "string" => Box::new(Utf8Array::<i32>::from([
             Some("Hello".to_string()),
             None,
             Some("aa".to_string()),
@@ -346,7 +346,7 @@ pub fn pyarrow_nullable(column: &str) -> Box<dyn Array> {
             Some("def".to_string()),
             Some("aaa".to_string()),
         ])),
-        "bool" => Box::new(BooleanArray::from(&[
+        "bool" => Box::new(BooleanArray::from([
             Some(true),
             None,
             Some(false),

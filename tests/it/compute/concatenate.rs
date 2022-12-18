@@ -11,8 +11,8 @@ fn empty_vec() {
 #[test]
 fn incompatible_datatypes() {
     let re = concatenate(&[
-        &Int64Array::from(vec![Some(-1), Some(2), None]),
-        &Utf8Array::<i32>::from(&vec![Some("hello"), Some("bar"), Some("world")]),
+        &Int64Array::from([Some(-1), Some(2), None]),
+        &Utf8Array::<i32>::from([Some("hello"), Some("bar"), Some("world")]),
     ]);
     assert!(re.is_err());
 }
@@ -20,12 +20,12 @@ fn incompatible_datatypes() {
 #[test]
 fn string_arrays() -> Result<()> {
     let arr = concatenate(&[
-        &Utf8Array::<i32>::from_slice(&vec!["hello", "world"]),
-        &Utf8Array::<i32>::from_slice(&vec!["2", "3", "4"]),
-        &Utf8Array::<i32>::from(&vec![Some("foo"), Some("bar"), None, Some("baz")]),
+        &Utf8Array::<i32>::from_slice(["hello", "world"]),
+        &Utf8Array::<i32>::from_slice(["2", "3", "4"]),
+        &Utf8Array::<i32>::from([Some("foo"), Some("bar"), None, Some("baz")]),
     ])?;
 
-    let expected_output = Utf8Array::<i32>::from(&vec![
+    let expected_output = Utf8Array::<i32>::from([
         Some("hello"),
         Some("world"),
         Some("2"),

@@ -441,7 +441,7 @@ fn push(
         Boolean => boolean::push(from, min, max),
         Int8 => primitive::push(from, min, max, |x: i32| Ok(x as i8)),
         Int16 => primitive::push(from, min, max, |x: i32| Ok(x as i16)),
-        Date32 | Time32(_) => primitive::push(from, min, max, |x: i32| Ok(x as i32)),
+        Date32 | Time32(_) => primitive::push::<i32, i32, _>(from, min, max, Ok),
         Interval(IntervalUnit::YearMonth) => fixlen::push_year_month(from, min, max),
         Interval(IntervalUnit::DayTime) => fixlen::push_days_ms(from, min, max),
         UInt8 => primitive::push(from, min, max, |x: i32| Ok(x as u8)),
@@ -455,9 +455,9 @@ fn push(
                 other
             ))),
         },
-        Int32 => primitive::push(from, min, max, |x: i32| Ok(x as i32)),
+        Int32 => primitive::push::<i32, i32, _>(from, min, max, Ok),
         Int64 | Date64 | Time64(_) | Duration(_) => {
-            primitive::push(from, min, max, |x: i64| Ok(x as i64))
+            primitive::push::<i64, i64, _>(from, min, max, Ok)
         }
         UInt64 => primitive::push(from, min, max, |x: i64| Ok(x as u64)),
         Timestamp(time_unit, _) => {
@@ -498,8 +498,8 @@ fn push(
                 })
             }
         }
-        Float32 => primitive::push(from, min, max, |x: f32| Ok(x as f32)),
-        Float64 => primitive::push(from, min, max, |x: f64| Ok(x as f64)),
+        Float32 => primitive::push::<f32, f32, _>(from, min, max, Ok),
+        Float64 => primitive::push::<f64, f64, _>(from, min, max, Ok),
         Decimal(_, _) => match physical_type {
             ParquetPhysicalType::Int32 => primitive::push(from, min, max, |x: i32| Ok(x as i128)),
             ParquetPhysicalType::Int64 => primitive::push(from, min, max, |x: i64| Ok(x as i128)),

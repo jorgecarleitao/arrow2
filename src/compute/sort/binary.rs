@@ -10,7 +10,7 @@ pub(super) fn indices_sorted_unstable_by<I: Index, O: Offset>(
     options: &SortOptions,
     limit: Option<usize>,
 ) -> PrimitiveArray<I> {
-    let get = |idx| unsafe { array.value_unchecked(idx as usize) };
+    let get = |idx| unsafe { array.value_unchecked(idx) };
     let cmp = |lhs: &&[u8], rhs: &&[u8]| lhs.cmp(rhs);
     common::indices_sorted_unstable_by(array.validity(), get, cmp, array.len(), options, limit)
 }

@@ -140,7 +140,7 @@ impl FixedSizeListArray {
         let values = self
             .values
             .clone()
-            .slice_unchecked(offset * self.size as usize, length * self.size as usize);
+            .slice_unchecked(offset * self.size, length * self.size);
         Self {
             data_type: self.data_type.clone(),
             size: self.size,
@@ -174,7 +174,7 @@ impl FixedSizeListArray {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.values.len() / self.size as usize
+        self.values.len() / self.size
     }
 
     /// The optional validity.
@@ -193,8 +193,7 @@ impl FixedSizeListArray {
     /// panics iff `i >= self.len()`
     #[inline]
     pub fn value(&self, i: usize) -> Box<dyn Array> {
-        self.values
-            .slice(i * self.size as usize, self.size as usize)
+        self.values.slice(i * self.size, self.size)
     }
 
     /// Returns the `Vec<T>` at position `i`.
@@ -202,8 +201,7 @@ impl FixedSizeListArray {
     /// Caller must ensure that `i < self.len()`
     #[inline]
     pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
-        self.values
-            .slice_unchecked(i * self.size as usize, self.size as usize)
+        self.values.slice_unchecked(i * self.size, self.size)
     }
 }
 
@@ -214,7 +212,7 @@ impl FixedSizeListArray {
                 if *size == 0 {
                     return Err(Error::oos("FixedSizeBinaryArray expects a positive size"));
                 }
-                Ok((child.as_ref(), *size as usize))
+                Ok((child.as_ref(), *size))
             }
             _ => Err(Error::oos(
                 "FixedSizeListArray expects DataType::FixedSizeList",

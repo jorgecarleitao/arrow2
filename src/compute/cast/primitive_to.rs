@@ -38,7 +38,7 @@ pub fn primitive_to_binary<T: NativeType + lexical_core::ToLexical, O: Offset>(
             let len = lexical_core::write_unchecked(*x, bytes).len();
 
             offset += len;
-            offsets.push(O::from_usize(offset as usize).unwrap());
+            offsets.push(O::from_usize(offset).unwrap());
         }
         values.set_len(offset);
         values.shrink_to_fit();
@@ -398,11 +398,7 @@ pub fn time64_to_time32(
     let from_size = time_unit_multiple(from_unit);
     let to_size = time_unit_multiple(to_unit);
     let divisor = from_size / to_size;
-    unary(
-        from,
-        |x| (x as i64 / divisor) as i32,
-        DataType::Time32(to_unit),
-    )
+    unary(from, |x| (x / divisor) as i32, DataType::Time32(to_unit))
 }
 
 /// Conversion of timestamp
