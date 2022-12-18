@@ -301,7 +301,7 @@
         .map_err(|<span class="kw">_</span>| Error::from(OutOfSpecKind::NegativeFooterLength))<span class="question-mark">?</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>meta_buffer = <span class="macro">vec!</span>[];
-    meta_buffer.try_reserve(meta_len <span class="kw">as </span>usize)<span class="question-mark">?</span>;
+    meta_buffer.try_reserve(meta_len)<span class="question-mark">?</span>;
     reader
         .take(meta_len <span class="kw">as </span>u64)
         .read_to_end(<span class="kw-2">&amp;mut </span>meta_buffer)
@@ -352,7 +352,7 @@
     }
 
     state.message_buffer.clear();
-    state.message_buffer.try_reserve(meta_length <span class="kw">as </span>usize)<span class="question-mark">?</span>;
+    state.message_buffer.try_reserve(meta_length)<span class="question-mark">?</span>;
     (<span class="kw-2">&amp;mut </span>state.reader)
         .take(meta_length <span class="kw">as </span>u64)
         .read_to_end(<span class="kw-2">&amp;mut </span>state.message_buffer)
@@ -375,7 +375,7 @@
     <span class="kw">match </span>header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) =&gt; {
             state.data_buffer.clear();
-            state.data_buffer.try_reserve(block_length <span class="kw">as </span>usize)<span class="question-mark">?</span>;
+            state.data_buffer.try_reserve(block_length)<span class="question-mark">?</span>;
             (<span class="kw-2">&amp;mut </span>state.reader)
                 .take(block_length <span class="kw">as </span>u64)
                 .read_to_end(<span class="kw-2">&amp;mut </span>state.data_buffer)
@@ -398,7 +398,7 @@
         }
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) =&gt; {
             state.data_buffer.clear();
-            state.data_buffer.try_reserve(block_length <span class="kw">as </span>usize)<span class="question-mark">?</span>;
+            state.data_buffer.try_reserve(block_length)<span class="question-mark">?</span>;
             (<span class="kw-2">&amp;mut </span>state.reader)
                 .take(block_length <span class="kw">as </span>u64)
                 .read_to_end(<span class="kw-2">&amp;mut </span>state.data_buffer)

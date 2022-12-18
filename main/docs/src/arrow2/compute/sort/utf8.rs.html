@@ -52,7 +52,7 @@
     options: <span class="kw-2">&amp;</span>SortOptions,
     limit: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 ) -&gt; PrimitiveArray&lt;I&gt; {
-    <span class="kw">let </span>get = |idx| <span class="kw">unsafe </span>{ array.value_unchecked(idx <span class="kw">as </span>usize) };
+    <span class="kw">let </span>get = |idx| <span class="kw">unsafe </span>{ array.value_unchecked(idx) };
     <span class="kw">let </span>cmp = |lhs: &amp;&amp;str, rhs: &amp;&amp;str| lhs.cmp(rhs);
     common::indices_sorted_unstable_by(array.validity(), get, cmp, array.len(), options, limit)
 }

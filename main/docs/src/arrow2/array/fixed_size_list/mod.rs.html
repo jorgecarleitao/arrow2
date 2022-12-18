@@ -269,8 +269,6 @@
 <a href="#269" id="269">269</a>
 <a href="#270" id="270">270</a>
 <a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
@@ -413,7 +411,7 @@
         <span class="kw">let </span>values = <span class="self">self
             </span>.values
             .clone()
-            .slice_unchecked(offset * <span class="self">self</span>.size <span class="kw">as </span>usize, length * <span class="self">self</span>.size <span class="kw">as </span>usize);
+            .slice_unchecked(offset * <span class="self">self</span>.size, length * <span class="self">self</span>.size);
         <span class="self">Self </span>{
             data_type: <span class="self">self</span>.data_type.clone(),
             size: <span class="self">self</span>.size,
@@ -447,7 +445,7 @@
     <span class="doccomment">/// Returns the length of this array
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.values.len() / <span class="self">self</span>.size <span class="kw">as </span>usize
+        <span class="self">self</span>.values.len() / <span class="self">self</span>.size
     }
 
     <span class="doccomment">/// The optional validity.
@@ -466,8 +464,7 @@
     /// panics iff `i &gt;= self.len()`
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        <span class="self">self</span>.values
-            .slice(i * <span class="self">self</span>.size <span class="kw">as </span>usize, <span class="self">self</span>.size <span class="kw">as </span>usize)
+        <span class="self">self</span>.values.slice(i * <span class="self">self</span>.size, <span class="self">self</span>.size)
     }
 
     <span class="doccomment">/// Returns the `Vec&lt;T&gt;` at position `i`.
@@ -475,8 +472,7 @@
     /// Caller must ensure that `i &lt; self.len()`
     </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>value_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, i: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        <span class="self">self</span>.values
-            .slice_unchecked(i * <span class="self">self</span>.size <span class="kw">as </span>usize, <span class="self">self</span>.size <span class="kw">as </span>usize)
+        <span class="self">self</span>.values.slice_unchecked(i * <span class="self">self</span>.size, <span class="self">self</span>.size)
     }
 }
 
@@ -487,7 +483,7 @@
                 <span class="kw">if </span><span class="kw-2">*</span>size == <span class="number">0 </span>{
                     <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;FixedSizeBinaryArray expects a positive size&quot;</span>));
                 }
-                <span class="prelude-val">Ok</span>((child.as_ref(), <span class="kw-2">*</span>size <span class="kw">as </span>usize))
+                <span class="prelude-val">Ok</span>((child.as_ref(), <span class="kw-2">*</span>size))
             }
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::oos(
                 <span class="string">&quot;FixedSizeListArray expects DataType::FixedSizeList&quot;</span>,

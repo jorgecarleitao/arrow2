@@ -270,7 +270,7 @@
             } <span class="kw">else </span>{
                 length_i + start
             };
-        <span class="kw">let </span>start = start.max(windows[<span class="number">0</span>]).min(windows[<span class="number">1</span>]);
+        <span class="kw">let </span>start = start.clamp(windows[<span class="number">0</span>], windows[<span class="number">1</span>]);
 
         <span class="kw">let </span>length: O = length
             .unwrap_or(length_i)

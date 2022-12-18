@@ -798,7 +798,7 @@
 <span class="doccomment">/// Calculate an 8-byte boundary and return the number of bytes needed to pad to 8 bytes
 </span><span class="attr">#[inline]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>pad_to_64(len: usize) -&gt; usize {
-    (((len + <span class="number">63</span>) &amp; !<span class="number">63</span>) - len) <span class="kw">as </span>usize
+    ((len + <span class="number">63</span>) &amp; !<span class="number">63</span>) - len
 }
 
 <span class="doccomment">/// An array [`Chunk`] with optional accompanying IPC fields.

@@ -103,7 +103,7 @@
 
 <span class="kw">fn </span>column_to_field(column_description: <span class="kw-2">&amp;</span>api::ColumnDescription) -&gt; Field {
     Field::new(
-        <span class="kw-2">&amp;</span>column_description
+        column_description
             .name_to_string()
             .expect(<span class="string">&quot;Column name must be representable in utf8&quot;</span>),
         column_to_data_type(<span class="kw-2">&amp;</span>column_description.data_type),

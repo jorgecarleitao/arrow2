@@ -368,7 +368,7 @@
         .map_err(|<span class="kw">_</span>| Error::from(OutOfSpecKind::NegativeFooterLength))<span class="question-mark">?</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
-    buffer.try_reserve(length <span class="kw">as </span>usize)<span class="question-mark">?</span>;
+    buffer.try_reserve(length)<span class="question-mark">?</span>;
     reader
         .by_ref()
         .take(length <span class="kw">as </span>u64)
@@ -455,7 +455,7 @@
     }
 
     message_buffer.clear();
-    message_buffer.try_reserve(meta_length <span class="kw">as </span>usize)<span class="question-mark">?</span>;
+    message_buffer.try_reserve(meta_length)<span class="question-mark">?</span>;
     reader
         .by_ref()
         .take(meta_length <span class="kw">as </span>u64)
@@ -478,7 +478,7 @@
     <span class="kw">match </span>header {
         arrow_format::ipc::MessageHeaderRef::RecordBatch(batch) =&gt; {
             data_buffer.clear();
-            data_buffer.try_reserve(block_length <span class="kw">as </span>usize)<span class="question-mark">?</span>;
+            data_buffer.try_reserve(block_length)<span class="question-mark">?</span>;
             reader
                 .by_ref()
                 .take(block_length <span class="kw">as </span>u64)
@@ -513,7 +513,7 @@
         }
         arrow_format::ipc::MessageHeaderRef::DictionaryBatch(batch) =&gt; {
             data_buffer.clear();
-            data_buffer.try_reserve(block_length <span class="kw">as </span>usize)<span class="question-mark">?</span>;
+            data_buffer.try_reserve(block_length)<span class="question-mark">?</span>;
             reader
                 .by_ref()
                 .take(block_length <span class="kw">as </span>u64)

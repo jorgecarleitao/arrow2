@@ -117,7 +117,7 @@
     <span class="kw">let </span>slice = array.slice(slice_offset, length);
 
     <span class="comment">// Generate array with remaining `null` items
-    </span><span class="kw">let </span>nulls = abs(offset <span class="kw">as </span>i64) <span class="kw">as </span>usize;
+    </span><span class="kw">let </span>nulls = abs(offset) <span class="kw">as </span>usize;
 
     <span class="kw">let </span>null_array = new_null_array(array.data_type().clone(), nulls);
 

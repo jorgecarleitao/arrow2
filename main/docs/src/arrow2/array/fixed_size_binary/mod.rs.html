@@ -494,7 +494,7 @@
     <span class="doccomment">/// Returns the length of this array
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.values.len() / <span class="self">self</span>.size <span class="kw">as </span>usize
+        <span class="self">self</span>.values.len() / <span class="self">self</span>.size
     }
 
     <span class="doccomment">/// The optional validity.
@@ -663,7 +663,7 @@
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.size <span class="kw">as </span>usize
+        <span class="self">self</span>.size
     }
 }
 </code></pre></div>

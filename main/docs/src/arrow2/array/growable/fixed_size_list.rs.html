@@ -148,7 +148,7 @@
 
         <span class="kw">let </span>size =
             <span class="kw">if let </span>DataType::FixedSizeList(<span class="kw">_</span>, size) = <span class="kw-2">&amp;</span>arrays[<span class="number">0</span>].data_type().to_logical_type() {
-                <span class="kw-2">*</span>size <span class="kw">as </span>usize
+                <span class="kw-2">*</span>size
             } <span class="kw">else </span>{
                 <span class="macro">unreachable!</span>(<span class="string">&quot;`GrowableFixedSizeList` expects `DataType::FixedSizeList`&quot;</span>)
             };

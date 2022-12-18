@@ -581,10 +581,10 @@
                     capacity,
                 )) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>MutableArray&gt;
             }
-            DataType::FixedSizeBinary(size) =&gt; Box::new(MutableFixedSizeBinaryArray::with_capacity(
-                <span class="kw-2">*</span>size <span class="kw">as </span>usize,
-                capacity,
-            )) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>MutableArray&gt;,
+            DataType::FixedSizeBinary(size) =&gt; {
+                Box::new(MutableFixedSizeBinaryArray::with_capacity(<span class="kw-2">*</span>size, capacity))
+                    <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>MutableArray&gt;
+            }
             DataType::Struct(fields) =&gt; {
                 <span class="kw">let </span>values = fields
                     .iter()
@@ -725,7 +725,7 @@
                     array.push(<span class="prelude-val">Some</span>(value))
                 }
                 PrimitiveType::Int64 =&gt; {
-                    <span class="kw">let </span>value = util::zigzag_i64(<span class="kw-2">&amp;mut </span>block)<span class="question-mark">? </span><span class="kw">as </span>i64;
+                    <span class="kw">let </span>value = util::zigzag_i64(<span class="kw-2">&amp;mut </span>block)<span class="question-mark">?</span>;
                     <span class="kw">let </span>array = array
                         .as_mut_any()
                         .downcast_mut::&lt;MutablePrimitiveArray&lt;i64&gt;&gt;()
@@ -804,7 +804,7 @@
                         .as_mut_any()
                         .downcast_mut::&lt;MutablePrimitiveArray&lt;i128&gt;&gt;()
                         .unwrap();
-                    array.push(<span class="prelude-val">Some</span>(data <span class="kw">as </span>i128))
+                    array.push(<span class="prelude-val">Some</span>(data))
                 }
                 <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
             },

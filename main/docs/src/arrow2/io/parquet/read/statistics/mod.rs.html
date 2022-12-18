@@ -995,7 +995,7 @@
         Boolean =&gt; boolean::push(from, min, max),
         Int8 =&gt; primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>i8)),
         Int16 =&gt; primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>i16)),
-        Date32 | Time32(<span class="kw">_</span>) =&gt; primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>i32)),
+        Date32 | Time32(<span class="kw">_</span>) =&gt; primitive::push::&lt;i32, i32, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>),
         Interval(IntervalUnit::YearMonth) =&gt; fixlen::push_year_month(from, min, max),
         Interval(IntervalUnit::DayTime) =&gt; fixlen::push_days_ms(from, min, max),
         UInt8 =&gt; primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>u8)),
@@ -1009,9 +1009,9 @@
                 other
             ))),
         },
-        Int32 =&gt; primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>i32)),
+        Int32 =&gt; primitive::push::&lt;i32, i32, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>),
         Int64 | Date64 | Time64(<span class="kw">_</span>) | Duration(<span class="kw">_</span>) =&gt; {
-            primitive::push(from, min, max, |x: i64| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>i64))
+            primitive::push::&lt;i64, i64, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>)
         }
         UInt64 =&gt; primitive::push(from, min, max, |x: i64| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>u64)),
         Timestamp(time_unit, <span class="kw">_</span>) =&gt; {
@@ -1052,8 +1052,8 @@
                 })
             }
         }
-        Float32 =&gt; primitive::push(from, min, max, |x: f32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>f32)),
-        Float64 =&gt; primitive::push(from, min, max, |x: f64| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>f64)),
+        Float32 =&gt; primitive::push::&lt;f32, f32, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>),
+        Float64 =&gt; primitive::push::&lt;f64, f64, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>),
         Decimal(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="kw">match </span>physical_type {
             ParquetPhysicalType::Int32 =&gt; primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>i128)),
             ParquetPhysicalType::Int64 =&gt; primitive::push(from, min, max, |x: i64| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>i128)),

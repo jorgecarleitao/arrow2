@@ -462,7 +462,7 @@
         <span class="kw">if </span><span class="kw-2">*</span><span class="self">self</span>.remaining.last().unwrap() &gt; <span class="number">0 </span>{
             <span class="kw-2">*</span><span class="self">self</span>.remaining.last_mut().unwrap() -= <span class="number">1</span>;
 
-            <span class="kw">let </span>primitive = <span class="self">self</span>.primitive_validity.next()<span class="question-mark">?</span>.<span class="number">0 </span><span class="kw">as </span>u32;
+            <span class="kw">let </span>primitive = <span class="self">self</span>.primitive_validity.next()<span class="question-mark">?</span>.<span class="number">0</span>;
             <span class="kw">let </span>r = <span class="prelude-val">Some</span>(<span class="self">self</span>.total + primitive);
 
             <span class="kw">for </span>level <span class="kw">in </span><span class="number">0</span>..<span class="self">self</span>.current_level - <span class="number">1 </span>{
@@ -475,7 +475,7 @@
             }
             <span class="kw">if </span><span class="self">self</span>.remaining[<span class="number">0</span>] == <span class="number">0 </span>{
                 <span class="self">self</span>.current_level -= <span class="number">1</span>;
-                <span class="self">self</span>.total -= <span class="self">self</span>.validity[<span class="number">0</span>] <span class="kw">as </span>u32;
+                <span class="self">self</span>.total -= <span class="self">self</span>.validity[<span class="number">0</span>];
             }
             <span class="self">self</span>.remaining_values -= <span class="number">1</span>;
             <span class="kw">return </span>r;

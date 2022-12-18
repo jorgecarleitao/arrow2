@@ -342,9 +342,6 @@
 <a href="#342" id="342">342</a>
 <a href="#343" id="343">343</a>
 <a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::io::{Read, Seek};
 
 <span class="kw">use </span>futures::{
@@ -481,10 +478,7 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>chunk = <span class="macro">vec!</span>[];
     chunk.try_reserve(length <span class="kw">as </span>usize)<span class="question-mark">?</span>;
-    reader
-        .by_ref()
-        .take(length <span class="kw">as </span>u64)
-        .read_to_end(<span class="kw-2">&amp;mut </span>chunk)<span class="question-mark">?</span>;
+    reader.by_ref().take(length).read_to_end(<span class="kw-2">&amp;mut </span>chunk)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>((meta, chunk))
 }
 
@@ -502,7 +496,7 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>chunk = <span class="macro">vec!</span>[];
     chunk.try_reserve(length <span class="kw">as </span>usize)<span class="question-mark">?</span>;
-    reader.take(length <span class="kw">as </span>u64).read_to_end(<span class="kw-2">&amp;mut </span>chunk).<span class="kw">await</span><span class="question-mark">?</span>;
+    reader.take(length).read_to_end(<span class="kw-2">&amp;mut </span>chunk).<span class="kw">await</span><span class="question-mark">?</span>;
     Result::Ok((meta, chunk))
 }
 

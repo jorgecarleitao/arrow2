@@ -591,9 +591,6 @@
 <a href="#591" id="591">591</a>
 <a href="#592" id="592">592</a>
 <a href="#593" id="593">593</a>
-<a href="#594" id="594">594</a>
-<a href="#595" id="595">595</a>
-<a href="#596" id="596">596</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Comparison functions for [`PrimitiveArray`]
 </span><span class="kw">use </span><span class="kw">crate</span>::compute::comparison::{finish_eq_validities, finish_neq_validities};
 <span class="kw">use crate</span>::{
@@ -931,10 +928,7 @@
         <span class="kw">let </span>b = Int64Array::from_slice([<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span>]);
         <span class="kw">let </span>c = b.slice(<span class="number">5</span>, <span class="number">5</span>);
         <span class="kw">let </span>d = eq(<span class="kw-2">&amp;</span>c, <span class="kw-2">&amp;</span>a);
-        <span class="macro">assert_eq!</span>(
-            d,
-            BooleanArray::from_slice(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])
-        );
+        <span class="macro">assert_eq!</span>(d, BooleanArray::from_slice([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>]));
     }
 
     <span class="attr">#[test]
@@ -1180,11 +1174,11 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_length_of_result_buffer() {
         <span class="comment">// `item_count` is chosen to not be a multiple of 64.
-        </span><span class="kw">let </span>item_count = <span class="number">130</span>;
+        </span><span class="kw">const </span>ITEM_COUNT: usize = <span class="number">130</span>;
 
-        <span class="kw">let </span>array_a = Int8Array::from_slice(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[<span class="number">1</span>; item_count]);
-        <span class="kw">let </span>array_b = Int8Array::from_slice(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[<span class="number">2</span>; item_count]);
-        <span class="kw">let </span>expected = BooleanArray::from_slice(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[<span class="bool-val">false</span>; item_count]);
+        <span class="kw">let </span>array_a = Int8Array::from_slice([<span class="number">1</span>; ITEM_COUNT]);
+        <span class="kw">let </span>array_b = Int8Array::from_slice([<span class="number">2</span>; ITEM_COUNT]);
+        <span class="kw">let </span>expected = BooleanArray::from_slice([<span class="bool-val">false</span>; ITEM_COUNT]);
         <span class="kw">let </span>result = gt_eq(<span class="kw-2">&amp;</span>array_a, <span class="kw-2">&amp;</span>array_b);
 
         <span class="macro">assert_eq!</span>(result, expected)

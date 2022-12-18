@@ -680,7 +680,7 @@
             data_type,
             num_rows,
             chunk_size,
-            |x: i32| x <span class="kw">as </span>i32,
+            |x: i32| x,
         ))),
 
         Timestamp(time_unit, <span class="kw">_</span>) =&gt; {
@@ -808,7 +808,7 @@
             data_type,
             num_rows,
             chunk_size,
-            |x: i64| x <span class="kw">as </span>i64,
+            |x: i64| x,
         ))),
         UInt64 =&gt; dyn_iter(iden(primitive::IntegerIter::new(
             pages,
@@ -1046,7 +1046,7 @@
                 data_type,
                 num_rows,
                 chunk_size,
-                |x: i32| x <span class="kw">as </span>i32,
+                |x: i32| x,
             ))
         }
 
