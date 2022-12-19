@@ -62,7 +62,7 @@ This crate uses `unsafe` when strictly necessary:
 We have extensive tests over these, all of which run and pass under MIRI.
 Most uses of `unsafe` fall into 3 categories:
 
-* The Arrow format has invariants over utf8 that can't be written in safe Rust
+* The Arrow format has invariants over UTF-8 that can't be written in safe Rust
 * `TrustedLen` and trait specialization are still nightly features
 * FFI
 
@@ -71,8 +71,8 @@ them (see e.g. `.cargo/audit.yaml` and `.github/workflows/security.yaml`).
 
 Reading from untrusted data currently _may_ `panic!` on the following formats:
 
-* parquet
-* avro
+* Apache Parquet
+* Apache Avro
 
 We are actively addressing this.
 
@@ -121,7 +121,7 @@ unsuitable for this type of work:
 
 This implies that the crate version is independent of the changelog or its API stability,
 which violates SemVer. This procedure makes the crate incompatible with
-Rusts' (and many others') ecosystem that heavily relies on SemVer to constraint
+Rust's (and many others') ecosystem that heavily relies on SemVer to constraint
 software versions.
 
 Secondly, this implies the arrow crate is versioned as `>0.x`. This places
