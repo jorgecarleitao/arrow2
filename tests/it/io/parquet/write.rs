@@ -1,7 +1,9 @@
 use std::io::Cursor;
 
+use arrow2::array::*;
 use arrow2::error::Result;
 use arrow2::io::parquet::write::*;
+use arrow2::offset::Offsets;
 
 use super::*;
 
@@ -70,6 +72,45 @@ fn round_trip_opt_stats(
     if check_stats {
         assert_eq!(statistics, stats);
     }
+    Ok(())
+}
+
+fn round_trip_native(
+    schema: Schema,
+    chunk: Chunk<Box<dyn Array>>,
+    version: Version,
+    compression: CompressionOptions,
+    encodings: Vec<Vec<Encoding>>,
+) -> Result<()> {
+    let options = WriteOptions {
+        write_statistics: true,
+        compression,
+        version,
+        data_pagesize_limit: None,
+    };
+
+    let row_groups = RowGroupIterator::try_new(
+        vec![Ok(chunk.clone())].into_iter(),
+        &schema,
+        options,
+        encodings,
+    )?;
+
+    let writer = Cursor::new(vec![]);
+    let mut writer = FileWriter::try_new(writer, schema.clone(), options)?;
+
+    for group in row_groups {
+        writer.write(group?)?;
+    }
+    writer.end(None)?;
+
+    let data = writer.into_inner().into_inner();
+
+    for (field, array) in schema.fields.iter().zip(chunk.arrays().iter()) {
+        let (result, _) = read_column(&mut Cursor::new(data.clone()), field.name.as_str())?;
+        assert_eq!(array, result.as_ref());
+    }
+
     Ok(())
 }
 
@@ -583,5 +624,45 @@ fn struct_v2() -> Result<()> {
         Version::V2,
         CompressionOptions::Uncompressed,
         vec![Encoding::Plain, Encoding::Plain],
+    )
+}
+
+#[test]
+fn round_trip_nested_required_struct() -> Result<()> {
+    let inner = PrimitiveArray::<f64>::from_values(vec![
+        2.0, 2.0, 4.0, 4.0, 6.0, 6.0, 8.0, 8.0, 10.0, 10.0,
+    ]);
+
+    let offsets = vec![0, 2, 2, 4, 6, 8];
+    let child = ListArray::new(
+        DataType::List(Box::new(Field::new(
+            "inner",
+            inner.data_type().clone(),
+            false,
+        ))),
+        Offsets::try_from(offsets).unwrap().into(),
+        inner.boxed(),
+        None,
+    );
+
+    let nested = StructArray::new(
+        DataType::Struct(vec![Field::new("child", child.data_type().clone(), false)]),
+        vec![child.clone().boxed()],
+        None,
+    );
+
+    let schema = Schema {
+        fields: vec![Field::new("nested", nested.data_type().clone(), false)],
+        metadata: Metadata::default(),
+    };
+
+    let chunk = Chunk::new(vec![nested.to_boxed()]);
+
+    round_trip_native(
+        schema,
+        chunk,
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![vec![Encoding::Plain]],
     )
 }
