@@ -508,7 +508,10 @@ fn can_partial_eq_scalar(data_type: &DataType) -> bool {
         )
 }
 
-fn finish_eq_validities(
+/// Utility for low level end users that implement their own comparison functions
+/// A comparison on the data column can be applied on masked out values
+/// This function will correct equality for the validities.
+pub fn finish_eq_validities(
     output_without_validities: BooleanArray,
     validity_lhs: Option<Bitmap>,
     validity_rhs: Option<Bitmap>,
@@ -565,7 +568,10 @@ fn finish_eq_validities(
     }
 }
 
-fn finish_neq_validities(
+/// Utility for low level end users that implement their own comparison functions
+/// A comparison on the data column can be applied on masked out values
+/// This function will correct non-equality for the validities.
+pub fn finish_neq_validities(
     output_without_validities: BooleanArray,
     validity_lhs: Option<Bitmap>,
     validity_rhs: Option<Bitmap>,
