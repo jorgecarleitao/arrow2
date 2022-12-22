@@ -46,7 +46,9 @@ pub fn infer_schema<R: Read + Seek, F: Fn(&[u8]) -> DataType>(
 
         for (i, column) in column_types.iter_mut().enumerate() {
             if let Some(string) = record.get(i) {
-                column.insert(infer(string));
+                if !string.is_empty() {
+                    column.insert(infer(string));
+                }
             }
         }
     }
