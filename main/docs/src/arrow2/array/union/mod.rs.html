@@ -609,7 +609,7 @@
 
     <span class="doccomment">/// Creates a new empty [`UnionArray`].
     </span><span class="kw">pub fn </span>new_empty(data_type: DataType) -&gt; <span class="self">Self </span>{
-        <span class="kw">if let </span>DataType::Union(f, <span class="kw">_</span>, mode) = <span class="kw-2">&amp;</span>data_type {
+        <span class="kw">if let </span>DataType::Union(f, <span class="kw">_</span>, mode) = data_type.to_logical_type() {
             <span class="kw">let </span>fields = f
                 .iter()
                 .map(|x| new_empty_array(x.data_type().clone()))

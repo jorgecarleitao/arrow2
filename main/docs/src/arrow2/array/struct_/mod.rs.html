@@ -439,7 +439,7 @@
 
     <span class="doccomment">/// Creates an empty [`StructArray`].
     </span><span class="kw">pub fn </span>new_empty(data_type: DataType) -&gt; <span class="self">Self </span>{
-        <span class="kw">if let </span>DataType::Struct(fields) = <span class="kw-2">&amp;</span>data_type {
+        <span class="kw">if let </span>DataType::Struct(fields) = <span class="kw-2">&amp;</span>data_type.to_logical_type() {
             <span class="kw">let </span>values = fields
                 .iter()
                 .map(|field| new_empty_array(field.data_type().clone()))

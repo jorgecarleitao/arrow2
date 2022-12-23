@@ -124,15 +124,11 @@
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use crate</span>::{
     array::{Array, StructArray},
     bitmap::MutableBitmap,
-    datatypes::DataType,
 };
 
 <span class="kw">use super</span>::{
@@ -154,6 +150,8 @@
     /// # Panics
     /// If `arrays` is empty.
     </span><span class="kw">pub fn </span>new(arrays: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>StructArray&gt;, <span class="kw-2">mut </span>use_validity: bool, capacity: usize) -&gt; <span class="self">Self </span>{
+        <span class="macro">assert!</span>(!arrays.is_empty());
+
         <span class="comment">// if any of the arrays has nulls, insertions from any array requires setting bits
         // as there is at least one array with nulls.
         </span><span class="kw">if </span>arrays.iter().any(|array| array.null_count() &gt; <span class="number">0</span>) {
@@ -197,11 +195,7 @@
         <span class="kw">let </span>values = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values);
         <span class="kw">let </span>values = values.into_iter().map(|<span class="kw-2">mut </span>x| x.as_box()).collect();
 
-        StructArray::new(
-            DataType::Struct(<span class="self">self</span>.arrays[<span class="number">0</span>].fields().to_vec()),
-            values,
-            validity.into(),
-        )
+        StructArray::new(<span class="self">self</span>.arrays[<span class="number">0</span>].data_type().clone(), values, validity.into())
     }
 }
 
@@ -250,7 +244,7 @@
         <span class="kw">let </span>values = val.values.into_iter().map(|<span class="kw-2">mut </span>x| x.as_box()).collect();
 
         StructArray::new(
-            DataType::Struct(val.arrays[<span class="number">0</span>].fields().to_vec()),
+            val.arrays[<span class="number">0</span>].data_type().clone(),
             values,
             val.validity.into(),
         )
