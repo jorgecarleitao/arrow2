@@ -245,7 +245,7 @@ pub fn has_indexes(row_group: &RowGroupMetaData) -> bool {
 /// This function is IO-bounded and calls `reader.read_exact` exactly once.
 /// # Error
 /// Errors iff the indexes can't be read or their deserialization to arrow is incorrect (e.g. invalid utf-8)
-fn read_columns_indexes<R: Read + Seek>(
+pub fn read_columns_indexes<R: Read + Seek>(
     reader: &mut R,
     chunks: &[ColumnChunkMetaData],
     fields: &[Field],
@@ -264,7 +264,7 @@ fn read_columns_indexes<R: Read + Seek>(
 }
 
 /// Returns the set of (row) intervals of the pages.
-fn compute_page_row_intervals(
+pub fn compute_page_row_intervals(
     locations: &[PageLocation],
     num_rows: usize,
 ) -> Result<Vec<Interval>, ParquetError> {
