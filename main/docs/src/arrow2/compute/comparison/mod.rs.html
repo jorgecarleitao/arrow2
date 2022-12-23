@@ -629,6 +629,12 @@
 <a href="#629" id="629">629</a>
 <a href="#630" id="630">630</a>
 <a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains comparison operators
 //!
 //! The module contains functions that compare either an [`Array`] and a [`Scalar`]
@@ -1139,7 +1145,10 @@
         )
 }
 
-<span class="kw">fn </span>finish_eq_validities(
+<span class="doccomment">/// Utility for low level end users that implement their own comparison functions
+/// A comparison on the data column can be applied on masked out values
+/// This function will correct equality for the validities.
+</span><span class="kw">pub fn </span>finish_eq_validities(
     output_without_validities: BooleanArray,
     validity_lhs: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;,
     validity_rhs: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;,
@@ -1196,7 +1205,10 @@
     }
 }
 
-<span class="kw">fn </span>finish_neq_validities(
+<span class="doccomment">/// Utility for low level end users that implement their own comparison functions
+/// A comparison on the data column can be applied on masked out values
+/// This function will correct non-equality for the validities.
+</span><span class="kw">pub fn </span>finish_neq_validities(
     output_without_validities: BooleanArray,
     validity_lhs: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;,
     validity_rhs: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;,
