@@ -195,7 +195,7 @@ impl UnionArray {
 
     /// Creates a new empty [`UnionArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        if let DataType::Union(f, _, mode) = &data_type {
+        if let DataType::Union(f, _, mode) = data_type.to_logical_type() {
             let fields = f
                 .iter()
                 .map(|x| new_empty_array(x.data_type().clone()))

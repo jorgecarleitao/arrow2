@@ -122,7 +122,7 @@ impl StructArray {
 
     /// Creates an empty [`StructArray`].
     pub fn new_empty(data_type: DataType) -> Self {
-        if let DataType::Struct(fields) = &data_type {
+        if let DataType::Struct(fields) = &data_type.to_logical_type() {
             let values = fields
                 .iter()
                 .map(|field| new_empty_array(field.data_type().clone()))
