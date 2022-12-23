@@ -8,6 +8,7 @@ use crate::error::Result;
 use crate::types::simd::{NativeSimd, Simd};
 use crate::types::BitChunkOnes;
 use crate::{array::*, types::NativeType};
+use num_traits::Bounded;
 use num_traits::One;
 use num_traits::Zero;
 
@@ -25,24 +26,34 @@ where
     let mut chunks = values.chunks_exact(T::Simd::LANES);
     let mut new = Vec::<T>::with_capacity(filter_count);
     let mut dst = new.as_mut_ptr();
+
+    let size = std::mem::size_of::<<T::Simd as NativeSimd>::Chunk>() * 8;
+    let max = <T::Simd as NativeSimd>::Chunk::max_value();
+    let zero = <T::Simd as NativeSimd>::Chunk::zero();
+
     chunks
         .by_ref()
         .zip(mask_chunks.by_ref())
-        .for_each(|(chunk, validity_chunk)| {
-            let ones_iter = BitChunkOnes::new(validity_chunk);
+        .for_each(|(chunk, mask_chunk)| {
+            // all false
+            if mask_chunk == zero {
+                return;
+            }
 
-            let (size, _) = ones_iter.size_hint();
-            if size == T::Simd::LANES {
-                // Fast path: all lanes are set
+            // all true
+            if mask_chunk == max {
                 unsafe {
                     std::ptr::copy(chunk.as_ptr(), dst, size);
                     dst = dst.add(size);
                 }
-            } else {
-                for pos in ones_iter {
-                    dst.write(chunk[pos]);
-                    dst = dst.add(1);
-                }
+                return;
+            }
+
+            // this triggers a bit count.
+            let ones_iter = BitChunkOnes::new(mask_chunk);
+            for pos in ones_iter {
+                dst.write(*chunk.get_unchecked(pos));
+                dst = dst.add(1);
             }
         });
 
@@ -84,30 +95,49 @@ where
     let mut dst = new.as_mut_ptr();
     let mut new_validity = MutableBitmap::with_capacity(filter_count);
 
+    let zero = <T::Simd as NativeSimd>::Chunk::zero();
+    let size = std::mem::size_of::<<T::Simd as NativeSimd>::Chunk>() * 8;
+    let max = <T::Simd as NativeSimd>::Chunk::max_value();
+
     chunks
         .by_ref()
         .zip(validity_chunks.by_ref())
         .zip(mask_chunks.by_ref())
         .for_each(|((chunk, validity_chunk), mask_chunk)| {
-            let ones_iter = BitChunkOnes::new(mask_chunk);
-            let (size, _) = ones_iter.size_hint();
+            // all false
+            if mask_chunk == zero {
+                return;
+            }
 
-            if size == T::Simd::LANES {
+            // all true
+            if mask_chunk == max {
                 // Fast path: all lanes are set
                 unsafe {
                     std::ptr::copy(chunk.as_ptr(), dst, size);
                     dst = dst.add(size);
-                    new_validity.extend_from_slice(validity_chunk.to_ne_bytes().as_ref(), 0, size);
+
+                    if validity_chunk == max {
+                        new_validity.extend_constant(size, true)
+                    } else {
+                        new_validity.extend_from_slice(
+                            validity_chunk.to_ne_bytes().as_ref(),
+                            0,
+                            size,
+                        );
+                    }
                 }
-            } else {
-                for pos in ones_iter {
-                    dst.write(chunk[pos]);
-                    dst = dst.add(1);
-                    new_validity.push(
-                        validity_chunk & (<<<T as Simd>::Simd as NativeSimd>::Chunk>::one() << pos)
-                            > <<<T as Simd>::Simd as NativeSimd>::Chunk>::zero(),
-                    );
-                }
+                return;
+            }
+
+            // this triggers a bitcount
+            let ones_iter = BitChunkOnes::new(mask_chunk);
+            for pos in ones_iter {
+                dst.write(*chunk.get_unchecked(pos));
+                dst = dst.add(1);
+                new_validity.push_unchecked(
+                    validity_chunk & (<<<T as Simd>::Simd as NativeSimd>::Chunk>::one() << pos)
+                        > <<<T as Simd>::Simd as NativeSimd>::Chunk>::zero(),
+                );
             }
         });
 
