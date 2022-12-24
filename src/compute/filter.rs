@@ -1,16 +1,13 @@
 //! Contains operators to filter arrays such as [`filter`].
 use crate::array::growable::{make_growable, Growable};
-use crate::bitmap::utils::{BitChunk, BitChunkIterExact, BitChunksExact};
+use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
 use crate::bitmap::{utils::SlicesIterator, Bitmap, MutableBitmap};
 use crate::chunk::Chunk;
 use crate::datatypes::DataType;
 use crate::error::Result;
-use crate::types::simd::{NativeSimd, Simd};
+use crate::types::simd::Simd;
 use crate::types::BitChunkOnes;
 use crate::{array::*, types::NativeType};
-use num_traits::Bounded;
-use num_traits::One;
-use num_traits::Zero;
 
 /// Function that can filter arbitrary arrays
 pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a + Send + Sync>;
