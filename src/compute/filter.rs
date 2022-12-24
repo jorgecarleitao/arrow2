@@ -21,22 +21,21 @@ pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a + Send + Syn
 unsafe fn nonnull_filter_impl<T, I>(values: &[T], mut mask_chunks: I, filter_count: usize) -> Vec<T>
 where
     T: NativeType + Simd,
-    I: BitChunkIterExact<<<T as Simd>::Simd as NativeSimd>::Chunk>,
+    I: BitChunkIterExact<u64>,
 {
-    let mut chunks = values.chunks_exact(T::Simd::LANES);
+    let mut chunks = values.chunks_exact(64);
     let mut new = Vec::<T>::with_capacity(filter_count);
     let mut dst = new.as_mut_ptr();
 
-    let size = std::mem::size_of::<<T::Simd as NativeSimd>::Chunk>() * 8;
-    let max = <T::Simd as NativeSimd>::Chunk::max_value();
-    let zero = <T::Simd as NativeSimd>::Chunk::zero();
+    let size = 64;
+    let max = u64::MAX;
 
     chunks
         .by_ref()
         .zip(mask_chunks.by_ref())
         .for_each(|(chunk, mask_chunk)| {
             // all false
-            if mask_chunk == zero {
+            if mask_chunk == 0 {
                 return;
             }
 
@@ -85,19 +84,18 @@ unsafe fn null_filter_impl<T, I>(
 ) -> (Vec<T>, MutableBitmap)
 where
     T: NativeType + Simd,
-    I: BitChunkIterExact<<<T as Simd>::Simd as NativeSimd>::Chunk>,
+    I: BitChunkIterExact<u64>,
 {
-    let mut chunks = values.chunks_exact(T::Simd::LANES);
+    let mut chunks = values.chunks_exact(64);
 
-    let mut validity_chunks = validity.chunks::<<T::Simd as NativeSimd>::Chunk>();
+    let mut validity_chunks = validity.chunks::<u64>();
 
     let mut new = Vec::<T>::with_capacity(filter_count);
     let mut dst = new.as_mut_ptr();
     let mut new_validity = MutableBitmap::with_capacity(filter_count);
 
-    let zero = <T::Simd as NativeSimd>::Chunk::zero();
-    let size = std::mem::size_of::<<T::Simd as NativeSimd>::Chunk>() * 8;
-    let max = <T::Simd as NativeSimd>::Chunk::max_value();
+    let size = 64;
+    let max = u64::MAX;
 
     chunks
         .by_ref()
@@ -105,7 +103,7 @@ where
         .zip(mask_chunks.by_ref())
         .for_each(|((chunk, validity_chunk), mask_chunk)| {
             // all false
-            if mask_chunk == zero {
+            if mask_chunk == 0 {
                 return;
             }
 
@@ -134,10 +132,7 @@ where
             for pos in ones_iter {
                 dst.write(*chunk.get_unchecked(pos));
                 dst = dst.add(1);
-                new_validity.push_unchecked(
-                    validity_chunk & (<<<T as Simd>::Simd as NativeSimd>::Chunk>::one() << pos)
-                        > <<<T as Simd>::Simd as NativeSimd>::Chunk>::zero(),
-                );
+                new_validity.push_unchecked(validity_chunk & (1 << pos) > 0);
             }
         });
 
@@ -170,10 +165,10 @@ fn null_filter_simd<T: NativeType + Simd>(
 
     let (slice, offset, length) = mask.as_slice();
     if offset == 0 {
-        let mask_chunks = BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(slice, length);
+        let mask_chunks = BitChunksExact::<u64>::new(slice, length);
         unsafe { null_filter_impl(values, validity, mask_chunks, filter_count) }
     } else {
-        let mask_chunks = mask.chunks::<<T::Simd as NativeSimd>::Chunk>();
+        let mask_chunks = mask.chunks::<u64>();
         unsafe { null_filter_impl(values, validity, mask_chunks, filter_count) }
     }
 }
@@ -184,10 +179,10 @@ fn nonnull_filter_simd<T: NativeType + Simd>(values: &[T], mask: &Bitmap) -> Vec
 
     let (slice, offset, length) = mask.as_slice();
     if offset == 0 {
-        let mask_chunks = BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(slice, length);
+        let mask_chunks = BitChunksExact::<u64>::new(slice, length);
         unsafe { nonnull_filter_impl(values, mask_chunks, filter_count) }
     } else {
-        let mask_chunks = mask.chunks::<<T::Simd as NativeSimd>::Chunk>();
+        let mask_chunks = mask.chunks::<u64>();
         unsafe { nonnull_filter_impl(values, mask_chunks, filter_count) }
     }
 }
