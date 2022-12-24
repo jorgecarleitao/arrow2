@@ -20,8 +20,7 @@ pub trait Sum<T> {
     fn simd_sum(self) -> T;
 }
 
-#[multiversion]
-#[clone(target = "x86_64+avx")]
+#[multiversion(targets("x86_64+avx"))]
 fn nonnull_sum<T>(values: &[T]) -> T
 where
     T: NativeType + Simd + Add<Output = T> + std::iter::Sum<T>,
@@ -39,8 +38,7 @@ where
 
 /// # Panics
 /// iff `values.len() != bitmap.len()` or the operation overflows.
-#[multiversion]
-#[clone(target = "x86_64+avx")]
+#[multiversion(targets("x86_64+avx"))]
 fn null_sum_impl<T, I>(values: &[T], mut validity_masks: I) -> T
 where
     T: NativeType + Simd,
