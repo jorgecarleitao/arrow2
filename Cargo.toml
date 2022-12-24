@@ -16,7 +16,7 @@ bench = false
 
 [dependencies]
 foreign_vec = "0.1.0"
-either = "1.6"
+either = "1.8"
 num-traits = "0.2"
 dyn-clone = "1"
 bytemuck = { version = "1", features = ["derive"] }
@@ -29,13 +29,13 @@ ethnum = "1"
 # crate provides HashMap that assumes pre-hashed values.
 hash_hasher = "^2.0.3"
 # For SIMD utf8 validation
-simdutf8 = "0.1.3"
+simdutf8 = "0.1"
 
 # A Rust port of SwissTable
-hashbrown = { version = "0.12", default-features = false, optional = true }
+hashbrown = { version = "0.13", default-features = false, optional = true }
 
 # for timezone support
-chrono-tz = { version = "0.6", optional = true }
+chrono-tz = { version = "0.8", optional = true }
 # To efficiently cast numbers to strings
 lexical-core = { version = "0.8", optional = true }
 
@@ -44,38 +44,38 @@ csv = { version = "^1.1", optional = true }
 csv-core = { version = "0.1", optional = true }
 
 # for csv async io
-csv-async = { version = "^1.1", optional = true }
+csv-async = { version = "^1.2", optional = true }
 
-regex = { version = "^1.3", optional = true }
+regex = { version = "^1.7", optional = true }
 regex-syntax = { version = "^0.6", optional = true }
 streaming-iterator = { version = "0.1", optional = true }
 fallible-streaming-iterator = { version = "0.1", optional = true }
 
 json-deserializer = { version = "0.4.4", optional = true, features = ["preserve_order"] }
-indexmap = { version = "^1.6", optional = true }
+indexmap = { version = "^1.9", optional = true }
 
 # used to print columns in a nice columnar format
-comfy-table = { version = "5.0", optional = true, default-features = false }
+comfy-table = { version = "6.1.0", optional = true, default-features = false }
 
 arrow-format = { version = "0.8", optional = true, features = ["ipc"] }
 
 hex = { version = "^0.4", optional = true }
 
 # for IPC compression
-lz4 = { version = "1.23.1", optional = true }
-zstd = { version = "0.11", optional = true }
+lz4 = { version = "1.24", optional = true }
+zstd = { version = "0.12", optional = true }
 
 rand = { version = "0.8", optional = true }
 
 itertools = { version = "^0.10", optional = true }
 
-base64 = { version = "0.13.0", optional = true }
+base64 = { version = "0.20", optional = true }
 
 # to write to parquet as a stream
 futures = { version = "0.3", optional = true }
 
 # to read IPC as a stream
-async-stream = { version = "0.3.2", optional = true }
+async-stream = { version = "0.3", optional = true }
 
 # avro support
 avro-schema = { version = "0.3", optional = true }
@@ -113,13 +113,13 @@ default_features = false
 features = ["async"]
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.4"
 flate2 = "1"
 doc-comment = "0.3"
-crossbeam-channel = "0.5.1"
+crossbeam-channel = "0.5"
 # used to test async readers
 tokio = { version = "1", features = ["macros", "rt", "fs", "io-util"] }
-tokio-util = { version = "0.6", features = ["compat"] }
+tokio-util = { version = "0.7", features = ["compat"] }
 # used to run formal property testing
 proptest = { version = "1", default_features = false, features = ["std"] }
 avro-rs = { version = "0.13", features = ["snappy"] }
