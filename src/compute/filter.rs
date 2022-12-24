@@ -24,20 +24,15 @@ where
     let mut new = Vec::<T>::with_capacity(filter_count);
     let mut dst = new.as_mut_ptr();
 
-    let size = 64;
-    let max = u64::MAX;
-
     chunks
         .by_ref()
         .zip(mask_chunks.by_ref())
         .for_each(|(chunk, mask_chunk)| {
-            // all false
-            if mask_chunk == 0 {
-                return;
-            }
+            let ones = mask_chunk.count_ones();
+            let leading_ones = mask_chunk.leading_ones();
 
-            // all true
-            if mask_chunk == max {
+            if ones == leading_ones {
+                let size = leading_ones as usize;
                 unsafe {
                     std::ptr::copy(chunk.as_ptr(), dst, size);
                     dst = dst.add(size);
@@ -45,8 +40,7 @@ where
                 return;
             }
 
-            // this triggers a bit count.
-            let ones_iter = BitChunkOnes::new(mask_chunk);
+            let ones_iter = BitChunkOnes::from_known_count(mask_chunk, ones as usize);
             for pos in ones_iter {
                 dst.write(*chunk.get_unchecked(pos));
                 dst = dst.add(1);
@@ -91,41 +85,27 @@ where
     let mut dst = new.as_mut_ptr();
     let mut new_validity = MutableBitmap::with_capacity(filter_count);
 
-    let size = 64;
-    let max = u64::MAX;
-
     chunks
         .by_ref()
         .zip(validity_chunks.by_ref())
         .zip(mask_chunks.by_ref())
         .for_each(|((chunk, validity_chunk), mask_chunk)| {
-            // all false
-            if mask_chunk == 0 {
-                return;
-            }
+            let ones = mask_chunk.count_ones();
+            let leading_ones = mask_chunk.leading_ones();
 
-            // all true
-            if mask_chunk == max {
-                // Fast path: all lanes are set
+            if ones == leading_ones {
+                let size = leading_ones as usize;
                 unsafe {
                     std::ptr::copy(chunk.as_ptr(), dst, size);
                     dst = dst.add(size);
 
-                    if validity_chunk == max {
-                        new_validity.extend_constant(size, true)
-                    } else {
-                        new_validity.extend_from_slice(
-                            validity_chunk.to_ne_bytes().as_ref(),
-                            0,
-                            size,
-                        );
-                    }
+                    new_validity.extend_from_slice(validity_chunk.to_ne_bytes().as_ref(), 0, size);
                 }
                 return;
             }
 
             // this triggers a bitcount
-            let ones_iter = BitChunkOnes::new(mask_chunk);
+            let ones_iter = BitChunkOnes::from_known_count(mask_chunk, ones as usize);
             for pos in ones_iter {
                 dst.write(*chunk.get_unchecked(pos));
                 dst = dst.add(1);
