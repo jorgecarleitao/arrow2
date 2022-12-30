@@ -8,14 +8,21 @@ impl<A: Iterator<Item = usize> + std::fmt::Debug> DebugIter for A {}
 fn iter<'a>(nested: &'a [Nested]) -> Vec<Box<dyn DebugIter + 'a>> {
     nested
         .iter()
-        .filter_map(|nested| match nested {
+        .enumerate()
+        .filter_map(|(i, nested)| match nested {
             Nested::Primitive(_, _, _) => None,
             Nested::List(nested) => Some(Box::new(to_length(nested.offsets)) as Box<dyn DebugIter>),
             Nested::LargeList(nested) => {
                 Some(Box::new(to_length(nested.offsets)) as Box<dyn DebugIter>)
             }
             Nested::Struct(_, _, length) => {
-                Some(Box::new(std::iter::repeat(1usize).take(*length)) as Box<dyn DebugIter>)
+                // only return 1, 1, 1, (x len) if struct is outer structure.
+                // otherwise treat as leaf
+                if i == 0 {
+                    Some(Box::new(std::iter::repeat(1usize).take(*length)) as Box<dyn DebugIter>)
+                } else {
+                    None
+                }
             }
         })
         .collect()
@@ -220,6 +227,27 @@ mod tests {
             Nested::Primitive(None, true, 2),
         ];
         let expected = vec![0, 0];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn list_struct_list() {
+        let nested = vec![
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0i32, 2, 3],
+                validity: None,
+            }),
+            Nested::Struct(None, true, 3),
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0i32, 3, 6, 7],
+                validity: None,
+            }),
+            Nested::Primitive(None, true, 7),
+        ];
+        let expected = vec![0, 2, 2, 1, 2, 2, 0];
 
         test(nested, expected)
     }
