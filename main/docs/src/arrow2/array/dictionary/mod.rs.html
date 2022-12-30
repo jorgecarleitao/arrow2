@@ -418,6 +418,41 @@
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
 <a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::hint::unreachable_unchecked;
 
 <span class="kw">use crate</span>::{
@@ -437,6 +472,9 @@
 <span class="kw">mod </span>iterator;
 <span class="kw">mod </span>mutable;
 <span class="kw">use </span><span class="kw">crate</span>::array::specification::check_indexes_unchecked;
+<span class="kw">mod </span>typed_iterator;
+
+<span class="kw">use </span><span class="kw">crate</span>::array::dictionary::typed_iterator::{DictValue, DictionaryValuesIterTyped};
 <span class="kw">pub use </span>iterator::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>mutable::<span class="kw-2">*</span>;
 
@@ -655,6 +693,38 @@
     /// Consider calling `keys_iter` and `values`, downcasting `values`, and iterating over that.
     </span><span class="kw">pub fn </span>values_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DictionaryValuesIter&lt;K&gt; {
         DictionaryValuesIter::new(<span class="self">self</span>)
+    }
+
+    <span class="doccomment">/// Returns an iterator over the the values [`V::IterValue`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the keys of this [`DictionaryArray`] have any null types.
+    /// If they do [`DictionaryArray::iter_typed`] should be called
+    </span><span class="kw">pub fn </span>values_iter_typed&lt;V: DictValue&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;DictionaryValuesIterTyped&lt;K, V&gt;, Error&gt; {
+        <span class="kw">let </span>keys = <span class="kw-2">&amp;</span><span class="self">self</span>.keys;
+        <span class="macro">assert_eq!</span>(keys.null_count(), <span class="number">0</span>);
+        <span class="kw">let </span>values = <span class="self">self</span>.values.as_ref();
+        <span class="kw">let </span>values = V::downcast_values(values)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ DictionaryValuesIterTyped::new(keys, values) })
+    }
+
+    <span class="doccomment">/// Returns an iterator over the the optional values of  [`Option&lt;V::IterValue&gt;`].
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the `values` array
+    </span><span class="kw">pub fn </span>iter_typed&lt;V: DictValue&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;ZipValidity&lt;V::IterValue&lt;<span class="lifetime">&#39;_</span>&gt;, DictionaryValuesIterTyped&lt;K, V&gt;, BitmapIter&gt;, Error&gt;
+    {
+        <span class="kw">let </span>keys = <span class="kw-2">&amp;</span><span class="self">self</span>.keys;
+        <span class="kw">let </span>values = <span class="self">self</span>.values.as_ref();
+        <span class="kw">let </span>values = V::downcast_values(values)<span class="question-mark">?</span>;
+        <span class="kw">let </span>values_iter = <span class="kw">unsafe </span>{ DictionaryValuesIterTyped::new(keys, values) };
+        <span class="prelude-val">Ok</span>(ZipValidity::new_with_validity(values_iter, <span class="self">self</span>.validity()))
     }
 
     <span class="doccomment">/// Returns the [`DataType`] of this [`DictionaryArray`]

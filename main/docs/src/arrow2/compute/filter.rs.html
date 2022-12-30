@@ -312,6 +312,15 @@
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
 <a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains operators to filter arrays such as [`filter`].
 </span><span class="kw">use </span><span class="kw">crate</span>::array::growable::{make_growable, Growable};
 <span class="kw">use </span><span class="kw">crate</span>::bitmap::utils::{BitChunkIterExact, BitChunksExact};
@@ -325,6 +334,15 @@
 
 <span class="doccomment">/// Function that can filter arbitrary arrays
 </span><span class="kw">pub type </span>Filter&lt;<span class="lifetime">&#39;a</span>&gt; = Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span><span class="kw">dyn </span>Array) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt;;
+
+<span class="attr">#[inline]
+</span><span class="kw">fn </span>get_leading_ones(chunk: u64) -&gt; u32 {
+    <span class="kw">if </span><span class="macro">cfg!</span>(target_endian = <span class="string">&quot;little&quot;</span>) {
+        chunk.trailing_ones()
+    } <span class="kw">else </span>{
+        chunk.leading_ones()
+    }
+}
 
 <span class="doccomment">/// # Safety
 /// This assumes that the `mask_chunks` contains a number of set/true items equal
@@ -343,7 +361,7 @@
         .zip(mask_chunks.by_ref())
         .for_each(|(chunk, mask_chunk)| {
             <span class="kw">let </span>ones = mask_chunk.count_ones();
-            <span class="kw">let </span>leading_ones = mask_chunk.leading_ones();
+            <span class="kw">let </span>leading_ones = get_leading_ones(mask_chunk);
 
             <span class="kw">if </span>ones == leading_ones {
                 <span class="kw">let </span>size = leading_ones <span class="kw">as </span>usize;
@@ -405,7 +423,7 @@
         .zip(mask_chunks.by_ref())
         .for_each(|((chunk, validity_chunk), mask_chunk)| {
             <span class="kw">let </span>ones = mask_chunk.count_ones();
-            <span class="kw">let </span>leading_ones = mask_chunk.leading_ones();
+            <span class="kw">let </span>leading_ones = get_leading_ones(mask_chunk);
 
             <span class="kw">if </span>ones == leading_ones {
                 <span class="kw">let </span>size = leading_ones <span class="kw">as </span>usize;
