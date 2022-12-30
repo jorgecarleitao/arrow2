@@ -368,7 +368,11 @@ fn extend_bitmap() {
     assert_eq!(b.len(), 5 + 4);
 }
 
+// TODO! undo miri ignore once issue is fixed in miri
+// this test was a memory hog and lead to OOM in CI
+// given enough memory it was able to pass succesfully on a local
 #[test]
+#[cfg_attr(miri, ignore)]
 fn extend_constant1() {
     use std::iter::FromIterator;
     for i in 0..64 {

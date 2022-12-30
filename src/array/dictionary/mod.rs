@@ -17,6 +17,9 @@ pub(super) mod fmt;
 mod iterator;
 mod mutable;
 use crate::array::specification::check_indexes_unchecked;
+mod typed_iterator;
+
+use crate::array::dictionary::typed_iterator::{DictValue, DictionaryValuesIterTyped};
 pub use iterator::*;
 pub use mutable::*;
 
@@ -235,6 +238,38 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     /// Consider calling `keys_iter` and `values`, downcasting `values`, and iterating over that.
     pub fn values_iter(&self) -> DictionaryValuesIter<K> {
         DictionaryValuesIter::new(self)
+    }
+
+    /// Returns an iterator over the the values [`V::IterValue`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the keys of this [`DictionaryArray`] have any null types.
+    /// If they do [`DictionaryArray::iter_typed`] should be called
+    pub fn values_iter_typed<V: DictValue>(
+        &self,
+    ) -> Result<DictionaryValuesIterTyped<K, V>, Error> {
+        let keys = &self.keys;
+        assert_eq!(keys.null_count(), 0);
+        let values = self.values.as_ref();
+        let values = V::downcast_values(values)?;
+        Ok(unsafe { DictionaryValuesIterTyped::new(keys, values) })
+    }
+
+    /// Returns an iterator over the the optional values of  [`Option<V::IterValue>`].
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the `values` array
+    pub fn iter_typed<V: DictValue>(
+        &self,
+    ) -> Result<ZipValidity<V::IterValue<'_>, DictionaryValuesIterTyped<K, V>, BitmapIter>, Error>
+    {
+        let keys = &self.keys;
+        let values = self.values.as_ref();
+        let values = V::downcast_values(values)?;
+        let values_iter = unsafe { DictionaryValuesIterTyped::new(keys, values) };
+        Ok(ZipValidity::new_with_validity(values_iter, self.validity()))
     }
 
     /// Returns the [`DataType`] of this [`DictionaryArray`]

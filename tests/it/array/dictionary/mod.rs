@@ -165,3 +165,48 @@ fn keys_values_iter() {
 
     assert_eq!(array.keys_values_iter().collect::<Vec<_>>(), vec![1, 0]);
 }
+
+#[test]
+fn iter_values_typed() {
+    let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
+    let array =
+        DictionaryArray::try_from_keys(PrimitiveArray::from_vec(vec![1, 0, 0]), values.boxed())
+            .unwrap();
+
+    let iter = array.values_iter_typed::<Utf8Array<i32>>().unwrap();
+    assert_eq!(iter.size_hint(), (3, Some(3)));
+    assert_eq!(iter.collect::<Vec<_>>(), vec!["aa", "a", "a"]);
+
+    let iter = array.iter_typed::<Utf8Array<i32>>().unwrap();
+    assert_eq!(iter.size_hint(), (3, Some(3)));
+    assert_eq!(
+        iter.collect::<Vec<_>>(),
+        vec![Some("aa"), Some("a"), Some("a")]
+    );
+}
+
+#[test]
+#[should_panic]
+fn iter_values_typed_panic() {
+    let values = Utf8Array::<i32>::from_iter([Some("a"), Some("aa"), None]);
+    let array =
+        DictionaryArray::try_from_keys(PrimitiveArray::from_vec(vec![1, 0, 0]), values.boxed())
+            .unwrap();
+
+    // should not be iterating values
+    let iter = array.values_iter_typed::<Utf8Array<i32>>().unwrap();
+    let _ = iter.collect::<Vec<_>>();
+}
+
+#[test]
+#[should_panic]
+fn iter_values_typed_panic_2() {
+    let values = Utf8Array::<i32>::from_iter([Some("a"), Some("aa"), None]);
+    let array =
+        DictionaryArray::try_from_keys(PrimitiveArray::from_vec(vec![1, 0, 0]), values.boxed())
+            .unwrap();
+
+    // should not be iterating values
+    let iter = array.iter_typed::<Utf8Array<i32>>().unwrap();
+    let _ = iter.collect::<Vec<_>>();
+}
