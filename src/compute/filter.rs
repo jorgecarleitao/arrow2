@@ -12,6 +12,15 @@ use crate::{array::*, types::NativeType};
 /// Function that can filter arbitrary arrays
 pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a + Send + Sync>;
 
+#[inline]
+fn get_leading_ones(chunk: u64) -> u32 {
+    if cfg!(target_endian = "little") {
+        chunk.trailing_ones()
+    } else {
+        chunk.leading_ones()
+    }
+}
+
 /// # Safety
 /// This assumes that the `mask_chunks` contains a number of set/true items equal
 /// to `filter_count`
@@ -29,7 +38,7 @@ where
         .zip(mask_chunks.by_ref())
         .for_each(|(chunk, mask_chunk)| {
             let ones = mask_chunk.count_ones();
-            let leading_ones = mask_chunk.leading_ones();
+            let leading_ones = get_leading_ones(mask_chunk);
 
             if ones == leading_ones {
                 let size = leading_ones as usize;
@@ -91,7 +100,7 @@ where
         .zip(mask_chunks.by_ref())
         .for_each(|((chunk, validity_chunk), mask_chunk)| {
             let ones = mask_chunk.count_ones();
-            let leading_ones = mask_chunk.leading_ones();
+            let leading_ones = get_leading_ones(mask_chunk);
 
             if ones == leading_ones {
                 let size = leading_ones as usize;

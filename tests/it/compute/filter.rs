@@ -14,6 +14,26 @@ fn array_slice() {
 }
 
 #[test]
+fn array_large_filter_chunks() {
+    let len = 65usize;
+    let a = Int32Array::from_iter((0..(len as i32)).map(Some));
+
+    let init = vec![true, true, true, false, false, true];
+    let remaining = len - init.len();
+    let iter = init
+        .into_iter()
+        .chain(std::iter::repeat(false).take(remaining))
+        .map(Some);
+    let b = BooleanArray::from_iter(iter);
+
+    let c = filter(&a, &b).unwrap();
+
+    let expected = Int32Array::from_slice([0, 1, 2, 5]);
+
+    assert_eq!(expected, c.as_ref());
+}
+
+#[test]
 fn array_low_density() {
     // this test exercises the all 0's branch of the filter algorithm
     let mut data_values = (1..=65).collect::<Vec<i32>>();
@@ -71,7 +91,7 @@ fn string_array_simple() {
 }
 
 #[test]
-fn primative_array_with_null() {
+fn primitive_array_with_null() {
     let a = Int32Array::from(&[Some(5), None]);
     let b = BooleanArray::from_slice(vec![false, true]);
     let c = filter(&a, &b).unwrap();
