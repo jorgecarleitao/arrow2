@@ -1,15 +1,13 @@
 //! Contains operators to filter arrays such as [`filter`].
 use crate::array::growable::{make_growable, Growable};
-use crate::bitmap::utils::{BitChunk, BitChunkIterExact, BitChunksExact};
+use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
 use crate::bitmap::{utils::SlicesIterator, Bitmap, MutableBitmap};
 use crate::chunk::Chunk;
 use crate::datatypes::DataType;
 use crate::error::Result;
-use crate::types::simd::{NativeSimd, Simd};
+use crate::types::simd::Simd;
 use crate::types::BitChunkOnes;
 use crate::{array::*, types::NativeType};
-use num_traits::One;
-use num_traits::Zero;
 
 /// Function that can filter arbitrary arrays
 pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a + Send + Sync>;
@@ -20,29 +18,32 @@ pub type Filter<'a> = Box<dyn Fn(&dyn Array) -> Box<dyn Array> + 'a + Send + Syn
 unsafe fn nonnull_filter_impl<T, I>(values: &[T], mut mask_chunks: I, filter_count: usize) -> Vec<T>
 where
     T: NativeType + Simd,
-    I: BitChunkIterExact<<<T as Simd>::Simd as NativeSimd>::Chunk>,
+    I: BitChunkIterExact<u64>,
 {
-    let mut chunks = values.chunks_exact(T::Simd::LANES);
+    let mut chunks = values.chunks_exact(64);
     let mut new = Vec::<T>::with_capacity(filter_count);
     let mut dst = new.as_mut_ptr();
+
     chunks
         .by_ref()
         .zip(mask_chunks.by_ref())
-        .for_each(|(chunk, validity_chunk)| {
-            let ones_iter = BitChunkOnes::new(validity_chunk);
+        .for_each(|(chunk, mask_chunk)| {
+            let ones = mask_chunk.count_ones();
+            let leading_ones = mask_chunk.leading_ones();
 
-            let (size, _) = ones_iter.size_hint();
-            if size == T::Simd::LANES {
-                // Fast path: all lanes are set
+            if ones == leading_ones {
+                let size = leading_ones as usize;
                 unsafe {
                     std::ptr::copy(chunk.as_ptr(), dst, size);
                     dst = dst.add(size);
                 }
-            } else {
-                for pos in ones_iter {
-                    dst.write(chunk[pos]);
-                    dst = dst.add(1);
-                }
+                return;
+            }
+
+            let ones_iter = BitChunkOnes::from_known_count(mask_chunk, ones as usize);
+            for pos in ones_iter {
+                dst.write(*chunk.get_unchecked(pos));
+                dst = dst.add(1);
             }
         });
 
@@ -74,11 +75,11 @@ unsafe fn null_filter_impl<T, I>(
 ) -> (Vec<T>, MutableBitmap)
 where
     T: NativeType + Simd,
-    I: BitChunkIterExact<<<T as Simd>::Simd as NativeSimd>::Chunk>,
+    I: BitChunkIterExact<u64>,
 {
-    let mut chunks = values.chunks_exact(T::Simd::LANES);
+    let mut chunks = values.chunks_exact(64);
 
-    let mut validity_chunks = validity.chunks::<<T::Simd as NativeSimd>::Chunk>();
+    let mut validity_chunks = validity.chunks::<u64>();
 
     let mut new = Vec::<T>::with_capacity(filter_count);
     let mut dst = new.as_mut_ptr();
@@ -89,25 +90,26 @@ where
         .zip(validity_chunks.by_ref())
         .zip(mask_chunks.by_ref())
         .for_each(|((chunk, validity_chunk), mask_chunk)| {
-            let ones_iter = BitChunkOnes::new(mask_chunk);
-            let (size, _) = ones_iter.size_hint();
+            let ones = mask_chunk.count_ones();
+            let leading_ones = mask_chunk.leading_ones();
 
-            if size == T::Simd::LANES {
-                // Fast path: all lanes are set
+            if ones == leading_ones {
+                let size = leading_ones as usize;
                 unsafe {
                     std::ptr::copy(chunk.as_ptr(), dst, size);
                     dst = dst.add(size);
+
                     new_validity.extend_from_slice(validity_chunk.to_ne_bytes().as_ref(), 0, size);
                 }
-            } else {
-                for pos in ones_iter {
-                    dst.write(chunk[pos]);
-                    dst = dst.add(1);
-                    new_validity.push(
-                        validity_chunk & (<<<T as Simd>::Simd as NativeSimd>::Chunk>::one() << pos)
-                            > <<<T as Simd>::Simd as NativeSimd>::Chunk>::zero(),
-                    );
-                }
+                return;
+            }
+
+            // this triggers a bitcount
+            let ones_iter = BitChunkOnes::from_known_count(mask_chunk, ones as usize);
+            for pos in ones_iter {
+                dst.write(*chunk.get_unchecked(pos));
+                dst = dst.add(1);
+                new_validity.push_unchecked(validity_chunk & (1 << pos) > 0);
             }
         });
 
@@ -140,10 +142,10 @@ fn null_filter_simd<T: NativeType + Simd>(
 
     let (slice, offset, length) = mask.as_slice();
     if offset == 0 {
-        let mask_chunks = BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(slice, length);
+        let mask_chunks = BitChunksExact::<u64>::new(slice, length);
         unsafe { null_filter_impl(values, validity, mask_chunks, filter_count) }
     } else {
-        let mask_chunks = mask.chunks::<<T::Simd as NativeSimd>::Chunk>();
+        let mask_chunks = mask.chunks::<u64>();
         unsafe { null_filter_impl(values, validity, mask_chunks, filter_count) }
     }
 }
@@ -154,10 +156,10 @@ fn nonnull_filter_simd<T: NativeType + Simd>(values: &[T], mask: &Bitmap) -> Vec
 
     let (slice, offset, length) = mask.as_slice();
     if offset == 0 {
-        let mask_chunks = BitChunksExact::<<T::Simd as NativeSimd>::Chunk>::new(slice, length);
+        let mask_chunks = BitChunksExact::<u64>::new(slice, length);
         unsafe { nonnull_filter_impl(values, mask_chunks, filter_count) }
     } else {
-        let mask_chunks = mask.chunks::<<T::Simd as NativeSimd>::Chunk>();
+        let mask_chunks = mask.chunks::<u64>();
         unsafe { nonnull_filter_impl(values, mask_chunks, filter_count) }
     }
 }
