@@ -15,7 +15,7 @@ fn array_slice() {
 
 #[test]
 fn array_large_filter_chunks() {
-    let len = 65 as usize;
+    let len = 65usize;
     let a = Int32Array::from_iter((0..(len as i32)).map(Some));
 
     let init = vec![true, true, true, false, false, true];
