@@ -67,7 +67,7 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
                 + validity_size(array.validity())
         }
         FixedSizeList => {
-            let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
+            let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
             estimated_bytes_size(array.values().as_ref()) + validity_size(array.validity())
         }
         LargeList => {
