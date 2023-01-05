@@ -45,7 +45,7 @@ fn type_to_schema(
 
 fn _get_field_name(name_counter: &mut i32) -> String {
     *name_counter += 1;
-    format!("r{}", name_counter)
+    format!("r{name_counter}")
 }
 
 fn _type_to_schema(data_type: &DataType, name_counter: &mut i32) -> Result<AvroSchema> {
@@ -86,11 +86,6 @@ fn _type_to_schema(data_type: &DataType, name_counter: &mut i32) -> Result<AvroS
         }
         DataType::FixedSizeBinary(size) => AvroSchema::Fixed(Fixed::new("", *size)),
         DataType::Decimal(p, s) => AvroSchema::Bytes(Some(BytesLogical::Decimal(*p, *s))),
-        other => {
-            return Err(Error::NotYetImplemented(format!(
-                "write {:?} to avro",
-                other
-            )))
-        }
+        other => return Err(Error::NotYetImplemented(format!("write {other:?} to avro"))),
     })
 }

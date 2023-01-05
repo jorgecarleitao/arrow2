@@ -204,7 +204,7 @@ where
         move |x, buf| {
             if let Some(x) = x {
                 let nd = convert(*x);
-                write!(buf, "\"{}\"", nd).unwrap();
+                write!(buf, "\"{nd}\"").unwrap();
             } else {
                 buf.extend_from_slice(b"null")
             }
@@ -225,7 +225,7 @@ where
         move |x, buf| {
             if let Some(x) = x {
                 let ndt = convert(*x);
-                write!(buf, "\"{}\"", ndt).unwrap();
+                write!(buf, "\"{ndt}\"").unwrap();
             } else {
                 buf.extend_from_slice(b"null")
             }

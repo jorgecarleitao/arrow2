@@ -31,8 +31,7 @@ fn get_arrow_schema_from_metadata(encoded_meta: &str) -> Result<Schema> {
         Err(err) => {
             // The C++ implementation returns an error if the schema can't be parsed.
             Err(Error::InvalidArgumentError(format!(
-                "Unable to decode the encoded schema stored in {}, {:?}",
-                ARROW_SCHEMA_META_KEY, err
+                "Unable to decode the encoded schema stored in {ARROW_SCHEMA_META_KEY}, {err:?}"
             )))
         }
     }

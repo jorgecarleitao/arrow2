@@ -18,7 +18,7 @@ impl<O: Offset> Debug for Utf8Array<O> {
         } else {
             "Utf8Array"
         };
-        write!(f, "{}", head)?;
+        write!(f, "{head}")?;
         write_vec(f, writer, self.validity(), self.len(), "None", false)
     }
 }

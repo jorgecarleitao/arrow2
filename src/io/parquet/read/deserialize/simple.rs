@@ -103,8 +103,7 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
             ))),
             other => {
                 return Err(Error::NotYetImplemented(format!(
-                    "Reading uin32 from {:?}-encoded parquet still not implemented",
-                    other
+                    "Reading uin32 from {other:?}-encoded parquet still not implemented"
                 )))
             }
         },
@@ -216,8 +215,7 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
             ))),
             PhysicalType::FixedLenByteArray(n) if *n > 16 => {
                 return Err(Error::NotYetImplemented(format!(
-                    "Can't decode Decimal128 type from Fixed Size Byte Array of len {:?}",
-                    n
+                    "Can't decode Decimal128 type from Fixed Size Byte Array of len {n:?}"
                 )))
             }
             PhysicalType::FixedLenByteArray(n) => {
@@ -301,8 +299,7 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
 
         other => {
             return Err(Error::NotYetImplemented(format!(
-                "Reading {:?} from parquet still not implemented",
-                other
+                "Reading {other:?} from parquet still not implemented"
             )))
         }
     })
@@ -545,8 +542,7 @@ fn dict_read<'a, K: DictionaryKey, I: Pages + 'a>(
         )),
         other => {
             return Err(Error::nyi(format!(
-                "Reading dictionaries of type {:?}",
-                other
+                "Reading dictionaries of type {other:?}"
             )))
         }
     })

@@ -428,8 +428,7 @@ fn dict_read<'a, K: DictionaryKey, I: 'a + Pages>(
          */
         other => {
             return Err(Error::nyi(format!(
-                "Reading nested dictionaries of type {:?}",
-                other
+                "Reading nested dictionaries of type {other:?}"
             )))
         }
     })

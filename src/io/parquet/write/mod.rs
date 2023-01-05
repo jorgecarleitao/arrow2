@@ -312,8 +312,7 @@ pub fn array_to_page_simple(
     let data_type = array.data_type();
     if !can_encode(data_type, encoding) {
         return Err(Error::InvalidArgumentError(format!(
-            "The datatype {:?} cannot be encoded by {:?}",
-            data_type, encoding
+            "The datatype {data_type:?} cannot be encoded by {encoding:?}"
         )));
     }
 
@@ -527,8 +526,7 @@ pub fn array_to_page_simple(
             }
         }
         other => Err(Error::NotYetImplemented(format!(
-            "Writing parquet pages for data type {:?}",
-            other
+            "Writing parquet pages for data type {other:?}"
         ))),
     }
     .map(Page::Data)
@@ -608,8 +606,7 @@ fn array_to_page_nested(
             primitive::nested_array_to_page::<f64, f64>(array, options, type_, nested)
         }
         other => Err(Error::NotYetImplemented(format!(
-            "Writing nested parquet pages for data type {:?}",
-            other
+            "Writing nested parquet pages for data type {other:?}"
         ))),
     }
     .map(Page::Data)

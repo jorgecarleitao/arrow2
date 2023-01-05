@@ -127,7 +127,7 @@ fn timestamp_with_tz_default<'a>(
             move |x, buf| {
                 if let Some(x) = x {
                     let dt = temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone);
-                    let _ = write!(StringWrap(buf), "{}", dt);
+                    let _ = write!(StringWrap(buf), "{dt}");
                 }
             },
             vec![],
@@ -141,7 +141,7 @@ fn timestamp_with_tz_default<'a>(
                     if let Some(x) = x {
                         let dt =
                             temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone);
-                        let _ = write!(StringWrap(buf), "{}", dt);
+                        let _ = write!(StringWrap(buf), "{dt}");
                     }
                 },
                 vec![],
@@ -171,7 +171,7 @@ fn timestamp_with_tz_with_format<'a>(
                 if let Some(x) = x {
                     let dt = temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone)
                         .format(format);
-                    let _ = write!(StringWrap(buf), "{}", dt);
+                    let _ = write!(StringWrap(buf), "{dt}");
                 }
             },
             vec![],
@@ -186,7 +186,7 @@ fn timestamp_with_tz_with_format<'a>(
                         let dt =
                             temporal_conversions::timestamp_to_datetime(*x, time_unit, &timezone)
                                 .format(format);
-                        let _ = write!(StringWrap(buf), "{}", dt);
+                        let _ = write!(StringWrap(buf), "{dt}");
                     }
                 },
                 vec![],
@@ -462,7 +462,7 @@ pub fn new_serializer<'a>(
                 panic!("only dictionary with string values are supported by csv writer")
             }
         },
-        dt => panic!("data type: {:?} not supported by csv writer", dt),
+        dt => panic!("data type: {dt:?} not supported by csv writer"),
     })
 }
 

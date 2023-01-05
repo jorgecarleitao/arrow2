@@ -24,7 +24,7 @@ fn to_time_unit(item: Option<&Value>) -> Result<TimeUnit> {
 fn to_int(item: &Value) -> Result<IntegerType> {
     Ok(match item.get("isSigned") {
         Some(&Value::Bool(true)) => match item.get("bitWidth") {
-            Some(&Value::Number(ref n)) => match n.as_u64() {
+            Some(Value::Number(n)) => match n.as_u64() {
                 Some(8) => IntegerType::Int8,
                 Some(16) => IntegerType::Int16,
                 Some(32) => IntegerType::Int32,
@@ -42,7 +42,7 @@ fn to_int(item: &Value) -> Result<IntegerType> {
             }
         },
         Some(&Value::Bool(false)) => match item.get("bitWidth") {
-            Some(&Value::Number(ref n)) => match n.as_u64() {
+            Some(Value::Number(n)) => match n.as_u64() {
                 Some(8) => IntegerType::UInt8,
                 Some(16) => IntegerType::UInt16,
                 Some(32) => IntegerType::UInt32,
@@ -126,8 +126,7 @@ fn read_metadata(metadata: &Value) -> Result<Metadata> {
                     res.insert(k.clone(), str_value.to_string().clone());
                 } else {
                     return Err(Error::OutOfSpec(format!(
-                        "Field 'metadata' contains non-string value for key {}",
-                        k
+                        "Field 'metadata' contains non-string value for key {k}"
                     )));
                 }
             }
@@ -282,8 +281,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
         }
         other => {
             return Err(Error::NotYetImplemented(format!(
-                "invalid json value type \"{}\"",
-                other
+                "invalid json value type \"{other}\""
             )))
         }
     })
@@ -338,7 +336,7 @@ fn deserialize_field(value: &Value) -> Result<Field> {
     };
 
     let name = match map.get("name") {
-        Some(&Value::String(ref name)) => name.to_string(),
+        Some(Value::String(name)) => name.to_string(),
         _ => {
             return Err(Error::OutOfSpec(
                 "Field missing 'name' attribute".to_string(),

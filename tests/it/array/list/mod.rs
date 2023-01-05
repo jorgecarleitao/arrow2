@@ -17,7 +17,7 @@ fn debug() {
         None,
     );
 
-    assert_eq!(format!("{:?}", array), "ListArray[[1, 2], [], [3], [4, 5]]");
+    assert_eq!(format!("{array:?}"), "ListArray[[1, 2], [], [3], [4, 5]]");
 }
 
 #[test]
@@ -66,5 +66,5 @@ fn test_nested_display() {
     );
 
     let expected = "ListArray[[[1, 2], [3, 4]], [[5, 6, 7], [], [8]], [[9, 10]]]";
-    assert_eq!(format!("{:?}", nested), expected);
+    assert_eq!(format!("{nested:?}"), expected);
 }

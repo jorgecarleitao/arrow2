@@ -261,7 +261,7 @@ fn to_dictionary<K: DictionaryKey + NumCast>(
     let dict_id = field.dictionary_id.unwrap();
     let dictionary = dictionaries
         .get(&dict_id)
-        .ok_or_else(|| Error::OutOfSpec(format!("Unable to find any dictionary id {}", dict_id)))?;
+        .ok_or_else(|| Error::OutOfSpec(format!("Unable to find any dictionary id {dict_id}")))?;
 
     let keys = to_primitive(json_col, K::PRIMITIVE.into());
 

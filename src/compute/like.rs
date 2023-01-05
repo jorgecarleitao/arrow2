@@ -79,10 +79,9 @@ fn a_like_utf8<O: Offset, F: Fn(bool) -> bool>(
                         pattern
                     } else {
                         let re_pattern = replace_pattern(pattern);
-                        let re = Regex::new(&format!("^{}$", re_pattern)).map_err(|e| {
+                        let re = Regex::new(&format!("^{re_pattern}$")).map_err(|e| {
                             Error::InvalidArgumentError(format!(
-                                "Unable to build regex from LIKE pattern: {}",
-                                e
+                                "Unable to build regex from LIKE pattern: {e}"
                             ))
                         })?;
                         map.insert(pattern, re);
@@ -155,8 +154,8 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.ends_with(ends_with))))
     } else {
         let re_pattern = replace_pattern(rhs);
-        let re = Regex::new(&format!("^{}$", re_pattern)).map_err(|e| {
-            Error::InvalidArgumentError(format!("Unable to build regex from LIKE pattern: {}", e))
+        let re = Regex::new(&format!("^{re_pattern}$")).map_err(|e| {
+            Error::InvalidArgumentError(format!("Unable to build regex from LIKE pattern: {e}"))
         })?;
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(re.is_match(x))))
     };
@@ -227,10 +226,9 @@ fn a_like_binary<O: Offset, F: Fn(bool) -> bool>(
                     } else {
                         let re_pattern = simdutf8::basic::from_utf8(pattern).unwrap();
                         let re_pattern = replace_pattern(re_pattern);
-                        let re = BytesRegex::new(&format!("^{}$", re_pattern)).map_err(|e| {
+                        let re = BytesRegex::new(&format!("^{re_pattern}$")).map_err(|e| {
                             Error::InvalidArgumentError(format!(
-                                "Unable to build regex from LIKE pattern: {}",
-                                e
+                                "Unable to build regex from LIKE pattern: {e}"
                             ))
                         })?;
                         map.insert(pattern, re);
@@ -289,10 +287,7 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
 ) -> Result<BooleanArray> {
     let validity = lhs.validity();
     let pattern = simdutf8::basic::from_utf8(rhs).map_err(|e| {
-        Error::InvalidArgumentError(format!(
-            "Unable to convert the LIKE pattern to string: {}",
-            e
-        ))
+        Error::InvalidArgumentError(format!("Unable to convert the LIKE pattern to string: {e}"))
     })?;
 
     let values = if !pattern.contains(is_like_pattern) {
@@ -310,8 +305,8 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.ends_with(ends_with))))
     } else {
         let re_pattern = replace_pattern(pattern);
-        let re = BytesRegex::new(&format!("^{}$", re_pattern)).map_err(|e| {
-            Error::InvalidArgumentError(format!("Unable to build regex from LIKE pattern: {}", e))
+        let re = BytesRegex::new(&format!("^{re_pattern}$")).map_err(|e| {
+            Error::InvalidArgumentError(format!("Unable to build regex from LIKE pattern: {e}"))
         })?;
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(re.is_match(x))))
     };

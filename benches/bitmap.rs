@@ -10,7 +10,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         let bitmap2 = Bitmap::from_iter((0..size).into_iter().map(|x| x % 3 == 0));
 
-        c.bench_function(&format!("bitmap extend aligned 2^{}", log2_size), |b| {
+        c.bench_function(&format!("bitmap extend aligned 2^{log2_size}"), |b| {
             let mut bitmap1 = MutableBitmap::new();
             b.iter(|| {
                 bitmap1.extend_from_bitmap(&bitmap2);
@@ -18,7 +18,7 @@ fn add_benchmark(c: &mut Criterion) {
             })
         });
 
-        c.bench_function(&format!("bitmap extend unaligned 2^{}", log2_size), |b| {
+        c.bench_function(&format!("bitmap extend unaligned 2^{log2_size}"), |b| {
             let mut bitmap1 = MutableBitmap::with_capacity(1);
             b.iter(|| {
                 bitmap1.push(true);
@@ -28,7 +28,7 @@ fn add_benchmark(c: &mut Criterion) {
         });
 
         c.bench_function(
-            &format!("bitmap extend_constant aligned 2^{}", log2_size),
+            &format!("bitmap extend_constant aligned 2^{log2_size}"),
             |b| {
                 let mut bitmap1 = MutableBitmap::new();
                 b.iter(|| {
@@ -39,7 +39,7 @@ fn add_benchmark(c: &mut Criterion) {
         );
 
         c.bench_function(
-            &format!("bitmap extend_constant unaligned 2^{}", log2_size),
+            &format!("bitmap extend_constant unaligned 2^{log2_size}"),
             |b| {
                 let mut bitmap1 = MutableBitmap::with_capacity(1);
                 b.iter(|| {
@@ -54,14 +54,14 @@ fn add_benchmark(c: &mut Criterion) {
             .into_iter()
             .map(|x| x % 3 == 0)
             .collect::<Vec<_>>();
-        c.bench_function(&format!("bitmap from_trusted_len 2^{}", log2_size), |b| {
+        c.bench_function(&format!("bitmap from_trusted_len 2^{log2_size}"), |b| {
             b.iter(|| {
                 MutableBitmap::from_trusted_len_iter(iter.iter().copied());
             })
         });
 
         c.bench_function(
-            &format!("bitmap extend_from_trusted_len_iter 2^{}", log2_size),
+            &format!("bitmap extend_from_trusted_len_iter 2^{log2_size}"),
             |b| {
                 b.iter(|| {
                     let mut a = MutableBitmap::from(&[true]);

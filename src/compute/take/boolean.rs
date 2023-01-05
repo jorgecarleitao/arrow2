@@ -48,7 +48,7 @@ fn take_indices_validity<I: Index>(
                 if !validity.get_bit(i) {
                     false
                 } else {
-                    panic!("Out-of-bounds index {}", index)
+                    panic!("Out-of-bounds index {index}")
                 }
             }
         }

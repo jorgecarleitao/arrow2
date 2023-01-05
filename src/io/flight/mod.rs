@@ -124,7 +124,7 @@ pub fn deserialize_batch(
 ) -> Result<Chunk<Box<dyn Array>>> {
     // check that the data_header is a record batch message
     let message = arrow_format::ipc::MessageRef::read_as_root(&data.data_header)
-        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
+        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {err:?}")))?;
 
     let length = data.data_body.len();
     let mut reader = std::io::Cursor::new(&data.data_body);
@@ -242,8 +242,7 @@ pub fn deserialize_message(
             Ok(None)
         }
         t => Err(Error::nyi(format!(
-            "Reading types other than record batches not yet supported, unable to read {:?}",
-            t
+            "Reading types other than record batches not yet supported, unable to read {t:?}"
         ))),
     }
 }

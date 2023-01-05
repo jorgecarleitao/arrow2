@@ -54,32 +54,32 @@ fn add_benchmark(c: &mut Criterion) {
         let size = 2usize.pow(log2_size);
         let arr_a = create_primitive_array::<f32>(size, 0.0);
 
-        c.bench_function(&format!("sort 2^{} f32", log2_size), |b| {
+        c.bench_function(&format!("sort 2^{log2_size} f32"), |b| {
             b.iter(|| bench_sort(&arr_a))
         });
 
-        c.bench_function(&format!("sort-limit 2^{} f32", log2_size), |b| {
+        c.bench_function(&format!("sort-limit 2^{log2_size} f32"), |b| {
             b.iter(|| bench_sort_limit(&arr_a))
         });
 
         let arr_b = create_primitive_array_with_seed::<f32>(size, 0.0, 43);
-        c.bench_function(&format!("lexsort 2^{} f32", log2_size), |b| {
+        c.bench_function(&format!("lexsort 2^{log2_size} f32"), |b| {
             b.iter(|| bench_lexsort(&arr_a, &arr_b))
         });
 
         let arr_a = create_primitive_array::<f32>(size, 0.5);
 
-        c.bench_function(&format!("sort null 2^{} f32", log2_size), |b| {
+        c.bench_function(&format!("sort null 2^{log2_size} f32"), |b| {
             b.iter(|| bench_sort(&arr_a))
         });
 
         let arr_b = create_primitive_array_with_seed::<f32>(size, 0.5, 43);
-        c.bench_function(&format!("lexsort null 2^{} f32", log2_size), |b| {
+        c.bench_function(&format!("lexsort null 2^{log2_size} f32"), |b| {
             b.iter(|| bench_lexsort(&arr_a, &arr_b))
         });
 
         let arr_a = create_string_array::<i32>(size, 4, 0.1, 42);
-        c.bench_function(&format!("sort utf8 null 2^{}", log2_size), |b| {
+        c.bench_function(&format!("sort utf8 null 2^{log2_size}"), |b| {
             b.iter(|| bench_sort(&arr_a))
         });
     });

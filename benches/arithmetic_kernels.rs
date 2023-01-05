@@ -27,16 +27,16 @@ fn add_benchmark(c: &mut Criterion) {
         let arr_a = create_primitive_array_with_seed::<u64>(size, 0.0, 43);
         let arr_b = create_primitive_array_with_seed::<u64>(size, 0.0, 42);
 
-        c.bench_function(&format!("divide_scalar 2^{}", log2_size), |b| {
+        c.bench_function(&format!("divide_scalar 2^{log2_size}"), |b| {
             // 4 is a very fast optimizable divisor
             b.iter(|| bench_div_scalar(&arr_a, &4))
         });
-        c.bench_function(&format!("divide_scalar prime 2^{}", log2_size), |b| {
+        c.bench_function(&format!("divide_scalar prime 2^{log2_size}"), |b| {
             // large prime number that is probably harder to simplify
             b.iter(|| bench_div_scalar(&arr_a, &524287))
         });
 
-        c.bench_function(&format!("add 2^{}", log2_size), |b| {
+        c.bench_function(&format!("add 2^{log2_size}"), |b| {
             b.iter(|| bench_add(&arr_a, &arr_b))
         });
     });

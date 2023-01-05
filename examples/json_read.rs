@@ -26,6 +26,6 @@ fn main() -> Result<()> {
     let file_path = &args[1];
 
     let batch = read_path(file_path)?;
-    println!("{:#?}", batch);
+    println!("{batch:#?}");
     Ok(())
 }

@@ -29,21 +29,21 @@ fn add_benchmark(c: &mut Criterion) {
         let array = create_primitive_array::<i32>(size, 0.1);
         let batch = make_chunk(array);
 
-        c.bench_function(&format!("csv write i32 2^{}", log2_size), |b| {
+        c.bench_function(&format!("csv write i32 2^{log2_size}"), |b| {
             b.iter(|| write_batch(&batch))
         });
 
         let array = create_string_array::<i32>(size, 100, 0.1, 42);
         let batch = make_chunk(array);
 
-        c.bench_function(&format!("csv write utf8 2^{}", log2_size), |b| {
+        c.bench_function(&format!("csv write utf8 2^{log2_size}"), |b| {
             b.iter(|| write_batch(&batch))
         });
 
         let array = create_primitive_array::<f64>(size, 0.1);
         let batch = make_chunk(array);
 
-        c.bench_function(&format!("csv write f64 2^{}", log2_size), |b| {
+        c.bench_function(&format!("csv write f64 2^{log2_size}"), |b| {
             b.iter(|| write_batch(&batch))
         });
     });

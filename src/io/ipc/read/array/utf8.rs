@@ -24,8 +24,7 @@ pub fn read_utf8<O: Offset, R: Read + Seek>(
 ) -> Result<Utf8Array<O>> {
     let field_node = field_nodes.pop_front().ok_or_else(|| {
         Error::oos(format!(
-            "IPC: unable to fetch the field for {:?}. The file or stream is corrupted.",
-            data_type
+            "IPC: unable to fetch the field for {data_type:?}. The file or stream is corrupted."
         ))
     })?;
 

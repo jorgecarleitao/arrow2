@@ -9,8 +9,7 @@ use crate::io::ipc::common::read_gzip_json;
 fn test_file(version: &str, file_name: &str) -> Result<()> {
     let testdata = crate::test_util::arrow_test_data();
     let mut file = File::open(format!(
-        "{}/arrow-ipc-stream/integration/{}/{}.stream",
-        testdata, version, file_name
+        "{testdata}/arrow-ipc-stream/integration/{version}/{file_name}.stream"
     ))?;
 
     let metadata = read_stream_metadata(&mut file)?;
@@ -105,8 +104,7 @@ fn read_generated_200_compression_zstd() -> Result<()> {
 fn test_projection(version: &str, file_name: &str, columns: Vec<usize>) -> Result<()> {
     let testdata = crate::test_util::arrow_test_data();
     let mut file = File::open(format!(
-        "{}/arrow-ipc-stream/integration/{}/{}.stream",
-        testdata, version, file_name
+        "{testdata}/arrow-ipc-stream/integration/{version}/{file_name}.stream"
     ))?;
 
     let metadata = read_stream_metadata(&mut file)?;

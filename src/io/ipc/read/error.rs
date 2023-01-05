@@ -99,7 +99,7 @@ pub enum OutOfSpecKind {
 
 impl From<OutOfSpecKind> for Error {
     fn from(kind: OutOfSpecKind) -> Self {
-        Error::OutOfSpec(format!("{:?}", kind))
+        Error::OutOfSpec(format!("{kind:?}"))
     }
 }
 

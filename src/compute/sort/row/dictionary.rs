@@ -80,8 +80,7 @@ pub fn compute_dictionary_mapping(
         }
         t => {
             return Err(Error::NotYetImplemented(format!(
-                "dictionary value {:?} is not supported",
-                t
+                "dictionary value {t:?} is not supported"
             )))
         }
     })

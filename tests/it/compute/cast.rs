@@ -479,15 +479,12 @@ fn consistency() {
             if can_cast_types(d1, d2) {
                 let result = cast(array.as_ref(), d2, CastOptions::default());
                 if let Ok(result) = result {
-                    assert_eq!(result.data_type(), d2, "type not equal: {:?} {:?}", d1, d2);
+                    assert_eq!(result.data_type(), d2, "type not equal: {d1:?} {d2:?}");
                 } else {
-                    panic!(
-                        "Cast should have not have failed {:?} {:?}: {:?}",
-                        d1, d2, result
-                    );
+                    panic!("Cast should have not have failed {d1:?} {d2:?}: {result:?}");
                 }
             } else if cast(array.as_ref(), d2, CastOptions::default()).is_ok() {
-                panic!("Cast should have failed {:?} {:?}", d1, d2);
+                panic!("Cast should have failed {d1:?} {d2:?}");
             }
         }
     }

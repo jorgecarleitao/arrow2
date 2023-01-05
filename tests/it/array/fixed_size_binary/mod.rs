@@ -39,10 +39,7 @@ fn debug() {
         vec![1, 2, 3, 4, 5, 6].into(),
         Some(Bitmap::from([true, false, true])),
     );
-    assert_eq!(
-        format!("{:?}", a),
-        "FixedSizeBinary(2)[[1, 2], None, [5, 6]]"
-    );
+    assert_eq!(format!("{a:?}"), "FixedSizeBinary(2)[[1, 2], None, [5, 6]]");
 }
 
 #[test]

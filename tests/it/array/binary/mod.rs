@@ -153,7 +153,7 @@ fn value_unchecked_with_wrong_offsets_panics() {
 fn debug() {
     let array = BinaryArray::<i32>::from([Some([1, 2].as_ref()), Some(&[]), None]);
 
-    assert_eq!(format!("{:?}", array), "BinaryArray[[1, 2], [], None]");
+    assert_eq!(format!("{array:?}"), "BinaryArray[[1, 2], [], None]");
 }
 
 #[test]

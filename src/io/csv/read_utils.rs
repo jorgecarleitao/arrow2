@@ -235,8 +235,7 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
         LargeBinary => deserialize_binary::<i64, _>(rows, column),
         other => {
             return Err(Error::NotYetImplemented(format!(
-                "Deserializing type \"{:?}\" is not implemented",
-                other
+                "Deserializing type \"{other:?}\" is not implemented"
             )))
         }
     })

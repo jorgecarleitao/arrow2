@@ -12,7 +12,7 @@ fn add_benchmark(c: &mut Criterion) {
         let array1 = create_primitive_array::<i32>(8, 0.5);
         let array2 = create_primitive_array::<i32>(size + 1, 0.5);
 
-        c.bench_function(&format!("int32 concat aligned 2^{}", log2_size), |b| {
+        c.bench_function(&format!("int32 concat aligned 2^{log2_size}"), |b| {
             b.iter(|| {
                 let _ = concatenate(&[&array1, &array2]);
             })
@@ -20,7 +20,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         let array1 = create_primitive_array::<i32>(9, 0.5);
 
-        c.bench_function(&format!("int32 concat unaligned 2^{}", log2_size), |b| {
+        c.bench_function(&format!("int32 concat unaligned 2^{log2_size}"), |b| {
             b.iter(|| {
                 let _ = concatenate(&[&array1, &array2]);
             })
@@ -29,7 +29,7 @@ fn add_benchmark(c: &mut Criterion) {
         let array1 = create_boolean_array(8, 0.5, 0.5);
         let array2 = create_boolean_array(size + 1, 0.5, 0.5);
 
-        c.bench_function(&format!("boolean concat aligned 2^{}", log2_size), |b| {
+        c.bench_function(&format!("boolean concat aligned 2^{log2_size}"), |b| {
             b.iter(|| {
                 let _ = concatenate(&[&array1, &array2]);
             })
@@ -37,7 +37,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         let array1 = create_boolean_array(9, 0.5, 0.5);
 
-        c.bench_function(&format!("boolean concat unaligned 2^{}", log2_size), |b| {
+        c.bench_function(&format!("boolean concat unaligned 2^{log2_size}"), |b| {
             b.iter(|| {
                 let _ = concatenate(&[&array1, &array2]);
             })

@@ -42,19 +42,19 @@ fn add_benchmark(c: &mut Criterion) {
         let arr_a = create_primitive_array_with_seed::<u64>(size, 0.0, 43);
         let arr_b = create_primitive_array_with_seed::<u64>(size, 0.0, 42);
 
-        c.bench_function(&format!("or 2^{}", log2_size), |b| {
+        c.bench_function(&format!("or 2^{log2_size}"), |b| {
             b.iter(|| bench_or(&arr_a, &arr_b))
         });
 
-        c.bench_function(&format!("xor 2^{}", log2_size), |b| {
+        c.bench_function(&format!("xor 2^{log2_size}"), |b| {
             b.iter(|| bench_xor(&arr_a, &arr_b))
         });
 
-        c.bench_function(&format!("and 2^{}", log2_size), |b| {
+        c.bench_function(&format!("and 2^{log2_size}"), |b| {
             b.iter(|| bench_and(&arr_a, &arr_b))
         });
 
-        c.bench_function(&format!("not 2^{}", log2_size), |b| {
+        c.bench_function(&format!("not 2^{log2_size}"), |b| {
             b.iter(|| bench_not(&arr_a))
         });
     });

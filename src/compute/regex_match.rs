@@ -34,10 +34,7 @@ pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Re
             regex
         } else {
             let re = Regex::new(regex).map_err(|e| {
-                Error::InvalidArgumentError(format!(
-                    "Unable to build regex from LIKE pattern: {}",
-                    e
-                ))
+                Error::InvalidArgumentError(format!("Unable to build regex from LIKE pattern: {e}"))
             })?;
             map.insert(regex, re);
             map.get(regex).unwrap()
@@ -63,7 +60,7 @@ pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Re
 /// ```
 pub fn regex_match_scalar<O: Offset>(values: &Utf8Array<O>, regex: &str) -> Result<BooleanArray> {
     let regex = Regex::new(regex)
-        .map_err(|e| Error::InvalidArgumentError(format!("Unable to compile regex: {}", e)))?;
+        .map_err(|e| Error::InvalidArgumentError(format!("Unable to compile regex: {e}")))?;
     Ok(unary_utf8_boolean(values, |x| regex.is_match(x)))
 }
 

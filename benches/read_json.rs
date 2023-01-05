@@ -33,7 +33,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         let (data, dt) = prep(array);
 
-        c.bench_function(&format!("read i32 2^{}", log2_size), |b| {
+        c.bench_function(&format!("read i32 2^{log2_size}"), |b| {
             b.iter(|| bench_read(&data, &dt))
         });
 
@@ -41,7 +41,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         let (data, dt) = prep(array);
 
-        c.bench_function(&format!("read f64 2^{}", log2_size), |b| {
+        c.bench_function(&format!("read f64 2^{log2_size}"), |b| {
             b.iter(|| bench_read(&data, &dt))
         });
 
@@ -49,7 +49,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         let (data, dt) = prep(array);
 
-        c.bench_function(&format!("read utf8 2^{}", log2_size), |b| {
+        c.bench_function(&format!("read utf8 2^{log2_size}"), |b| {
             b.iter(|| bench_read(&data, &dt))
         });
 
@@ -57,7 +57,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         let (data, dt) = prep(array);
 
-        c.bench_function(&format!("read bool 2^{}", log2_size), |b| {
+        c.bench_function(&format!("read bool 2^{log2_size}"), |b| {
             b.iter(|| bench_read(&data, &dt))
         });
     })

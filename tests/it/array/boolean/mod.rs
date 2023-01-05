@@ -59,7 +59,7 @@ fn with_validity() {
 #[test]
 fn debug() {
     let array = BooleanArray::from([Some(true), None, Some(false)]);
-    assert_eq!(format!("{:?}", array), "BooleanArray[true, None, false]");
+    assert_eq!(format!("{array:?}"), "BooleanArray[true, None, false]");
 }
 
 #[test]

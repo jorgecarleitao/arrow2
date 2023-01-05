@@ -42,8 +42,7 @@ pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
 
         assert!(
             res.abs() <= max,
-            "Overflow in subtract presented for precision {}",
-            precision
+            "Overflow in subtract presented for precision {precision}"
         );
 
         res

@@ -657,7 +657,7 @@ pub fn deserialize_records(json: &Value, schema: &Schema) -> Result<Chunk<Box<dy
                     Value::Object(record) => {
                         for (key, value) in record.iter() {
                             let arr = results.get_mut(key).ok_or_else(|| {
-                                Error::ExternalFormat(format!("unexpected key: '{}'", key))
+                                Error::ExternalFormat(format!("unexpected key: '{key}'"))
                             })?;
                             deserialize_into(arr, &[value]);
                         }

@@ -289,9 +289,9 @@ impl<'a> PageValidity<'a> for OptionalPageValidity<'a> {
 }
 
 /// Extends a [`Pushable`] from an iterator of non-null values and an hybrid-rle decoder
-pub(super) fn extend_from_decoder<'a, T: Default, P: Pushable<T>, I: Iterator<Item = T>>(
+pub(super) fn extend_from_decoder<T: Default, P: Pushable<T>, I: Iterator<Item = T>>(
     validity: &mut MutableBitmap,
-    page_validity: &mut dyn PageValidity<'a>,
+    page_validity: &mut dyn PageValidity,
     limit: Option<usize>,
     pushable: &mut P,
     mut values_iter: I,

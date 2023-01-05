@@ -273,7 +273,7 @@ fn utf8_to_timestamp_ns_impl<O: Offset, T: chrono::TimeZone>(
 #[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
 pub fn parse_offset_tz(timezone: &str) -> Result<chrono_tz::Tz> {
     timezone.parse::<chrono_tz::Tz>().map_err(|_| {
-        Error::InvalidArgumentError(format!("timezone \"{}\" cannot be parsed", timezone))
+        Error::InvalidArgumentError(format!("timezone \"{timezone}\" cannot be parsed"))
     })
 }
 

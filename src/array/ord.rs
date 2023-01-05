@@ -230,16 +230,14 @@ pub fn build_compare(left: &dyn Array, right: &dyn Array) -> Result<DynComparato
                 (IntegerType::Int64, IntegerType::Int64) => dyn_dict!(i64, left, right),
                 (lhs, _) => {
                     return Err(Error::InvalidArgumentError(format!(
-                        "Dictionaries do not support keys of type {:?}",
-                        lhs
+                        "Dictionaries do not support keys of type {lhs:?}"
                     )))
                 }
             }
         }
         (lhs, _) => {
             return Err(Error::InvalidArgumentError(format!(
-                "The data type type {:?} has no natural order",
-                lhs
+                "The data type type {lhs:?} has no natural order"
             )))
         }
     })

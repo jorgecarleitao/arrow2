@@ -26,7 +26,7 @@ fn bench_filter(data_array: &dyn Array, filter_array: &BooleanArray) {
     criterion::black_box(filter(data_array, filter_array).unwrap());
 }
 
-fn bench_built_filter<'a>(filter: &Filter<'a>, array: &dyn Array) {
+fn bench_built_filter(filter: &Filter, array: &dyn Array) {
     criterion::black_box(filter(array));
 }
 
@@ -40,13 +40,13 @@ fn add_benchmark(c: &mut Criterion) {
             BooleanArray::new(DataType::Boolean, filter_array.values().clone(), None);
 
         let arr_a = create_primitive_array::<f32>(size, 0.0);
-        c.bench_function(&format!("filter 2^{} f32", log2_size), |b| {
+        c.bench_function(&format!("filter 2^{log2_size} f32"), |b| {
             b.iter(|| bench_filter(&arr_a, &filter_array))
         });
 
         let arr_a = create_primitive_array::<f32>(size, 0.1);
 
-        c.bench_function(&format!("filter null 2^{} f32", log2_size), |b| {
+        c.bench_function(&format!("filter null 2^{log2_size} f32"), |b| {
             b.iter(|| bench_filter(&arr_a, &filter_array))
         });
     });

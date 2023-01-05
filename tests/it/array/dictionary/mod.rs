@@ -21,7 +21,7 @@ fn try_new_ok() {
     );
     assert!(!array.is_ordered());
 
-    assert_eq!(format!("{:?}", array), "DictionaryArray[aa, a]");
+    assert_eq!(format!("{array:?}"), "DictionaryArray[aa, a]");
 }
 
 #[test]
@@ -109,7 +109,7 @@ fn new_null() {
     let dt = DataType::Dictionary(i16::KEY_TYPE, Box::new(DataType::Int32), false);
     let array = DictionaryArray::<i16>::new_null(dt, 2);
 
-    assert_eq!(format!("{:?}", array), "DictionaryArray[None, None]");
+    assert_eq!(format!("{array:?}"), "DictionaryArray[None, None]");
 }
 
 #[test]
@@ -117,7 +117,7 @@ fn new_empty() {
     let dt = DataType::Dictionary(i16::KEY_TYPE, Box::new(DataType::Int32), false);
     let array = DictionaryArray::<i16>::new_empty(dt);
 
-    assert_eq!(format!("{:?}", array), "DictionaryArray[]");
+    assert_eq!(format!("{array:?}"), "DictionaryArray[]");
 }
 
 #[test]
@@ -129,7 +129,7 @@ fn with_validity() {
 
     let array = array.with_validity(Some([true, false].into()));
 
-    assert_eq!(format!("{:?}", array), "DictionaryArray[aa, None]");
+    assert_eq!(format!("{array:?}"), "DictionaryArray[aa, None]");
 }
 
 #[test]
