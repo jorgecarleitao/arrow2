@@ -374,8 +374,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                 }
                 _ => {
                     return Err(Error::OutOfSpec(format!(
-                        "The datatype \"{}\" is still not supported in Rust implementation",
-                        other
+                        "The datatype \"{other}\" is still not supported in Rust implementation",
                     )));
                 }
             }
@@ -437,16 +436,16 @@ fn to_format(data_type: &DataType) -> String {
                 tz.as_ref().map(|x| x.as_ref()).unwrap_or("")
             )
         }
-        DataType::Decimal(precision, scale) => format!("d:{},{}", precision, scale),
-        DataType::Decimal256(precision, scale) => format!("d:{},{},256", precision, scale),
+        DataType::Decimal(precision, scale) => format!("d:{precision},{scale}"),
+        DataType::Decimal256(precision, scale) => format!("d:{precision},{scale},256"),
         DataType::List(_) => "+l".to_string(),
         DataType::LargeList(_) => "+L".to_string(),
         DataType::Struct(_) => "+s".to_string(),
-        DataType::FixedSizeBinary(size) => format!("w:{}", size),
-        DataType::FixedSizeList(_, size) => format!("+w:{}", size),
+        DataType::FixedSizeBinary(size) => format!("w:{size}"),
+        DataType::FixedSizeList(_, size) => format!("+w:{size}"),
         DataType::Union(f, ids, mode) => {
             let sparsness = if mode.is_sparse() { 's' } else { 'd' };
-            let mut r = format!("+u{}:", sparsness);
+            let mut r = format!("+u{sparsness}:");
             let ids = if let Some(ids) = ids {
                 ids.iter()
                     .fold(String::new(), |a, b| a + &b.to_string() + ",")
@@ -473,8 +472,7 @@ pub(super) fn get_child(data_type: &DataType, index: usize) -> Result<DataType> 
         (index, DataType::Union(fields, _, _)) => Ok(fields[index].data_type().clone()),
         (index, DataType::Extension(_, subtype, _)) => get_child(subtype, index),
         (child, data_type) => Err(Error::OutOfSpec(format!(
-            "Requested child {} to type {:?} that has no such child",
-            child, data_type
+            "Requested child {child} to type {data_type:?} that has no such child",
         ))),
     }
 }

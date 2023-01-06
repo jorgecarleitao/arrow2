@@ -415,12 +415,12 @@ fn write_escaping_resize_local_buf() {
         let a = Utf8Array::<i32>::from_slice([payload]);
         let chunk = Chunk::new(vec![a.boxed()]);
 
-        test_generic(chunk,  &format!("\"{}\"\n", payload));
+        test_generic(chunk,  &format!("\"{payload}\"\n"));
 
         let a = Utf8Array::<i64>::from_slice([payload]);
         let chunk = Chunk::new(vec![a.boxed()]);
 
-        test_generic(chunk,  &format!("\"{}\"\n", payload));
+        test_generic(chunk,  &format!("\"{payload}\"\n"));
     }
 }
 

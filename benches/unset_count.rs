@@ -10,11 +10,11 @@ fn add_benchmark(c: &mut Criterion) {
             .map(|x| 0b01011011u8.rotate_left(x))
             .collect::<Vec<_>>();
 
-        c.bench_function(&format!("count_zeros 2^{}", log2_size), |b| {
+        c.bench_function(&format!("count_zeros 2^{log2_size}"), |b| {
             b.iter(|| count_zeros(&bytes, 0, bytes.len() * 8))
         });
 
-        c.bench_function(&format!("count_zeros offset 2^{}", log2_size), |b| {
+        c.bench_function(&format!("count_zeros offset 2^{log2_size}"), |b| {
             b.iter(|| count_zeros(&bytes, 10, bytes.len() * 8 - 10))
         });
     })

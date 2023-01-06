@@ -65,8 +65,7 @@ fn make_mutable(
             }
             other => {
                 return Err(Error::NotYetImplemented(format!(
-                    "Deserializing type {:#?} is still not implemented",
-                    other
+                    "Deserializing type {other:#?} is still not implemented"
                 )))
             }
         },

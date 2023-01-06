@@ -13,7 +13,7 @@ pub fn get_value_display<'a, F: Write + 'a>(
 ) -> Box<dyn Fn(&mut F, usize) -> Result + 'a> {
     use crate::datatypes::PhysicalType::*;
     match array.data_type().to_physical_type() {
-        Null => Box::new(move |f, _| write!(f, "{}", null)),
+        Null => Box::new(move |f, _| write!(f, "{null}")),
         Boolean => Box::new(|f, index| {
             super::boolean::fmt::write_value(array.as_any().downcast_ref().unwrap(), index, f)
         }),
@@ -152,7 +152,7 @@ where
             if val.get_bit(index) {
                 d(f, index)
             } else {
-                write!(f, "{}", null)
+                write!(f, "{null}")
             }
         } else {
             d(f, index)

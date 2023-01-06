@@ -10,7 +10,7 @@ pub use serialize::{can_serialize, new_serializer, BoxSerializer};
 /// # Panics
 /// Panics iff the number of items in any of the serializers is not equal to the number of rows
 /// declared in the `block`.
-pub fn serialize<'a>(serializers: &mut [BoxSerializer<'a>], block: &mut Block) {
+pub fn serialize(serializers: &mut [BoxSerializer], block: &mut Block) {
     let Block {
         data,
         number_of_rows,

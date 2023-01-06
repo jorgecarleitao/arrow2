@@ -34,7 +34,7 @@ fn sparse_debug() -> Result<()> {
 
     let array = UnionArray::new(data_type, types, fields, None);
 
-    assert_eq!(format!("{:?}", array), "UnionArray[1, None, c]");
+    assert_eq!(format!("{array:?}"), "UnionArray[1, None, c]");
 
     Ok(())
 }
@@ -55,7 +55,7 @@ fn dense_debug() -> Result<()> {
 
     let array = UnionArray::new(data_type, types, fields, offsets);
 
-    assert_eq!(format!("{:?}", array), "UnionArray[1, None, c]");
+    assert_eq!(format!("{array:?}"), "UnionArray[1, None, c]");
 
     Ok(())
 }

@@ -57,8 +57,7 @@ pub fn div(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
 
         assert!(
             res.abs() <= max,
-            "Overflow in multiplication presented for precision {}",
-            precision
+            "Overflow in multiplication presented for precision {precision}"
         );
 
         res
@@ -100,8 +99,7 @@ pub fn div_scalar(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveScalar<i128>) -> Pr
 
         assert!(
             res.abs() <= max,
-            "Overflow in multiplication presented for precision {}",
-            precision
+            "Overflow in multiplication presented for precision {precision}"
         );
 
         res

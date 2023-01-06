@@ -30,7 +30,7 @@ fn write_basics() -> Result<()> {
 
     let actual: Vec<&str> = table.lines().collect();
 
-    assert_eq!(expected, actual, "Actual result:\n{}", table);
+    assert_eq!(expected, actual, "Actual result:\n{table}");
 
     Ok(())
 }
@@ -61,7 +61,7 @@ fn write_null() -> Result<()> {
 
     let actual: Vec<&str> = table.lines().collect();
 
-    assert_eq!(expected, actual, "Actual result:\n{:#?}", table);
+    assert_eq!(expected, actual, "Actual result:\n{table:#?}");
     Ok(())
 }
 
@@ -88,7 +88,7 @@ fn write_dictionary() -> Result<()> {
 
     let actual: Vec<&str> = table.lines().collect();
 
-    assert_eq!(expected, actual, "Actual result:\n{}", table);
+    assert_eq!(expected, actual, "Actual result:\n{table}");
 
     Ok(())
 }
@@ -109,7 +109,7 @@ fn dictionary_validities() -> Result<()> {
 
     let actual: Vec<&str> = table.lines().collect();
 
-    assert_eq!(expected, actual, "Actual result:\n{}", table);
+    assert_eq!(expected, actual, "Actual result:\n{table}");
 
     Ok(())
 }
@@ -345,7 +345,7 @@ fn write_struct() -> Result<()> {
 
     let actual: Vec<&str> = table.lines().collect();
 
-    assert_eq!(expected, actual, "Actual result:\n{}", table);
+    assert_eq!(expected, actual, "Actual result:\n{table}");
 
     Ok(())
 }
@@ -375,7 +375,7 @@ fn write_union() -> Result<()> {
 
     let actual: Vec<&str> = table.lines().collect();
 
-    assert_eq!(expected, actual, "Actual result:\n{}", table);
+    assert_eq!(expected, actual, "Actual result:\n{table}");
 
     Ok(())
 }

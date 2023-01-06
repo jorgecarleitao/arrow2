@@ -30,7 +30,7 @@ fn add_benchmark(c: &mut Criterion) {
             Some(validity),
         );
 
-        c.bench_function(&format!("list: iter_values 2^{}", log2_size), |b| {
+        c.bench_function(&format!("list: iter_values 2^{log2_size}"), |b| {
             b.iter(|| {
                 for x in array.values_iter() {
                     assert_eq!(x.len(), 2);
@@ -38,7 +38,7 @@ fn add_benchmark(c: &mut Criterion) {
             })
         });
 
-        c.bench_function(&format!("list: iter 2^{}", log2_size), |b| {
+        c.bench_function(&format!("list: iter 2^{log2_size}"), |b| {
             b.iter(|| {
                 for x in array.iter() {
                     assert_eq!(x.unwrap().len(), 2);

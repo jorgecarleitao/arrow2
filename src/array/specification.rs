@@ -126,7 +126,7 @@ pub(crate) unsafe fn check_indexes_unchecked<K: DictionaryKey>(
 
     if invalid {
         let key = keys.iter().map(|k| k.as_usize()).max().unwrap();
-        Err(Error::oos(format!("One of the dictionary keys is {} but it must be < than the length of the dictionary values, which is {}", key, len)))
+        Err(Error::oos(format!("One of the dictionary keys is {key} but it must be < than the length of the dictionary values, which is {len}")))
     } else {
         Ok(())
     }
@@ -139,9 +139,9 @@ where
     keys.iter().try_for_each(|key| {
         let key: usize = (*key)
             .try_into()
-            .map_err(|_| Error::oos(format!("The dictionary key must fit in a `usize`, but {:?} does not", key)))?;
+            .map_err(|_| Error::oos(format!("The dictionary key must fit in a `usize`, but {key:?} does not")))?;
         if key >= len {
-            Err(Error::oos(format!("One of the dictionary keys is {} but it must be < than the length of the dictionary values, which is {}", key, len)))
+            Err(Error::oos(format!("One of the dictionary keys is {key} but it must be < than the length of the dictionary values, which is {len}")))
         } else {
             Ok(())
         }

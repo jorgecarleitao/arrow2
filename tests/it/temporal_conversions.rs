@@ -13,7 +13,7 @@ fn naive() {
         "1996-12-19 13:39:57-03:00", // missing T
     ]);
     let r = temporal_conversions::utf8_to_naive_timestamp_ns(&array, fmt);
-    assert_eq!(format!("{:?}", r), expected);
+    assert_eq!(format!("{r:?}"), expected);
 
     let fmt = "%Y-%m-%dT%H:%M:%S"; // no tz info
     let array = Utf8Array::<i32>::from_slice([
@@ -22,7 +22,7 @@ fn naive() {
         "1996-12-19 13:39:57-03:00", // missing T
     ]);
     let r = temporal_conversions::utf8_to_naive_timestamp_ns(&array, fmt);
-    assert_eq!(format!("{:?}", r), expected);
+    assert_eq!(format!("{r:?}"), expected);
 }
 
 #[test]
@@ -35,7 +35,7 @@ fn naive_no_tz() {
         "1996-12-19 13:39:57", // missing T
     ]);
     let r = temporal_conversions::utf8_to_naive_timestamp_ns(&array, fmt);
-    assert_eq!(format!("{:?}", r), expected);
+    assert_eq!(format!("{r:?}"), expected);
 }
 
 #[test]
@@ -50,7 +50,7 @@ fn tz_aware() {
         "1996-12-19 13:39:57.0-03:00",
     ]);
     let r = temporal_conversions::utf8_to_timestamp_ns(&array, fmt, tz).unwrap();
-    assert_eq!(format!("{:?}", r), expected);
+    assert_eq!(format!("{r:?}"), expected);
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn tz_aware_no_timezone() {
         "1996-12-19 13:39:57.0",
     ]);
     let r = temporal_conversions::utf8_to_timestamp_ns(&array, fmt, tz).unwrap();
-    assert_eq!(format!("{:?}", r), expected);
+    assert_eq!(format!("{r:?}"), expected);
 }
 
 #[test]
@@ -81,7 +81,7 @@ fn add_interval_fixed_offset() {
         &timezone,
     );
     let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
-    assert_eq!("1972-02-29 02:01:00 +01:00", format!("{}", r));
+    assert_eq!("1972-02-29 02:01:00 +01:00", format!("{r}"));
 
     let r = temporal_conversions::add_interval(
         timestamp,
@@ -90,7 +90,7 @@ fn add_interval_fixed_offset() {
         &timezone,
     );
     let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
-    assert_eq!("1972-03-29 02:01:00 +01:00", format!("{}", r));
+    assert_eq!("1972-03-29 02:01:00 +01:00", format!("{r}"));
 
     let r = temporal_conversions::add_interval(
         timestamp,
@@ -99,7 +99,7 @@ fn add_interval_fixed_offset() {
         &timezone,
     );
     let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
-    assert_eq!("1974-03-01 02:01:00 +01:00", format!("{}", r));
+    assert_eq!("1974-03-01 02:01:00 +01:00", format!("{r}"));
 
     let r = temporal_conversions::add_interval(
         timestamp,
@@ -108,7 +108,7 @@ fn add_interval_fixed_offset() {
         &timezone,
     );
     let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
-    assert_eq!("1972-01-29 02:01:00 +01:00", format!("{}", r));
+    assert_eq!("1972-01-29 02:01:00 +01:00", format!("{r}"));
 }
 
 #[cfg(feature = "chrono-tz")]
@@ -127,7 +127,7 @@ fn add_interval_timezone() {
         &timezone,
     );
     let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
-    assert_eq!("2020-03-29 02:00:00 WEST", format!("{}", r));
+    assert_eq!("2020-03-29 02:00:00 WEST", format!("{r}"));
 
     // crosses two summer time changes and thus adds only 1 hour
     let r = temporal_conversions::add_interval(
@@ -137,5 +137,5 @@ fn add_interval_timezone() {
         &timezone,
     );
     let r = temporal_conversions::timestamp_to_datetime(r, timeunit, &timezone);
-    assert_eq!("2020-10-29 01:00:00 WET", format!("{}", r));
+    assert_eq!("2020-10-29 01:00:00 WET", format!("{r}"));
 }

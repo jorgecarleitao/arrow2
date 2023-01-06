@@ -33,7 +33,7 @@ fn from_iter() {
 fn debug() {
     let buffer = Buffer::<i32>::from(vec![0, 1, 2, 3]);
     let buffer = buffer.slice(1, 2);
-    let a = format!("{:?}", buffer);
+    let a = format!("{buffer:?}");
     assert_eq!(a, "[1, 2]")
 }
 

@@ -12,7 +12,7 @@ fn add_benchmark(c: &mut Criterion) {
         let size = 2usize.pow(log2_size);
 
         let bitmap: Bitmap = (0..size).into_iter().map(|x| x % 3 == 0).collect();
-        c.bench_function(&format!("bitmap aligned not 2^{}", log2_size), |b| {
+        c.bench_function(&format!("bitmap aligned not 2^{log2_size}"), |b| {
             b.iter(|| {
                 let r = !&bitmap;
                 assert!(r.unset_bits() > 0);
@@ -23,7 +23,7 @@ fn add_benchmark(c: &mut Criterion) {
         let len = ((size as f64) * 0.85) as usize;
 
         c.bench_function(
-            &format!("bitmap count zeros 85% slice 2^{}", log2_size),
+            &format!("bitmap count zeros 85% slice 2^{log2_size}"),
             |b| {
                 b.iter(|| {
                     let r = bitmap.clone().slice(offset, len);
@@ -36,7 +36,7 @@ fn add_benchmark(c: &mut Criterion) {
         let len = ((size as f64) * 0.51) as usize;
 
         c.bench_function(
-            &format!("bitmap count zeros 51% slice 2^{}", log2_size),
+            &format!("bitmap count zeros 51% slice 2^{log2_size}"),
             |b| {
                 b.iter(|| {
                     let r = bitmap.clone().slice(offset, len);
@@ -46,7 +46,7 @@ fn add_benchmark(c: &mut Criterion) {
         );
 
         let bitmap1 = bitmap.clone().slice(1, size - 1);
-        c.bench_function(&format!("bitmap not 2^{}", log2_size), |b| {
+        c.bench_function(&format!("bitmap not 2^{log2_size}"), |b| {
             b.iter(|| {
                 let r = !&bitmap1;
                 assert!(r.unset_bits() > 0);
@@ -54,7 +54,7 @@ fn add_benchmark(c: &mut Criterion) {
         });
 
         let bitmap1: Bitmap = (0..size).into_iter().map(|x| x % 4 == 0).collect();
-        c.bench_function(&format!("bitmap aligned or 2^{}", log2_size), |b| {
+        c.bench_function(&format!("bitmap aligned or 2^{log2_size}"), |b| {
             b.iter(|| bench_arrow2(&bitmap, &bitmap1))
         });
     });

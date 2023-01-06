@@ -21,8 +21,7 @@ fn to_buffer(
     let nullable = if nullable { "" } else { "_required" };
 
     let path = PathBuf::from(dir).join(format!(
-        "fixtures/pyarrow3/v1/{}{}{}benches{}_{}.parquet",
-        dict, multi_page, compressed, nullable, size
+        "fixtures/pyarrow3/v1/{dict}{multi_page}{compressed}benches{nullable}_{size}.parquet",
     ));
 
     let metadata = fs::metadata(&path).expect("unable to read metadata");
@@ -51,50 +50,50 @@ fn read_chunk(buffer: &[u8], size: usize, column: usize) -> Result<()> {
 }
 
 fn add_benchmark(c: &mut Criterion) {
-    (10..=20).step_by(2).for_each(|i| {
-        let size = 2usize.pow(i);
+    (10..=20).step_by(2).for_each(|log2_size| {
+        let size = 2usize.pow(log2_size);
         let buffer = to_buffer(size, true, false, false, false);
-        let a = format!("read i64 2^{}", i);
+        let a = format!("read i64 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 0).unwrap()));
 
         let buffer = to_buffer(size, true, true, false, false);
-        let a = format!("read ts dict 2^{}", i);
+        let a = format!("read ts dict 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 11).unwrap()));
 
-        let a = format!("read utf8 2^{}", i);
+        let a = format!("read utf8 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 2).unwrap()));
 
-        let a = format!("read utf8 large 2^{}", i);
+        let a = format!("read utf8 large 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 6).unwrap()));
 
-        let a = format!("read utf8 emoji 2^{}", i);
+        let a = format!("read utf8 emoji 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 12).unwrap()));
 
-        let a = format!("read bool 2^{}", i);
+        let a = format!("read bool 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 3).unwrap()));
 
         let buffer = to_buffer(size, true, true, false, false);
-        let a = format!("read utf8 dict 2^{}", i);
+        let a = format!("read utf8 dict 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 2).unwrap()));
 
         let buffer = to_buffer(size, true, false, false, true);
-        let a = format!("read i64 snappy 2^{}", i);
+        let a = format!("read i64 snappy 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 0).unwrap()));
 
         let buffer = to_buffer(size, true, false, true, false);
-        let a = format!("read utf8 multi 2^{}", i);
+        let a = format!("read utf8 multi 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 2).unwrap()));
 
         let buffer = to_buffer(size, true, false, true, true);
-        let a = format!("read utf8 multi snappy 2^{}", i);
+        let a = format!("read utf8 multi snappy 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 2).unwrap()));
 
         let buffer = to_buffer(size, true, false, true, true);
-        let a = format!("read i64 multi snappy 2^{}", i);
+        let a = format!("read i64 multi snappy 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 0).unwrap()));
 
         let buffer = to_buffer(size, false, false, false, false);
-        let a = format!("read required utf8 2^{}", i);
+        let a = format!("read required utf8 2^{log2_size}");
         c.bench_function(&a, |b| b.iter(|| read_chunk(&buffer, size, 2).unwrap()));
     });
 }

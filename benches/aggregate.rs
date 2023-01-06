@@ -17,41 +17,41 @@ fn add_benchmark(c: &mut Criterion) {
         let size = 2usize.pow(log2_size);
         let arr_a = create_primitive_array::<f32>(size, 0.0);
 
-        c.bench_function(&format!("sum 2^{} f32", log2_size), |b| {
+        c.bench_function(&format!("sum 2^{log2_size} f32"), |b| {
             b.iter(|| bench_sum(&arr_a))
         });
-        c.bench_function(&format!("min 2^{} f32", log2_size), |b| {
+        c.bench_function(&format!("min 2^{log2_size} f32"), |b| {
             b.iter(|| bench_min(&arr_a))
         });
 
         let arr_a = create_primitive_array::<i32>(size, 0.0);
 
-        c.bench_function(&format!("sum 2^{} i32", log2_size), |b| {
+        c.bench_function(&format!("sum 2^{log2_size} i32"), |b| {
             b.iter(|| bench_sum(&arr_a))
         });
-        c.bench_function(&format!("min 2^{} i32", log2_size), |b| {
+        c.bench_function(&format!("min 2^{log2_size} i32"), |b| {
             b.iter(|| bench_min(&arr_a))
         });
 
         let arr_a = create_primitive_array::<f32>(size, 0.1);
 
-        c.bench_function(&format!("sum null 2^{} f32", log2_size), |b| {
+        c.bench_function(&format!("sum null 2^{log2_size} f32"), |b| {
             b.iter(|| bench_sum(&arr_a))
         });
 
-        c.bench_function(&format!("min null 2^{} f32", log2_size), |b| {
+        c.bench_function(&format!("min null 2^{log2_size} f32"), |b| {
             b.iter(|| bench_min(&arr_a))
         });
 
         let arr_a = create_string_array::<i32>(1, size, 0.0, 0);
 
-        c.bench_function(&format!("min 2^{} utf8", log2_size), |b| {
+        c.bench_function(&format!("min 2^{log2_size} utf8"), |b| {
             b.iter(|| bench_min(&arr_a))
         });
 
         let arr_a = create_string_array::<i32>(1, size, 0.1, 0);
 
-        c.bench_function(&format!("min null 2^{} utf8", log2_size), |b| {
+        c.bench_function(&format!("min null 2^{log2_size} utf8"), |b| {
             b.iter(|| bench_min(&arr_a))
         });
     });

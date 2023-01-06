@@ -213,7 +213,7 @@ pub(super) fn deserialize_footer(footer_data: &[u8], size: u64) -> Result<FileMe
 pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata> {
     // check if header contain the correct magic bytes
     let mut magic_buffer: [u8; 6] = [0; 6];
-    let start = reader.seek(SeekFrom::Current(0))?;
+    let start = reader.stream_position()?;
     reader.read_exact(&mut magic_buffer)?;
     if magic_buffer != ARROW_MAGIC {
         return Err(Error::from(OutOfSpecKind::InvalidHeader));

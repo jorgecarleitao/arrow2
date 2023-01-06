@@ -8,7 +8,7 @@ fn add_benchmark(c: &mut Criterion) {
         let size = 2usize.pow(log2_size);
 
         let mut bitmap: MutableBitmap = (0..size).into_iter().map(|x| x % 3 == 0).collect();
-        c.bench_function(&format!("mutablebitmap not 2^{}", log2_size), |b| {
+        c.bench_function(&format!("mutablebitmap not 2^{log2_size}"), |b| {
             b.iter(|| {
                 unary_assign(criterion::black_box(&mut bitmap), |x: u64| !x);
                 assert!(!bitmap.is_empty());
@@ -16,7 +16,7 @@ fn add_benchmark(c: &mut Criterion) {
         });
 
         let bitmap: Bitmap = (0..size).into_iter().map(|x| x % 3 == 0).collect();
-        c.bench_function(&format!("bitmap not 2^{}", log2_size), |b| {
+        c.bench_function(&format!("bitmap not 2^{log2_size}"), |b| {
             b.iter(|| {
                 let r = !criterion::black_box(&bitmap);
                 assert!(!r.is_empty());
@@ -25,7 +25,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         let mut lhs: MutableBitmap = (0..size).into_iter().map(|x| x % 3 == 0).collect();
         let rhs: Bitmap = (0..size).into_iter().map(|x| x % 4 == 0).collect();
-        c.bench_function(&format!("mutablebitmap and 2^{}", log2_size), |b| {
+        c.bench_function(&format!("mutablebitmap and 2^{log2_size}"), |b| {
             b.iter(|| {
                 binary_assign(criterion::black_box(&mut lhs), &rhs, |x: u64, y| x & y);
                 assert!(!bitmap.is_empty());
@@ -34,7 +34,7 @@ fn add_benchmark(c: &mut Criterion) {
 
         let lhs: Bitmap = (0..size).into_iter().map(|x| x % 3 == 0).collect();
         let rhs: Bitmap = (0..size).into_iter().map(|x| x % 4 == 0).collect();
-        c.bench_function(&format!("bitmap and 2^{}", log2_size), |b| {
+        c.bench_function(&format!("bitmap and 2^{log2_size}"), |b| {
             b.iter(|| {
                 let r = criterion::black_box(&lhs) & &rhs;
                 assert!(!r.is_empty());

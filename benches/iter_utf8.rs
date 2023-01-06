@@ -12,7 +12,7 @@ fn add_benchmark(c: &mut Criterion) {
                 .chain(std::iter::repeat("bbb").take(size / 2)),
         );
 
-        c.bench_function(&format!("iter_values 2^{}", log2_size), |b| {
+        c.bench_function(&format!("iter_values 2^{log2_size}"), |b| {
             b.iter(|| {
                 for x in array.values_iter() {
                     assert_eq!(x.len(), 3);
@@ -20,7 +20,7 @@ fn add_benchmark(c: &mut Criterion) {
             })
         });
 
-        c.bench_function(&format!("iter 2^{}", log2_size), |b| {
+        c.bench_function(&format!("iter 2^{log2_size}"), |b| {
             b.iter(|| {
                 for x in array.iter() {
                     assert_eq!(x.unwrap().len(), 3);

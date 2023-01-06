@@ -44,8 +44,7 @@ pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
 
         assert!(
             res.abs() <= max,
-            "Overflow in addition presented for precision {}",
-            precision
+            "Overflow in addition presented for precision {precision}"
         );
 
         res

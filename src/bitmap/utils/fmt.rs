@@ -46,7 +46,7 @@ pub fn fmt(
     let number_of_bytes = remaining / 8;
     for byte in &bytes[..number_of_bytes] {
         f.write_str(", ")?;
-        f.write_fmt(format_args!("{:#010b}", byte))?;
+        f.write_fmt(format_args!("{byte:#010b}"))?;
     }
     remaining -= number_of_bytes * 8;
     if remaining == 0 {

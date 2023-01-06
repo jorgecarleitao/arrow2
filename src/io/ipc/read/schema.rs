@@ -96,8 +96,7 @@ fn deserialize_time(time: TimeRef) -> Result<(DataType, IpcField)> {
         (64, TimeUnit::Nanosecond) => DataType::Time64(TimeUnit::Nanosecond),
         (bits, precision) => {
             return Err(Error::nyi(format!(
-                "Time type with bit width of {} and unit of {:?}",
-                bits, precision
+                "Time type with bit width of {bits} and unit of {precision:?}"
             )))
         }
     };
@@ -360,7 +359,7 @@ fn get_data_type(
 /// Deserialize an flatbuffers-encoded Schema message into [`Schema`] and [`IpcSchema`].
 pub fn deserialize_schema(message: &[u8]) -> Result<(Schema, IpcSchema)> {
     let message = arrow_format::ipc::MessageRef::read_as_root(message)
-        .map_err(|err| Error::oos(format!("Unable deserialize message: {:?}", err)))?;
+        .map_err(|err| Error::oos(format!("Unable deserialize message: {err:?}")))?;
 
     let schema = match message
         .header()?
@@ -413,7 +412,7 @@ pub(super) fn fb_to_schema(schema: arrow_format::ipc::SchemaRef) -> Result<(Sche
 
 pub(super) fn deserialize_stream_metadata(meta: &[u8]) -> Result<StreamMetadata> {
     let message = arrow_format::ipc::MessageRef::read_as_root(meta)
-        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {:?}", err)))?;
+        .map_err(|err| Error::OutOfSpec(format!("Unable to get root as message: {err:?}")))?;
     let version = message.version()?;
     // message header is a Schema, so read it
     let header = message

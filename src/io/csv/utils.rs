@@ -34,7 +34,7 @@ fn is_datetime(string: &str) -> Option<String> {
         parsed.offset.map(|x| {
             let hours = x / 60 / 60;
             let minutes = x / 60 - hours * 60;
-            format!("{:03}:{:02}", hours, minutes)
+            format!("{hours:03}:{minutes:02}")
         })
     } else {
         None

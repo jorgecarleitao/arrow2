@@ -23,7 +23,7 @@ fn main() -> Result<(), Error> {
     // we can read the statistics of all parquet's row groups (here for each field)
     for field in &schema.fields {
         let statistics = read::statistics::deserialize(field, &metadata.row_groups)?;
-        println!("{:#?}", statistics);
+        println!("{statistics:#?}");
     }
 
     // say we found that we only need to read the first two row groups, "0" and "1"

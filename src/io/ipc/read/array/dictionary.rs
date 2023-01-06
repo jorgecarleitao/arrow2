@@ -37,8 +37,7 @@ where
         .ok_or_else(|| {
             let valid_ids = dictionaries.keys().collect::<HashSet<_>>();
             Error::OutOfSpec(format!(
-                "Dictionary id {} not found. Valid ids: {:?}",
-                id, valid_ids
+                "Dictionary id {id} not found. Valid ids: {valid_ids:?}"
             ))
         })?
         .clone();

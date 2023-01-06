@@ -47,7 +47,7 @@ fn with_validity() {
 fn debug() {
     let array = data();
 
-    assert_eq!(format!("{:?}", array), "FixedSizeListArray[[10, 20], None]");
+    assert_eq!(format!("{array:?}"), "FixedSizeListArray[[10, 20], None]");
 }
 
 #[test]

@@ -77,18 +77,18 @@ impl Display for Error {
             Error::External(message, source) => {
                 write!(f, "External error{}: {}", message, &source)
             }
-            Error::Io(desc) => write!(f, "Io error: {}", desc),
+            Error::Io(desc) => write!(f, "Io error: {desc}"),
             Error::InvalidArgumentError(desc) => {
-                write!(f, "Invalid argument error: {}", desc)
+                write!(f, "Invalid argument error: {desc}")
             }
             Error::ExternalFormat(desc) => {
-                write!(f, "External format error: {}", desc)
+                write!(f, "External format error: {desc}")
             }
             Error::Overflow => {
                 write!(f, "Operation overflew the backing container.")
             }
             Error::OutOfSpec(message) => {
-                write!(f, "{}", message)
+                write!(f, "{message}")
             }
         }
     }

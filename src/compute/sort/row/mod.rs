@@ -509,8 +509,7 @@ fn new_empty_rows(
             }),
             t => {
                 return Err(Error::NotYetImplemented(format!(
-                    "not yet implemented: {:?}",
-                    t
+                    "not yet implemented: {t:?}"
                 )))
             }
         }

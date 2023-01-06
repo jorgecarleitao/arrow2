@@ -34,6 +34,6 @@ fn main() -> Result<()> {
     let file_path = &args[1];
 
     let arrays = read_path(file_path)?;
-    println!("{:#?}", arrays);
+    println!("{arrays:#?}");
     Ok(())
 }

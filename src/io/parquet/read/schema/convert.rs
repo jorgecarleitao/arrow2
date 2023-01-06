@@ -299,7 +299,7 @@ fn to_list(fields: &[ParquetType], parent_name: &str) -> Option<DataType> {
         ParquetType::GroupType { fields, .. } => {
             if fields.len() == 1
                 && item.name() != "array"
-                && item.name() != format!("{}_tuple", parent_name)
+                && item.name() != format!("{parent_name}_tuple")
             {
                 // extract the repetition field
                 let nested_item = fields.first().unwrap();

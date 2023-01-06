@@ -8,11 +8,11 @@ mod utf8;
 
 pub fn test_equal(lhs: &dyn Array, rhs: &dyn Array, expected: bool) {
     // equality is symmetric
-    assert!(equal(lhs, lhs), "\n{:?}\n{:?}", lhs, lhs);
-    assert!(equal(rhs, rhs), "\n{:?}\n{:?}", rhs, rhs);
+    assert!(equal(lhs, lhs), "\n{lhs:?}\n{lhs:?}");
+    assert!(equal(rhs, rhs), "\n{rhs:?}\n{rhs:?}");
 
-    assert_eq!(equal(lhs, rhs), expected, "\n{:?}\n{:?}", lhs, rhs);
-    assert_eq!(equal(rhs, lhs), expected, "\n{:?}\n{:?}", rhs, lhs);
+    assert_eq!(equal(lhs, rhs), expected, "\n{lhs:?}\n{rhs:?}");
+    assert_eq!(equal(rhs, lhs), expected, "\n{rhs:?}\n{lhs:?}");
 }
 
 #[allow(clippy::type_complexity)]

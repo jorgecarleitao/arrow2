@@ -94,7 +94,7 @@ pub fn get_write_value<'a, T: NativeType, F: Write>(
             }
         }
         Interval(IntervalUnit::YearMonth) => {
-            dyn_primitive!(array, i32, |x| format!("{}m", x))
+            dyn_primitive!(array, i32, |x| format!("{x}m"))
         }
         Interval(IntervalUnit::DayTime) => {
             dyn_primitive!(array, days_ms, |x: days_ms| format!(
@@ -111,10 +111,10 @@ pub fn get_write_value<'a, T: NativeType, F: Write>(
                 x.ns()
             ))
         }
-        Duration(TimeUnit::Second) => dyn_primitive!(array, i64, |x| format!("{}s", x)),
-        Duration(TimeUnit::Millisecond) => dyn_primitive!(array, i64, |x| format!("{}ms", x)),
-        Duration(TimeUnit::Microsecond) => dyn_primitive!(array, i64, |x| format!("{}us", x)),
-        Duration(TimeUnit::Nanosecond) => dyn_primitive!(array, i64, |x| format!("{}ns", x)),
+        Duration(TimeUnit::Second) => dyn_primitive!(array, i64, |x| format!("{x}s")),
+        Duration(TimeUnit::Millisecond) => dyn_primitive!(array, i64, |x| format!("{x}ms")),
+        Duration(TimeUnit::Microsecond) => dyn_primitive!(array, i64, |x| format!("{x}us")),
+        Duration(TimeUnit::Nanosecond) => dyn_primitive!(array, i64, |x| format!("{x}ns")),
         Decimal(_, scale) => {
             // The number 999.99 has a precision of 5 and scale of 2
             let scale = *scale as u32;
@@ -122,7 +122,7 @@ pub fn get_write_value<'a, T: NativeType, F: Write>(
             let display = move |x: i128| {
                 let base = x / factor;
                 let decimals = (x - base * factor).abs();
-                format!("{}.{}", base, decimals)
+                format!("{base}.{decimals}")
             };
             dyn_primitive!(array, i128, display)
         }
@@ -132,7 +132,7 @@ pub fn get_write_value<'a, T: NativeType, F: Write>(
             let display = move |x: i256| {
                 let base = x.0 / factor;
                 let decimals = (x.0 - base * factor).abs();
-                format!("{}.{}", base, decimals)
+                format!("{base}.{decimals}")
             };
             dyn_primitive!(array, i256, display)
         }

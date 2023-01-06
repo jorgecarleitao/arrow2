@@ -192,8 +192,7 @@ pub fn contains(list: &dyn Array, values: &dyn Array) -> Result<BooleanArray> {
         (DataType::LargeList(_), DataType::Float32) => primitive!(list, values, i64, f32),
         (DataType::LargeList(_), DataType::Float64) => primitive!(list, values, i64, f64),
         _ => Err(Error::NotYetImplemented(format!(
-            "Contains is not supported between logical types \"{:?}\" and \"{:?}\"",
-            list_data_type, values_data_type
+            "Contains is not supported between logical types \"{list_data_type:?}\" and \"{values_data_type:?}\""
         ))),
     }
 }

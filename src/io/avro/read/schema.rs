@@ -95,8 +95,7 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
                     schema_to_field(schema, None, Metadata::default())?.data_type
                 } else {
                     return Err(Error::NotYetImplemented(format!(
-                        "Can't read avro union {:?}",
-                        schema
+                        "Can't read avro union {schema:?}"
                     )));
                 }
             } else {

@@ -10,8 +10,7 @@ use crate::io::ipc::common::read_gzip_json;
 async fn test_file(version: &str, file_name: &str) -> Result<()> {
     let testdata = crate::test_util::arrow_test_data();
     let mut file = File::open(format!(
-        "{}/arrow-ipc-stream/integration/{}/{}.arrow_file",
-        testdata, version, file_name
+        "{testdata}/arrow-ipc-stream/integration/{version}/{file_name}.arrow_file"
     ))
     .await?
     .compat();

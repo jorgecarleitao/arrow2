@@ -21,7 +21,7 @@ impl<O: Offset> Debug for BinaryArray<O> {
         } else {
             "BinaryArray"
         };
-        write!(f, "{}", head)?;
+        write!(f, "{head}")?;
         write_vec(f, writer, self.validity(), self.len(), "None", false)
     }
 }

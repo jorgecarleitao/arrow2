@@ -25,7 +25,7 @@ impl<O: Offset> Debug for ListArray<O> {
         } else {
             "ListArray"
         };
-        write!(f, "{}", head)?;
+        write!(f, "{head}")?;
         write_vec(f, writer, self.validity(), self.len(), "None", false)
     }
 }

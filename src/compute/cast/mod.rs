@@ -495,8 +495,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             Float32 => primitive_to_boolean_dyn::<f32>(array, to_type.clone()),
             Float64 => primitive_to_boolean_dyn::<f64>(array, to_type.clone()),
             _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {:?} to {:?} not supported",
-                from_type, to_type,
+                "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
         (Boolean, _) => match to_type {
@@ -515,8 +514,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             Binary => boolean_to_binary_dyn::<i32>(array),
             LargeBinary => boolean_to_binary_dyn::<i64>(array),
             _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {:?} to {:?} not supported",
-                from_type, to_type,
+                "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
 
@@ -546,8 +544,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 utf8_to_timestamp_ns_dyn::<i32>(array, tz.clone())
             }
             _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {:?} to {:?} not supported",
-                from_type, to_type,
+                "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
         (LargeUtf8, _) => match to_type {
@@ -574,8 +571,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 utf8_to_timestamp_ns_dyn::<i64>(array, tz.clone())
             }
             _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {:?} to {:?} not supported",
-                from_type, to_type,
+                "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
 
@@ -610,8 +606,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 Ok(Box::new(naive_timestamp_to_utf8::<i32>(from, *from_unit)))
             }
             _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {:?} to {:?} not supported",
-                from_type, to_type,
+                "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
 
@@ -641,8 +636,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 Ok(Box::new(naive_timestamp_to_utf8::<i64>(from, *from_unit)))
             }
             _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {:?} to {:?} not supported",
-                from_type, to_type,
+                "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
 
@@ -665,8 +659,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 .map(|x| x.boxed()),
 
             _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {:?} to {:?} not supported",
-                from_type, to_type,
+                "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
 
@@ -690,8 +683,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                     .map(|x| x.boxed())
             }
             _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {:?} to {:?} not supported",
-                from_type, to_type,
+                "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
 
@@ -707,8 +699,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             Float32 => primitive_to_binary_dyn::<f32, i32>(array),
             Float64 => primitive_to_binary_dyn::<f64, i32>(array),
             _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {:?} to {:?} not supported",
-                from_type, to_type,
+                "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
 
@@ -724,8 +715,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             Float32 => primitive_to_binary_dyn::<f32, i64>(array),
             Float64 => primitive_to_binary_dyn::<f64, i64>(array),
             _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {:?} to {:?} not supported",
-                from_type, to_type,
+                "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
 
@@ -919,8 +909,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         }
 
         (_, _) => Err(Error::NotYetImplemented(format!(
-            "Casting from {:?} to {:?} not supported",
-            from_type, to_type,
+            "Casting from {from_type:?} to {to_type:?} not supported",
         ))),
     }
 }
@@ -950,8 +939,7 @@ fn cast_to_dictionary<K: DictionaryKey>(
         DataType::Binary => binary_to_dictionary_dyn::<i32, K>(array),
         DataType::LargeBinary => binary_to_dictionary_dyn::<i64, K>(array),
         _ => Err(Error::NotYetImplemented(format!(
-            "Unsupported output type for dictionary packing: {:?}",
-            dict_value_type
+            "Unsupported output type for dictionary packing: {dict_value_type:?}"
         ))),
     }
 }

@@ -17,7 +17,7 @@ fn main() -> Result<()> {
 
     let schema = read::infer_schema(&metadata.record)?;
 
-    println!("{:#?}", metadata);
+    println!("{metadata:#?}");
 
     let reader = read::Reader::new(file, metadata, schema.fields, None);
 

@@ -15,7 +15,7 @@ fn add_benchmark(c: &mut Criterion) {
         let size = 2usize.pow(log2_size);
 
         let bitmap: Bitmap = (0..size).into_iter().map(|x| x % 3 == 0).collect();
-        c.bench_function(&format!("bitmap slices 2^{}", log2_size), |b| {
+        c.bench_function(&format!("bitmap slices 2^{log2_size}"), |b| {
             b.iter(|| bench_slices(&bitmap))
         });
     });

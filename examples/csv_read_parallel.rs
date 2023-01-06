@@ -43,7 +43,7 @@ fn parallel_read(path: &str) -> Result<Vec<Chunk<Box<dyn Array>>>> {
         let child = thread::spawn(move || {
             let (rows, line_number) = rx_consumer.recv().unwrap();
             let start = SystemTime::now();
-            println!("consumer start - {}", line_number);
+            println!("consumer start - {line_number}");
             let batch = read::deserialize_batch(
                 &rows,
                 &consumer_fields,

@@ -25,19 +25,19 @@ fn add_benchmark(c: &mut Criterion) {
 
         let array = create_primitive_array::<i32>(size, 0.1);
 
-        c.bench_function(&format!("json write i32 2^{}", log2_size), |b| {
+        c.bench_function(&format!("json write i32 2^{log2_size}"), |b| {
             b.iter(|| write_array(Box::new(array.clone())))
         });
 
         let array = create_string_array::<i32>(size, 100, 0.1, 42);
 
-        c.bench_function(&format!("json write utf8 2^{}", log2_size), |b| {
+        c.bench_function(&format!("json write utf8 2^{log2_size}"), |b| {
             b.iter(|| write_array(Box::new(array.clone())))
         });
 
         let array = create_primitive_array::<f64>(size, 0.1);
 
-        c.bench_function(&format!("json write f64 2^{}", log2_size), |b| {
+        c.bench_function(&format!("json write f64 2^{log2_size}"), |b| {
             b.iter(|| write_array(Box::new(array.clone())))
         });
     });

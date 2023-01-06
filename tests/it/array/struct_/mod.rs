@@ -21,7 +21,7 @@ fn debug() {
         Some(Bitmap::from([true, true, false, true])),
     );
     assert_eq!(
-        format!("{:?}", array),
+        format!("{array:?}"),
         "StructArray[{b: false, c: 42}, {b: false, c: 28}, None, {b: true, c: 31}]"
     );
 }

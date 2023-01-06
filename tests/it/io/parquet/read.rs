@@ -19,14 +19,13 @@ fn test_pyarrow_integration(
     }
     let use_dict = if use_dict { "dict/" } else { "" };
     let compression = if let Some(compression) = compression {
-        format!("{}/", compression)
+        format!("{compression}/")
     } else {
         "".to_string()
     };
     let required_str = if required { "required" } else { "nullable" };
     let path = format!(
-        "fixtures/pyarrow3/v{}/{}{}{}_{}_10.parquet",
-        version, use_dict, compression, type_, required_str
+        "fixtures/pyarrow3/v{version}/{use_dict}{compression}{type_}_{required_str}_10.parquet"
     );
 
     let mut file = File::open(path).unwrap();
@@ -610,8 +609,7 @@ fn invalid_utf8() -> Result<()> {
     let error = reader.collect::<Result<Vec<_>>>().unwrap_err();
     assert!(
         error.to_string().contains("invalid utf-8"),
-        "unexpected error: {}",
-        error
+        "unexpected error: {error}"
     );
     Ok(())
 }

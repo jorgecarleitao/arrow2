@@ -320,8 +320,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             ))
         }
         other => Err(Error::NotYetImplemented(format!(
-            "Writing the data type {:?} is not yet implemented",
-            other
+            "Writing the data type {other:?} is not yet implemented"
         ))),
     }
 }

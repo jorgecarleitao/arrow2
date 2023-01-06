@@ -229,8 +229,7 @@ pub fn array_to_pages<K: DictionaryKey>(
                 }
                 other => {
                     return Err(Error::NotYetImplemented(format!(
-                        "Writing dictionary arrays to parquet only support data type {:?}",
-                        other
+                        "Writing dictionary arrays to parquet only support data type {other:?}"
                     )))
                 }
             };
