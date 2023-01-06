@@ -189,7 +189,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let batch = read_path(file_path, None)?;
-    println!(&quot;{:?}&quot;, batch);
+    println!(&quot;{batch:?}&quot;);
     Ok(())
 }</code></pre></pre>
 <h2 id="orchestration-and-parallelization"><a class="header" href="#orchestration-and-parallelization">Orchestration and parallelization</a></h2>
@@ -242,7 +242,7 @@ fn parallel_read(path: &amp;str) -&gt; Result&lt;Vec&lt;Chunk&lt;Box&lt;dyn Arra
         let child = thread::spawn(move || {
             let (rows, line_number) = rx_consumer.recv().unwrap();
             let start = SystemTime::now();
-            println!(&quot;consumer start - {}&quot;, line_number);
+            println!(&quot;consumer start - {line_number}&quot;);
             let batch = read::deserialize_batch(
                 &amp;rows,
                 &amp;consumer_fields,

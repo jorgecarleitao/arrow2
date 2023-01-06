@@ -179,7 +179,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let arrays = read_path(file_path)?;
-    println!(&quot;{:#?}&quot;, arrays);
+    println!(&quot;{arrays:#?}&quot;);
     Ok(())
 }</code></pre></pre>
 <p>Note how deserialization can be performed on a separate thread pool to avoid
@@ -213,7 +213,7 @@ fn main() -&gt; Result&lt;()&gt; {
     let file_path = &amp;args[1];
 
     let batch = read_path(file_path)?;
-    println!(&quot;{:#?}&quot;, batch);
+    println!(&quot;{batch:#?}&quot;);
     Ok(())
 }</code></pre></pre>
 <h2 id="metadata-and-inference"><a class="header" href="#metadata-and-inference">Metadata and inference</a></h2>
