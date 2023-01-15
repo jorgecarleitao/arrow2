@@ -71,45 +71,75 @@ fn dense() -> Result<()> {
 
 #[test]
 fn complex_dense() -> Result<()> {
+    let fixed_size_type =
+        DataType::FixedSizeList(Box::new(Field::new("i", DataType::UInt16, true)), 3);
+
     let fields = vec![
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
+        Field::new("c", fixed_size_type.clone(), true),
     ];
 
     let data_type = DataType::Union(fields, None, UnionMode::Dense);
 
-    let types = vec![0, 0, 1].into();
+    // UnionArray[1, [11, 12, 13], abcd, [21, 22, 23], 2]
+    let types = vec![0, 2, 1, 2, 0].into();
     let fields = vec![
         Int32Array::from(&[Some(1), Some(2)]).boxed(),
-        Utf8Array::<i32>::from([Some("c")]).boxed(),
+        Utf8Array::<i32>::from([Some("abcd")]).boxed(),
+        FixedSizeListArray::try_new(
+            fixed_size_type.clone(),
+            UInt16Array::from_iter([11, 12, 13, 21, 22, 23].into_iter().map(Some)).boxed(),
+            None,
+        )
+        .unwrap()
+        .boxed(),
     ];
-    let offsets = Some(vec![0, 1, 0].into());
+    let offsets = Some(vec![0, 0, 0, 1, 1].into());
 
     let array1 = UnionArray::new(data_type.clone(), types, fields, offsets);
 
-    let types = vec![1, 1, 0].into();
+    // UnionArray[[31, 32, 33], [41, 42, 43], ef, ghijk, 3]
+    let types = vec![2, 2, 1, 1, 0].into();
     let fields = vec![
-        Int32Array::from(&[Some(6)]).boxed(),
-        Utf8Array::<i32>::from([Some("d"), Some("e")]).boxed(),
+        Int32Array::from(&[Some(3)]).boxed(),
+        Utf8Array::<i32>::from([Some("ef"), Some("ghijk")]).boxed(),
+        FixedSizeListArray::try_new(
+            fixed_size_type.clone(),
+            UInt16Array::from_iter([31, 32, 33, 41, 42, 43].into_iter().map(Some)).boxed(),
+            None,
+        )
+        .unwrap()
+        .boxed(),
     ];
-    let offsets = Some(vec![0, 1, 0].into());
+    let offsets = Some(vec![0, 1, 0, 1, 0].into());
 
     let array2 = UnionArray::new(data_type.clone(), types, fields, offsets);
 
     let mut a = GrowableUnion::new(vec![&array1, &array2], 10);
 
-    // Effective concat
-    a.extend(0, 0, 3);
-    a.extend(1, 0, 3);
+    // Take the whole first array
+    a.extend(0, 0, 5);
+    // Skip the first value from the second array: [31, 32, 33]
+    a.extend(1, 1, 4);
 
     let result: UnionArray = a.into();
 
-    let types = vec![0, 0, 1, 1, 1, 0].into();
+    // UnionArray[1, [11, 12, 13], abcd, [21, 22, 23], 2, [41, 42, 43], ef, ghijk, 3]
+    let types = vec![0, 2, 1, 2, 0, 2, 1, 1, 0].into();
     let fields = vec![
-        Int32Array::from(&[Some(1), Some(2), Some(6)]).boxed(),
-        Utf8Array::<i32>::from([Some("c"), Some("d"), Some("e")]).boxed(),
+        Int32Array::from(&[Some(1), Some(2), Some(3)]).boxed(),
+        Utf8Array::<i32>::from([Some("abcd"), Some("ef"), Some("ghijk")]).boxed(),
+        FixedSizeListArray::try_new(
+            fixed_size_type.clone(),
+            UInt16Array::from_iter([11, 12, 13, 21, 22, 23, 41, 42, 43].into_iter().map(Some))
+                .boxed(),
+            None,
+        )
+        .unwrap()
+        .boxed(),
     ];
-    let offsets = Some(vec![0, 1, 0, 1, 2, 2].into());
+    let offsets = Some(vec![0, 0, 0, 1, 1, 2, 1, 2, 2].into());
 
     let expected = UnionArray::new(data_type.clone(), types, fields, offsets);
 
