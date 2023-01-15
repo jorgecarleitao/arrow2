@@ -85,6 +85,11 @@ impl<'a> Growable<'a> for GrowableFixedSizeList<'a> {
         self.validity.extend_constant(additional, false);
     }
 
+    #[inline]
+    fn next_offset(&self) -> usize {
+        self.values.next_offset() / self.size
+    }
+
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(self.to())
     }

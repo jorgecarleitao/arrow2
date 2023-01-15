@@ -81,6 +81,11 @@ impl<'a, O: Offset> Growable<'a> for GrowableBinary<'a, O> {
         self.validity.extend_constant(additional, false);
     }
 
+    #[inline]
+    fn next_offset(&self) -> usize {
+        self.offsets.len() - 1
+    }
+
     fn as_arc(&mut self) -> Arc<dyn Array> {
         self.to().arced()
     }

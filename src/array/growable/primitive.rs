@@ -83,6 +83,11 @@ impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     }
 
     #[inline]
+    fn next_offset(&self) -> usize {
+        self.values.len()
+    }
+
+    #[inline]
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(self.to())
     }

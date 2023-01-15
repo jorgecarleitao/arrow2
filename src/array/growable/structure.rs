@@ -104,6 +104,18 @@ impl<'a> Growable<'a> for GrowableStruct<'a> {
         self.validity.extend_constant(additional, false);
     }
 
+    #[inline]
+    fn next_offset(&self) -> usize {
+        // All children should have the same indexing, so just use the first
+        // one. If we don't have children, we might still have a validity
+        // array, so use that.
+        if let Some(child) = self.values.get(0) {
+            child.next_offset()
+        } else {
+            self.validity.len()
+        }
+    }
+
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(self.to())
     }
