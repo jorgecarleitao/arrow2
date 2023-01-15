@@ -131,7 +131,7 @@ fn complex_dense() -> Result<()> {
         Int32Array::from(&[Some(1), Some(2), Some(3)]).boxed(),
         Utf8Array::<i32>::from([Some("abcd"), Some("ef"), Some("ghijk")]).boxed(),
         FixedSizeListArray::try_new(
-            fixed_size_type.clone(),
+            fixed_size_type,
             UInt16Array::from_iter([11, 12, 13, 21, 22, 23, 41, 42, 43].into_iter().map(Some))
                 .boxed(),
             None,
@@ -141,7 +141,7 @@ fn complex_dense() -> Result<()> {
     ];
     let offsets = Some(vec![0, 0, 0, 1, 1, 2, 1, 2, 2].into());
 
-    let expected = UnionArray::new(data_type.clone(), types, fields, offsets);
+    let expected = UnionArray::new(data_type, types, fields, offsets);
 
     assert_eq!(expected, result);
 
