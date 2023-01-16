@@ -67,6 +67,7 @@ impl<R: Read + Seek + Write> FileWriter<R> {
                 dictionaries,
                 cannot_replace: true,
             },
+            encoded_message: Default::default(),
         })
     }
 }

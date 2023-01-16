@@ -5,7 +5,7 @@ use arrow_format::ipc::planus::Builder;
 use super::{
     super::IpcField,
     super::ARROW_MAGIC,
-    common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions},
+    common::{DictionaryTracker, EncodedData, WriteOptions},
     common_sync::{write_continuation, write_message},
     default_ipc_fields, schema, schema_to_bytes,
 };
@@ -14,6 +14,7 @@ use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::*;
 use crate::error::{Error, Result};
+use crate::io::ipc::write::common::encode_chunk_amortized;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum State {
@@ -41,6 +42,8 @@ pub struct FileWriter<W: Write> {
     pub(crate) state: State,
     /// Keeps track of dictionaries that have been written
     pub(crate) dictionary_tracker: DictionaryTracker,
+    /// Buffer/scratch that is reused between writes
+    pub(crate) encoded_message: EncodedData,
 }
 
 impl<W: Write> FileWriter<W> {
@@ -83,12 +86,24 @@ impl<W: Write> FileWriter<W> {
                 dictionaries: Default::default(),
                 cannot_replace: true,
             },
+            encoded_message: Default::default(),
         }
     }
 
     /// Consumes itself into the inner writer
     pub fn into_inner(self) -> W {
         self.writer
+    }
+
+    /// Get the inner memory scratches so they can be reused in a new writer.
+    /// This can be utilized to save memory allocations for performance reasons.
+    pub fn get_scratches(&mut self) -> EncodedData {
+        std::mem::take(&mut self.encoded_message)
+    }
+    /// Set the inner memory scratches so they can be reused in a new writer.
+    /// This can be utilized to save memory allocations for performance reasons.
+    pub fn set_scratches(&mut self, scratches: EncodedData) {
+        self.encoded_message = scratches;
     }
 
     /// Writes the header and first (schema) message to the file.
@@ -109,7 +124,7 @@ impl<W: Write> FileWriter<W> {
             arrow_data: vec![],
         };
 
-        let (meta, data) = write_message(&mut self.writer, encoded_message)?;
+        let (meta, data) = write_message(&mut self.writer, &encoded_message)?;
         self.block_offsets += meta + data + 8; // 8 <=> arrow magic + 2 bytes for alignment
         self.state = State::Started;
         Ok(())
@@ -132,17 +147,17 @@ impl<W: Write> FileWriter<W> {
         } else {
             self.ipc_fields.as_ref()
         };
-
-        let (encoded_dictionaries, encoded_message) = encode_chunk(
+        let encoded_dictionaries = encode_chunk_amortized(
             chunk,
             ipc_fields,
             &mut self.dictionary_tracker,
             &self.options,
+            &mut self.encoded_message,
         )?;
 
         // add all dictionaries
         for encoded_dictionary in encoded_dictionaries {
-            let (meta, data) = write_message(&mut self.writer, encoded_dictionary)?;
+            let (meta, data) = write_message(&mut self.writer, &encoded_dictionary)?;
 
             let block = arrow_format::ipc::Block {
                 offset: self.block_offsets as i64,
@@ -153,7 +168,7 @@ impl<W: Write> FileWriter<W> {
             self.block_offsets += meta + data;
         }
 
-        let (meta, data) = write_message(&mut self.writer, encoded_message)?;
+        let (meta, data) = write_message(&mut self.writer, &self.encoded_message)?;
         // add a record block for the footer
         let block = arrow_format::ipc::Block {
             offset: self.block_offsets as i64,

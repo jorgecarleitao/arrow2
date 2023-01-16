@@ -7,11 +7,11 @@ use super::common::pad_to_64;
 use super::common::EncodedData;
 
 /// Write a message's IPC data and buffers, returning metadata and buffer data lengths written
-pub fn write_message<W: Write>(writer: &mut W, encoded: EncodedData) -> Result<(usize, usize)> {
+pub fn write_message<W: Write>(writer: &mut W, encoded: &EncodedData) -> Result<(usize, usize)> {
     let arrow_data_len = encoded.arrow_data.len();
 
     let a = 8 - 1;
-    let buffer = encoded.ipc_message;
+    let buffer = &encoded.ipc_message;
     let flatbuf_size = buffer.len();
     let prefix_size = 8;
     let aligned_size = (flatbuf_size + prefix_size + a) & !a;
@@ -21,10 +21,12 @@ pub fn write_message<W: Write>(writer: &mut W, encoded: EncodedData) -> Result<(
 
     // write the flatbuf
     if flatbuf_size > 0 {
-        writer.write_all(&buffer)?;
+        writer.write_all(buffer)?;
     }
     // write padding
-    writer.write_all(&vec![0; padding_bytes])?;
+    // aligned to a 8 byte boundary, so maximum is [u8;8]
+    const PADDING_MAX: [u8; 8] = [0u8; 8];
+    writer.write_all(&PADDING_MAX[..padding_bytes])?;
 
     // write arrow data
     let body_len = if arrow_data_len > 0 {
