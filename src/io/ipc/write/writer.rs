@@ -43,9 +43,7 @@ pub struct FileWriter<W: Write> {
     /// Keeps track of dictionaries that have been written
     pub(crate) dictionary_tracker: DictionaryTracker,
     /// Buffer/scratch that is reused between writes
-    /// This is public so a user can swap this in between
-    /// creating new writers to save/amortize allocations.
-    pub encoded_message: EncodedData,
+    pub(crate) encoded_message: EncodedData,
 }
 
 impl<W: Write> FileWriter<W> {
@@ -95,6 +93,17 @@ impl<W: Write> FileWriter<W> {
     /// Consumes itself into the inner writer
     pub fn into_inner(self) -> W {
         self.writer
+    }
+
+    /// Get the inner memory scratches so they can be reused in a new writer.
+    /// This can be utilized to save memory allocations for performance reasons.
+    pub fn get_scratches(&mut self) -> EncodedData {
+        std::mem::take(&mut self.encoded_message)
+    }
+    /// Set the inner memory scratches so they can be reused in a new writer.
+    /// This can be utilized to save memory allocations for performance reasons.
+    pub fn set_scratches(&mut self, scratches: EncodedData) {
+        self.encoded_message = scratches;
     }
 
     /// Writes the header and first (schema) message to the file.
