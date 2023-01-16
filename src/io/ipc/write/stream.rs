@@ -62,7 +62,7 @@ impl<W: Write> StreamWriter<W> {
             ipc_message: schema_to_bytes(schema, self.ipc_fields.as_ref().unwrap()),
             arrow_data: vec![],
         };
-        write_message(&mut self.writer, encoded_message)?;
+        write_message(&mut self.writer, &encoded_message)?;
         Ok(())
     }
 
@@ -91,10 +91,10 @@ impl<W: Write> StreamWriter<W> {
         )?;
 
         for encoded_dictionary in encoded_dictionaries {
-            write_message(&mut self.writer, encoded_dictionary)?;
+            write_message(&mut self.writer, &encoded_dictionary)?;
         }
 
-        write_message(&mut self.writer, encoded_message)?;
+        write_message(&mut self.writer, &encoded_message)?;
         Ok(())
     }
 

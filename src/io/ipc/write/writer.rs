@@ -109,7 +109,7 @@ impl<W: Write> FileWriter<W> {
             arrow_data: vec![],
         };
 
-        let (meta, data) = write_message(&mut self.writer, encoded_message)?;
+        let (meta, data) = write_message(&mut self.writer, &encoded_message)?;
         self.block_offsets += meta + data + 8; // 8 <=> arrow magic + 2 bytes for alignment
         self.state = State::Started;
         Ok(())
@@ -142,7 +142,7 @@ impl<W: Write> FileWriter<W> {
 
         // add all dictionaries
         for encoded_dictionary in encoded_dictionaries {
-            let (meta, data) = write_message(&mut self.writer, encoded_dictionary)?;
+            let (meta, data) = write_message(&mut self.writer, &encoded_dictionary)?;
 
             let block = arrow_format::ipc::Block {
                 offset: self.block_offsets as i64,
@@ -153,7 +153,7 @@ impl<W: Write> FileWriter<W> {
             self.block_offsets += meta + data;
         }
 
-        let (meta, data) = write_message(&mut self.writer, encoded_message)?;
+        let (meta, data) = write_message(&mut self.writer, &encoded_message)?;
         // add a record block for the footer
         let block = arrow_format::ipc::Block {
             offset: self.block_offsets as i64,
