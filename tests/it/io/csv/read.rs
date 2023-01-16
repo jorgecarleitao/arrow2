@@ -88,6 +88,24 @@ fn infer_ints() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn infer_ints_with_empty_fields() -> Result<()> {
+    let file = Cursor::new("1,2,3\n1,3,5\n2,,4");
+    let mut reader = ReaderBuilder::new().from_reader(file);
+
+    let (fields, _) = infer_schema(&mut reader, Some(10), false, &infer)?;
+
+    assert_eq!(
+        fields,
+        vec![
+            Field::new("column_1", DataType::Int64, true),
+            Field::new("column_2", DataType::Int64, true),
+            Field::new("column_3", DataType::Int64, true),
+        ]
+    );
+    Ok(())
+}
+
 fn test_deserialize(input: &str, data_type: DataType) -> Result<Box<dyn Array>> {
     let reader = std::io::Cursor::new(input);
     let mut reader = ReaderBuilder::new().has_headers(false).from_reader(reader);
