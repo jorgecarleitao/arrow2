@@ -12,6 +12,7 @@ fn basic() {
     let mut a = GrowableFixedSizeBinary::new(vec![&array], false, 0);
 
     a.extend(0, 1, 2);
+    assert_eq!(a.len(), 2);
 
     let result: FixedSizeBinaryArray = a.into();
 
@@ -30,6 +31,7 @@ fn offsets() {
     let mut a = GrowableFixedSizeBinary::new(vec![&array], false, 0);
 
     a.extend(0, 0, 3);
+    assert_eq!(a.len(), 3);
 
     let result: FixedSizeBinaryArray = a.into();
 
@@ -46,6 +48,7 @@ fn multiple_with_validity() {
 
     a.extend(0, 0, 2);
     a.extend(1, 0, 2);
+    assert_eq!(a.len(), 4);
 
     let result: FixedSizeBinaryArray = a.into();
 
@@ -63,6 +66,7 @@ fn null_offset_validity() {
 
     a.extend(0, 1, 2);
     a.extend_validity(1);
+    assert_eq!(a.len(), 3);
 
     let result: FixedSizeBinaryArray = a.into();
 
@@ -81,6 +85,7 @@ fn sized_offsets() {
 
     a.extend(0, 1, 1);
     a.extend(0, 0, 1);
+    assert_eq!(a.len(), 2);
 
     let result: FixedSizeBinaryArray = a.into();
 

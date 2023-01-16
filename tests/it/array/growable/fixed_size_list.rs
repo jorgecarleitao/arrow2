@@ -21,6 +21,7 @@ fn basic() {
 
     let mut a = GrowableFixedSizeList::new(vec![&array], false, 0);
     a.extend(0, 0, 1);
+    assert_eq!(a.len(), 1);
 
     let result: FixedSizeListArray = a.into();
 
@@ -42,6 +43,7 @@ fn null_offset() {
 
     let mut a = GrowableFixedSizeList::new(vec![&array], false, 0);
     a.extend(0, 1, 1);
+    assert_eq!(a.len(), 1);
 
     let result: FixedSizeListArray = a.into();
 
@@ -70,6 +72,7 @@ fn test_from_two_lists() {
     let mut a = GrowableFixedSizeList::new(vec![&array_1, &array_2], false, 6);
     a.extend(0, 0, 2);
     a.extend(1, 1, 1);
+    assert_eq!(a.len(), 3);
 
     let result: FixedSizeListArray = a.into();
 

@@ -9,6 +9,7 @@ fn basics() {
     let b = PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(3)]);
     let mut a = GrowablePrimitive::new(vec![&b], false, 3);
     a.extend(0, 0, 2);
+    assert_eq!(a.len(), 2);
     let result: PrimitiveArray<u8> = a.into();
     let expected = PrimitiveArray::<u8>::from(vec![Some(1), Some(2)]);
     assert_eq!(result, expected);
@@ -21,6 +22,7 @@ fn offset() {
     let b = b.slice(1, 2);
     let mut a = GrowablePrimitive::new(vec![&b], false, 2);
     a.extend(0, 0, 2);
+    assert_eq!(a.len(), 2);
     let result: PrimitiveArray<u8> = a.into();
     let expected = PrimitiveArray::<u8>::from(vec![Some(2), Some(3)]);
     assert_eq!(result, expected);
@@ -33,6 +35,7 @@ fn null_offset() {
     let b = b.slice(1, 2);
     let mut a = GrowablePrimitive::new(vec![&b], false, 2);
     a.extend(0, 0, 2);
+    assert_eq!(a.len(), 2);
     let result: PrimitiveArray<u8> = a.into();
     let expected = PrimitiveArray::<u8>::from(vec![None, Some(3)]);
     assert_eq!(result, expected);
@@ -46,6 +49,7 @@ fn null_offset_validity() {
     a.extend(0, 0, 2);
     a.extend_validity(3);
     a.extend(0, 1, 1);
+    assert_eq!(a.len(), 6);
     let result: PrimitiveArray<u8> = a.into();
     let expected = PrimitiveArray::<u8>::from(&[Some(2), Some(3), None, None, None, Some(3)]);
     assert_eq!(result, expected);
@@ -58,6 +62,7 @@ fn joining_arrays() {
     let mut a = GrowablePrimitive::new(vec![&b, &c], false, 4);
     a.extend(0, 0, 2);
     a.extend(1, 1, 2);
+    assert_eq!(a.len(), 4);
     let result: PrimitiveArray<u8> = a.into();
 
     let expected = PrimitiveArray::<u8>::from(&[Some(1), Some(2), Some(5), Some(6)]);

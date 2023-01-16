@@ -8,6 +8,7 @@ fn test_bool() {
     let mut a = GrowableBoolean::new(vec![&array], false, 0);
 
     a.extend(0, 1, 2);
+    assert_eq!(a.len(), 2);
 
     let result: BooleanArray = a.into();
 

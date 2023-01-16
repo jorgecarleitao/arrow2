@@ -33,6 +33,7 @@ fn extension() {
 
     let mut a = GrowableList::new(vec![&array_ext], false, 0);
     a.extend(0, 0, 1);
+    assert_eq!(a.len(), 1);
 
     let result: ListArray<i32> = a.into();
     assert_eq!(array_ext.data_type(), result.data_type());
@@ -51,6 +52,7 @@ fn basic() {
 
     let mut a = GrowableList::new(vec![&array], false, 0);
     a.extend(0, 0, 1);
+    assert_eq!(a.len(), 1);
 
     let result: ListArray<i32> = a.into();
 
@@ -72,6 +74,7 @@ fn null_offset() {
 
     let mut a = GrowableList::new(vec![&array], false, 0);
     a.extend(0, 1, 1);
+    assert_eq!(a.len(), 1);
 
     let result: ListArray<i32> = a.into();
 
@@ -93,6 +96,7 @@ fn null_offsets() {
 
     let mut a = GrowableList::new(vec![&array], false, 0);
     a.extend(0, 1, 1);
+    assert_eq!(a.len(), 1);
 
     let result: ListArray<i32> = a.into();
 
@@ -121,6 +125,7 @@ fn test_from_two_lists() {
     let mut a = GrowableList::new(vec![&array_1, &array_2], false, 6);
     a.extend(0, 0, 2);
     a.extend(1, 1, 1);
+    assert_eq!(a.len(), 3);
 
     let result: ListArray<i32> = a.into();
 

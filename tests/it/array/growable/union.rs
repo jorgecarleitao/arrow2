@@ -26,6 +26,8 @@ fn sparse() -> Result<()> {
             let mut a = GrowableUnion::new(vec![&array], 10);
 
             a.extend(0, index, length);
+            assert_eq!(a.len(), length);
+
             let expected = array.slice(index, length);
 
             let result: UnionArray = a.into();
@@ -58,6 +60,7 @@ fn dense() -> Result<()> {
             let mut a = GrowableUnion::new(vec![&array], 10);
 
             a.extend(0, index, length);
+            assert_eq!(a.len(), length);
             let expected = array.slice(index, length);
 
             let result: UnionArray = a.into();
@@ -122,6 +125,7 @@ fn complex_dense() -> Result<()> {
     a.extend(0, 0, 5);
     // Skip the first value from the second array: [31, 32, 33]
     a.extend(1, 1, 4);
+    assert_eq!(a.len(), 9);
 
     let result: UnionArray = a.into();
 

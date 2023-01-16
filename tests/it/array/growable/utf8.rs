@@ -28,6 +28,7 @@ fn offsets() {
     let mut a = GrowableUtf8::new(vec![&array], false, 0);
 
     a.extend(0, 0, 3);
+    assert_eq!(a.len(), 3);
 
     let result: Utf8Array<i32> = a.into();
 
@@ -43,6 +44,7 @@ fn offsets2() {
     let mut a = GrowableUtf8::new(vec![&array], false, 0);
 
     a.extend(0, 0, 3);
+    assert_eq!(a.len(), 3);
 
     let result: Utf8Array<i32> = a.into();
 
@@ -59,6 +61,7 @@ fn multiple_with_validity() {
 
     a.extend(0, 0, 2);
     a.extend(1, 0, 2);
+    assert_eq!(a.len(), 4);
 
     let result: Utf8Array<i32> = a.into();
 
@@ -75,6 +78,7 @@ fn null_offset_validity() {
 
     a.extend(0, 1, 2);
     a.extend_validity(1);
+    assert_eq!(a.len(), 3);
 
     let result: Utf8Array<i32> = a.into();
 
