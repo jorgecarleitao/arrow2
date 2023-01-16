@@ -57,6 +57,8 @@
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::io::Write;
 
 <span class="kw">use </span><span class="kw">crate</span>::error::Result;
@@ -66,11 +68,11 @@
 <span class="kw">use </span><span class="kw">super</span>::common::EncodedData;
 
 <span class="doccomment">/// Write a message&#39;s IPC data and buffers, returning metadata and buffer data lengths written
-</span><span class="kw">pub fn </span>write_message&lt;W: Write&gt;(writer: <span class="kw-2">&amp;mut </span>W, encoded: EncodedData) -&gt; <span class="prelude-ty">Result</span>&lt;(usize, usize)&gt; {
+</span><span class="kw">pub fn </span>write_message&lt;W: Write&gt;(writer: <span class="kw-2">&amp;mut </span>W, encoded: <span class="kw-2">&amp;</span>EncodedData) -&gt; <span class="prelude-ty">Result</span>&lt;(usize, usize)&gt; {
     <span class="kw">let </span>arrow_data_len = encoded.arrow_data.len();
 
     <span class="kw">let </span>a = <span class="number">8 </span>- <span class="number">1</span>;
-    <span class="kw">let </span>buffer = encoded.ipc_message;
+    <span class="kw">let </span>buffer = <span class="kw-2">&amp;</span>encoded.ipc_message;
     <span class="kw">let </span>flatbuf_size = buffer.len();
     <span class="kw">let </span>prefix_size = <span class="number">8</span>;
     <span class="kw">let </span>aligned_size = (flatbuf_size + prefix_size + a) &amp; !a;
@@ -80,10 +82,12 @@
 
     <span class="comment">// write the flatbuf
     </span><span class="kw">if </span>flatbuf_size &gt; <span class="number">0 </span>{
-        writer.write_all(<span class="kw-2">&amp;</span>buffer)<span class="question-mark">?</span>;
+        writer.write_all(buffer)<span class="question-mark">?</span>;
     }
     <span class="comment">// write padding
-    </span>writer.write_all(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[<span class="number">0</span>; padding_bytes])<span class="question-mark">?</span>;
+    // aligned to a 8 byte boundary, so maximum is [u8;8]
+    </span><span class="kw">const </span>PADDING_MAX: [u8; <span class="number">8</span>] = [<span class="number">0u8</span>; <span class="number">8</span>];
+    writer.write_all(<span class="kw-2">&amp;</span>PADDING_MAX[..padding_bytes])<span class="question-mark">?</span>;
 
     <span class="comment">// write arrow data
     </span><span class="kw">let </span>body_len = <span class="kw">if </span>arrow_data_len &gt; <span class="number">0 </span>{

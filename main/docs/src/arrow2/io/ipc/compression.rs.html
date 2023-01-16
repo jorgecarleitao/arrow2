@@ -139,13 +139,13 @@
 }
 
 <span class="attr">#[cfg(not(feature = <span class="string">&quot;io_ipc_compression&quot;</span>))]
-</span><span class="kw">pub fn </span>compress_lz4(_input_buf: <span class="kw-2">&amp;</span>[u8], _output_buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+</span><span class="kw">pub fn </span>compress_lz4(_input_buf: <span class="kw-2">&amp;</span>[u8], _output_buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">use </span><span class="kw">crate</span>::error::Error;
     <span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;The crate was compiled without IPC compression. Use `io_ipc_compression` to write compressed IPC.&quot;</span>.to_string()))
 }
 
 <span class="attr">#[cfg(not(feature = <span class="string">&quot;io_ipc_compression&quot;</span>))]
-</span><span class="kw">pub fn </span>compress_zstd(_input_buf: <span class="kw-2">&amp;</span>[u8], _output_buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+</span><span class="kw">pub fn </span>compress_zstd(_input_buf: <span class="kw-2">&amp;</span>[u8], _output_buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">use </span><span class="kw">crate</span>::error::Error;
     <span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;The crate was compiled without IPC compression. Use `io_ipc_compression` to write compressed IPC.&quot;</span>.to_string()))
 }

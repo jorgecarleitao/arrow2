@@ -85,6 +85,11 @@
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use crate</span>::{
@@ -156,6 +161,11 @@
     <span class="kw">fn </span>extend_validity(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize) {
         <span class="self">self</span>.values.extend_constant(additional, <span class="bool-val">false</span>);
         <span class="self">self</span>.validity.extend_constant(additional, <span class="bool-val">false</span>);
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.values.len()
     }
 
     <span class="kw">fn </span>as_arc(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Array&gt; {

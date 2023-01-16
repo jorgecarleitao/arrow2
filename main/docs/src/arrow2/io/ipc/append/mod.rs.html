@@ -70,6 +70,7 @@
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
 </pre><pre class="rust"><code><span class="doccomment">//! A struct adapter of Read+Seek+Write to append to IPC files
 </span><span class="comment">// read header and convert to writer information
 // seek to first byte of header - 1
@@ -139,6 +140,7 @@
                 dictionaries,
                 cannot_replace: <span class="bool-val">true</span>,
             },
+            encoded_message: Default::default(),
         })
     }
 }

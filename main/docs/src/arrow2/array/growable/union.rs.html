@@ -109,6 +109,16 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span><span class="kw">crate</span>::array::{Array, UnionArray};
@@ -184,10 +194,15 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = <span class="self">self</span>.offsets.as_mut() {
             <span class="kw">let </span>offsets = <span class="kw-2">&amp;</span>array.offsets().unwrap()[start..start + len];
 
-            x.extend(offsets);
             <span class="comment">// in a dense union, each slot has its own offset. We extend the fields accordingly.
             </span><span class="kw">for </span>(<span class="kw-2">&amp;</span>type_, <span class="kw-2">&amp;</span>offset) <span class="kw">in </span>types.iter().zip(offsets.iter()) {
-                <span class="self">self</span>.fields[type_ <span class="kw">as </span>usize].extend(index, offset <span class="kw">as </span>usize, <span class="number">1</span>);
+                <span class="kw">let </span>field = <span class="kw-2">&amp;mut </span><span class="self">self</span>.fields[type_ <span class="kw">as </span>usize];
+                <span class="comment">// The offset for the element that is about to be extended is the current length
+                // of the child field of the corresponding type. Note that this may be very
+                // different than the original offset from the array we are extending from as
+                // it is a function of the previous extensions to this child.
+                </span>x.push(field.len() <span class="kw">as </span>i32);
+                field.extend(index, offset <span class="kw">as </span>usize, <span class="number">1</span>);
             }
         } <span class="kw">else </span>{
             <span class="comment">// in a sparse union, every field has the same length =&gt; extend all fields equally
@@ -198,6 +213,11 @@
     }
 
     <span class="kw">fn </span>extend_validity(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _additional: usize) {}
+
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.types.len()
+    }
 
     <span class="kw">fn </span>as_arc(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Array&gt; {
         <span class="self">self</span>.to().arced()

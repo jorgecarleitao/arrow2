@@ -425,6 +425,28 @@
 <a href="#425" id="425">425</a>
 <a href="#426" id="426">426</a>
 <a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::{Borrow, Cow};
 
 <span class="kw">use </span>arrow_format::ipc::planus::Builder;
@@ -604,6 +626,25 @@
     dictionary_tracker: <span class="kw-2">&amp;mut </span>DictionaryTracker,
     options: <span class="kw-2">&amp;</span>WriteOptions,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;EncodedData&gt;, EncodedData)&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>encoded_message = EncodedData::default();
+    <span class="kw">let </span>encoded_dictionaries = encode_chunk_amortized(
+        chunk,
+        fields,
+        dictionary_tracker,
+        options,
+        <span class="kw-2">&amp;mut </span>encoded_message,
+    )<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>((encoded_dictionaries, encoded_message))
+}
+
+<span class="comment">// Amortizes `EncodedData` allocation.
+</span><span class="kw">pub fn </span>encode_chunk_amortized(
+    chunk: <span class="kw-2">&amp;</span>Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;,
+    fields: <span class="kw-2">&amp;</span>[IpcField],
+    dictionary_tracker: <span class="kw-2">&amp;mut </span>DictionaryTracker,
+    options: <span class="kw-2">&amp;</span>WriteOptions,
+    encoded_message: <span class="kw-2">&amp;mut </span>EncodedData,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;EncodedData&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>encoded_dictionaries = <span class="macro">vec!</span>[];
 
     <span class="kw">for </span>(field, array) <span class="kw">in </span>fields.iter().zip(chunk.as_ref()) {
@@ -616,9 +657,9 @@
         )<span class="question-mark">?</span>;
     }
 
-    <span class="kw">let </span>encoded_message = chunk_to_bytes(chunk, options);
+    chunk_to_bytes_amortized(chunk, options, encoded_message);
 
-    <span class="prelude-val">Ok</span>((encoded_dictionaries, encoded_message))
+    <span class="prelude-val">Ok</span>(encoded_dictionaries)
 }
 
 <span class="kw">fn </span>serialize_compression(
@@ -640,10 +681,16 @@
 
 <span class="doccomment">/// Write [`Chunk`] into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the batch&#39;s data
-</span><span class="kw">fn </span>chunk_to_bytes(chunk: <span class="kw-2">&amp;</span>Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;, options: <span class="kw-2">&amp;</span>WriteOptions) -&gt; EncodedData {
+</span><span class="kw">fn </span>chunk_to_bytes_amortized(
+    chunk: <span class="kw-2">&amp;</span>Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;,
+    options: <span class="kw-2">&amp;</span>WriteOptions,
+    encoded_message: <span class="kw-2">&amp;mut </span>EncodedData,
+) {
     <span class="kw">let </span><span class="kw-2">mut </span>nodes: Vec&lt;arrow_format::ipc::FieldNode&gt; = <span class="macro">vec!</span>[];
     <span class="kw">let </span><span class="kw-2">mut </span>buffers: Vec&lt;arrow_format::ipc::Buffer&gt; = <span class="macro">vec!</span>[];
-    <span class="kw">let </span><span class="kw-2">mut </span>arrow_data: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
+    <span class="kw">let </span><span class="kw-2">mut </span>arrow_data = std::mem::take(<span class="kw-2">&amp;mut </span>encoded_message.arrow_data);
+    arrow_data.clear();
+
     <span class="kw">let </span><span class="kw-2">mut </span>offset = <span class="number">0</span>;
     <span class="kw">for </span>array <span class="kw">in </span>chunk.arrays() {
         write(
@@ -675,11 +722,8 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>builder = Builder::new();
     <span class="kw">let </span>ipc_message = builder.finish(<span class="kw-2">&amp;</span>message, <span class="prelude-val">None</span>);
-
-    EncodedData {
-        ipc_message: ipc_message.to_vec(),
-        arrow_data,
-    }
+    encoded_message.ipc_message = ipc_message.to_vec();
+    encoded_message.arrow_data = arrow_data
 }
 
 <span class="doccomment">/// Write dictionary values into two sets of bytes, one for the header (ipc::Schema::Message) and the
@@ -787,7 +831,7 @@
 }
 
 <span class="doccomment">/// Stores the encoded data, which is an ipc::Schema::Message, and optional Arrow data
-</span><span class="attr">#[derive(Debug)]
+</span><span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">pub struct </span>EncodedData {
     <span class="doccomment">/// An encoded ipc::Schema::Message
     </span><span class="kw">pub </span>ipc_message: Vec&lt;u8&gt;,

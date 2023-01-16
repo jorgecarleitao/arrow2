@@ -111,6 +111,11 @@
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use crate</span>::{
@@ -209,6 +214,11 @@
         <span class="self">self</span>.offsets.extend_constant(additional);
         <span class="self">self</span>.validity.extend_constant(additional, <span class="bool-val">false</span>);
     }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.offsets.len() - <span class="number">1
+    </span>}
 
     <span class="kw">fn </span>as_arc(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Array&gt; {
         Arc::new(<span class="self">self</span>.to())

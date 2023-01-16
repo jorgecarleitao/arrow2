@@ -141,6 +141,9 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains the trait [`Growable`] and corresponding concreate implementations, one per concrete array,
 //! that offer the ability to create a new [`Array`] out of slices of existing [`Array`]s.
 
@@ -185,6 +188,9 @@
 
     <span class="doccomment">/// Extends this [`Growable`] with null elements, disregarding the bound arrays
     </span><span class="kw">fn </span>extend_validity(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize);
+
+    <span class="doccomment">/// The current length of the [`Growable`].
+    </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
 
     <span class="doccomment">/// Converts this [`Growable`] to an [`Arc&lt;dyn Array&gt;`], thereby finishing the mutation.
     /// Self will be empty after such operation.

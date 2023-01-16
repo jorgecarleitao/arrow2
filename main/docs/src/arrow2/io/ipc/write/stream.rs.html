@@ -176,7 +176,7 @@
             ipc_message: schema_to_bytes(schema, <span class="self">self</span>.ipc_fields.as_ref().unwrap()),
             arrow_data: <span class="macro">vec!</span>[],
         };
-        write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, encoded_message)<span class="question-mark">?</span>;
+        write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, <span class="kw-2">&amp;</span>encoded_message)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -205,10 +205,10 @@
         )<span class="question-mark">?</span>;
 
         <span class="kw">for </span>encoded_dictionary <span class="kw">in </span>encoded_dictionaries {
-            write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, encoded_dictionary)<span class="question-mark">?</span>;
+            write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, <span class="kw-2">&amp;</span>encoded_dictionary)<span class="question-mark">?</span>;
         }
 
-        write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, encoded_message)<span class="question-mark">?</span>;
+        write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, <span class="kw-2">&amp;</span>encoded_message)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 

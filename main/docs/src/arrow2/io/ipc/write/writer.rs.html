@@ -197,6 +197,21 @@
 <a href="#197" id="197">197</a>
 <a href="#198" id="198">198</a>
 <a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::io::Write;
 
 <span class="kw">use </span>arrow_format::ipc::planus::Builder;
@@ -204,7 +219,7 @@
 <span class="kw">use super</span>::{
     <span class="kw">super</span>::IpcField,
     <span class="kw">super</span>::ARROW_MAGIC,
-    common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions},
+    common::{DictionaryTracker, EncodedData, WriteOptions},
     common_sync::{write_continuation, write_message},
     default_ipc_fields, schema, schema_to_bytes,
 };
@@ -213,6 +228,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::chunk::Chunk;
 <span class="kw">use </span><span class="kw">crate</span>::datatypes::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::error::{Error, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span><span class="kw">crate</span>::io::ipc::write::common::encode_chunk_amortized;
 
 <span class="attr">#[derive(Clone, Copy, PartialEq, Eq)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>State {
@@ -240,6 +256,8 @@
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) state: State,
     <span class="doccomment">/// Keeps track of dictionaries that have been written
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) dictionary_tracker: DictionaryTracker,
+    <span class="doccomment">/// Buffer/scratch that is reused between writes
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) encoded_message: EncodedData,
 }
 
 <span class="kw">impl</span>&lt;W: Write&gt; FileWriter&lt;W&gt; {
@@ -282,12 +300,24 @@
                 dictionaries: Default::default(),
                 cannot_replace: <span class="bool-val">true</span>,
             },
+            encoded_message: Default::default(),
         }
     }
 
     <span class="doccomment">/// Consumes itself into the inner writer
     </span><span class="kw">pub fn </span>into_inner(<span class="self">self</span>) -&gt; W {
         <span class="self">self</span>.writer
+    }
+
+    <span class="doccomment">/// Get the inner memory scratches so they can be reused in a new writer.
+    /// This can be utilized to save memory allocations for performance reasons.
+    </span><span class="kw">pub fn </span>get_scratches(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; EncodedData {
+        std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.encoded_message)
+    }
+    <span class="doccomment">/// Set the inner memory scratches so they can be reused in a new writer.
+    /// This can be utilized to save memory allocations for performance reasons.
+    </span><span class="kw">pub fn </span>set_scratches(<span class="kw-2">&amp;mut </span><span class="self">self</span>, scratches: EncodedData) {
+        <span class="self">self</span>.encoded_message = scratches;
     }
 
     <span class="doccomment">/// Writes the header and first (schema) message to the file.
@@ -308,7 +338,7 @@
             arrow_data: <span class="macro">vec!</span>[],
         };
 
-        <span class="kw">let </span>(meta, data) = write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, encoded_message)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(meta, data) = write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, <span class="kw-2">&amp;</span>encoded_message)<span class="question-mark">?</span>;
         <span class="self">self</span>.block_offsets += meta + data + <span class="number">8</span>; <span class="comment">// 8 &lt;=&gt; arrow magic + 2 bytes for alignment
         </span><span class="self">self</span>.state = State::Started;
         <span class="prelude-val">Ok</span>(())
@@ -331,17 +361,17 @@
         } <span class="kw">else </span>{
             <span class="self">self</span>.ipc_fields.as_ref()
         };
-
-        <span class="kw">let </span>(encoded_dictionaries, encoded_message) = encode_chunk(
+        <span class="kw">let </span>encoded_dictionaries = encode_chunk_amortized(
             chunk,
             ipc_fields,
             <span class="kw-2">&amp;mut </span><span class="self">self</span>.dictionary_tracker,
             <span class="kw-2">&amp;</span><span class="self">self</span>.options,
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>.encoded_message,
         )<span class="question-mark">?</span>;
 
         <span class="comment">// add all dictionaries
         </span><span class="kw">for </span>encoded_dictionary <span class="kw">in </span>encoded_dictionaries {
-            <span class="kw">let </span>(meta, data) = write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, encoded_dictionary)<span class="question-mark">?</span>;
+            <span class="kw">let </span>(meta, data) = write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, <span class="kw-2">&amp;</span>encoded_dictionary)<span class="question-mark">?</span>;
 
             <span class="kw">let </span>block = arrow_format::ipc::Block {
                 offset: <span class="self">self</span>.block_offsets <span class="kw">as </span>i64,
@@ -352,7 +382,7 @@
             <span class="self">self</span>.block_offsets += meta + data;
         }
 
-        <span class="kw">let </span>(meta, data) = write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, encoded_message)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(meta, data) = write_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>.writer, <span class="kw-2">&amp;</span><span class="self">self</span>.encoded_message)<span class="question-mark">?</span>;
         <span class="comment">// add a record block for the footer
         </span><span class="kw">let </span>block = arrow_format::ipc::Block {
             offset: <span class="self">self</span>.block_offsets <span class="kw">as </span>i64,

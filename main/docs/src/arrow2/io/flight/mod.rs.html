@@ -337,7 +337,7 @@
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>schema = <span class="macro">vec!</span>[];
-    write::common_sync::write_message(<span class="kw-2">&amp;mut </span>schema, encoded_data)<span class="question-mark">?</span>;
+    write::common_sync::write_message(<span class="kw-2">&amp;mut </span>schema, <span class="kw-2">&amp;</span>encoded_data)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(schema)
 }
 
