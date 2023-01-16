@@ -89,7 +89,7 @@ impl<'a, O: Offset> Growable<'a> for GrowableUtf8<'a, O> {
     }
 
     #[inline]
-    fn next_offset(&self) -> usize {
+    fn len(&self) -> usize {
         self.offsets.len() - 1
     }
 

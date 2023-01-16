@@ -79,7 +79,7 @@ impl<'a> Growable<'a> for GrowableFixedSizeBinary<'a> {
     }
 
     #[inline]
-    fn next_offset(&self) -> usize {
+    fn len(&self) -> usize {
         self.values.len() / self.size
     }
 

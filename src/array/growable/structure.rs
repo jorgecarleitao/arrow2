@@ -105,12 +105,12 @@ impl<'a> Growable<'a> for GrowableStruct<'a> {
     }
 
     #[inline]
-    fn next_offset(&self) -> usize {
+    fn len(&self) -> usize {
         // All children should have the same indexing, so just use the first
         // one. If we don't have children, we might still have a validity
         // array, so use that.
         if let Some(child) = self.values.get(0) {
-            child.next_offset()
+            child.len()
         } else {
             self.validity.len()
         }

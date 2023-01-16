@@ -83,7 +83,7 @@ impl<'a, T: NativeType> Growable<'a> for GrowablePrimitive<'a, T> {
     }
 
     #[inline]
-    fn next_offset(&self) -> usize {
+    fn len(&self) -> usize {
         self.values.len()
     }
 

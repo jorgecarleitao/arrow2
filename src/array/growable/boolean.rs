@@ -72,7 +72,7 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
     }
 
     #[inline]
-    fn next_offset(&self) -> usize {
+    fn len(&self) -> usize {
         self.values.len()
     }
 

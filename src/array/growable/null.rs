@@ -39,7 +39,7 @@ impl<'a> Growable<'a> for GrowableNull {
     }
 
     #[inline]
-    fn next_offset(&self) -> usize {
+    fn len(&self) -> usize {
         self.length
     }
 

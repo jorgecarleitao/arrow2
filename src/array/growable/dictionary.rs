@@ -133,7 +133,7 @@ impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
     }
 
     #[inline]
-    fn next_offset(&self) -> usize {
+    fn len(&self) -> usize {
         self.key_values.len()
     }
 

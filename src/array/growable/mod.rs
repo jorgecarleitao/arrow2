@@ -43,9 +43,8 @@ pub trait Growable<'a> {
     /// Extends this [`Growable`] with null elements, disregarding the bound arrays
     fn extend_validity(&mut self, additional: usize);
 
-    /// Get the offset of the next value to be added to this [`Growable`].
-    /// Used to remap offsets when building up a [`GrowableUnion`].
-    fn next_offset(&self) -> usize;
+    /// The current length of the [`Growable`].
+    fn len(&self) -> usize;
 
     /// Converts this [`Growable`] to an [`Arc<dyn Array>`], thereby finishing the mutation.
     /// Self will be empty after such operation.
