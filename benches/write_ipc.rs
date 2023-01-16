@@ -14,7 +14,7 @@ fn write(array: &dyn Array) -> Result<()> {
     let columns = Chunk::try_new(vec![clone(array)])?;
 
     let writer = Cursor::new(vec![]);
-    let mut writer = FileWriter::try_new(writer, &schema, None, Default::default())?;
+    let mut writer = FileWriter::try_new(writer, schema, None, Default::default())?;
 
     writer.write(&columns, None)
 }

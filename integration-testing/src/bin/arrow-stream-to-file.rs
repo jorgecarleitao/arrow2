@@ -31,7 +31,7 @@ fn main() -> Result<()> {
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::try_new(
         writer,
-        &metadata.schema,
+        metadata.schema.clone(),
         Some(metadata.ipc_schema.fields),
         options,
     )?;
