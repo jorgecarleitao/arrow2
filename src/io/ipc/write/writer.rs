@@ -5,7 +5,7 @@ use arrow_format::ipc::planus::Builder;
 use super::{
     super::IpcField,
     super::ARROW_MAGIC,
-    common::{encode_chunk, DictionaryTracker, EncodedData, WriteOptions},
+    common::{DictionaryTracker, EncodedData, WriteOptions},
     common_sync::{write_continuation, write_message},
     default_ipc_fields, schema, schema_to_bytes,
 };
@@ -14,6 +14,7 @@ use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::*;
 use crate::error::{Error, Result};
+use crate::io::ipc::write::common::encode_chunk_amortized;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum State {
@@ -41,6 +42,10 @@ pub struct FileWriter<W: Write> {
     pub(crate) state: State,
     /// Keeps track of dictionaries that have been written
     pub(crate) dictionary_tracker: DictionaryTracker,
+    /// Buffer/scratch that is reused between writes
+    /// This is public so a user can swap this in between
+    /// creating new writers to save/amortize allocations.
+    pub encoded_message: EncodedData,
 }
 
 impl<W: Write> FileWriter<W> {
@@ -83,6 +88,7 @@ impl<W: Write> FileWriter<W> {
                 dictionaries: Default::default(),
                 cannot_replace: true,
             },
+            encoded_message: Default::default(),
         }
     }
 
@@ -132,12 +138,12 @@ impl<W: Write> FileWriter<W> {
         } else {
             self.ipc_fields.as_ref()
         };
-
-        let (encoded_dictionaries, encoded_message) = encode_chunk(
+        let encoded_dictionaries = encode_chunk_amortized(
             chunk,
             ipc_fields,
             &mut self.dictionary_tracker,
             &self.options,
+            &mut self.encoded_message,
         )?;
 
         // add all dictionaries
@@ -153,7 +159,7 @@ impl<W: Write> FileWriter<W> {
             self.block_offsets += meta + data;
         }
 
-        let (meta, data) = write_message(&mut self.writer, &encoded_message)?;
+        let (meta, data) = write_message(&mut self.writer, &self.encoded_message)?;
         // add a record block for the footer
         let block = arrow_format::ipc::Block {
             offset: self.block_offsets as i64,

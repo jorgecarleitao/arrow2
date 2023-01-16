@@ -177,6 +177,25 @@ pub fn encode_chunk(
     dictionary_tracker: &mut DictionaryTracker,
     options: &WriteOptions,
 ) -> Result<(Vec<EncodedData>, EncodedData)> {
+    let mut encoded_message = EncodedData::default();
+    let encoded_dictionaries = encode_chunk_amortized(
+        chunk,
+        fields,
+        dictionary_tracker,
+        options,
+        &mut encoded_message,
+    )?;
+    Ok((encoded_dictionaries, encoded_message))
+}
+
+// Amortizes `EncodedData` allocation.
+pub fn encode_chunk_amortized(
+    chunk: &Chunk<Box<dyn Array>>,
+    fields: &[IpcField],
+    dictionary_tracker: &mut DictionaryTracker,
+    options: &WriteOptions,
+    encoded_message: &mut EncodedData,
+) -> Result<Vec<EncodedData>> {
     let mut encoded_dictionaries = vec![];
 
     for (field, array) in fields.iter().zip(chunk.as_ref()) {
@@ -189,9 +208,9 @@ pub fn encode_chunk(
         )?;
     }
 
-    let encoded_message = chunk_to_bytes(chunk, options);
+    chunk_to_bytes_amortized(chunk, options, encoded_message);
 
-    Ok((encoded_dictionaries, encoded_message))
+    Ok(encoded_dictionaries)
 }
 
 fn serialize_compression(
@@ -213,10 +232,16 @@ fn serialize_compression(
 
 /// Write [`Chunk`] into two sets of bytes, one for the header (ipc::Schema::Message) and the
 /// other for the batch's data
-fn chunk_to_bytes(chunk: &Chunk<Box<dyn Array>>, options: &WriteOptions) -> EncodedData {
+fn chunk_to_bytes_amortized(
+    chunk: &Chunk<Box<dyn Array>>,
+    options: &WriteOptions,
+    encoded_message: &mut EncodedData,
+) {
     let mut nodes: Vec<arrow_format::ipc::FieldNode> = vec![];
     let mut buffers: Vec<arrow_format::ipc::Buffer> = vec![];
-    let mut arrow_data: Vec<u8> = vec![];
+    let mut arrow_data = std::mem::take(&mut encoded_message.arrow_data);
+    arrow_data.clear();
+
     let mut offset = 0;
     for array in chunk.arrays() {
         write(
@@ -248,11 +273,8 @@ fn chunk_to_bytes(chunk: &Chunk<Box<dyn Array>>, options: &WriteOptions) -> Enco
 
     let mut builder = Builder::new();
     let ipc_message = builder.finish(&message, None);
-
-    EncodedData {
-        ipc_message: ipc_message.to_vec(),
-        arrow_data,
-    }
+    encoded_message.ipc_message = ipc_message.to_vec();
+    encoded_message.arrow_data = arrow_data
 }
 
 /// Write dictionary values into two sets of bytes, one for the header (ipc::Schema::Message) and the
@@ -360,7 +382,7 @@ impl DictionaryTracker {
 }
 
 /// Stores the encoded data, which is an ipc::Schema::Message, and optional Arrow data
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EncodedData {
     /// An encoded ipc::Schema::Message
     pub ipc_message: Vec<u8>,
