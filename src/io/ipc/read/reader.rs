@@ -71,6 +71,21 @@ impl<R: Read + Seek> FileReader<R> {
         self.reader
     }
 
+    /// Get the inner memory scratches so they can be reused in a new writer.
+    /// This can be utilized to save memory allocations for performance reasons.
+    pub fn get_scratches(&mut self) -> (Vec<u8>, Vec<u8>) {
+        (
+            std::mem::take(&mut self.data_scratch),
+            std::mem::take(&mut self.message_scratch),
+        )
+    }
+
+    /// Set the inner memory scratches so they can be reused in a new writer.
+    /// This can be utilized to save memory allocations for performance reasons.
+    pub fn set_scratches(&mut self, scratches: (Vec<u8>, Vec<u8>)) {
+        (self.data_scratch, self.message_scratch) = scratches;
+    }
+
     fn read_dictionaries(&mut self) -> Result<()> {
         if self.dictionaries.is_none() {
             self.dictionaries = Some(read_file_dictionaries(
