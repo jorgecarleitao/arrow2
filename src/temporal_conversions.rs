@@ -295,8 +295,7 @@ fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
     timezone: String,
 ) -> Result<PrimitiveArray<i64>> {
     Err(Error::InvalidArgumentError(format!(
-        "timezone \"{}\" cannot be parsed (feature chrono-tz is not active)",
-        timezone
+        "timezone \"{timezone}\" cannot be parsed (feature chrono-tz is not active)",
     )))
 }
 

@@ -21,7 +21,7 @@ pub fn write_message<W: Write>(writer: &mut W, encoded: &EncodedData) -> Result<
 
     // write the flatbuf
     if flatbuf_size > 0 {
-        writer.write_all(&buffer)?;
+        writer.write_all(buffer)?;
     }
     // write padding
     // aligned to a 8 byte boundary, so maximum is [u8;8]

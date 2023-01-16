@@ -89,7 +89,7 @@ pub fn serialize_schema_to_info(
     };
 
     let mut schema = vec![];
-    write::common_sync::write_message(&mut schema, encoded_data)?;
+    write::common_sync::write_message(&mut schema, &encoded_data)?;
     Ok(schema)
 }
 
