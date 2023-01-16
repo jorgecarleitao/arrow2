@@ -58,6 +58,8 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
 </pre><pre class="rust"><code><span class="kw">use </span>ahash::AHashSet;
 <span class="kw">use </span>std::io::{Read, Seek};
 
@@ -106,7 +108,9 @@
 
         <span class="kw">for </span>(i, column) <span class="kw">in </span>column_types.iter_mut().enumerate() {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(string) = record.get(i) {
-                column.insert(infer(string));
+                <span class="kw">if </span>!string.is_empty() {
+                    column.insert(infer(string));
+                }
             }
         }
     }
