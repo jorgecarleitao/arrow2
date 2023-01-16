@@ -12,6 +12,7 @@ fn null() {
 
     mutable.extend(0, 1, 2);
     mutable.extend(1, 0, 1);
+    assert_eq!(mutable.len(), 3);
 
     let result: NullArray = mutable.into();
 

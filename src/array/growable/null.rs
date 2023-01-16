@@ -38,6 +38,11 @@ impl<'a> Growable<'a> for GrowableNull {
         self.length += additional;
     }
 
+    #[inline]
+    fn len(&self) -> usize {
+        self.length
+    }
+
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(NullArray::new(self.data_type.clone(), self.length))
     }

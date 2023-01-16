@@ -85,6 +85,11 @@ impl<'a> Growable<'a> for GrowableFixedSizeList<'a> {
         self.validity.extend_constant(additional, false);
     }
 
+    #[inline]
+    fn len(&self) -> usize {
+        self.values.len() / self.size
+    }
+
     fn as_arc(&mut self) -> Arc<dyn Array> {
         Arc::new(self.to())
     }

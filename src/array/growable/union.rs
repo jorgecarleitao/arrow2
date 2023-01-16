@@ -73,10 +73,15 @@ impl<'a> Growable<'a> for GrowableUnion<'a> {
         if let Some(x) = self.offsets.as_mut() {
             let offsets = &array.offsets().unwrap()[start..start + len];
 
-            x.extend(offsets);
             // in a dense union, each slot has its own offset. We extend the fields accordingly.
             for (&type_, &offset) in types.iter().zip(offsets.iter()) {
-                self.fields[type_ as usize].extend(index, offset as usize, 1);
+                let field = &mut self.fields[type_ as usize];
+                // The offset for the element that is about to be extended is the current length
+                // of the child field of the corresponding type. Note that this may be very
+                // different than the original offset from the array we are extending from as
+                // it is a function of the previous extensions to this child.
+                x.push(field.len() as i32);
+                field.extend(index, offset as usize, 1);
             }
         } else {
             // in a sparse union, every field has the same length => extend all fields equally
@@ -87,6 +92,11 @@ impl<'a> Growable<'a> for GrowableUnion<'a> {
     }
 
     fn extend_validity(&mut self, _additional: usize) {}
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.types.len()
+    }
 
     fn as_arc(&mut self) -> Arc<dyn Array> {
         self.to().arced()

@@ -36,6 +36,7 @@ fn basic() {
     let mut a = GrowableStruct::new(vec![&array], false, 0);
 
     a.extend(0, 1, 2);
+    assert_eq!(a.len(), 2);
     let result: StructArray = a.into();
 
     let expected = StructArray::new(
@@ -55,6 +56,7 @@ fn offset() {
     let mut a = GrowableStruct::new(vec![&array], false, 0);
 
     a.extend(0, 1, 2);
+    assert_eq!(a.len(), 2);
     let result: StructArray = a.into();
 
     let expected = StructArray::new(
@@ -79,6 +81,7 @@ fn nulls() {
     let mut a = GrowableStruct::new(vec![&array], false, 0);
 
     a.extend(0, 1, 2);
+    assert_eq!(a.len(), 2);
     let result: StructArray = a.into();
 
     let expected = StructArray::new(
@@ -101,6 +104,7 @@ fn many() {
     mutable.extend(0, 1, 2);
     mutable.extend(1, 0, 2);
     mutable.extend_validity(1);
+    assert_eq!(mutable.len(), 5);
     let result = mutable.as_box();
 
     let expected_string: Box<dyn Array> = Box::new(Utf8Array::<i32>::from([

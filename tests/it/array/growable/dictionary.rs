@@ -21,6 +21,7 @@ fn test_single() -> Result<()> {
     let mut growable = GrowableDictionary::new(&[&array], false, 0);
 
     growable.extend(0, 1, 2);
+    assert_eq!(growable.len(), 2);
 
     let result: DictionaryArray<i32> = growable.into();
 
@@ -56,6 +57,7 @@ fn test_multi() -> Result<()> {
 
     growable.extend(0, 1, 2);
     growable.extend(1, 1, 2);
+    assert_eq!(growable.len(), 4);
 
     let result: DictionaryArray<i32> = growable.into();
 

@@ -133,6 +133,11 @@ impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
     }
 
     #[inline]
+    fn len(&self) -> usize {
+        self.key_values.len()
+    }
+
+    #[inline]
     fn extend_validity(&mut self, additional: usize) {
         self.key_values
             .resize(self.key_values.len() + additional, T::default());

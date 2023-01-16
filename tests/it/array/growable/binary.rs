@@ -10,6 +10,7 @@ fn no_offsets() {
     let mut a = GrowableBinary::new(vec![&array], false, 0);
 
     a.extend(0, 1, 2);
+    assert_eq!(a.len(), 2);
 
     let result: BinaryArray<i32> = a.into();
 
@@ -27,6 +28,7 @@ fn with_offsets() {
     let mut a = GrowableBinary::new(vec![&array], false, 0);
 
     a.extend(0, 0, 3);
+    assert_eq!(a.len(), 3);
 
     let result: BinaryArray<i32> = a.into();
 
@@ -42,6 +44,7 @@ fn test_string_offsets() {
     let mut a = GrowableBinary::new(vec![&array], false, 0);
 
     a.extend(0, 0, 3);
+    assert_eq!(a.len(), 3);
 
     let result: BinaryArray<i32> = a.into();
 
@@ -58,6 +61,7 @@ fn test_multiple_with_validity() {
 
     a.extend(0, 0, 2);
     a.extend(1, 0, 2);
+    assert_eq!(a.len(), 4);
 
     let result: BinaryArray<i32> = a.into();
 
@@ -74,6 +78,7 @@ fn test_string_null_offset_validity() {
 
     a.extend(0, 1, 2);
     a.extend_validity(1);
+    assert_eq!(a.len(), 3);
 
     let result: BinaryArray<i32> = a.into();
 
