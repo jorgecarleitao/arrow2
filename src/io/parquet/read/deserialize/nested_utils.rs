@@ -271,7 +271,7 @@ pub enum InitNested {
     Struct(bool),
 }
 
-fn init_nested(init: &[InitNested], capacity: usize) -> NestedState {
+pub fn init_nested(init: &[InitNested], capacity: usize) -> NestedState {
     let container = init
         .iter()
         .map(|init| match init {

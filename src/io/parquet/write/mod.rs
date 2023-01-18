@@ -32,6 +32,8 @@ use crate::error::{Error, Result};
 use crate::types::days_ms;
 use crate::types::NativeType;
 
+pub use nested::write_rep_and_def;
+pub use pages::{to_leaves, to_nested, to_parquet_leaves};
 use parquet2::schema::types::PrimitiveType as ParquetPrimitiveType;
 pub use parquet2::{
     compression::{BrotliLevel, CompressionOptions, GzipLevel, ZstdLevel},
@@ -46,6 +48,7 @@ pub use parquet2::{
     },
     FallibleStreamingIterator,
 };
+pub use utils::write_def_levels;
 
 /// Currently supported options to write to parquet
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,7 +73,7 @@ pub use pages::array_to_columns;
 pub use pages::Nested;
 
 /// returns offset and length to slice the leaf values
-pub(self) fn slice_nested_leaf(nested: &[Nested]) -> (usize, usize) {
+pub fn slice_nested_leaf(nested: &[Nested]) -> (usize, usize) {
     // find the deepest recursive dremel structure as that one determines how many values we must
     // take
     let mut out = (0, 0);
@@ -154,7 +157,7 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
     )
 }
 
-fn slice_parquet_array<'a>(
+pub fn slice_parquet_array<'a>(
     array: &'a dyn Array,
     nested: &'a [Nested<'a>],
     offset: usize,
@@ -186,7 +189,7 @@ fn slice_parquet_array<'a>(
     }
 }
 
-fn get_max_length(array: &dyn Array, nested: &[Nested]) -> usize {
+pub fn get_max_length(array: &dyn Array, nested: &[Nested]) -> usize {
     // get the length that should be sliced.
     // that is the inner nested structure that
     // dictates how often the primitive should be repeated
