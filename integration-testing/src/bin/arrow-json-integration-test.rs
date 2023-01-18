@@ -59,7 +59,7 @@ fn json_to_arrow(json_name: &str, arrow_name: &str, verbose: bool) -> Result<()>
     let options = write::WriteOptions { compression: None };
     let mut writer = write::FileWriter::try_new(
         arrow_file,
-        &json_file.schema,
+        json_file.schema.clone(),
         Some(json_file.fields),
         options,
     )?;

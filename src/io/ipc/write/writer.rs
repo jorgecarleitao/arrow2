@@ -50,11 +50,11 @@ impl<W: Write> FileWriter<W> {
     /// Creates a new [`FileWriter`] and writes the header to `writer`
     pub fn try_new(
         writer: W,
-        schema: &Schema,
+        schema: Schema,
         ipc_fields: Option<Vec<IpcField>>,
         options: WriteOptions,
     ) -> Result<Self> {
-        let mut slf = Self::new(writer, schema.clone(), ipc_fields, options);
+        let mut slf = Self::new(writer, schema, ipc_fields, options);
         slf.start()?;
 
         Ok(slf)
