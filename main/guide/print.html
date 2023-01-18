@@ -1719,8 +1719,12 @@ fn write(
 ) -&gt; Result&lt;Vec&lt;u8&gt;, Error&gt; {
     let result = vec![];
     let options = arrow2::io::ipc::write::WriteOptions { compression };
-    let mut writer =
-        arrow2::io::ipc::write::FileWriter::try_new(result, schema, ipc_fields.clone(), options)?;
+    let mut writer = arrow2::io::ipc::write::FileWriter::try_new(
+        result,
+        schema.clone(),
+        ipc_fields.clone(),
+        options,
+    )?;
     for chunk in chunks {
         writer.write(chunk, ipc_fields.as_ref().map(|x| x.as_ref()))?;
     }
