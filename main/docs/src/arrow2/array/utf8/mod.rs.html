@@ -579,6 +579,17 @@
 <a href="#579" id="579">579</a>
 <a href="#580" id="580">580</a>
 <a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::{
         utils::{BitmapIter, ZipValidity},
@@ -1095,6 +1106,17 @@
         I: TrustedLen&lt;Item = std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;P&gt;, E&gt;&gt;,
     {
         MutableUtf8Array::&lt;O&gt;::try_from_trusted_len_iter(iter).map(|x| x.into())
+    }
+
+    <span class="doccomment">/// Applies a function `f` to the validity of this array.
+    ///
+    /// This is an API to leverage clone-on-write
+    /// # Panics
+    /// This function panics if the function `f` modifies the length of the [`Bitmap`].
+    </span><span class="kw">pub fn </span>apply_validity&lt;F: FnOnce(Bitmap) -&gt; Bitmap&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, f: F) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity) {
+            <span class="self">self</span>.set_validity(<span class="prelude-val">Some</span>(f(validity)))
+        }
     }
 }
 
