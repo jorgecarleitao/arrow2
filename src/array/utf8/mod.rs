@@ -515,6 +515,17 @@ impl<O: Offset> Utf8Array<O> {
     {
         MutableUtf8Array::<O>::try_from_trusted_len_iter(iter).map(|x| x.into())
     }
+
+    /// Applies a function `f` to the validity of this array.
+    ///
+    /// This is an API to leverage clone-on-write
+    /// # Panics
+    /// This function panics if the function `f` modifies the length of the [`Bitmap`].
+    pub fn apply_validity<F: FnOnce(Bitmap) -> Bitmap>(&mut self, f: F) {
+        if let Some(validity) = std::mem::take(&mut self.validity) {
+            self.set_validity(Some(f(validity)))
+        }
+    }
 }
 
 impl<O: Offset> Array for Utf8Array<O> {

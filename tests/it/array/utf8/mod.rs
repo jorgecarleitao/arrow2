@@ -216,3 +216,20 @@ fn iter_nth() {
     assert_eq!(array.iter().nth(1), Some(Some(" ")));
     assert_eq!(array.iter().nth(10), None);
 }
+
+#[test]
+fn test_apply_validity() {
+    let mut array = Utf8Array::<i32>::from([Some("Red"), Some("Green"), Some("Blue")]);
+    array.set_validity(Some([true, true, true].into()));
+
+    array.apply_validity(|bitmap| {
+        let mut mut_bitmap = bitmap.into_mut().right().unwrap();
+        mut_bitmap.set(1, false);
+        mut_bitmap.set(2, false);
+        mut_bitmap.into()
+    });
+
+    assert!(array.is_valid(0));
+    assert!(!array.is_valid(1));
+    assert!(!array.is_valid(2));
+}
