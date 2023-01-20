@@ -635,7 +635,11 @@ pub(crate) unsafe fn mmap<T: AsRef<[u8]>>(
     unsafe { try_from(InternalArrowArray::new(array, data_type)) }
 }
 
-pub unsafe fn mmap_slice<T: NativeType>(data: &[T]) -> Result<Box<dyn Array>, Error> {
+/// Returns an Array memory mapped from a slice of primitive data.
+///
+/// # Safety
+/// The lifetime of the array is bounded to the lifetime of the slice.
+pub(crate) unsafe fn mmap_slice<T: NativeType>(data: &[T]) -> Result<Box<dyn Array>, Error> {
     let num_rows = data.len();
     let null_count = 0;
     let validity = None;

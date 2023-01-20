@@ -144,6 +144,9 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// Creates a (non-null) [`PrimitiveArray`] from a slice of values.
     /// This does not have memcopy and is the fastest way to create a [`PrimitiveArray`].
     ///
+    /// This can be useful if you want to apply arrow kernels on slices without incurring
+    /// a memcopy cost.
+    ///
     /// # Safety
     ///
     /// This is unsafe as the lifetime of the returned array is bound to the lifetime
