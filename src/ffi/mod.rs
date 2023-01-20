@@ -3,8 +3,6 @@
 mod array;
 mod bridge;
 mod generated;
-#[cfg(feature = "io_ipc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "io_ipc")))]
 pub(crate) mod mmap;
 mod schema;
 mod stream;

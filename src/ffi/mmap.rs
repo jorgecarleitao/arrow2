@@ -1,17 +1,26 @@
+#[cfg(feature = "io_ipc")]
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use crate::array::{Array, DictionaryKey, FixedSizeListArray, ListArray, StructArray};
+use crate::array::Array;
+#[cfg(feature = "io_ipc")]
+use crate::array::{DictionaryKey, FixedSizeListArray, ListArray, StructArray};
+#[cfg(feature = "io_ipc")]
 use crate::datatypes::DataType;
 use crate::error::Error;
+#[cfg(feature = "io_ipc")]
 use crate::offset::Offset;
 
-use crate::io::ipc::read::{Dictionaries, OutOfSpecKind};
-use crate::io::ipc::read::{IpcBuffer, Node};
-use crate::io::ipc::IpcField;
+#[cfg(feature = "io_ipc")]
+use crate::io::ipc::{
+    read::{Dictionaries, IpcBuffer, Node, OutOfSpecKind},
+    IpcField,
+};
 use crate::types::NativeType;
 
-use super::{export_array_to_c, try_from, ArrowArray, InternalArrowArray};
+#[cfg(feature = "io_ipc")]
+use super::export_array_to_c;
+use super::{try_from, ArrowArray, InternalArrowArray};
 
 #[allow(dead_code)]
 struct PrivateData<T> {
@@ -22,6 +31,7 @@ struct PrivateData<T> {
     dictionary_ptr: Option<*mut ArrowArray>,
 }
 
+#[cfg(feature = "io_ipc")]
 fn get_buffer_bounds(buffers: &mut VecDeque<IpcBuffer>) -> Result<(usize, usize), Error> {
     let buffer = buffers
         .pop_front()
@@ -40,6 +50,7 @@ fn get_buffer_bounds(buffers: &mut VecDeque<IpcBuffer>) -> Result<(usize, usize)
     Ok((offset, length))
 }
 
+#[cfg(feature = "io_ipc")]
 fn get_buffer<'a, T: NativeType>(
     data: &'a [u8],
     block_offset: usize,
@@ -66,6 +77,7 @@ fn get_buffer<'a, T: NativeType>(
     Ok(values)
 }
 
+#[cfg(feature = "io_ipc")]
 fn get_validity<'a>(
     data: &'a [u8],
     block_offset: usize,
@@ -154,6 +166,7 @@ unsafe extern "C" fn release<T>(array: *mut ArrowArray) {
     array.release = None;
 }
 
+#[cfg(feature = "io_ipc")]
 fn mmap_binary<O: Offset, T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -188,6 +201,7 @@ fn mmap_binary<O: Offset, T: AsRef<[u8]>>(
     ))
 }
 
+#[cfg(feature = "io_ipc")]
 fn mmap_fixed_size_binary<T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -220,6 +234,7 @@ fn mmap_fixed_size_binary<T: AsRef<[u8]>>(
     ))
 }
 
+#[cfg(feature = "io_ipc")]
 fn mmap_null<T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -246,6 +261,7 @@ fn mmap_null<T: AsRef<[u8]>>(
     ))
 }
 
+#[cfg(feature = "io_ipc")]
 fn mmap_boolean<T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -282,6 +298,7 @@ fn mmap_boolean<T: AsRef<[u8]>>(
     ))
 }
 
+#[cfg(feature = "io_ipc")]
 fn mmap_primitive<P: NativeType, T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -315,6 +332,7 @@ fn mmap_primitive<P: NativeType, T: AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg(feature = "io_ipc")]
 fn mmap_list<O: Offset, T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -365,6 +383,7 @@ fn mmap_list<O: Offset, T: AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg(feature = "io_ipc")]
 fn mmap_fixed_size_list<T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -414,6 +433,7 @@ fn mmap_fixed_size_list<T: AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg(feature = "io_ipc")]
 fn mmap_struct<T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -468,6 +488,7 @@ fn mmap_struct<T: AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg(feature = "io_ipc")]
 fn mmap_dict<K: DictionaryKey, T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -509,6 +530,7 @@ fn mmap_dict<K: DictionaryKey, T: AsRef<[u8]>>(
     ))
 }
 
+#[cfg(feature = "io_ipc")]
 fn get_array<T: AsRef<[u8]>>(
     data: Arc<T>,
     block_offset: usize,
@@ -589,6 +611,7 @@ fn get_array<T: AsRef<[u8]>>(
 }
 
 /// Maps a memory region to an [`Array`].
+#[cfg(feature = "io_ipc")]
 pub(crate) unsafe fn mmap<T: AsRef<[u8]>>(
     data: Arc<T>,
     block_offset: usize,
@@ -610,4 +633,26 @@ pub(crate) unsafe fn mmap<T: AsRef<[u8]>>(
     // The unsafety comes from the fact that `array` is not necessarily valid -
     // the IPC file may be corrupted (e.g. invalid offsets or non-utf8 data)
     unsafe { try_from(InternalArrowArray::new(array, data_type)) }
+}
+
+pub unsafe fn mmap_slice<T: NativeType>(data: &[T]) -> Result<Box<dyn Array>, Error> {
+    let num_rows = data.len();
+    let null_count = 0;
+    let validity = None;
+
+    let ptr = data.as_ptr() as *const u8;
+    let data = Arc::new(std::slice::from_raw_parts(
+        ptr,
+        std::mem::size_of::<T>() * data.len(),
+    ));
+
+    let array = create_array(
+        data,
+        num_rows,
+        null_count,
+        [validity, Some(ptr)].into_iter(),
+        [].into_iter(),
+        None,
+    );
+    unsafe { try_from(InternalArrowArray::new(array, T::PRIMITIVE.into())) }
 }
