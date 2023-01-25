@@ -3,7 +3,7 @@
 mod array;
 mod bridge;
 mod generated;
-pub(crate) mod mmap;
+pub mod mmap;
 mod schema;
 mod stream;
 

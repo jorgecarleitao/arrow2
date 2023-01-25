@@ -1,38 +1,23 @@
-#[cfg(feature = "io_ipc")]
+use super::*;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
 use crate::array::Array;
-#[cfg(feature = "io_ipc")]
 use crate::array::{DictionaryKey, FixedSizeListArray, ListArray, StructArray};
-#[cfg(feature = "io_ipc")]
 use crate::datatypes::DataType;
 use crate::error::Error;
-#[cfg(feature = "io_ipc")]
 use crate::offset::Offset;
 
-#[cfg(feature = "io_ipc")]
 use crate::io::ipc::{
     read::{Dictionaries, IpcBuffer, Node, OutOfSpecKind},
     IpcField,
 };
 use crate::types::NativeType;
 
-#[cfg(feature = "io_ipc")]
 use super::export_array_to_c;
 use super::{try_from, ArrowArray, InternalArrowArray};
 
-#[allow(dead_code)]
-struct PrivateData<T> {
-    // the owner of the pointers' regions
-    data: T,
-    buffers_ptr: Box<[*const std::os::raw::c_void]>,
-    children_ptr: Box<[*mut ArrowArray]>,
-    dictionary_ptr: Option<*mut ArrowArray>,
-}
-
-#[cfg(feature = "io_ipc")]
-fn get_buffer_bounds(buffers: &mut VecDeque<IpcBuffer>) -> Result<(usize, usize), Error> {
+fn get_buffer_bounds(buffers: &mut VecDeque<IpcBuffer>) -> Result<(usize, usize)> {
     let buffer = buffers
         .pop_front()
         .ok_or_else(|| Error::from(OutOfSpecKind::ExpectedBuffer))?;
@@ -50,13 +35,12 @@ fn get_buffer_bounds(buffers: &mut VecDeque<IpcBuffer>) -> Result<(usize, usize)
     Ok((offset, length))
 }
 
-#[cfg(feature = "io_ipc")]
 fn get_buffer<'a, T: NativeType>(
     data: &'a [u8],
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
     num_rows: usize,
-) -> Result<&'a [u8], Error> {
+) -> Result<&'a [u8]> {
     let (offset, length) = get_buffer_bounds(buffers)?;
 
     // verify that they are in-bounds
@@ -77,13 +61,12 @@ fn get_buffer<'a, T: NativeType>(
     Ok(values)
 }
 
-#[cfg(feature = "io_ipc")]
 fn get_validity<'a>(
     data: &'a [u8],
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
     null_count: usize,
-) -> Result<Option<&'a [u8]>, Error> {
+) -> Result<Option<&'a [u8]>> {
     let validity = get_buffer_bounds(buffers)?;
     let (offset, length) = validity;
 
@@ -98,81 +81,12 @@ fn get_validity<'a>(
     })
 }
 
-fn create_array<
-    T: AsRef<[u8]>,
-    I: Iterator<Item = Option<*const u8>>,
-    II: Iterator<Item = ArrowArray>,
->(
-    data: Arc<T>,
-    num_rows: usize,
-    null_count: usize,
-    buffers: I,
-    children: II,
-    dictionary: Option<ArrowArray>,
-) -> ArrowArray {
-    let buffers_ptr = buffers
-        .map(|maybe_buffer| match maybe_buffer {
-            Some(b) => b as *const std::os::raw::c_void,
-            None => std::ptr::null(),
-        })
-        .collect::<Box<[_]>>();
-    let n_buffers = buffers_ptr.len() as i64;
-
-    let children_ptr = children
-        .map(|child| Box::into_raw(Box::new(child)))
-        .collect::<Box<_>>();
-    let n_children = children_ptr.len() as i64;
-
-    let dictionary_ptr = dictionary.map(|array| Box::into_raw(Box::new(array)));
-
-    let mut private_data = Box::new(PrivateData::<Arc<T>> {
-        data,
-        buffers_ptr,
-        children_ptr,
-        dictionary_ptr,
-    });
-
-    ArrowArray {
-        length: num_rows as i64,
-        null_count: null_count as i64,
-        offset: 0, // IPC files are by definition not offset
-        n_buffers,
-        n_children,
-        buffers: private_data.buffers_ptr.as_mut_ptr(),
-        children: private_data.children_ptr.as_mut_ptr(),
-        dictionary: private_data.dictionary_ptr.unwrap_or(std::ptr::null_mut()),
-        release: Some(release::<Arc<T>>),
-        private_data: Box::into_raw(private_data) as *mut ::std::os::raw::c_void,
-    }
-}
-
-/// callback used to drop [`ArrowArray`] when it is exported
-unsafe extern "C" fn release<T>(array: *mut ArrowArray) {
-    if array.is_null() {
-        return;
-    }
-    let array = &mut *array;
-
-    // take ownership of `private_data`, therefore dropping it
-    let private = Box::from_raw(array.private_data as *mut PrivateData<T>);
-    for child in private.children_ptr.iter() {
-        let _ = Box::from_raw(*child);
-    }
-
-    if let Some(ptr) = private.dictionary_ptr {
-        let _ = Box::from_raw(ptr);
-    }
-
-    array.release = None;
-}
-
-#[cfg(feature = "io_ipc")]
 fn mmap_binary<O: Offset, T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
-) -> Result<ArrowArray, Error> {
+) -> Result<ArrowArray> {
     let num_rows: usize = node
         .length()
         .try_into()
@@ -201,13 +115,12 @@ fn mmap_binary<O: Offset, T: AsRef<[u8]>>(
     ))
 }
 
-#[cfg(feature = "io_ipc")]
 fn mmap_fixed_size_binary<T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
-) -> Result<ArrowArray, Error> {
+) -> Result<ArrowArray> {
     let num_rows: usize = node
         .length()
         .try_into()
@@ -234,13 +147,12 @@ fn mmap_fixed_size_binary<T: AsRef<[u8]>>(
     ))
 }
 
-#[cfg(feature = "io_ipc")]
 fn mmap_null<T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
     _block_offset: usize,
     _buffers: &mut VecDeque<IpcBuffer>,
-) -> Result<ArrowArray, Error> {
+) -> Result<ArrowArray> {
     let num_rows: usize = node
         .length()
         .try_into()
@@ -261,13 +173,12 @@ fn mmap_null<T: AsRef<[u8]>>(
     ))
 }
 
-#[cfg(feature = "io_ipc")]
 fn mmap_boolean<T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
-) -> Result<ArrowArray, Error> {
+) -> Result<ArrowArray> {
     let num_rows: usize = node
         .length()
         .try_into()
@@ -298,13 +209,12 @@ fn mmap_boolean<T: AsRef<[u8]>>(
     ))
 }
 
-#[cfg(feature = "io_ipc")]
 fn mmap_primitive<P: NativeType, T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
-) -> Result<ArrowArray, Error> {
+) -> Result<ArrowArray> {
     let data_ref = data.as_ref().as_ref();
 
     let num_rows: usize = node
@@ -332,7 +242,6 @@ fn mmap_primitive<P: NativeType, T: AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
-#[cfg(feature = "io_ipc")]
 fn mmap_list<O: Offset, T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -342,7 +251,7 @@ fn mmap_list<O: Offset, T: AsRef<[u8]>>(
     dictionaries: &Dictionaries,
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<IpcBuffer>,
-) -> Result<ArrowArray, Error> {
+) -> Result<ArrowArray> {
     let child = ListArray::<O>::try_get_child(data_type)?.data_type();
 
     let num_rows: usize = node
@@ -383,7 +292,6 @@ fn mmap_list<O: Offset, T: AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
-#[cfg(feature = "io_ipc")]
 fn mmap_fixed_size_list<T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -393,7 +301,7 @@ fn mmap_fixed_size_list<T: AsRef<[u8]>>(
     dictionaries: &Dictionaries,
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<IpcBuffer>,
-) -> Result<ArrowArray, Error> {
+) -> Result<ArrowArray> {
     let child = FixedSizeListArray::try_child_and_size(data_type)?
         .0
         .data_type();
@@ -433,7 +341,6 @@ fn mmap_fixed_size_list<T: AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
-#[cfg(feature = "io_ipc")]
 fn mmap_struct<T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -443,7 +350,7 @@ fn mmap_struct<T: AsRef<[u8]>>(
     dictionaries: &Dictionaries,
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<IpcBuffer>,
-) -> Result<ArrowArray, Error> {
+) -> Result<ArrowArray> {
     let children = StructArray::try_get_fields(data_type)?;
 
     let num_rows: usize = node
@@ -475,7 +382,7 @@ fn mmap_struct<T: AsRef<[u8]>>(
                 buffers,
             )
         })
-        .collect::<Result<Vec<_>, Error>>()?;
+        .collect::<Result<Vec<_>>>()?;
 
     Ok(create_array(
         data,
@@ -488,7 +395,6 @@ fn mmap_struct<T: AsRef<[u8]>>(
 }
 
 #[allow(clippy::too_many_arguments)]
-#[cfg(feature = "io_ipc")]
 fn mmap_dict<K: DictionaryKey, T: AsRef<[u8]>>(
     data: Arc<T>,
     node: &Node,
@@ -498,7 +404,7 @@ fn mmap_dict<K: DictionaryKey, T: AsRef<[u8]>>(
     dictionaries: &Dictionaries,
     _: &mut VecDeque<Node>,
     buffers: &mut VecDeque<IpcBuffer>,
-) -> Result<ArrowArray, Error> {
+) -> Result<ArrowArray> {
     let num_rows: usize = node
         .length()
         .try_into()
@@ -530,7 +436,6 @@ fn mmap_dict<K: DictionaryKey, T: AsRef<[u8]>>(
     ))
 }
 
-#[cfg(feature = "io_ipc")]
 fn get_array<T: AsRef<[u8]>>(
     data: Arc<T>,
     block_offset: usize,
@@ -539,7 +444,7 @@ fn get_array<T: AsRef<[u8]>>(
     dictionaries: &Dictionaries,
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<IpcBuffer>,
-) -> Result<ArrowArray, Error> {
+) -> Result<ArrowArray> {
     use crate::datatypes::PhysicalType::*;
     let node = field_nodes
         .pop_front()
@@ -611,7 +516,6 @@ fn get_array<T: AsRef<[u8]>>(
 }
 
 /// Maps a memory region to an [`Array`].
-#[cfg(feature = "io_ipc")]
 pub(crate) unsafe fn mmap<T: AsRef<[u8]>>(
     data: Arc<T>,
     block_offset: usize,
@@ -620,7 +524,7 @@ pub(crate) unsafe fn mmap<T: AsRef<[u8]>>(
     dictionaries: &Dictionaries,
     field_nodes: &mut VecDeque<Node>,
     buffers: &mut VecDeque<IpcBuffer>,
-) -> Result<Box<dyn Array>, Error> {
+) -> Result<Box<dyn Array>> {
     let array = get_array(
         data,
         block_offset,
@@ -633,30 +537,4 @@ pub(crate) unsafe fn mmap<T: AsRef<[u8]>>(
     // The unsafety comes from the fact that `array` is not necessarily valid -
     // the IPC file may be corrupted (e.g. invalid offsets or non-utf8 data)
     unsafe { try_from(InternalArrowArray::new(array, data_type)) }
-}
-
-/// Returns an Array memory mapped from a slice of primitive data.
-///
-/// # Safety
-/// The lifetime of the array is bounded to the lifetime of the slice.
-pub(crate) unsafe fn mmap_slice<T: NativeType>(data: &[T]) -> Result<Box<dyn Array>, Error> {
-    let num_rows = data.len();
-    let null_count = 0;
-    let validity = None;
-
-    let ptr = data.as_ptr() as *const u8;
-    let data = Arc::new(std::slice::from_raw_parts(
-        ptr,
-        std::mem::size_of::<T>() * data.len(),
-    ));
-
-    let array = create_array(
-        data,
-        num_rows,
-        null_count,
-        [validity, Some(ptr)].into_iter(),
-        [].into_iter(),
-        None,
-    );
-    unsafe { try_from(InternalArrowArray::new(array, T::PRIMITIVE.into())) }
 }
