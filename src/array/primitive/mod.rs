@@ -19,7 +19,6 @@ mod from_natural;
 mod iterator;
 pub use iterator::*;
 mod mutable;
-use crate::ffi::mmap::mmap_slice;
 pub use mutable::*;
 
 /// A [`PrimitiveArray`] is Arrow's semantically equivalent of an immutable `Vec<Option<T>>` where
@@ -139,22 +138,6 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// ```
     pub fn from_vec(values: Vec<T>) -> Self {
         Self::new(T::PRIMITIVE.into(), values.into(), None)
-    }
-
-    /// Creates a (non-null) [`PrimitiveArray`] from a slice of values.
-    /// This does not have memcopy and is the fastest way to create a [`PrimitiveArray`].
-    ///
-    /// This can be useful if you want to apply arrow kernels on slices without incurring
-    /// a memcopy cost.
-    ///
-    /// # Safety
-    ///
-    /// This is unsafe as the lifetime of the returned array is bound to the lifetime
-    /// of the slice. It is adviced to drop the array before the slice is out of scope.
-    pub unsafe fn borrowed_from_slice(values: &[T]) -> Self {
-        let array = mmap_slice(values).unwrap();
-        let array: &PrimitiveArray<T> = array.as_any().downcast_ref().unwrap();
-        array.clone()
     }
 
     /// Returns an iterator over the values and validity, `Option<&T>`.
