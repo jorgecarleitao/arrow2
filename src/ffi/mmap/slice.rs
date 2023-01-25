@@ -10,10 +10,8 @@ pub unsafe fn mmap_slice<T: NativeType>(data: &[T]) -> Result<Box<dyn Array>> {
     let validity = None;
 
     let ptr = data.as_ptr() as *const u8;
-    let data = Arc::new(std::slice::from_raw_parts(
-        ptr,
-        std::mem::size_of::<T>() * data.len(),
-    ));
+    let data: &[u8] = bytemuck::cast_slice(data);
+    let data = Arc::new(data);
 
     let array = create_array(
         data,
