@@ -1,7 +1,12 @@
 //! Functionality to mmap in-memory data regions.
 use std::sync::Arc;
 
-use super::ArrowArray;
+use crate::{
+    array::{FromFfi, PrimitiveArray},
+    types::NativeType,
+};
+
+use super::{ArrowArray, InternalArrowArray};
 
 #[allow(dead_code)]
 struct PrivateData<T> {
@@ -78,4 +83,39 @@ unsafe extern "C" fn release<T>(array: *mut ArrowArray) {
     }
 
     array.release = None;
+}
+
+/// Creates a (non-null) [`PrimitiveArray`] from a slice of values.
+/// This does not have memcopy and is the fastest way to create a [`PrimitiveArray`].
+///
+/// This can be useful if you want to apply arrow kernels on slices without incurring
+/// a memcopy cost.
+///
+/// # Safety
+///
+/// Using this function is not unsafe, but the returned PrimitiveArray's lifetime is bound to the lifetime
+/// of the slice. The returned [`PrimitiveArray`] _must not_ outlive the passed slice.
+pub unsafe fn slice<T: NativeType>(slice: &[T]) -> PrimitiveArray<T> {
+    let num_rows = slice.len();
+    let null_count = 0;
+    let validity = None;
+
+    let data: &[u8] = bytemuck::cast_slice(slice);
+    let ptr = data.as_ptr() as *const u8;
+    let data = Arc::new(data);
+
+    // safety: the underlying assumption of this function: the array will not be used
+    // beyond the
+    let array = create_array(
+        data,
+        num_rows,
+        null_count,
+        [validity, Some(ptr)].into_iter(),
+        [].into_iter(),
+        None,
+    );
+    let array = InternalArrowArray::new(array, T::PRIMITIVE.into());
+
+    // safety: we just created a valid array
+    unsafe { PrimitiveArray::<T>::try_from_ffi(array) }.unwrap()
 }
