@@ -157,6 +157,7 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
     )
 }
 
+/// Slices the [`Array`] to `Box<dyn Array>` and `Vec<Nested>`.
 pub fn slice_parquet_array<'a>(
     array: &'a dyn Array,
     nested: &'a [Nested<'a>],
@@ -189,9 +190,9 @@ pub fn slice_parquet_array<'a>(
     }
 }
 
+/// Get the length of [`Array`] that should be sliced.
 pub fn get_max_length(array: &dyn Array, nested: &[Nested]) -> usize {
-    // get the length that should be sliced.
-    // that is the inner nested structure that
+    // the inner nested structure that
     // dictates how often the primitive should be repeated
     for nested in nested.iter().rev() {
         match nested {

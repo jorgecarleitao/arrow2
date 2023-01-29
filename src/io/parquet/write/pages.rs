@@ -149,6 +149,7 @@ fn to_nested_recursive<'a>(
     Ok(())
 }
 
+/// Convert [`Array`] to `Vec<&dyn Array>` leaves in DFS order.
 pub fn to_leaves(array: &dyn Array) -> Vec<&dyn Array> {
     let mut leaves = vec![];
     to_leaves_recursive(array, &mut leaves);
@@ -179,6 +180,7 @@ fn to_leaves_recursive<'a>(array: &'a dyn Array, leaves: &mut Vec<&'a dyn Array>
     }
 }
 
+/// Convert `ParquetType` to `Vec<ParquetPrimitiveType>` leaves in DFS order.
 pub fn to_parquet_leaves(type_: ParquetType) -> Vec<ParquetPrimitiveType> {
     let mut leaves = vec![];
     to_parquet_leaves_recursive(type_, &mut leaves);

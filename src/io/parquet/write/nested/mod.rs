@@ -106,6 +106,7 @@ fn to_length<O: Offset>(
         .map(|w| w[1].to_usize() - w[0].to_usize())
 }
 
+/// Write `repetition_levels` and `definition_levels` to buffer.
 pub fn write_rep_and_def(
     page_version: Version,
     nested: &[Nested],

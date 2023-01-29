@@ -43,6 +43,7 @@ pub fn get_page_iterator<R: Read + Seek>(
     )?)
 }
 
+/// Creates a new [`ListArray`] or [`FixedSizeListArray`].
 pub fn create_list(
     data_type: DataType,
     nested: &mut NestedState,
