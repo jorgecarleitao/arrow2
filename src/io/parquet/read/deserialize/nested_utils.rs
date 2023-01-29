@@ -267,8 +267,11 @@ pub(super) trait NestedDecoder<'a> {
 /// The initial info of nested data types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InitNested {
+    /// Primitive data types
     Primitive(bool),
+    /// List data types
     List(bool),
+    /// Struct data types
     Struct(bool),
 }
 
@@ -329,6 +332,7 @@ impl<'a> NestedPage<'a> {
 /// The state of nested data types.
 #[derive(Debug)]
 pub struct NestedState {
+    /// The nesteds composing `NestedState`.
     pub nested: Vec<Box<dyn Nested>>,
 }
 
