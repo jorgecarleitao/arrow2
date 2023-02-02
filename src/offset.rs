@@ -335,7 +335,7 @@ fn try_check_offsets<O: Offset>(offsets: &[O]) -> Result<(), Error> {
 
 /// A wrapper type of [`Buffer<O>`] that is guaranteed to:
 /// * Always contain an element
-/// * Every element is `>0`
+/// * Every element is `>= 0`
 /// * element at position `i` is >= than element at position `i-1`.
 #[derive(Clone, PartialEq, Debug)]
 pub struct OffsetsBuffer<O: Offset>(Buffer<O>);
