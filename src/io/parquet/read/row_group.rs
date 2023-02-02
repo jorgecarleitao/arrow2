@@ -261,7 +261,7 @@ pub fn to_deserializer<'a>(
 /// (e.g. implement [`Clone`]) you can use [`read_columns`] to read multiple columns at once
 /// and convert them to [`ArrayIter`] via [`to_deserializer`].
 pub fn read_columns_many<'a, R: Read + Seek>(
-    reader_factory: &mut R,
+    reader: &mut R,
     row_group: &RowGroupMetaData,
     fields: Vec<Field>,
     chunk_size: Option<usize>,
@@ -275,7 +275,7 @@ pub fn read_columns_many<'a, R: Read + Seek>(
     // This operation is IO-bounded `O(C)` where C is the number of columns in the row group
     let field_columns = fields
         .iter()
-        .map(|field| read_columns(reader_factory, row_group.columns(), &field.name))
+        .map(|field| read_columns(reader, row_group.columns(), &field.name))
         .collect::<Result<Vec<_>>>()?;
 
     if let Some(pages) = pages {
