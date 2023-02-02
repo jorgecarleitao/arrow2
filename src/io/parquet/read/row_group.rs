@@ -139,14 +139,14 @@ where
 }
 
 async fn _read_single_column_async<'b, R, F>(
-    factory: F,
+    reader_factory: F,
     meta: &ColumnChunkMetaData,
 ) -> Result<(&ColumnChunkMetaData, Vec<u8>)>
 where
     R: AsyncRead + AsyncSeek + Send + Unpin,
     F: Fn() -> BoxFuture<'b, std::io::Result<R>>,
 {
-    let mut reader = factory().await?;
+    let mut reader = reader_factory().await?;
     let (start, length) = meta.byte_range();
     reader.seek(std::io::SeekFrom::Start(start)).await?;
 
@@ -169,13 +169,13 @@ pub async fn read_columns_async<
     R: AsyncRead + AsyncSeek + Send + Unpin,
     F: Fn() -> BoxFuture<'b, std::io::Result<R>> + Clone,
 >(
-    factory: F,
+    reader_factory: F,
     columns: &'a [ColumnChunkMetaData],
     field_name: &str,
 ) -> Result<Vec<(&'a ColumnChunkMetaData, Vec<u8>)>> {
     let futures = get_field_columns(columns, field_name)
         .into_iter()
-        .map(|meta| async { _read_single_column_async(factory.clone(), meta).await });
+        .map(|meta| async { _read_single_column_async(reader_factory.clone(), meta).await });
 
     try_join_all(futures).await
 }
@@ -261,7 +261,7 @@ pub fn to_deserializer<'a>(
 /// (e.g. implement [`Clone`]) you can use [`read_columns`] to read multiple columns at once
 /// and convert them to [`ArrayIter`] via [`to_deserializer`].
 pub fn read_columns_many<'a, R: Read + Seek>(
-    reader: &mut R,
+    reader_factory: &mut R,
     row_group: &RowGroupMetaData,
     fields: Vec<Field>,
     chunk_size: Option<usize>,
@@ -275,7 +275,7 @@ pub fn read_columns_many<'a, R: Read + Seek>(
     // This operation is IO-bounded `O(C)` where C is the number of columns in the row group
     let field_columns = fields
         .iter()
-        .map(|field| read_columns(reader, row_group.columns(), &field.name))
+        .map(|field| read_columns(reader_factory, row_group.columns(), &field.name))
         .collect::<Result<Vec<_>>>()?;
 
     if let Some(pages) = pages {
@@ -309,7 +309,7 @@ pub async fn read_columns_many_async<
     R: AsyncRead + AsyncSeek + Send + Unpin,
     F: Fn() -> BoxFuture<'b, std::io::Result<R>> + Clone,
 >(
-    factory: F,
+    reader_factory: F,
     row_group: &RowGroupMetaData,
     fields: Vec<Field>,
     chunk_size: Option<usize>,
@@ -321,7 +321,7 @@ pub async fn read_columns_many_async<
 
     let futures = fields
         .iter()
-        .map(|field| read_columns_async(factory.clone(), row_group.columns(), &field.name));
+        .map(|field| read_columns_async(reader_factory.clone(), row_group.columns(), &field.name));
 
     let field_columns = try_join_all(futures).await?;
 
