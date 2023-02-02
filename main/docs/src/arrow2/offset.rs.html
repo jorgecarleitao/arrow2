@@ -843,7 +843,7 @@
 
 <span class="doccomment">/// A wrapper type of [`Buffer&lt;O&gt;`] that is guaranteed to:
 /// * Always contain an element
-/// * Every element is `&gt;0`
+/// * Every element is `&gt;= 0`
 /// * element at position `i` is &gt;= than element at position `i-1`.
 </span><span class="attr">#[derive(Clone, PartialEq, Debug)]
 </span><span class="kw">pub struct </span>OffsetsBuffer&lt;O: Offset&gt;(Buffer&lt;O&gt;);
