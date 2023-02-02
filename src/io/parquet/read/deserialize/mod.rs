@@ -21,7 +21,7 @@ use crate::{
     offset::Offsets,
 };
 
-use self::nested_utils::{InitNested, NestedArrayIter, NestedState};
+pub use self::nested_utils::{init_nested, InitNested, NestedArrayIter, NestedState};
 use simple::page_iter_to_arrays;
 
 use super::*;
@@ -43,7 +43,8 @@ pub fn get_page_iterator<R: Read + Seek>(
     )?)
 }
 
-fn create_list(
+/// Creates a new [`ListArray`] or [`FixedSizeListArray`].
+pub fn create_list(
     data_type: DataType,
     nested: &mut NestedState,
     values: Box<dyn Array>,
@@ -128,7 +129,7 @@ where
 }
 
 /// Returns the number of (parquet) columns that a [`DataType`] contains.
-fn n_columns(data_type: &DataType) -> usize {
+pub fn n_columns(data_type: &DataType) -> usize {
     use crate::datatypes::PhysicalType::*;
     match data_type.to_physical_type() {
         Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8

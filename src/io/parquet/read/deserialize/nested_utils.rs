@@ -264,14 +264,19 @@ pub(super) trait NestedDecoder<'a> {
     fn deserialize_dict(&self, page: &DictPage) -> Self::Dictionary;
 }
 
+/// The initial info of nested data types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InitNested {
+    /// Primitive data types
     Primitive(bool),
+    /// List data types
     List(bool),
+    /// Struct data types
     Struct(bool),
 }
 
-fn init_nested(init: &[InitNested], capacity: usize) -> NestedState {
+/// Initialize [`NestedState`] from `&[InitNested]`.
+pub fn init_nested(init: &[InitNested], capacity: usize) -> NestedState {
     let container = init
         .iter()
         .map(|init| match init {
@@ -324,12 +329,15 @@ impl<'a> NestedPage<'a> {
     }
 }
 
+/// The state of nested data types.
 #[derive(Debug)]
 pub struct NestedState {
+    /// The nesteds composing `NestedState`.
     pub nested: Vec<Box<dyn Nested>>,
 }
 
 impl NestedState {
+    /// Creates a new [`NestedState`].
     pub fn new(nested: Vec<Box<dyn Nested>>) -> Self {
         Self { nested }
     }
