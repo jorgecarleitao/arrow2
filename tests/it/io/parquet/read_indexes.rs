@@ -5,8 +5,11 @@ use arrow2::error::Error;
 use arrow2::io::parquet::read::indexes;
 use arrow2::{array::*, datatypes::*, error::Result, io::parquet::read::*, io::parquet::write::*};
 
-/// Returns 2 sets of pages with different the same number of rows distributed un-evenly
-fn pages(arrays: &[&dyn Array], encoding: Encoding) -> Result<(Vec<Page>, Vec<Page>, Schema)> {
+/// Returns sets of pages with different the same number of rows distributed un-evenly.
+/// One [`Array`] -> one [`Page`].
+/// Primitive arrays -> one vec of [`Page`].
+/// Struct arrays -> multiple vecs of [`Page`].
+fn pages(arrays: &[&dyn Array], encoding: Encoding) -> Result<(Vec<Vec<Page>>, Schema)> {
     // create pages with different number of rows
     let array11 = PrimitiveArray::<i64>::from_slice([1, 2, 3, 4]);
     let array12 = PrimitiveArray::<i64>::from_slice([5]);
@@ -46,31 +49,42 @@ fn pages(arrays: &[&dyn Array], encoding: Encoding) -> Result<(Vec<Page>, Vec<Pa
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let pages2 = arrays
-        .iter()
-        .flat_map(|array| {
-            array_to_pages(
-                *array,
-                parquet_schema.columns()[1]
-                    .descriptor
-                    .primitive_type
-                    .clone(),
-                &[Nested::Primitive(None, true, array.len())],
-                options,
-                encoding,
-            )
-            .unwrap()
-            .collect::<Result<Vec<_>>>()
-            .unwrap()
-        })
-        .collect::<Vec<_>>();
+    let mut pages = vec![pages1];
 
-    Ok((pages1, pages2, schema))
+    let mut pages2 = vec![];
+
+    for array in arrays {
+        let type_ = parquet_schema.columns()[1].base_type.clone();
+        let types = to_parquet_leaves(type_.clone());
+        let encoding = (0..types.len())
+            .into_iter()
+            .map(|_| encoding)
+            .collect::<Vec<_>>();
+        let columns = array_to_columns(array, type_, options, &encoding)?
+            .into_iter()
+            .map(|iter| iter.collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+        if pages2.is_empty() {
+            pages2 = columns
+                .into_iter()
+                .map(|c| c.into_iter().map(|p| p.unwrap()).collect::<Vec<_>>())
+                .collect::<Vec<_>>();
+        } else {
+            for (i, column) in columns.into_iter().enumerate() {
+                let column = column.into_iter().map(|p| p.unwrap()).collect::<Vec<_>>();
+                pages2[i].extend(column);
+            }
+        }
+    }
+
+    pages.extend(pages2);
+
+    Ok((pages, schema))
 }
 
 /// Tests reading pages while skipping indexes
 fn read_with_indexes(
-    (pages1, pages2, schema): (Vec<Page>, Vec<Page>, Schema),
+    (pages, schema): (Vec<Vec<Page>>, Schema),
     expected: Box<dyn Array>,
 ) -> Result<()> {
     let options = WriteOptions {
@@ -87,7 +101,9 @@ fn read_with_indexes(
         Result::Ok(DynStreamingIterator::new(compressed_pages))
     };
 
-    let row_group = DynIter::new(vec![to_compressed(pages1), to_compressed(pages2)].into_iter());
+    let pages = pages.into_iter().map(to_compressed).collect::<Vec<_>>();
+
+    let row_group = DynIter::new(pages.into_iter());
 
     let writer = vec![];
     let mut writer = FileWriter::try_new(writer, schema, options)?;
@@ -290,4 +306,44 @@ fn indexed_dict() -> Result<()> {
     let expected = expected.boxed();
 
     read_with_indexes(pages(&[&array], Encoding::RleDictionary)?, expected)
+}
+
+#[test]
+fn indexed_required_struct() -> Result<()> {
+    let array21 = StructArray::new(
+        DataType::Struct(vec![
+            Field::new("a", DataType::Int32, false),
+            Field::new("b", DataType::Boolean, false),
+        ]),
+        vec![
+            Int32Array::from_slice([1, 2, 3]).boxed(),
+            BooleanArray::from_slice([true, false, true]).boxed(),
+        ],
+        None,
+    );
+    let array22 = StructArray::new(
+        DataType::Struct(vec![
+            Field::new("a", DataType::Int32, false),
+            Field::new("b", DataType::Boolean, false),
+        ]),
+        vec![
+            Int32Array::from_slice([4, 5, 6]).boxed(),
+            BooleanArray::from_slice([false, true, false]).boxed(),
+        ],
+        None,
+    );
+    let expected = StructArray::new(
+        DataType::Struct(vec![
+            Field::new("a", DataType::Int32, false),
+            Field::new("b", DataType::Boolean, false),
+        ]),
+        vec![
+            Int32Array::from_slice([5]).boxed(),
+            BooleanArray::from_slice([true]).boxed(),
+        ],
+        None,
+    )
+    .boxed();
+
+    read_with_indexes(pages(&[&array21, &array22], Encoding::Plain)?, expected)
 }

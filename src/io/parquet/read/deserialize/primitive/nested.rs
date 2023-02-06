@@ -99,8 +99,8 @@ where
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 ValuesDictionary::try_new(page, dict).map(State::OptionalDictionary)
             }
-            (Encoding::Plain, _, true, false) => Values::try_new::<P>(page).map(State::Optional),
-            (Encoding::Plain, _, false, false) => Values::try_new::<P>(page).map(State::Required),
+            (Encoding::Plain, _, true, _) => Values::try_new::<P>(page).map(State::Optional),
+            (Encoding::Plain, _, false, _) => Values::try_new::<P>(page).map(State::Required),
             _ => Err(utils::not_implemented(page)),
         }
     }
