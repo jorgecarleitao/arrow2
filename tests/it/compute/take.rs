@@ -260,6 +260,25 @@ fn list_both_validity() {
 }
 
 #[test]
+fn fixed_size_list_with_no_none() {
+    let values = Buffer::from(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    let values = PrimitiveArray::<i32>::new(DataType::Int32, values, None);
+
+    let data_type = FixedSizeListArray::default_datatype(DataType::Int32, 2);
+    let array = FixedSizeListArray::new(data_type, Box::new(values), None);
+
+    let indices = PrimitiveArray::from([Some(4i32), Some(1), Some(3)]);
+    let result = take(&array, &indices).unwrap();
+
+    let expected_values = Buffer::from(vec![8, 9, 2, 3, 6, 7]);
+    let expected_values = PrimitiveArray::<i32>::new(DataType::Int32, expected_values, None);
+    let expected_type = FixedSizeListArray::default_datatype(DataType::Int32, 2);
+    let expected = FixedSizeListArray::new(expected_type, Box::new(expected_values), None);
+
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
 fn test_nested() {
     let values = Buffer::from(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     let values = PrimitiveArray::<i32>::new(DataType::Int32, values, None);

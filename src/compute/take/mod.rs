@@ -27,6 +27,7 @@ use crate::{
 mod binary;
 mod boolean;
 mod dict;
+mod fixed_size_list;
 mod generic_binary;
 mod list;
 mod primitive;
@@ -90,6 +91,10 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
             let array = values.as_any().downcast_ref().unwrap();
             Ok(Box::new(list::take::<i64, O>(array, indices)))
         }
+        FixedSizeList => {
+            let array = values.as_any().downcast_ref().unwrap();
+            Ok(Box::new(fixed_size_list::take::<O>(array, indices)))
+        }
         t => unimplemented!("Take not supported for data type {:?}", t),
     }
 }
@@ -135,6 +140,7 @@ pub fn can_take(data_type: &DataType) -> bool {
             | DataType::Struct(_)
             | DataType::List(_)
             | DataType::LargeList(_)
+            | DataType::FixedSizeList(_, _)
             | DataType::Dictionary(..)
     )
 }
