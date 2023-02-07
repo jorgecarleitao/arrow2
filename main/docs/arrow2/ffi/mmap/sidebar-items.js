@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["slice","Creates a (non-null) [`PrimitiveArray`] from a slice of values. This does not have memcopy and is the fastest way to create a [`PrimitiveArray`]."]]};
