@@ -483,14 +483,14 @@
 }
 
 <span class="kw">async fn </span>_read_single_column_async&lt;<span class="lifetime">&#39;b</span>, R, F&gt;(
-    factory: F,
+    reader_factory: F,
     meta: <span class="kw-2">&amp;</span>ColumnChunkMetaData,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="kw-2">&amp;</span>ColumnChunkMetaData, Vec&lt;u8&gt;)&gt;
 <span class="kw">where
     </span>R: AsyncRead + AsyncSeek + Send + Unpin,
     F: Fn() -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, std::io::Result&lt;R&gt;&gt;,
 {
-    <span class="kw">let </span><span class="kw-2">mut </span>reader = factory().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>reader = reader_factory().<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>(start, length) = meta.byte_range();
     reader.seek(std::io::SeekFrom::Start(start)).<span class="kw">await</span><span class="question-mark">?</span>;
 
@@ -513,13 +513,13 @@
     R: AsyncRead + AsyncSeek + Send + Unpin,
     F: Fn() -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, std::io::Result&lt;R&gt;&gt; + Clone,
 &gt;(
-    factory: F,
+    reader_factory: F,
     columns: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[ColumnChunkMetaData],
     field_name: <span class="kw-2">&amp;</span>str,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ColumnChunkMetaData, Vec&lt;u8&gt;)&gt;&gt; {
     <span class="kw">let </span>futures = get_field_columns(columns, field_name)
         .into_iter()
-        .map(|meta| <span class="kw">async </span>{ _read_single_column_async(factory.clone(), meta).<span class="kw">await </span>});
+        .map(|meta| <span class="kw">async </span>{ _read_single_column_async(reader_factory.clone(), meta).<span class="kw">await </span>});
 
     try_join_all(futures).<span class="kw">await
 </span>}
@@ -653,7 +653,7 @@
     R: AsyncRead + AsyncSeek + Send + Unpin,
     F: Fn() -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, std::io::Result&lt;R&gt;&gt; + Clone,
 &gt;(
-    factory: F,
+    reader_factory: F,
     row_group: <span class="kw-2">&amp;</span>RowGroupMetaData,
     fields: Vec&lt;Field&gt;,
     chunk_size: <span class="prelude-ty">Option</span>&lt;usize&gt;,
@@ -665,7 +665,7 @@
 
     <span class="kw">let </span>futures = fields
         .iter()
-        .map(|field| read_columns_async(factory.clone(), row_group.columns(), <span class="kw-2">&amp;</span>field.name));
+        .map(|field| read_columns_async(reader_factory.clone(), row_group.columns(), <span class="kw-2">&amp;</span>field.name));
 
     <span class="kw">let </span>field_columns = try_join_all(futures).<span class="kw">await</span><span class="question-mark">?</span>;
 
