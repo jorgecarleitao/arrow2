@@ -158,6 +158,18 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
         None,
         [""],
     ]
+
+    list_struct_nullable = [
+        [{"a": "a"}, {"a": "b"}],
+        None,
+        [{"a": "b"}, None, {"a": "b"}],
+        [{"a": None}, {"a": None}, {"a": None}],
+        [],
+        [{"a": "d"}, {"a": "d"}, {"a": "d"}],
+        None,
+        [{"a": "e"}],
+    ]
+
     fields = [
         pa.field("list_int64", pa.list_(pa.int64())),
         pa.field("list_int64_required", pa.list_(pa.field("item", pa.int64(), False))),
@@ -180,6 +192,10 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
         pa.field(
             "list_nested_inner_required_required_i64", pa.list_(pa.list_(pa.int64()))
         ),
+        pa.field(
+            "list_struct_nullable",
+            pa.list_(pa.struct([("a", pa.utf8())])),
+        ),
     ]
     schema = pa.schema(fields)
     return (
@@ -195,6 +211,7 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
             "list_nested_i64": items_nested,
             "list_nested_inner_required_i64": items_required_nested,
             "list_nested_inner_required_required_i64": items_required_nested_2,
+            "list_struct_nullable": list_struct_nullable,
         },
         schema,
         f"nested_nullable_10.parquet",
