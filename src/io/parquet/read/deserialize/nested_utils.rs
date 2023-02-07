@@ -556,5 +556,6 @@ where
     }
 }
 
+/// Type def for a sharable, boxed dyn [`Iterator`] of NestedStates and arrays
 pub type NestedArrayIter<'a> =
     Box<dyn Iterator<Item = Result<(NestedState, Box<dyn Array>)>> + Send + Sync + 'a>;
