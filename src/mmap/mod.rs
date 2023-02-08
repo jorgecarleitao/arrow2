@@ -2,11 +2,12 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
+mod array;
+
 use crate::array::Array;
 use crate::chunk::Chunk;
 use crate::datatypes::{DataType, Field};
 use crate::error::Error;
-use crate::ffi::mmap;
 
 use crate::io::ipc::read::file::{get_dictionary_batch, get_record_batch};
 use crate::io::ipc::read::{first_dict_field, Dictionaries, FileMetadata};
@@ -91,7 +92,7 @@ unsafe fn _mmap_record<T: AsRef<[u8]>>(
         .cloned()
         .zip(ipc_fields)
         .map(|(data_type, ipc_field)| {
-            mmap::mmap(
+            array::mmap(
                 data.clone(),
                 offset,
                 data_type,
