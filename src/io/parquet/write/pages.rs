@@ -2,9 +2,9 @@ use parquet2::schema::types::{ParquetType, PrimitiveType as ParquetPrimitiveType
 use parquet2::{page::Page, write::DynIter};
 use std::fmt::Debug;
 
-use crate::array::{ListArray, StructArray};
+use crate::array::{FixedSizeListArray, ListArray, PrimitiveArray, StructArray};
 use crate::bitmap::Bitmap;
-use crate::datatypes::PhysicalType;
+use crate::datatypes::{DataType, PhysicalType};
 use crate::io::parquet::read::schema::is_nullable;
 use crate::offset::Offset;
 use crate::{
@@ -173,6 +173,32 @@ fn to_leaves_recursive<'a>(array: &'a dyn Array, leaves: &mut Vec<&'a dyn Array>
         LargeList => {
             let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             to_leaves_recursive(array.values().as_ref(), leaves);
+        }
+        FixedSizeList => {
+            let indices: Option<Vec<u32>> = array.validity().map(|validity| {
+                validity
+                    .into_iter()
+                    .enumerate()
+                    .map(|(idx, val)| if val { Some(idx as u32) } else { None })
+                    .flatten()
+                    .collect()
+            });
+
+            if let Some(indices) = indices {
+                let new_array = crate::compute::take::take(
+                    array,
+                    &PrimitiveArray::new(DataType::UInt32, indices.into(), None),
+                )
+                .unwrap();
+                let new_array = new_array
+                    .as_any()
+                    .downcast_ref::<FixedSizeListArray>()
+                    .unwrap();
+                to_leaves_recursive(new_array.values().as_ref(), leaves);
+            } else {
+                let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
+                to_leaves_recursive(array.values().as_ref(), leaves);
+            }
         }
         Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
         | LargeUtf8 | Dictionary(_) => leaves.push(array),
