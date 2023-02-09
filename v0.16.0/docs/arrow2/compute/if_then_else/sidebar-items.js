@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["if_then_else","Returns the values from `lhs` if the predicate is `true` or from the `rhs` if the predicate is false Returns `None` if the predicate is `None`."]]};
