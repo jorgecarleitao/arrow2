@@ -22,6 +22,7 @@ use crate::{
 };
 
 pub use self::nested_utils::{init_nested, InitNested, NestedArrayIter, NestedState};
+pub use self::struct_::StructIterator;
 use simple::page_iter_to_arrays;
 
 use super::*;
