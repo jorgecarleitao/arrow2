@@ -28,20 +28,22 @@ fn single_iter<'a>(
 
 fn single_list_iter<'a, O: Offset>(nested: &ListNested<'a, O>) -> Box<dyn DebugIter + 'a> {
     match (nested.is_optional, nested.validity) {
-        (false, _) => {
-            Box::new(std::iter::repeat(1u32).zip(to_length(nested.offsets))) as Box<dyn DebugIter>
-        }
-        (true, None) => {
-            Box::new(std::iter::repeat(2u32).zip(to_length(nested.offsets))) as Box<dyn DebugIter>
-        }
+        (false, _) => Box::new(
+            std::iter::repeat(0u32)
+                .zip(to_length(nested.offsets))
+                .map(|(a, b)| (a + (b != 0) as u32, b)),
+        ) as Box<dyn DebugIter>,
+        (true, None) => Box::new(
+            std::iter::repeat(1u32)
+                .zip(to_length(nested.offsets))
+                .map(|(a, b)| (a + (b != 0) as u32, b)),
+        ) as Box<dyn DebugIter>,
         (true, Some(validity)) => Box::new(
             validity
                 .iter()
-                // lists have 2 groups, so
-                // True => 2
-                // False => 1
-                .map(|x| (x as u32) + 1)
-                .zip(to_length(nested.offsets)),
+                .map(|x| (x as u32))
+                .zip(to_length(nested.offsets))
+                .map(|(a, b)| (a + (b != 0) as u32, b)),
         ) as Box<dyn DebugIter>,
     }
 }
@@ -114,28 +116,16 @@ impl<'a> Iterator for DefLevelsIter<'a> {
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if *self.remaining.last().unwrap() > 0 {
-            *self.remaining.last_mut().unwrap() -= 1;
-
-            let primitive = self.primitive_validity.next()?.0;
-            let r = Some(self.total + primitive);
-
-            for level in 0..self.current_level - 1 {
-                let level = self.remaining.len() - level - 1;
-                if self.remaining[level] == 0 {
-                    self.current_level -= 1;
-                    self.total -= self.validity[level];
-                    self.remaining[level.saturating_sub(1)] -= 1;
-                }
-            }
-            if self.remaining[0] == 0 {
-                self.current_level -= 1;
-                self.total -= self.validity[0];
-            }
-            self.remaining_values -= 1;
-            return r;
+        if self.remaining_values == 0 {
+            return None;
         }
 
+        if self.remaining.is_empty() {
+            self.remaining_values -= 1;
+            return Some(0);
+        }
+
+        let mut empty_contrib = 0u32;
         for ((iter, remaining), validity) in self
             .iter
             .iter_mut()
@@ -145,15 +135,44 @@ impl<'a> Iterator for DefLevelsIter<'a> {
         {
             let (is_valid, length): (u32, usize) = iter.next()?;
             *validity = is_valid;
-            if length == 0 {
-                self.remaining_values -= 1;
-                return Some(self.total + is_valid / 2);
-            }
-            *remaining = length;
-            self.current_level += 1;
             self.total += is_valid;
+
+            *remaining = length;
+            if length == 0 {
+                *validity = 0;
+                self.total -= is_valid;
+                empty_contrib = is_valid;
+                break;
+            }
+            self.current_level += 1;
         }
-        self.next()
+
+        // track
+        if let Some(x) = self.remaining.get_mut(self.current_level.saturating_sub(1)) {
+            *x = x.saturating_sub(1)
+        }
+
+        let primitive = if self.current_level == self.remaining.len() {
+            self.primitive_validity.next()?.0
+        } else {
+            0
+        };
+        let r = Some(self.total + empty_contrib + primitive);
+
+        for level in 0..self.current_level.saturating_sub(1) {
+            let level = self.remaining.len() - level - 1;
+            if self.remaining[level] == 0 {
+                self.current_level -= 1;
+                self.remaining[level - 1] -= 1;
+                self.total -= self.validity[level];
+            }
+        }
+        if self.remaining[0] == 0 {
+            self.current_level = self.current_level.saturating_sub(1);
+            self.total -= self.validity[0];
+        }
+        self.remaining_values -= 1;
+        r
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -176,9 +195,10 @@ mod tests {
 
     #[test]
     fn struct_optional() {
-        let b = Bitmap::from([
+        let b = [
             true, false, true, true, false, true, false, false, true, true,
-        ]);
+        ]
+        .into();
         let nested = vec![
             Nested::Struct(None, true, 10),
             Nested::Primitive(Some(&b), true, 10),
@@ -189,10 +209,26 @@ mod tests {
     }
 
     #[test]
+    fn nested_edge_simple() {
+        let nested = vec![
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 2],
+                validity: None,
+            }),
+            Nested::Primitive(None, true, 2),
+        ];
+        let expected = vec![3, 3];
+
+        test(nested, expected)
+    }
+
+    #[test]
     fn struct_optional_1() {
-        let b = Bitmap::from([
+        let b = [
             true, false, true, true, false, true, false, false, true, true,
-        ]);
+        ]
+        .into();
         let nested = vec![
             Nested::Struct(None, true, 10),
             Nested::Primitive(Some(&b), true, 10),
@@ -217,7 +253,7 @@ mod tests {
     fn l1_required_required() {
         let nested = vec![
             // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: false,
                 offsets: &[0, 2, 2, 5, 8, 8, 11, 11, 12],
                 validity: None,
@@ -233,16 +269,17 @@ mod tests {
     fn l1_optional_optional() {
         // [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
 
-        let v0 = Bitmap::from([true, false, true, true, true, true, false, true]);
-        let v1 = Bitmap::from([
+        let v0 = [true, false, true, true, true, true, false, true].into();
+        let v1 = [
             true, true, //[0, 1]
             true, false, true, //[2, None, 3]
             true, true, true, //[4, 5, 6]
             true, true, true, //[7, 8, 9]
             true, //[10]
-        ]);
+        ]
+        .into();
         let nested = vec![
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: true,
                 offsets: &[0, 2, 2, 5, 8, 8, 11, 11, 12],
                 validity: Some(&v0),
@@ -256,18 +293,30 @@ mod tests {
 
     #[test]
     fn l2_required_required_required() {
+        /*
+        [
+            [
+                [1,2,3],
+                [4,5,6,7],
+            ],
+            [
+                [8],
+                [9, 10]
+            ]
+        ]
+        */
         let nested = vec![
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: false,
                 offsets: &[0, 2, 4],
                 validity: None,
             }),
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: false,
                 offsets: &[0, 3, 7, 8, 10],
                 validity: None,
             }),
-            Nested::Primitive(None, false, 12),
+            Nested::Primitive(None, false, 10),
         ];
         let expected = vec![2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
 
@@ -276,20 +325,33 @@ mod tests {
 
     #[test]
     fn l2_optional_required_required() {
-        let a = Bitmap::from([true, false, true, true]);
-        // e.g. [[[1,2,3], [4,5,6,7]], None, [[8], [], [9, 10]]]
+        let a = [true, false, true, true].into();
+        /*
+        [
+            [
+                [1,2,3],
+                [4,5,6,7],
+            ],
+            None,
+            [
+                [8],
+                [],
+                [9, 10]
+            ]
+        ]
+        */
         let nested = vec![
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: true,
                 offsets: &[0, 2, 2, 2, 5],
                 validity: Some(&a),
             }),
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: false,
                 offsets: &[0, 3, 7, 8, 8, 10],
                 validity: None,
             }),
-            Nested::Primitive(None, false, 12),
+            Nested::Primitive(None, false, 10),
         ];
         let expected = vec![3, 3, 3, 3, 3, 3, 3, 0, 1, 3, 2, 3, 3];
 
@@ -298,21 +360,34 @@ mod tests {
 
     #[test]
     fn l2_optional_optional_required() {
-        let a = Bitmap::from([true, false, true]);
-        let b = Bitmap::from([true, true, true, true, false]);
-        // e.g. [[[1,2,3], [4,5,6,7]], None, [[8], [], None]]
+        let a = [true, false, true].into();
+        let b = [true, true, true, true, false].into();
+        /*
+        [
+            [
+                [1,2,3],
+                [4,5,6,7],
+            ],
+            None,
+            [
+                [8],
+                [],
+                None,
+            ],
+        ]
+        */
         let nested = vec![
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: true,
                 offsets: &[0, 2, 2, 5],
                 validity: Some(&a),
             }),
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: true,
                 offsets: &[0, 3, 7, 8, 8, 8],
                 validity: Some(&b),
             }),
-            Nested::Primitive(None, false, 12),
+            Nested::Primitive(None, false, 8),
         ];
         let expected = vec![4, 4, 4, 4, 4, 4, 4, 0, 4, 3, 2];
 
@@ -321,24 +396,126 @@ mod tests {
 
     #[test]
     fn l2_optional_optional_optional() {
-        let a = Bitmap::from([true, false, true]);
-        let b = Bitmap::from([true, true, true, false]);
-        let c = Bitmap::from([true, true, true, true, false, true, true, true]);
-        // e.g. [[[1,2,3], [4,None,6,7]], None, [[8], None]]
+        let a = [true, false, true].into();
+        let b = [true, true, true, false].into();
+        let c = [true, true, true, true, false, true, true, true].into();
+        /*
+        [
+            [
+                [1,2,3],
+                [4,None,6,7],
+            ],
+            None,
+            [
+                [8],
+                None,
+            ],
+        ]
+        */
         let nested = vec![
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: true,
                 offsets: &[0, 2, 2, 4],
                 validity: Some(&a),
             }),
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: true,
                 offsets: &[0, 3, 7, 8, 8],
                 validity: Some(&b),
             }),
-            Nested::Primitive(Some(&c), true, 12),
+            Nested::Primitive(Some(&c), true, 8),
         ];
         let expected = vec![5, 5, 5, 5, 4, 5, 5, 0, 5, 2];
+
+        test(nested, expected)
+    }
+
+    /*
+        [{"a": "a"}, {"a": "b"}],
+        None,
+        [{"a": "b"}, None, {"a": "b"}],
+        [{"a": None}, {"a": None}, {"a": None}],
+        [],
+        [{"a": "d"}, {"a": "d"}, {"a": "d"}],
+        None,
+        [{"a": "e"}],
+    */
+    #[test]
+    fn nested_list_struct_nullable() {
+        let a = [
+            true, true, true, false, true, false, false, false, true, true, true, true,
+        ]
+        .into();
+        let b = [
+            true, true, true, false, true, true, true, true, true, true, true, true,
+        ]
+        .into();
+        let c = [true, false, true, true, true, true, false, true].into();
+        let nested = vec![
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 2, 2, 5, 8, 8, 11, 11, 12],
+                validity: Some(&c),
+            }),
+            Nested::Struct(Some(&b), true, 12),
+            Nested::Primitive(Some(&a), true, 12),
+        ];
+        let expected = vec![4, 4, 0, 4, 2, 4, 3, 3, 3, 1, 4, 4, 4, 0, 4];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn nested_list_struct_nullable1() {
+        let c = [true, false].into();
+        let nested = vec![
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 1, 1],
+                validity: Some(&c),
+            }),
+            Nested::Struct(None, true, 1),
+            Nested::Primitive(None, true, 1),
+        ];
+        let expected = vec![4, 0];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn nested_struct_list_nullable() {
+        let a = [true, false, true, true, true, true, false, true].into();
+        let b = [
+            true, true, true, false, true, true, true, true, true, true, true, true,
+        ]
+        .into();
+        let nested = vec![
+            Nested::Struct(None, true, 12),
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 2, 2, 5, 8, 8, 11, 11, 12],
+                validity: Some(&a),
+            }),
+            Nested::Primitive(Some(&b), true, 12),
+        ];
+        let expected = vec![4, 4, 1, 4, 3, 4, 4, 4, 4, 2, 4, 4, 4, 1, 4];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn nested_struct_list_nullable1() {
+        let a = [true, true, false].into();
+        let nested = vec![
+            Nested::Struct(None, true, 3),
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 1, 1, 1],
+                validity: Some(&a),
+            }),
+            Nested::Primitive(None, true, 1),
+        ];
+        let expected = vec![4, 2, 1];
 
         test(nested, expected)
     }

@@ -67,6 +67,9 @@ fn test_pyarrow_integration(
         // pyarrow counts null struct items as nulls
         "struct_nullable",
         "list_struct_nullable",
+        "list_struct_list_nullable",
+        "struct_list_nullable",
+        "null",
         // pyarrow reports an incorrect min/max for MapArray
         "map",
         "map_nullable",
@@ -349,8 +352,18 @@ fn v2_nested_nested_required_required() -> Result<()> {
 }
 
 #[test]
-fn v1_list_of_struct() -> Result<()> {
+fn v1_nested_list_struct_nullable() -> Result<()> {
     test_pyarrow_integration("list_struct_nullable", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_struct_list_nullable() -> Result<()> {
+    test_pyarrow_integration("struct_list_nullable", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_list_struct_list_nullable() -> Result<()> {
+    test_pyarrow_integration("list_struct_list_nullable", 1, "nested", false, false, None)
 }
 
 #[test]
@@ -474,18 +487,30 @@ fn v1_struct_struct_optional() -> Result<()> {
 }
 
 #[test]
-fn v1_nested_edge_1() -> Result<()> {
+fn v1_nested_edge_simple() -> Result<()> {
     test_pyarrow_integration("simple", 1, "nested_edge", false, false, None)
 }
 
 #[test]
-fn v1_nested_edge_2() -> Result<()> {
+fn v1_nested_edge_null() -> Result<()> {
     test_pyarrow_integration("null", 1, "nested_edge", false, false, None)
 }
 
 #[test]
-fn v1_nested_edge_3() -> Result<()> {
+fn v1_nested_edge_struct_list_nullable() -> Result<()> {
     test_pyarrow_integration("struct_list_nullable", 1, "nested_edge", false, false, None)
+}
+
+#[test]
+fn v1_nested_edge_list_struct_list_nullable() -> Result<()> {
+    test_pyarrow_integration(
+        "list_struct_list_nullable",
+        1,
+        "nested_edge",
+        false,
+        false,
+        None,
+    )
 }
 
 #[test]

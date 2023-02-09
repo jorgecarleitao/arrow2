@@ -37,6 +37,10 @@ fn round_trip_opt_stats(
             pyarrow_required_statistics(column),
         ),
         "struct" => (pyarrow_struct(column), pyarrow_struct_statistics(column)),
+        "nested_edge" => (
+            pyarrow_nested_edge(column),
+            pyarrow_nested_edge_statistics(column),
+        ),
         _ => unreachable!(),
     };
 
@@ -387,6 +391,30 @@ fn list_nested_inner_required_required_i64() -> Result<()> {
 }
 
 #[test]
+fn list_struct_nullable() -> Result<()> {
+    round_trip_opt_stats(
+        "list_struct_nullable",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn v1_nested_struct_list_nullable() -> Result<()> {
+    round_trip_opt_stats(
+        "struct_list_nullable",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
 fn utf8_optional_v2_delta() -> Result<()> {
     round_trip(
         "string",
@@ -583,5 +611,49 @@ fn struct_v2() -> Result<()> {
         Version::V2,
         CompressionOptions::Uncompressed,
         vec![Encoding::Plain, Encoding::Plain],
+    )
+}
+
+#[test]
+fn nested_edge_simple() -> Result<()> {
+    round_trip(
+        "simple",
+        "nested_edge",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+    )
+}
+
+#[test]
+fn nested_edge_null() -> Result<()> {
+    round_trip(
+        "null",
+        "nested_edge",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+    )
+}
+
+#[test]
+fn v1_nested_edge_struct_list_nullable() -> Result<()> {
+    round_trip(
+        "struct_list_nullable",
+        "nested_edge",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+    )
+}
+
+#[test]
+fn nested_edge_list_struct_list_nullable() -> Result<()> {
+    round_trip(
+        "list_struct_list_nullable",
+        "nested_edge",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
     )
 }
