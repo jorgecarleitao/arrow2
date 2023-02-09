@@ -1,5 +1,87 @@
 # Changelog
 
+## [v0.16.0](https://github.com/jorgecarleitao/arrow2/tree/v0.16.0) (2023-02-09)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.15.0...v0.16.0)
+
+**Breaking changes:**
+
+- Made IPC writer take owned schema [\#1361](https://github.com/jorgecarleitao/arrow2/pull/1361) ([ritchie46](https://github.com/ritchie46))
+- Correctly update child-offsets in `GrowableUnion` [\#1360](https://github.com/jorgecarleitao/arrow2/pull/1360) ([jleibs](https://github.com/jleibs))
+
+**Fixed bugs:**
+
+- invalid written parquet file of nested structures. \(Mixing list with structs\) [\#1325](https://github.com/jorgecarleitao/arrow2/issues/1325)
+- Fix incorrect downcast in `estimated_size_bytes` [\#1351](https://github.com/jorgecarleitao/arrow2/pull/1351) ([jleibs](https://github.com/jleibs))
+- fix\(parquet\): nested struct /list writing [\#1347](https://github.com/jorgecarleitao/arrow2/pull/1347) ([ritchie46](https://github.com/ritchie46))
+- Fixed csv infer\_schema on empty fields [\#1342](https://github.com/jorgecarleitao/arrow2/pull/1342) ([tripokey](https://github.com/tripokey))
+
+**Enhancements:**
+
+- Added support for `take` of `FixedSizeListArray` [\#1386](https://github.com/jorgecarleitao/arrow2/pull/1386) ([kylebarron](https://github.com/kylebarron))
+- Renamed `factory` argument on parquet read functions to `reader_factory` [\#1380](https://github.com/jorgecarleitao/arrow2/pull/1380) ([ozgrakkurt](https://github.com/ozgrakkurt))
+- Made some structs and functions public [\#1375](https://github.com/jorgecarleitao/arrow2/pull/1375) ([b41sh](https://github.com/b41sh))
+- Added `Utf8Array::apply_validity` [\#1367](https://github.com/jorgecarleitao/arrow2/pull/1367) ([Arty-Maly](https://github.com/Arty-Maly))
+- Added set/get scratches [\#1363](https://github.com/jorgecarleitao/arrow2/pull/1363) ([ritchie46](https://github.com/ritchie46))
+- Amortized intermediate allocations in IPC writer [\#1362](https://github.com/jorgecarleitao/arrow2/pull/1362) ([ritchie46](https://github.com/ritchie46))
+- Improved clippy [\#1353](https://github.com/jorgecarleitao/arrow2/pull/1353) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Documentation updates:**
+
+- Fixed typo in `OffsetsBuffer` docs [\#1373](https://github.com/jorgecarleitao/arrow2/pull/1373) ([DzenanJupic](https://github.com/DzenanJupic))
+- Update README.md to fix capitalization and spelling [\#1338](https://github.com/jorgecarleitao/arrow2/pull/1338) ([yerke](https://github.com/yerke))
+
+**Testing updates:**
+
+- add toolchain.toml [\#1349](https://github.com/jorgecarleitao/arrow2/pull/1349) ([ritchie46](https://github.com/ritchie46))
+
+## [v0.15.0](https://github.com/jorgecarleitao/arrow2/tree/v0.15.0) (2022-12-18)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.14.2...v0.15.0)
+
+**Breaking changes:**
+
+- Added values' capacity to `MutableBinaryArray::reserve` [\#1277](https://github.com/jorgecarleitao/arrow2/issues/1277)
+- Removed `from_data` from all arrays [\#1328](https://github.com/jorgecarleitao/arrow2/pull/1328) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `Offsets` and `OffsetsBuffer` [\#1316](https://github.com/jorgecarleitao/arrow2/pull/1316) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Bumped parquet2 dependency [\#1304](https://github.com/jorgecarleitao/arrow2/pull/1304) ([ritchie46](https://github.com/ritchie46))
+- Added data\_pagesize\_limit to write parquet pages [\#1303](https://github.com/jorgecarleitao/arrow2/pull/1303) ([sundy-li](https://github.com/sundy-li))
+- Bumped arrow-format to 0.8 [\#1298](https://github.com/jorgecarleitao/arrow2/pull/1298) ([Xuanwo](https://github.com/Xuanwo))
+- Improved iterators [\#1270](https://github.com/jorgecarleitao/arrow2/pull/1270) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**New features:**
+
+- Added `TryExtendFromSelf` [\#1278](https://github.com/jorgecarleitao/arrow2/pull/1278) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added support for JSON ser/de records layout [\#1275](https://github.com/jorgecarleitao/arrow2/pull/1275) ([AnIrishDuck](https://github.com/AnIrishDuck))
+
+**Fixed bugs:**
+
+- Parquet writes all values of sliced arrays?  [\#1323](https://github.com/jorgecarleitao/arrow2/issues/1323)
+- Avro schema: Invalid record names [\#1269](https://github.com/jorgecarleitao/arrow2/issues/1269)
+- Fixed writing nested/sliced arrays to parquet [\#1326](https://github.com/jorgecarleitao/arrow2/pull/1326) ([ritchie46](https://github.com/ritchie46))
+- Fixed failing to accept dictionary full of nulls [\#1312](https://github.com/jorgecarleitao/arrow2/pull/1312) ([ritchie46](https://github.com/ritchie46))
+- Added support for Extension types in ffi [\#1300](https://github.com/jorgecarleitao/arrow2/pull/1300) ([jondo2010](https://github.com/jondo2010))
+- Fixed error in memory usage of sliced binary/list/utf8arrays [\#1293](https://github.com/jorgecarleitao/arrow2/pull/1293) ([ritchie46](https://github.com/ritchie46))
+- Fixed descending ordering when specify nulls first [\#1286](https://github.com/jorgecarleitao/arrow2/pull/1286) ([sandflee](https://github.com/sandflee))
+- Added avro record names when converting arrow schema to avro [\#1279](https://github.com/jorgecarleitao/arrow2/pull/1279) ([Samrose-Ahmed](https://github.com/Samrose-Ahmed))
+
+**Enhancements:**
+
+- Fixed clippy [\#1336](https://github.com/jorgecarleitao/arrow2/pull/1336) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved `UnionArray` [\#1331](https://github.com/jorgecarleitao/arrow2/pull/1331) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Bumped json-deserializer version [\#1321](https://github.com/jorgecarleitao/arrow2/pull/1321) ([universalmind303](https://github.com/universalmind303))
+- Removed flushing during arrow IPC writing to improve performance when using a buffered writer [\#1318](https://github.com/jorgecarleitao/arrow2/pull/1318) ([cyr](https://github.com/cyr))
+- Improved performance of check\_indexes [\#1313](https://github.com/jorgecarleitao/arrow2/pull/1313) ([ritchie46](https://github.com/ritchie46))
+- Improved performance of checking offsets `~-64-73%` [\#1305](https://github.com/jorgecarleitao/arrow2/pull/1305) ([ritchie46](https://github.com/ritchie46))
+- Added `reserve` to pushable containers in parquet extend\_from\_decoder [\#1301](https://github.com/jorgecarleitao/arrow2/pull/1301) ([ritchie46](https://github.com/ritchie46))
+- Optimized slicing [\#1285](https://github.com/jorgecarleitao/arrow2/pull/1285) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved ZipValidity iterators [\#1284](https://github.com/jorgecarleitao/arrow2/pull/1284) ([ritchie46](https://github.com/ritchie46))
+- Added `MutableBinaryValuesArray` [\#1276](https://github.com/jorgecarleitao/arrow2/pull/1276) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Documentation updates:**
+
+- Fixed link from the API to the guide [\#1290](https://github.com/jorgecarleitao/arrow2/pull/1290) ([datapythonista](https://github.com/datapythonista))
+
 ## [v0.15.0](https://github.com/jorgecarleitao/arrow2/tree/v0.15.0) (2022-12-18)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.14.2...v0.15.0)
