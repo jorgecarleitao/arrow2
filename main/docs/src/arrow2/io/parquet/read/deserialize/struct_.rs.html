@@ -55,19 +55,23 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::array::{Array, StructArray};
 <span class="kw">use </span><span class="kw">crate</span>::datatypes::{DataType, Field};
 <span class="kw">use </span><span class="kw">crate</span>::error::Error;
 
 <span class="kw">use </span><span class="kw">super</span>::nested_utils::{NestedArrayIter, NestedState};
 
-<span class="kw">pub struct </span>StructIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="doccomment">/// An iterator adapter over [`NestedArrayIter`] assumed to be encoded as Struct arrays
+</span><span class="kw">pub struct </span>StructIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
     iters: Vec&lt;NestedArrayIter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;,
     fields: Vec&lt;Field&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; StructIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub fn </span>new(iters: Vec&lt;NestedArrayIter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;, fields: Vec&lt;Field&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates a new [`StructIterator`] with `iters` and `fields`.
+    </span><span class="kw">pub fn </span>new(iters: Vec&lt;NestedArrayIter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;, fields: Vec&lt;Field&gt;) -&gt; <span class="self">Self </span>{
         <span class="macro">assert_eq!</span>(iters.len(), fields.len());
         <span class="self">Self </span>{ iters, fields }
     }
@@ -113,4 +117,4 @@
     }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (bd39bbb4b 2023-02-07)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (ef934d9b6 2023-02-08)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

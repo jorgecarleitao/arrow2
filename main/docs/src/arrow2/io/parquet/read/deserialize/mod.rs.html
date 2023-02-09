@@ -178,6 +178,7 @@
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
 </pre><pre class="rust"><code><span class="doccomment">//! APIs to read from Parquet format.
 </span><span class="kw">mod </span>binary;
 <span class="kw">mod </span>boolean;
@@ -202,6 +203,7 @@
 };
 
 <span class="kw">pub use </span><span class="self">self</span>::nested_utils::{init_nested, InitNested, NestedArrayIter, NestedState};
+<span class="kw">pub use </span><span class="self">self</span>::struct_::StructIterator;
 <span class="kw">use </span>simple::page_iter_to_arrays;
 
 <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -359,4 +361,4 @@
     ))
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (bd39bbb4b 2023-02-07)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (ef934d9b6 2023-02-08)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
