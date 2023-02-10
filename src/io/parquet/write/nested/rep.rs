@@ -110,11 +110,10 @@ impl<'a> Iterator for RepLevelsIter<'a> {
         let r = Some((self.current_level - self.total) as u32);
 
         // update
-        for level in 0..self.current_level.saturating_sub(1) {
-            let level = self.remaining.len() - level - 1;
-            if self.remaining[level] == 0 {
+        for index in (1..self.current_level).rev() {
+            if self.remaining[index] == 0 {
                 self.current_level -= 1;
-                self.remaining[level - 1] -= 1;
+                self.remaining[index - 1] -= 1;
             }
         }
         if self.remaining[0] == 0 {

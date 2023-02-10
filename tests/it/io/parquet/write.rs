@@ -415,6 +415,18 @@ fn v1_nested_struct_list_nullable() -> Result<()> {
 }
 
 #[test]
+fn v1_nested_list_struct_list_nullable() -> Result<()> {
+    round_trip_opt_stats(
+        "list_struct_list_nullable",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
 fn utf8_optional_v2_delta() -> Result<()> {
     round_trip(
         "string",
