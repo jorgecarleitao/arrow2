@@ -8,45 +8,33 @@ impl<A: Iterator<Item = usize> + std::fmt::Debug> DebugIter for A {}
 fn iter<'a>(nested: &'a [Nested]) -> Vec<Box<dyn DebugIter + 'a>> {
     nested
         .iter()
-        .enumerate()
-        .filter_map(|(i, nested)| match nested {
+        .filter_map(|nested| match nested {
             Nested::Primitive(_, _, _) => None,
             Nested::List(nested) => Some(Box::new(to_length(nested.offsets)) as Box<dyn DebugIter>),
             Nested::LargeList(nested) => {
                 Some(Box::new(to_length(nested.offsets)) as Box<dyn DebugIter>)
             }
-            Nested::Struct(_, _, length) => {
-                // only return 1, 1, 1, (x len) if struct is outer structure.
-                // otherwise treat as leaf
-                if i == 0 {
-                    Some(Box::new(std::iter::repeat(1usize).take(*length)) as Box<dyn DebugIter>)
-                } else {
-                    None
-                }
-            }
+            Nested::Struct(_, _, _) => None,
         })
         .collect()
 }
 
 pub fn num_values(nested: &[Nested]) -> usize {
-    let iterators = iter(nested);
-    let depth = iterators.len();
+    let pr = match nested.last().unwrap() {
+        Nested::Primitive(_, _, len) => *len,
+        _ => todo!(),
+    };
 
-    iterators
+    iter(nested)
         .into_iter()
         .enumerate()
-        .map(|(index, lengths)| {
-            if index == depth - 1 {
-                lengths
-                    .map(|length| if length == 0 { 1 } else { length })
-                    .sum::<usize>()
-            } else {
-                lengths
-                    .map(|length| usize::from(length == 0))
-                    .sum::<usize>()
-            }
+        .map(|(_, lengths)| {
+            lengths
+                .map(|length| if length == 0 { 1 } else { 0 })
+                .sum::<usize>()
         })
-        .sum()
+        .sum::<usize>()
+        + pr
 }
 
 /// Iterator adapter of parquet / dremel repetition levels
@@ -76,7 +64,7 @@ impl<'a> RepLevelsIter<'a> {
         let remaining_values = num_values(nested);
 
         let iter = iter(nested);
-        let remaining = std::iter::repeat(0).take(iter.len()).collect();
+        let remaining = vec![0; iter.len()];
 
         Self {
             iter,
@@ -92,28 +80,14 @@ impl<'a> Iterator for RepLevelsIter<'a> {
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if *self.remaining.last().unwrap() > 0 {
-            *self.remaining.last_mut().unwrap() -= 1;
-
-            let total = self.total;
-            self.total = 0;
-            let r = Some((self.current_level - total) as u32);
-
-            for level in 0..self.current_level - 1 {
-                let level = self.remaining.len() - level - 1;
-                if self.remaining[level] == 0 {
-                    self.current_level -= 1;
-                    self.remaining[level.saturating_sub(1)] -= 1;
-                }
-            }
-            if self.remaining[0] == 0 {
-                self.current_level -= 1;
-            }
+        if self.remaining_values == 0 {
+            return None;
+        }
+        if self.remaining.is_empty() {
             self.remaining_values -= 1;
-            return r;
+            return Some(0);
         }
 
-        self.total = 0;
         for (iter, remaining) in self
             .iter
             .iter_mut()
@@ -121,15 +95,34 @@ impl<'a> Iterator for RepLevelsIter<'a> {
             .skip(self.current_level)
         {
             let length: usize = iter.next()?;
-            if length == 0 {
-                self.remaining_values -= 1;
-                return Some(self.current_level as u32);
-            }
             *remaining = length;
+            if length == 0 {
+                break;
+            }
             self.current_level += 1;
             self.total += 1;
         }
-        self.next()
+
+        // track
+        if let Some(x) = self.remaining.get_mut(self.current_level.saturating_sub(1)) {
+            *x = x.saturating_sub(1)
+        }
+        let r = Some((self.current_level - self.total) as u32);
+
+        // update
+        for index in (1..self.current_level).rev() {
+            if self.remaining[index] == 0 {
+                self.current_level -= 1;
+                self.remaining[index - 1] -= 1;
+            }
+        }
+        if self.remaining[0] == 0 {
+            self.current_level = self.current_level.saturating_sub(1);
+        }
+        self.total = 0;
+        self.remaining_values -= 1;
+
+        r
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -147,8 +140,7 @@ mod tests {
     fn test(nested: Vec<Nested>, expected: Vec<u32>) {
         let mut iter = RepLevelsIter::new(&nested);
         assert_eq!(iter.size_hint().0, expected.len());
-        let result = iter.by_ref().collect::<Vec<_>>();
-        assert_eq!(result, expected);
+        assert_eq!(iter.by_ref().collect::<Vec<_>>(), expected);
         assert_eq!(iter.size_hint().0, 0);
     }
 
@@ -177,14 +169,13 @@ mod tests {
     #[test]
     fn l1() {
         let nested = vec![
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: false,
                 offsets: &[0, 2, 2, 5, 8, 8, 11, 11, 12],
                 validity: None,
             }),
             Nested::Primitive(None, false, 12),
         ];
-
         let expected = vec![0u32, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0];
 
         test(nested, expected)
@@ -193,12 +184,12 @@ mod tests {
     #[test]
     fn l2() {
         let nested = vec![
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: false,
                 offsets: &[0, 2, 2, 4],
                 validity: None,
             }),
-            Nested::List(ListNested::<i32> {
+            Nested::List(ListNested {
                 is_optional: false,
                 offsets: &[0, 3, 7, 8, 10],
                 validity: None,
@@ -220,7 +211,7 @@ mod tests {
         let nested = vec![
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0i32, 1, 2],
+                offsets: &[0, 1, 2],
                 validity: None,
             }),
             Nested::Struct(None, true, 2),
@@ -236,18 +227,141 @@ mod tests {
         let nested = vec![
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0i32, 2, 3],
+                offsets: &[0, 2, 3],
                 validity: None,
             }),
             Nested::Struct(None, true, 3),
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0i32, 3, 6, 7],
+                offsets: &[0, 3, 6, 7],
                 validity: None,
             }),
             Nested::Primitive(None, true, 7),
         ];
         let expected = vec![0, 2, 2, 1, 2, 2, 0];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn struct_list_optional() {
+        /*
+        {"f1": ["a", "b", None, "c"]}
+        */
+        let nested = vec![
+            Nested::Struct(None, true, 1),
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 4],
+                validity: None,
+            }),
+            Nested::Primitive(None, true, 4),
+        ];
+        let expected = vec![0, 1, 1, 1];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn l2_other() {
+        let nested = vec![
+            Nested::List(ListNested {
+                is_optional: false,
+                offsets: &[0, 1, 1, 3, 5, 5, 8, 8, 9],
+                validity: None,
+            }),
+            Nested::List(ListNested {
+                is_optional: false,
+                offsets: &[0, 2, 4, 5, 7, 8, 9, 10, 11, 12],
+                validity: None,
+            }),
+            Nested::Primitive(None, false, 12),
+        ];
+        let expected = vec![0, 2, 0, 0, 2, 1, 0, 2, 1, 0, 0, 1, 1, 0, 0];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn list_struct_list_1() {
+        /*
+        [
+            [{"a": ["a"]}, {"a": ["b"]}],
+            [],
+            [{"a": ["b"]}, None, {"a": ["b"]}],
+            [{"a": []}, {"a": []}, {"a": []}],
+            [],
+            [{"a": ["d"]}, {"a": ["a"]}, {"a": ["c", "d"]}],
+            [],
+            [{"a": []}],
+        ]
+        // reps: [0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0]
+        */
+        let nested = vec![
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 2, 2, 5, 8, 8, 11, 11, 12],
+                validity: None,
+            }),
+            Nested::Struct(None, true, 12),
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 1, 2, 3, 3, 4, 4, 4, 4, 5, 6, 8],
+                validity: None,
+            }),
+            Nested::Primitive(None, true, 8),
+        ];
+        let expected = vec![0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 2, 0];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn list_struct_list_2() {
+        /*
+        [
+            [{"a": []}],
+        ]
+        // reps: [0]
+        */
+        let nested = vec![
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 1],
+                validity: None,
+            }),
+            Nested::Struct(None, true, 12),
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 0],
+                validity: None,
+            }),
+            Nested::Primitive(None, true, 0),
+        ];
+        let expected = vec![0];
+
+        test(nested, expected)
+    }
+
+    #[test]
+    fn list_struct_list_3() {
+        let nested = vec![
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 1, 1],
+                validity: None,
+            }),
+            Nested::Struct(None, true, 12),
+            Nested::List(ListNested {
+                is_optional: true,
+                offsets: &[0, 0],
+                validity: None,
+            }),
+            Nested::Primitive(None, true, 0),
+        ];
+        let expected = vec![0, 0];
+        // [1, 0], [0]
+        // pick last
 
         test(nested, expected)
     }

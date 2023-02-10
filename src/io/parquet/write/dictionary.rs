@@ -75,7 +75,6 @@ fn serialize_levels(
     nested: &[Nested],
     options: WriteOptions,
     buffer: &mut Vec<u8>,
-    offset: usize,
 ) -> Result<(usize, usize)> {
     if nested.len() == 1 {
         let is_optional = is_nullable(&type_.field_info);
@@ -83,7 +82,7 @@ fn serialize_levels(
         let definition_levels_byte_length = buffer.len();
         Ok((0, definition_levels_byte_length))
     } else {
-        nested::write_rep_and_def(options.version, nested, buffer, offset)
+        nested::write_rep_and_def(options.version, nested, buffer)
     }
 }
 
@@ -115,23 +114,29 @@ fn serialize_keys<K: DictionaryKey>(
     let validity = normalized_validity(array);
     let (start, len) = slice_nested_leaf(nested);
 
+    let mut nested = nested.to_vec();
+    let array = array.slice(start, len);
+    if let Some(Nested::Primitive(_, _, c)) = nested.last_mut() {
+        *c = len;
+    } else {
+        unreachable!("")
+    }
+
     let (repetition_levels_byte_length, definition_levels_byte_length) = serialize_levels(
         validity.as_ref(),
         array.len(),
         &type_,
-        nested,
+        &nested,
         options,
         &mut buffer,
-        start,
     )?;
-    let array = array.slice(start, len);
 
     serialize_keys_values(&array, validity.as_ref(), &mut buffer)?;
 
     let (num_values, num_rows) = if nested.len() == 1 {
         (array.len(), array.len())
     } else {
-        (nested::num_values(nested), nested[0].len())
+        (nested::num_values(&nested), nested[0].len())
     };
 
     utils::build_plain_page(

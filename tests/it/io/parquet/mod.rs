@@ -22,6 +22,19 @@ mod write_async;
 
 type ArrayStats = (Box<dyn Array>, Statistics);
 
+fn new_struct(
+    arrays: Vec<Box<dyn Array>>,
+    names: Vec<String>,
+    validity: Option<Bitmap>,
+) -> StructArray {
+    let fields = names
+        .into_iter()
+        .zip(arrays.iter())
+        .map(|(n, a)| Field::new(n, a.data_type().clone(), true))
+        .collect();
+    StructArray::new(DataType::Struct(fields), arrays, validity)
+}
+
 pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayStats> {
     let metadata = p_read::read_metadata(&mut reader)?;
     let schema = p_read::infer_schema(&metadata)?;
@@ -70,8 +83,18 @@ pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
             let array: ListArray<i32> = a.into();
             Box::new(array)
         }
+        "empty" => {
+            // [None]
+            let data: [Option<Vec<Option<i64>>>; 0] = [];
+            let mut a = MutableListArray::<i32, MutablePrimitiveArray<i64>>::new();
+            a.try_extend(data).unwrap();
+            let array: ListArray<i32> = a.into();
+            Box::new(array)
+        }
         "struct_list_nullable" => {
-            // [["a", "b", None, "c"]]
+            // [
+            //      {"f1": ["a", "b", None, "c"]}
+            // ]
             let a = ListArray::<i32>::new(
                 DataType::List(Box::new(Field::new("item", DataType::Utf8, true))),
                 vec![0, 4].try_into().unwrap(),
@@ -81,6 +104,20 @@ pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
             StructArray::new(
                 DataType::Struct(vec![Field::new("f1", a.data_type().clone(), true)]),
                 vec![a.boxed()],
+                None,
+            )
+            .boxed()
+        }
+        "list_struct_list_nullable" => {
+            let values = pyarrow_nested_edge("struct_list_nullable");
+            ListArray::<i32>::new(
+                DataType::List(Box::new(Field::new(
+                    "item",
+                    values.data_type().clone(),
+                    true,
+                ))),
+                vec![0, 1].try_into().unwrap(),
+                values,
                 None,
             )
             .boxed()
@@ -171,7 +208,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 [""],
             ]
         */
-        "list_utf8" => Box::new(Utf8Array::<i32>::from([
+        "list_utf8" => Utf8Array::<i32>::from([
             Some("Hello".to_string()),
             Some("bbb".to_string()),
             Some("aa".to_string()),
@@ -184,7 +221,8 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             Some("bbb".to_string()),
             Some("bbb".to_string()),
             Some("".to_string()),
-        ])),
+        ])
+        .boxed(),
         "list_large_binary" => Box::new(BinaryArray::<i64>::from([
             Some(b"Hello".to_vec()),
             Some(b"bbb".to_vec()),
@@ -202,6 +240,105 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
         "list_nested_i64"
         | "list_nested_inner_required_i64"
         | "list_nested_inner_required_required_i64" => Box::new(NullArray::new(DataType::Null, 1)),
+        "struct_list_nullable" => pyarrow_nested_nullable("list_utf8"),
+        "list_struct_nullable" => {
+            let array = Utf8Array::<i32>::from([
+                Some("a"),
+                Some("b"),
+                //
+                Some("b"),
+                None,
+                Some("b"),
+                //
+                None,
+                None,
+                None,
+                //
+                Some("d"),
+                Some("d"),
+                Some("d"),
+                //
+                Some("e"),
+            ])
+            .boxed();
+            new_struct(
+                vec![array],
+                vec!["a".to_string()],
+                Some(
+                    [
+                        true, true, //
+                        true, false, true, //
+                        true, true, true, //
+                        true, true, true, //
+                        true,
+                    ]
+                    .into(),
+                ),
+            )
+            .boxed()
+        }
+        "list_struct_list_nullable" => {
+            /*
+            [
+                [{"a": ["a"]}, {"a": ["b"]}],
+                None,
+                [{"a": ["b"]}, None, {"a": ["b"]}],
+                [{"a": None}, {"a": None}, {"a": None}],
+                [],
+                [{"a": ["d"]}, {"a": [None]}, {"a": ["c", "d"]}],
+                None,
+                [{"a": []}],
+            ]
+            */
+            let array = Utf8Array::<i32>::from([
+                Some("a"),
+                Some("b"),
+                //
+                Some("b"),
+                Some("b"),
+                //
+                Some("d"),
+                None,
+                Some("c"),
+                Some("d"),
+            ])
+            .boxed();
+
+            let array = ListArray::<i32>::new(
+                DataType::List(Box::new(Field::new(
+                    "item",
+                    array.data_type().clone(),
+                    true,
+                ))),
+                vec![0, 1, 2, 3, 3, 4, 4, 4, 4, 5, 6, 8, 8]
+                    .try_into()
+                    .unwrap(),
+                array,
+                Some(
+                    [
+                        true, true, true, false, true, false, false, false, true, true, true, true,
+                    ]
+                    .into(),
+                ),
+            )
+            .boxed();
+
+            new_struct(
+                vec![array],
+                vec!["a".to_string()],
+                Some(
+                    [
+                        true, true, //
+                        true, false, true, //
+                        true, true, true, //
+                        true, true, true, //
+                        true,
+                    ]
+                    .into(),
+                ),
+            )
+            .boxed()
+        }
         other => unreachable!("{}", other),
     };
 
@@ -272,6 +409,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             let array: ListArray<i32> = a.into();
             Box::new(array)
         }
+        "struct_list_nullable" => new_struct(vec![values], vec!["a".to_string()], None).boxed(),
         _ => {
             let field = match column {
                 "list_int64" => Field::new("item", DataType::Int64, true),
@@ -280,6 +418,8 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 "list_bool" => Field::new("item", DataType::Boolean, true),
                 "list_utf8" => Field::new("item", DataType::Utf8, true),
                 "list_large_binary" => Field::new("item", DataType::LargeBinary, true),
+                "list_struct_nullable" => Field::new("item", values.data_type().clone(), true),
+                "list_struct_list_nullable" => Field::new("item", values.data_type().clone(), true),
                 other => unreachable!("{}", other),
             };
 
@@ -664,6 +804,116 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
             )
             .boxed(),
         },
+        "list_struct_nullable" => Statistics {
+            distinct_count: new_list(
+                new_struct(
+                    vec![UInt64Array::from([None]).boxed()],
+                    vec!["a".to_string()],
+                    None,
+                )
+                .boxed(),
+                true,
+            )
+            .boxed(),
+            null_count: new_list(
+                new_struct(
+                    vec![UInt64Array::from([Some(4)]).boxed()],
+                    vec!["a".to_string()],
+                    None,
+                )
+                .boxed(),
+                true,
+            )
+            .boxed(),
+            min_value: new_list(
+                new_struct(
+                    vec![Utf8Array::<i32>::from_slice(["a"]).boxed()],
+                    vec!["a".to_string()],
+                    None,
+                )
+                .boxed(),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                new_struct(
+                    vec![Utf8Array::<i32>::from_slice(["e"]).boxed()],
+                    vec!["a".to_string()],
+                    None,
+                )
+                .boxed(),
+                true,
+            )
+            .boxed(),
+        },
+        "list_struct_list_nullable" => Statistics {
+            distinct_count: new_list(
+                new_struct(
+                    vec![new_list(UInt64Array::from([None]).boxed(), true).boxed()],
+                    vec!["a".to_string()],
+                    None,
+                )
+                .boxed(),
+                true,
+            )
+            .boxed(),
+            null_count: new_list(
+                new_struct(
+                    vec![new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed()],
+                    vec!["a".to_string()],
+                    None,
+                )
+                .boxed(),
+                true,
+            )
+            .boxed(),
+            min_value: new_list(
+                new_struct(
+                    vec![new_list(Utf8Array::<i32>::from_slice(["a"]).boxed(), true).boxed()],
+                    vec!["a".to_string()],
+                    None,
+                )
+                .boxed(),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                new_struct(
+                    vec![new_list(Utf8Array::<i32>::from_slice(["d"]).boxed(), true).boxed()],
+                    vec!["a".to_string()],
+                    None,
+                )
+                .boxed(),
+                true,
+            )
+            .boxed(),
+        },
+        "struct_list_nullable" => Statistics {
+            distinct_count: new_struct(
+                vec![new_list(UInt64Array::from([None]).boxed(), true).boxed()],
+                vec!["a".to_string()],
+                None,
+            )
+            .boxed(),
+            null_count: new_struct(
+                vec![new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed()],
+                vec!["a".to_string()],
+                None,
+            )
+            .boxed(),
+            min_value: new_struct(
+                vec![new_list(Utf8Array::<i32>::from_slice([""]).boxed(), true).boxed()],
+                vec!["a".to_string()],
+                None,
+            )
+            .boxed(),
+            max_value: new_struct(
+                vec![new_list(Utf8Array::<i32>::from_slice(["ccc"]).boxed(), true).boxed()],
+                vec!["a".to_string()],
+                None,
+            )
+            .boxed(),
+        },
         other => todo!("{}", other),
     }
 }
@@ -700,9 +950,9 @@ pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
             min_value: new_list(Box::new(Int64Array::from([Some(0)]))).boxed(),
             max_value: new_list(Box::new(Int64Array::from([Some(1)]))).boxed(),
         },
-        "null" => Statistics {
+        "null" | "empty" => Statistics {
             distinct_count: new_list(UInt64Array::from([None]).boxed()).boxed(),
-            null_count: new_list(UInt64Array::from([Some(1)]).boxed()).boxed(),
+            null_count: new_list(UInt64Array::from([Some(0)]).boxed()).boxed(),
             min_value: new_list(Box::new(Int64Array::from([None]))).boxed(),
             max_value: new_list(Box::new(Int64Array::from([None]))).boxed(),
         },
@@ -725,6 +975,34 @@ pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
                 vec![new_list(Box::new(Utf8Array::<i32>::from_slice(["c"]))).boxed()],
                 names,
             )),
+        },
+        "list_struct_list_nullable" => Statistics {
+            distinct_count: new_list(
+                new_struct(
+                    vec![new_list(Box::new(UInt64Array::from([None]))).boxed()],
+                    names.clone(),
+                )
+                .boxed(),
+            )
+            .boxed(),
+            null_count: new_list(
+                new_struct(
+                    vec![new_list(Box::new(UInt64Array::from([Some(1)]))).boxed()],
+                    names.clone(),
+                )
+                .boxed(),
+            )
+            .boxed(),
+            min_value: new_list(Box::new(new_struct(
+                vec![new_list(Box::new(Utf8Array::<i32>::from_slice(["a"]))).boxed()],
+                names.clone(),
+            )))
+            .boxed(),
+            max_value: new_list(Box::new(new_struct(
+                vec![new_list(Box::new(Utf8Array::<i32>::from_slice(["c"]))).boxed()],
+                names,
+            )))
+            .boxed(),
         },
         _ => unreachable!(),
     }
@@ -798,14 +1076,8 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
 }
 
 pub fn pyarrow_struct_statistics(column: &str) -> Statistics {
-    let new_struct = |arrays: Vec<Box<dyn Array>>, names: Vec<String>| {
-        let fields = names
-            .into_iter()
-            .zip(arrays.iter())
-            .map(|(n, a)| Field::new(n, a.data_type().clone(), true))
-            .collect();
-        StructArray::new(DataType::Struct(fields), arrays, None)
-    };
+    let new_struct =
+        |arrays: Vec<Box<dyn Array>>, names: Vec<String>| new_struct(arrays, names, None);
 
     let names = vec!["f1".to_string(), "f2".to_string()];
 

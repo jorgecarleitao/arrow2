@@ -158,6 +158,34 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
         None,
         [""],
     ]
+
+    list_struct_nullable = [
+        [{"a": "a"}, {"a": "b"}],
+        None,
+        [{"a": "b"}, None, {"a": "b"}],
+        [{"a": None}, {"a": None}, {"a": None}],
+        [],
+        [{"a": "d"}, {"a": "d"}, {"a": "d"}],
+        None,
+        [{"a": "e"}],
+    ]
+
+    struct_list_nullable = pa.StructArray.from_arrays(
+        [pa.array(string)],
+        fields=[("a", pa.list_(pa.utf8()))],
+    )
+
+    list_struct_list_nullable = [
+        [{"a": ["a"]}, {"a": ["b"]}],
+        None,
+        [{"a": ["b"]}, None, {"a": ["b"]}],
+        [{"a": None}, {"a": None}, {"a": None}],
+        [],
+        [{"a": ["d"]}, {"a": [None]}, {"a": ["c", "d"]}],
+        None,
+        [{"a": []}],
+    ]
+
     fields = [
         pa.field("list_int64", pa.list_(pa.int64())),
         pa.field("list_int64_required", pa.list_(pa.field("item", pa.int64(), False))),
@@ -180,6 +208,18 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
         pa.field(
             "list_nested_inner_required_required_i64", pa.list_(pa.list_(pa.int64()))
         ),
+        pa.field(
+            "list_struct_nullable",
+            pa.list_(pa.struct([("a", pa.utf8())])),
+        ),
+        pa.field(
+            "struct_list_nullable",
+            pa.struct([("a", pa.list_(pa.utf8()))]),
+        ),
+        pa.field(
+            "list_struct_list_nullable",
+            pa.list_(pa.struct([("a", pa.list_(pa.utf8()))])),
+        ),
     ]
     schema = pa.schema(fields)
     return (
@@ -195,6 +235,9 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
             "list_nested_i64": items_nested,
             "list_nested_inner_required_i64": items_required_nested,
             "list_nested_inner_required_required_i64": items_required_nested_2,
+            "list_struct_nullable": list_struct_nullable,
+            "struct_list_nullable": struct_list_nullable,
+            "list_struct_list_nullable": list_struct_list_nullable,
         },
         schema,
         f"nested_nullable_10.parquet",
@@ -246,7 +289,9 @@ def case_struct() -> Tuple[dict, pa.Schema, str]:
     struct_nullable = pa.StructArray.from_arrays(
         [pa.array(string), pa.array(boolean)],
         fields=struct_fields,
-        mask=pa.array([False, False, True, False, False, False, False, False, False, False]),
+        mask=pa.array(
+            [False, False, True, False, False, False, False, False, False, False]
+        ),
     )
 
     return (
@@ -260,7 +305,20 @@ def case_struct() -> Tuple[dict, pa.Schema, str]:
             "struct_struct_nullable": pa.StructArray.from_arrays(
                 [struct, pa.array(boolean)],
                 names=["f1", "f2"],
-                mask=pa.array([False, False, True, False, False, False, False, False, False, False]),
+                mask=pa.array(
+                    [
+                        False,
+                        False,
+                        True,
+                        False,
+                        False,
+                        False,
+                        False,
+                        False,
+                        False,
+                        False,
+                    ]
+                ),
             ),
         },
         schema,
@@ -271,30 +329,48 @@ def case_struct() -> Tuple[dict, pa.Schema, str]:
 def case_nested_edge():
     simple = [[0, 1]]
     null = [None]
+    empty = [[]]
 
     struct_list_nullable = pa.StructArray.from_arrays(
         [pa.array([["a", "b", None, "c"]])],
-        fields=[
-            ("f1", pa.list_(pa.utf8())),
-        ],
+        fields=[("f1", pa.list_(pa.utf8()))],
     )
+
+    list_struct_list_nullable = pa.ListArray.from_arrays([0, 1], struct_list_nullable)
 
     fields = [
         pa.field("simple", pa.list_(pa.int64())),
         pa.field("null", pa.list_(pa.field("item", pa.int64(), True))),
+        pa.field("empty", pa.list_(pa.field("item", pa.int64(), True))),
         pa.field(
-                "struct_list_nullable",
-                pa.struct([
-                    ("f1", pa.list_(pa.utf8())),
-                ]),
-            )
+            "struct_list_nullable",
+            pa.struct(
+                [("f1", pa.list_(pa.utf8()))],
+            ),
+        ),
+        pa.field(
+            "list_struct_list_nullable",
+            pa.list_(
+                pa.field(
+                    "item",
+                    pa.struct(
+                        [
+                            ("f1", pa.list_(pa.utf8())),
+                        ]
+                    ),
+                    True,
+                )
+            ),
+        ),
     ]
     schema = pa.schema(fields)
     return (
         {
             "simple": simple,
             "null": null,
+            "empty": empty,
             "struct_list_nullable": struct_list_nullable,
+            "list_struct_list_nullable": list_struct_list_nullable,
         },
         schema,
         f"nested_edge_nullable_10.parquet",
