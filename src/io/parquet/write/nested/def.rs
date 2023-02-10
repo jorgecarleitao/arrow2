@@ -87,7 +87,7 @@ pub struct DefLevelsIter<'a> {
 }
 
 impl<'a> DefLevelsIter<'a> {
-    pub fn new(nested: &'a [Nested], _offset: usize) -> Self {
+    pub fn new(nested: &'a [Nested]) -> Self {
         let remaining_values = num_values(nested);
 
         let iter = iter(nested);
@@ -173,7 +173,7 @@ mod tests {
     use super::*;
 
     fn test(nested: Vec<Nested>, expected: Vec<u32>) {
-        let mut iter = DefLevelsIter::new(&nested, 0);
+        let mut iter = DefLevelsIter::new(&nested);
         assert_eq!(iter.size_hint().0, expected.len());
         let result = iter.by_ref().collect::<Vec<_>>();
         assert_eq!(result, expected);

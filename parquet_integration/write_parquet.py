@@ -472,7 +472,7 @@ def case_benches_required(size):
 
 
 # for read benchmarks
-for i in range(22, 22, 2):
+for i in range(10, 22, 2):
     # two pages (dict)
     write_pyarrow(case_benches(2**i), 1, True, False, None)
     # single page

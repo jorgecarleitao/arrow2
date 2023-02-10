@@ -26,11 +26,18 @@ where
     // By slicing the leaf array we also don't write too many values.
     let (start, len) = slice_nested_leaf(nested);
 
+    let mut nested = nested.to_vec();
+    let array = array.slice(start, len);
+    if let Some(Nested::Primitive(_, _, c)) = nested.last_mut() {
+        *c = len;
+    } else {
+        unreachable!("")
+    }
+
     let mut buffer = vec![];
     let (repetition_levels_byte_length, definition_levels_byte_length) =
-        nested::write_rep_and_def(options.version, nested, &mut buffer, start)?;
+        nested::write_rep_and_def(options.version, &nested, &mut buffer)?;
 
-    let array = array.slice(start, len);
     encode_plain(&array, is_optional, &mut buffer);
 
     let statistics = if options.write_statistics {
@@ -41,7 +48,7 @@ where
 
     utils::build_plain_page(
         buffer,
-        nested::num_values(nested),
+        nested::num_values(&nested),
         nested[0].len(),
         array.null_count(),
         repetition_levels_byte_length,

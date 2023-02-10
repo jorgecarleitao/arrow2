@@ -94,7 +94,7 @@ impl<'a> Iterator for RepLevelsIter<'a> {
             .zip(self.remaining.iter_mut())
             .skip(self.current_level)
         {
-            let length: usize = iter.next().unwrap_or_default();
+            let length: usize = iter.next()?;
             *remaining = length;
             if length == 0 {
                 break;
@@ -309,9 +309,9 @@ mod tests {
                 offsets: &[0, 1, 2, 3, 3, 4, 4, 4, 4, 5, 6, 8],
                 validity: None,
             }),
-            Nested::Primitive(None, true, 9),
+            Nested::Primitive(None, true, 8),
         ];
-        let expected = vec![0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 2, 0, 0];
+        let expected = vec![0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 2, 0];
 
         test(nested, expected)
     }
