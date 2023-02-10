@@ -548,8 +548,6 @@ mod tests {
     #[test]
     fn nested_list_struct_list_nullable() {
         /*
-            [List(ListNested { is_optional: true, offsets: [0, 2, 2, 5, 8, 8, 11, 11, 12], validity: Some([0b10111101]) }), Struct(Some([0b11110111, 0b____1111]), true, 12), List(ListNested { is_optional: true, offsets: [0, 1, 2, 3, 3, 4, 4, 4, 4, 5, 6, 8, 8], validity: Some([0b00010111, 0b____1111]) }), Primitive(Some([0b11011111]), true, 8)]
-
             [
             [{"a": ["a"]}, {"a": ["b"]}],
             None,
@@ -577,7 +575,6 @@ mod tests {
                 offsets: &[0, 2, 2, 5, 8, 8, 11, 11, 12],
                 validity: Some(&a),
             }),
-            // 0b11110111, 0b____1111
             Nested::Struct(Some(&b), true, 12),
             Nested::List(ListNested {
                 is_optional: true,
@@ -586,24 +583,6 @@ mod tests {
             }),
             Nested::Primitive(Some(&d), true, 8),
         ];
-        /*
-                0 6
-                1 6
-                0 0
-                0 6
-                1 2
-                1 6
-                0 3
-                1 3
-                1 3
-                0 1
-                0 6
-                1 5
-                1 6
-                2 6
-                0 0
-                0 4
-        */
         let expected = vec![6, 6, 0, 6, 2, 6, 3, 3, 3, 1, 6, 5, 6, 6, 0, 4];
 
         test(nested, expected)

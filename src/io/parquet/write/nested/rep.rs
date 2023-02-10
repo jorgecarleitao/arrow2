@@ -176,30 +176,6 @@ mod tests {
             }),
             Nested::Primitive(None, false, 12),
         ];
-        // [2, 0, 3, 3, 0, 3, 0, 1]
-        // 1)
-        //  a) 2 => remaining = [2], level = 1, total = 1
-        //  b) return 0
-        //  c) remaining = [1], total = 0
-        // 2)
-        //  a)
-        //  b) return 1
-        //  c) remaining = [0], => 1
-
-        //
-        /*
-        [
-            [False, True],
-            [],
-            [True, True, False],
-            [True, False, True],
-            [],
-            [False, False, False],
-            [],
-            [True],
-        ]
-        */
-
         let expected = vec![0u32, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0];
 
         test(nested, expected)
@@ -369,24 +345,6 @@ mod tests {
 
     #[test]
     fn list_struct_list_3() {
-        /*
-        [
-            [{"a": []}],
-            [],
-        ]
-        // reps: [0, 0]
-
-        // lengths: [[1, 0], [0]]
-        // 1)
-        //  a1) 1 => remaining = [1, 0], level = 1, total = 1
-        //  a2) 0 => remaining = [1, 0], level = 1, total = 1
-        //  b) return 0
-        //  c) remaining = [1, 0], level = 1, total = 0
-        // 2)
-        //  a) 0 => remaining = [1, 0], level = 1, total = 0
-        //  b) return 1
-        //  c) remaining = [0], => 1
-        */
         let nested = vec![
             Nested::List(ListNested {
                 is_optional: true,
