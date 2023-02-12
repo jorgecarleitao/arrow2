@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["read","APIs to read from CSV"],["read_async","Asynchronous reading of CSV"],["write","APIs to write to CSV"]]};
+window.SIDEBAR_ITEMS = {"mod":["read","read_async","write"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["write","Returns a visual representation of [`Chunk`]"]]};
+window.SIDEBAR_ITEMS = {"fn":["write"]};

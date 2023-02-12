@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["read","APIs to read from ODBC"],["write","APIs to write to ODBC"]]};
+window.SIDEBAR_ITEMS = {"mod":["read","write"]};

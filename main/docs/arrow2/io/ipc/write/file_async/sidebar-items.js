@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["FileSink","Sink that writes array `chunks` as an IPC file."]]};
+window.SIDEBAR_ITEMS = {"struct":["FileSink"]};

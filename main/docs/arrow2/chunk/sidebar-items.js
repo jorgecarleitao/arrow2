@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Chunk","A vector of trait objects of [`Array`] where every item has the same length, [`Chunk::len`]."]]};
+window.SIDEBAR_ITEMS = {"struct":["Chunk"]};

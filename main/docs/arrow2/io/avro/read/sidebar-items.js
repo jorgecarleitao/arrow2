@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["deserialize","Deserializes a [`Block`] assumed to be encoded according to [`AvroField`] into [`Chunk`], using `projection` to ignore `avro_fields`."],["infer_schema","Infers an [`Schema`] from the root [`Record`]. This"]],"struct":[["Reader","Single threaded, blocking reader of Avro; [`Iterator`] of [`Chunk`]."]]};
+window.SIDEBAR_ITEMS = {"fn":["deserialize","infer_schema"],"struct":["Reader"]};

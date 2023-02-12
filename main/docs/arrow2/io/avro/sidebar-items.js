@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["read","APIs to read from Avro format to arrow."],["write","APIs to write to Avro format."]]};
+window.SIDEBAR_ITEMS = {"mod":["read","write"]};
