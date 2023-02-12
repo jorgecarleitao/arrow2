@@ -34,7 +34,7 @@ let x = vec![1u32, 2, 3];
 let x: Buffer<u32> = x.into();
 assert_eq!(x.as_slice(), &[1u32, 2, 3]);
 
-let x = x.slice(1, 2); // O(1)
+let x = x.sliced(1, 2); // O(1)
 assert_eq!(x.as_slice(), &[2, 3]);
 # }
 ```

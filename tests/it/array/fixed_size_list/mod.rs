@@ -30,7 +30,7 @@ fn basics() {
     assert_eq!(array.value(0).as_ref(), Int32Array::from_slice([10, 20]));
     assert_eq!(array.value(1).as_ref(), Int32Array::from_slice([0, 0]));
 
-    let array = array.slice(1, 1);
+    let array = array.sliced(1, 1);
 
     assert_eq!(array.value(0).as_ref(), Int32Array::from_slice([0, 0]));
 }

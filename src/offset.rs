@@ -393,7 +393,22 @@ impl<O: Offset> OffsetsBuffer<O> {
         self.0.as_slice()
     }
 
-    /// Returns the last offset of this container, which is guaranteed to exist.
+    /// Returns the range of the offsets.
+    #[inline]
+    pub fn range(&self) -> O {
+        *self.last() - *self.first()
+    }
+
+    /// Returns the first offset.
+    #[inline]
+    pub fn first(&self) -> &O {
+        match self.0.first() {
+            Some(element) => element,
+            None => unsafe { unreachable_unchecked() },
+        }
+    }
+
+    /// Returns the last offset.
     #[inline]
     pub fn last(&self) -> &O {
         match self.0.last() {
@@ -423,13 +438,12 @@ impl<O: Offset> OffsetsBuffer<O> {
         (start, end)
     }
 
-    /// Returns a new [`OffsetsBuffer`] that is a slice of this buffer starting at `offset`.
-    /// Doing so allows the same memory region to be shared between buffers.
+    /// Slices this [`OffsetsBuffer`] starting at `offset`.
     /// # Safety
     /// The caller must ensure `offset + length <= self.len()`
     #[inline]
-    pub unsafe fn slice_unchecked(self, offset: usize, length: usize) -> Self {
-        Self(self.0.slice_unchecked(offset, length))
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.0.slice_unchecked(offset, length);
     }
 
     /// Returns an iterator with the lengths of the offsets

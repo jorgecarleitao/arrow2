@@ -51,16 +51,16 @@ fn test_list_offsets() {
     let a = create_list_array([Some(&[1, 2]), None, None, Some(&[3, 4]), None, None]);
     let b = create_list_array([Some(&[1, 2]), None, None, Some(&[3, 5]), None, None]);
 
-    let a_slice = a.slice(0, 3);
-    let b_slice = b.slice(0, 3);
+    let a_slice = a.clone().sliced(0, 3);
+    let b_slice = b.clone().sliced(0, 3);
     test_equal(&a_slice, &b_slice, true);
 
-    let a_slice = a.slice(0, 5);
-    let b_slice = b.slice(0, 5);
+    let a_slice = a.clone().sliced(0, 5);
+    let b_slice = b.clone().sliced(0, 5);
     test_equal(&a_slice, &b_slice, false);
 
-    let a_slice = a.slice(4, 1);
-    let b_slice = b.slice(4, 1);
+    let a_slice = a.sliced(4, 1);
+    let b_slice = b.sliced(4, 1);
     test_equal(&a_slice, &b_slice, true);
 }
 
@@ -78,7 +78,7 @@ fn test_bla() {
     ]));
     let validity = Bitmap::from([true, false, true]);
     let lhs = ListArray::<i32>::new(data_type, offsets, values, Some(validity));
-    let lhs = lhs.slice(1, 2);
+    let lhs = lhs.sliced(1, 2);
 
     let offsets = vec![0, 0, 3].try_into().unwrap();
     let data_type = ListArray::<i32>::default_datatype(DataType::Int32);

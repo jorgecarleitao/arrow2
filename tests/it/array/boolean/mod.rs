@@ -34,7 +34,7 @@ fn basics() {
     );
     assert_eq!(array, array2);
 
-    let array = array.slice(1, 2);
+    let array = array.sliced(1, 2);
     assert!(!array.value(0));
     assert!(!array.value(1));
 }

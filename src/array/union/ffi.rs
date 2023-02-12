@@ -50,7 +50,7 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for UnionArray {
             .collect::<Result<Vec<Box<dyn Array>>>>()?;
 
         if offset > 0 {
-            types = types.slice(offset, length);
+            types.slice(offset, length);
         };
 
         Self::try_new(data_type, types, fields, offsets)

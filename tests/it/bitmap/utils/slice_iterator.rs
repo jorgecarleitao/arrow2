@@ -132,7 +132,7 @@ fn past_end_should_not_be_returned() {
 #[test]
 fn sliced() {
     let values = Bitmap::from_u8_slice([0b11111010, 0b11111011], 16);
-    let values = values.slice(8, 2);
+    let values = values.sliced(8, 2);
     let iter = SlicesIterator::new(&values);
 
     let chunks = iter.collect::<Vec<_>>();
@@ -144,7 +144,7 @@ fn sliced() {
 #[test]
 fn remainder_1() {
     let values = Bitmap::from_u8_slice([0, 0, 0b00000000, 0b00010101], 27);
-    let values = values.slice(22, 5);
+    let values = values.sliced(22, 5);
     let iter = SlicesIterator::new(&values);
     let chunks = iter.collect::<Vec<_>>();
     assert_eq!(chunks, vec![(2, 1), (4, 1)]);

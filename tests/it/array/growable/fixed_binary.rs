@@ -26,7 +26,7 @@ fn basic() {
 fn offsets() {
     let array =
         FixedSizeBinaryArray::from_iter(vec![Some(b"ab"), Some(b"bc"), None, Some(b"fh")], 2);
-    let array = array.slice(1, 3);
+    let array = array.sliced(1, 3);
 
     let mut a = GrowableFixedSizeBinary::new(vec![&array], false, 0);
 
@@ -60,7 +60,7 @@ fn multiple_with_validity() {
 #[test]
 fn null_offset_validity() {
     let array = FixedSizeBinaryArray::from_iter(vec![Some("aa"), Some("bc"), None, Some("fh")], 2);
-    let array = array.slice(1, 3);
+    let array = array.sliced(1, 3);
 
     let mut a = GrowableFixedSizeBinary::new(vec![&array], true, 0);
 
@@ -78,7 +78,7 @@ fn null_offset_validity() {
 fn sized_offsets() {
     let array =
         FixedSizeBinaryArray::from_iter(vec![Some(&[0, 0]), Some(&[0, 1]), Some(&[0, 2])], 2);
-    let array = array.slice(1, 2);
+    let array = array.sliced(1, 2);
     // = [[0, 1], [0, 2]] due to the offset = 1
 
     let mut a = GrowableFixedSizeBinary::new(vec![&array], false, 0);

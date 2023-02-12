@@ -23,7 +23,7 @@ fn validity() {
 #[test]
 fn offsets() {
     let array = Utf8Array::<i32>::from([Some("a"), Some("bc"), None, Some("defh")]);
-    let array = array.slice(1, 3);
+    let array = array.sliced(1, 3);
 
     let mut a = GrowableUtf8::new(vec![&array], false, 0);
 
@@ -39,7 +39,7 @@ fn offsets() {
 #[test]
 fn offsets2() {
     let array = Utf8Array::<i32>::from([Some("a"), Some("bc"), None, Some("defh")]);
-    let array = array.slice(1, 3);
+    let array = array.sliced(1, 3);
 
     let mut a = GrowableUtf8::new(vec![&array], false, 0);
 
@@ -72,7 +72,7 @@ fn multiple_with_validity() {
 #[test]
 fn null_offset_validity() {
     let array = Utf8Array::<i32>::from([Some("a"), Some("bc"), None, Some("defh")]);
-    let array = array.slice(1, 3);
+    let array = array.sliced(1, 3);
 
     let mut a = GrowableUtf8::new(vec![&array], true, 0);
 

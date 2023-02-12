@@ -239,7 +239,7 @@ unsafe fn create_buffer<T: NativeType>(
     let offset = buffer_offset(array, data_type, index);
     let bytes = Bytes::from_foreign(ptr, len, owner);
 
-    Ok(Buffer::from_bytes(bytes).slice(offset, len - offset))
+    Ok(Buffer::from_bytes(bytes).sliced(offset, len - offset))
 }
 
 /// returns the buffer `i` of `array` interpreted as a [`Bitmap`].
@@ -260,7 +260,7 @@ unsafe fn create_bitmap(
     let bytes_len = bytes_for(offset + len);
     let bytes = Bytes::from_foreign(ptr, bytes_len, owner);
 
-    Ok(Bitmap::from_bytes(bytes, offset + len).slice(offset, len))
+    Ok(Bitmap::from_bytes(bytes, offset + len).sliced(offset, len))
 }
 
 fn buffer_offset(array: &ArrowArray, data_type: &DataType, i: usize) -> usize {

@@ -224,7 +224,7 @@ fn write_list<O: Offset>(
     write(
         array
             .values()
-            .slice(first.to_usize(), last.to_usize() - first.to_usize())
+            .sliced(first.to_usize(), last.to_usize() - first.to_usize())
             .as_ref(),
         buffers,
         arrow_data,
@@ -352,7 +352,7 @@ fn write_map(
     write(
         array
             .field()
-            .slice(first as usize, last as usize - first as usize)
+            .sliced(first as usize, last as usize - first as usize)
             .as_ref(),
         buffers,
         arrow_data,

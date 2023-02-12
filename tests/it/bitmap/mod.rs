@@ -21,7 +21,7 @@ pub(crate) fn bitmap_strategy() -> impl Strategy<Value = Bitmap> {
         })
         .prop_flat_map(|(vec, index, len)| {
             let bitmap = Bitmap::from(&vec);
-            let bitmap = bitmap.slice(index, len);
+            let bitmap = bitmap.sliced(index, len);
             Just(bitmap)
         })
 }
@@ -49,12 +49,12 @@ fn eq_len() {
 
 #[test]
 fn eq_slice() {
-    let lhs = create_bitmap([0b10101010], 8).slice(1, 7);
-    let rhs = create_bitmap([0b10101011], 8).slice(1, 7);
+    let lhs = create_bitmap([0b10101010], 8).sliced(1, 7);
+    let rhs = create_bitmap([0b10101011], 8).sliced(1, 7);
     assert!(lhs == rhs);
 
-    let lhs = create_bitmap([0b10101010], 8).slice(2, 6);
-    let rhs = create_bitmap([0b10101110], 8).slice(2, 6);
+    let lhs = create_bitmap([0b10101010], 8).sliced(2, 6);
+    let rhs = create_bitmap([0b10101110], 8).sliced(2, 6);
     assert!(lhs != rhs);
 }
 
@@ -89,9 +89,9 @@ fn or_large() {
 
 #[test]
 fn and_offset() {
-    let lhs = create_bitmap([0b01101011], 8).slice(1, 7);
-    let rhs = create_bitmap([0b01001111], 8).slice(1, 7);
-    let expected = create_bitmap([0b01001010], 8).slice(1, 7);
+    let lhs = create_bitmap([0b01101011], 8).sliced(1, 7);
+    let rhs = create_bitmap([0b01001111], 8).sliced(1, 7);
+    let expected = create_bitmap([0b01001010], 8).sliced(1, 7);
     assert_eq!(&lhs & &rhs, expected);
 }
 
@@ -115,11 +115,11 @@ fn subslicing_gives_correct_null_count() {
     let base = Bitmap::from([false, true, true, false, false, true, true, true]);
     assert_eq!(base.unset_bits(), 3);
 
-    let view1 = base.clone().slice(0, 1);
-    let view2 = base.slice(1, 7);
+    let view1 = base.clone().sliced(0, 1);
+    let view2 = base.sliced(1, 7);
     assert_eq!(view1.unset_bits(), 1);
     assert_eq!(view2.unset_bits(), 2);
 
-    let view3 = view2.slice(0, 1);
+    let view3 = view2.sliced(0, 1);
     assert_eq!(view3.unset_bits(), 0);
 }

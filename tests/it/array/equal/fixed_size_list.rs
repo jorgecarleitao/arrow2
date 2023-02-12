@@ -70,15 +70,15 @@ fn test_fixed_list_offsets() {
     let b =
         create_fixed_size_list_array([Some(&[1, 2, 3]), None, None, Some(&[3, 6, 9]), None, None]);
 
-    let a_slice = a.slice(0, 3);
-    let b_slice = b.slice(0, 3);
+    let a_slice = a.clone().sliced(0, 3);
+    let b_slice = b.clone().sliced(0, 3);
     test_equal(&a_slice, &b_slice, true);
 
-    let a_slice = a.slice(0, 5);
-    let b_slice = b.slice(0, 5);
+    let a_slice = a.clone().sliced(0, 5);
+    let b_slice = b.clone().sliced(0, 5);
     test_equal(&a_slice, &b_slice, false);
 
-    let a_slice = a.slice(4, 1);
-    let b_slice = b.slice(4, 1);
+    let a_slice = a.sliced(4, 1);
+    let b_slice = b.sliced(4, 1);
     test_equal(&a_slice, &b_slice, true);
 }

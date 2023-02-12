@@ -160,7 +160,7 @@ pub(crate) fn align(bitmap: &Bitmap, new_offset: usize) -> Bitmap {
         .chain(bitmap.iter())
         .collect();
 
-    bitmap.slice(new_offset, length)
+    bitmap.sliced(new_offset, length)
 }
 
 #[inline]

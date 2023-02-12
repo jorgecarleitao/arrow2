@@ -72,9 +72,9 @@ fn primitive_arrays() -> Result<()> {
 
 #[test]
 fn primitive_array_slices() -> Result<()> {
-    let input_1 = Int64Array::from(&[Some(-1), Some(-1), Some(2), None, None]).slice(1, 3);
+    let input_1 = Int64Array::from(&[Some(-1), Some(-1), Some(2), None, None]).sliced(1, 3);
 
-    let input_2 = Int64Array::from(&[Some(101), Some(102), Some(103), None]).slice(1, 3);
+    let input_2 = Int64Array::from(&[Some(101), Some(102), Some(103), None]).sliced(1, 3);
     let arr = concatenate(&[&input_1, &input_2])?;
 
     let expected_output = Int64Array::from(&[Some(-1), Some(2), None, Some(102), Some(103), None]);

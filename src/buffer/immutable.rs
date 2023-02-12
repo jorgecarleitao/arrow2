@@ -26,8 +26,9 @@ use super::IntoIter;
 ///
 /// // cloning and slicing is `O(1)` (data is shared)
 /// let mut buffer: Buffer<u32> = vec![1, 2, 3].into();
-/// let slice = buffer.clone().slice(1, 1);
-/// assert_eq!(slice.as_ref(), [2].as_ref());
+/// let mut sliced = buffer.clone();
+/// sliced.slice(1, 1);
+/// assert_eq!(sliced.as_ref(), [2].as_ref());
 /// // but cloning forbids getting mut since `slice` and `buffer` now share data
 /// assert_eq!(buffer.get_mut(), None);
 /// ```
@@ -121,7 +122,20 @@ impl<T> Buffer<T> {
     /// # Panics
     /// Panics iff `offset` is larger than `len`.
     #[inline]
-    pub fn slice(self, offset: usize, length: usize) -> Self {
+    pub fn sliced(self, offset: usize, length: usize) -> Self {
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        // Safety: we just checked bounds
+        unsafe { self.sliced_unchecked(offset, length) }
+    }
+
+    /// Slices this buffer starting at `offset`.
+    /// # Panics
+    /// Panics iff `offset` is larger than `len`.
+    #[inline]
+    pub fn slice(&mut self, offset: usize, length: usize) {
         assert!(
             offset + length <= self.len(),
             "the offset of the new Buffer cannot exceed the existing length"
@@ -135,10 +149,19 @@ impl<T> Buffer<T> {
     /// # Safety
     /// The caller must ensure `offset + length <= self.len()`
     #[inline]
-    pub unsafe fn slice_unchecked(mut self, offset: usize, length: usize) -> Self {
+    #[must_use]
+    pub unsafe fn sliced_unchecked(mut self, offset: usize, length: usize) -> Self {
+        self.slice_unchecked(offset, length);
+        self
+    }
+
+    /// Slices this buffer starting at `offset`.
+    /// # Safety
+    /// The caller must ensure `offset + length <= self.len()`
+    #[inline]
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
         self.offset += offset;
         self.length = length;
-        self
     }
 
     /// Returns a pointer to the start of this buffer.

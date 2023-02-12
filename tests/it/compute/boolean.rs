@@ -126,8 +126,8 @@ fn array_and_sliced_same_offset() {
         false, false, false, false, false, false, false, false, false, true, false, true,
     ]);
 
-    let a = a.slice(8, 4);
-    let b = b.slice(8, 4);
+    let a = a.sliced(8, 4);
+    let b = b.sliced(8, 4);
     let c = and(&a, &b);
 
     let expected = BooleanArray::from_slice(vec![false, false, false, true]);
@@ -144,8 +144,8 @@ fn array_and_sliced_same_offset_mod8() {
         false, false, false, false, false, false, false, false, false, true, false, true,
     ]);
 
-    let a = a.slice(0, 4);
-    let b = b.slice(8, 4);
+    let a = a.sliced(0, 4);
+    let b = b.sliced(8, 4);
 
     let c = and(&a, &b);
 
@@ -161,7 +161,7 @@ fn array_and_sliced_offset1() {
     ]);
     let b = BooleanArray::from_slice(vec![false, true, false, true]);
 
-    let a = a.slice(8, 4);
+    let a = a.sliced(8, 4);
 
     let c = and(&a, &b);
 
@@ -177,7 +177,7 @@ fn array_and_sliced_offset2() {
         false, false, false, false, false, false, false, false, false, true, false, true,
     ]);
 
-    let b = b.slice(8, 4);
+    let b = b.sliced(8, 4);
 
     let c = and(&a, &b);
 
@@ -189,7 +189,7 @@ fn array_and_sliced_offset2() {
 #[test]
 fn array_and_validity_offset() {
     let a = BooleanArray::from(vec![None, Some(false), Some(true), None, Some(true)]);
-    let a = a.slice(1, 4);
+    let a = a.sliced(1, 4);
     let a = a.as_any().downcast_ref::<BooleanArray>().unwrap();
 
     let b = BooleanArray::from(vec![
@@ -201,7 +201,7 @@ fn array_and_validity_offset() {
         Some(true),
     ]);
 
-    let b = b.slice(2, 4);
+    let b = b.sliced(2, 4);
     let b = b.as_any().downcast_ref::<BooleanArray>().unwrap();
 
     let c = and(a, b);
@@ -225,7 +225,7 @@ fn test_nonnull_array_is_null() {
 #[test]
 fn test_nonnull_array_with_offset_is_null() {
     let a = Int32Array::from_slice(vec![1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1]);
-    let a = a.slice(8, 4);
+    let a = a.sliced(8, 4);
 
     let res = is_null(&a);
 
@@ -248,7 +248,7 @@ fn test_nonnull_array_is_not_null() {
 #[test]
 fn test_nonnull_array_with_offset_is_not_null() {
     let a = Int32Array::from_slice([1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1]);
-    let a = a.slice(8, 4);
+    let a = a.sliced(8, 4);
 
     let res = is_not_null(&a);
 
@@ -289,7 +289,7 @@ fn test_nullable_array_with_offset_is_null() {
         None,
         None,
     ]);
-    let a = a.slice(8, 4);
+    let a = a.sliced(8, 4);
 
     let res = is_null(&a);
 
@@ -330,7 +330,7 @@ fn test_nullable_array_with_offset_is_not_null() {
         None,
         None,
     ]);
-    let a = a.slice(8, 4);
+    let a = a.sliced(8, 4);
 
     let res = is_not_null(&a);
 

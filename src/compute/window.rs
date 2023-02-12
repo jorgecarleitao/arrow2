@@ -49,7 +49,7 @@ pub fn shift(array: &dyn Array, offset: i64) -> Result<Box<dyn Array>> {
     // Compute slice
     let slice_offset = clamp(-offset, 0, array.len() as i64) as usize;
     let length = array.len() - abs(offset) as usize;
-    let slice = array.slice(slice_offset, length);
+    let slice = array.sliced(slice_offset, length);
 
     // Generate array with remaining `null` items
     let nulls = abs(offset) as usize;

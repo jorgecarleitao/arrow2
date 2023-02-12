@@ -26,7 +26,7 @@ fn round_trip(array: Box<dyn Array>) -> Result<()> {
 #[test]
 fn utf8() -> Result<()> {
     let array = Utf8Array::<i32>::from([None, None, Some("bb")])
-        .slice(1, 2)
+        .sliced(1, 2)
         .boxed();
     round_trip(array)
 }
@@ -34,24 +34,24 @@ fn utf8() -> Result<()> {
 #[test]
 fn fixed_size_binary() -> Result<()> {
     let array = FixedSizeBinaryArray::from([None, None, Some([1, 2])])
-        .slice(1, 2)
-        .boxed();
+        .boxed()
+        .sliced(1, 2);
     round_trip(array)
 }
 
 #[test]
 fn primitive() -> Result<()> {
     let array = PrimitiveArray::<i32>::from([None, None, Some(3)])
-        .slice(1, 2)
-        .boxed();
+        .boxed()
+        .sliced(1, 2);
     round_trip(array)
 }
 
 #[test]
 fn boolean() -> Result<()> {
     let array = BooleanArray::from([None, None, Some(true)])
-        .slice(1, 2)
-        .boxed();
+        .boxed()
+        .sliced(1, 2);
     round_trip(array)
 }
 
@@ -73,7 +73,7 @@ fn fixed_size_list() -> Result<()> {
     array.try_extend(data)?;
 
     let array: FixedSizeListArray = array.into();
-    round_trip(array.slice(1, 2).boxed())
+    round_trip(array.sliced(1, 2).boxed())
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn list() -> Result<()> {
 
     let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
     array.try_extend(data).unwrap();
-    let array = array.into_box().slice(1, 2);
+    let array = array.into_box().sliced(1, 2);
     round_trip(array)
 }
 
@@ -99,8 +99,8 @@ fn struct_() -> Result<()> {
         vec![array],
         Some([true, true, false, true, false].into()),
     )
-    .slice(1, 4)
-    .boxed();
+    .boxed()
+    .sliced(1, 4);
 
     round_trip(array)
 }
@@ -112,8 +112,8 @@ fn dict() -> Result<()> {
     let values = PrimitiveArray::<i32>::from_slice([0, 1, 2, 3, 4, 5]).boxed();
 
     let array = DictionaryArray::try_from_keys(keys, values)?
-        .slice(1, 4)
-        .boxed();
+        .boxed()
+        .sliced(1, 4);
 
     round_trip(array)
 }

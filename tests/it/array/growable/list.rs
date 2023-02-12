@@ -70,7 +70,7 @@ fn null_offset() {
         Some(vec![Some(6i32), Some(7), Some(8)]),
     ];
     let array = create_list_array(data);
-    let array = array.slice(1, 2);
+    let array = array.sliced(1, 2);
 
     let mut a = GrowableList::new(vec![&array], false, 0);
     a.extend(0, 1, 1);
@@ -92,7 +92,7 @@ fn null_offsets() {
         Some(vec![Some(6i32), None, Some(8)]),
     ];
     let array = create_list_array(data);
-    let array = array.slice(1, 2);
+    let array = array.sliced(1, 2);
 
     let mut a = GrowableList::new(vec![&array], false, 0);
     a.extend(0, 1, 1);

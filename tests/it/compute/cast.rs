@@ -102,7 +102,7 @@ fn i32_to_u8() {
 #[test]
 fn i32_to_u8_sliced() {
     let array = Int32Array::from_slice([-5, 6, -7, 8, 100000000]);
-    let array = array.slice(2, 3);
+    let array = array.sliced(2, 3);
     let b = cast(&array, &DataType::UInt8, CastOptions::default()).unwrap();
     let expected = UInt8Array::from(&[None, Some(8), None]);
     let c = b.as_any().downcast_ref::<UInt8Array>().unwrap();
@@ -170,7 +170,7 @@ fn i32_to_list_f64_nullable_sliced() {
 
     let array = Int32Array::from(input);
 
-    let array = array.slice(2, 4);
+    let array = array.sliced(2, 4);
     let b = cast(
         &array,
         &DataType::List(Box::new(Field::new("item", DataType::Float64, true))),

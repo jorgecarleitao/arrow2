@@ -143,14 +143,13 @@ impl BooleanArray {
         self.values.get_bit_unchecked(i)
     }
 
-    /// Returns a slice of this [`BooleanArray`].
+    /// Slices this [`BooleanArray`].
     /// # Implementation
     /// This operation is `O(1)` as it amounts to increase up to two ref counts.
     /// # Panic
     /// This function panics iff `offset + length > self.len()`.
     #[inline]
-    #[must_use]
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
+    pub fn slice(&mut self, offset: usize, length: usize) {
         assert!(
             offset + length <= self.len(),
             "the offset of the new Buffer cannot exceed the existing length"
@@ -158,25 +157,21 @@ impl BooleanArray {
         unsafe { self.slice_unchecked(offset, length) }
     }
 
-    /// Returns a slice of this [`BooleanArray`].
+    /// Slices this [`BooleanArray`].
     /// # Implementation
     /// This operation is `O(1)` as it amounts to increase two ref counts.
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
     #[inline]
-    #[must_use]
-    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
-        let validity = self
-            .validity
-            .clone()
-            .map(|bitmap| bitmap.slice_unchecked(offset, length))
-            .and_then(|bitmap| (bitmap.unset_bits() > 0).then(|| bitmap));
-        Self {
-            data_type: self.data_type.clone(),
-            values: self.values.clone().slice_unchecked(offset, length),
-            validity,
-        }
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.validity.as_mut().and_then(|bitmap| {
+            bitmap.slice_unchecked(offset, length);
+            (bitmap.unset_bits() > 0).then(|| bitmap)
+        });
+        self.values.slice_unchecked(offset, length);
     }
+
+    impl_sliced!();
 
     /// Returns this [`BooleanArray`] with a new validity.
     /// # Panic
@@ -400,13 +395,15 @@ impl Array for BooleanArray {
     }
 
     #[inline]
-    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice(offset, length))
+    fn slice(&mut self, offset: usize, length: usize) {
+        self.slice(offset, length)
     }
+
     #[inline]
-    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice_unchecked(offset, length))
+    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.slice_unchecked(offset, length)
     }
+
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.clone().with_validity(validity))
     }

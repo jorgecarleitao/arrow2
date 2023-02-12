@@ -31,12 +31,12 @@ fn test_boolean_equal_offset() {
     let b = BooleanArray::from_slice(vec![true, false, false, false, true, false, true, true]);
     test_equal(&a, &b, false);
 
-    let a_slice = a.slice(2, 3);
-    let b_slice = b.slice(3, 3);
+    let a_slice = a.sliced(2, 3);
+    let b_slice = b.sliced(3, 3);
     test_equal(&a_slice, &b_slice, true);
 
-    let a_slice = a.slice(3, 4);
-    let b_slice = b.slice(4, 4);
+    let a_slice = a.sliced(3, 4);
+    let b_slice = b.sliced(4, 4);
     test_equal(&a_slice, &b_slice, false);
 
     // Elements fill in `u8`'s exactly.

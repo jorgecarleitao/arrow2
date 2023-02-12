@@ -27,7 +27,7 @@ fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
     _test_round_trip(array.clone(), clone(expected.as_ref()))?;
 
     // sliced
-    _test_round_trip(array.slice(1, 2), expected.slice(1, 2))
+    _test_round_trip(array.sliced(1, 2), expected.sliced(1, 2))
 }
 
 fn test_round_trip_schema(field: Field) -> Result<()> {
@@ -53,7 +53,7 @@ fn bool() -> Result<()> {
 
 #[test]
 fn bool_nullable_sliced() -> Result<()> {
-    let bitmap = Bitmap::from([true, false, false, true]).slice(1, 3);
+    let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
     let data = BooleanArray::try_new(DataType::Boolean, [true, true, false].into(), Some(bitmap))?;
     test_round_trip(data)
 }
@@ -72,7 +72,7 @@ fn u32() -> Result<()> {
 
 #[test]
 fn u32_sliced() -> Result<()> {
-    let bitmap = Bitmap::from([true, false, false, true]).slice(1, 3);
+    let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
     let data = Int32Array::try_new(DataType::Int32, vec![1, 2, 3].into(), Some(bitmap))?;
     test_round_trip(data)
 }
@@ -112,7 +112,7 @@ fn utf8() -> Result<()> {
 
 #[test]
 fn utf8_sliced() -> Result<()> {
-    let bitmap = Bitmap::from([true, false, false, true]).slice(1, 3);
+    let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
     let data = Utf8Array::<i32>::try_new(
         DataType::Utf8,
         vec![0, 1, 1, 2].try_into().unwrap(),
@@ -142,7 +142,7 @@ fn binary() -> Result<()> {
 
 #[test]
 fn binary_sliced() -> Result<()> {
-    let bitmap = Bitmap::from([true, false, false, true]).slice(1, 3);
+    let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
     let data = BinaryArray::<i32>::try_new(
         DataType::Binary,
         vec![0, 1, 1, 2].try_into().unwrap(),
@@ -180,7 +180,7 @@ fn fixed_size_binary_nullable() -> Result<()> {
 
 #[test]
 fn fixed_size_binary_sliced() -> Result<()> {
-    let bitmap = Bitmap::from([true, false, false, true]).slice(1, 3);
+    let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
     let data = FixedSizeBinaryArray::try_new(
         DataType::FixedSizeBinary(2),
         b"ababab".to_vec().into(),
@@ -207,7 +207,7 @@ fn list() -> Result<()> {
 
 #[test]
 fn list_sliced() -> Result<()> {
-    let bitmap = Bitmap::from([true, false, false, true]).slice(1, 3);
+    let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
 
     let array = ListArray::<i32>::try_new(
         DataType::List(Box::new(Field::new("a", DataType::Int32, true))),
@@ -253,7 +253,7 @@ fn fixed_size_list() -> Result<()> {
 
 #[test]
 fn fixed_size_list_sliced() -> Result<()> {
-    let bitmap = Bitmap::from([true, false, false, true]).slice(1, 3);
+    let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
 
     let array = FixedSizeListArray::try_new(
         DataType::FixedSizeList(Box::new(Field::new("a", DataType::Int32, true)), 2),
