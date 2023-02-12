@@ -240,7 +240,8 @@ impl<O: Offset> BinaryArray<O> {
     }
 
     /// Try to convert this `BinaryArray` to a `MutableBinaryArray`
-    pub fn into_mut(mut self) -> Either<Self, MutableBinaryArray<O>> {
+    #[must_use]
+    pub fn into_mut(self) -> Either<Self, MutableBinaryArray<O>> {
         use Either::*;
         if let Some(bitmap) = self.validity {
             match bitmap.into_mut() {
@@ -251,29 +252,26 @@ impl<O: Offset> BinaryArray<O> {
                     self.values,
                     Some(bitmap),
                 )),
-                Right(mutable_bitmap) => match (
-                    self.values.get_mut().map(std::mem::take),
-                    self.offsets.get_mut(),
-                ) {
-                    (None, None) => Left(BinaryArray::new(
+                Right(mutable_bitmap) => match (self.values.into_mut(), self.offsets.into_mut()) {
+                    (Left(values), Left(offsets)) => Left(BinaryArray::new(
                         self.data_type,
-                        self.offsets,
-                        self.values,
+                        offsets,
+                        values,
                         Some(mutable_bitmap.into()),
                     )),
-                    (None, Some(offsets)) => Left(BinaryArray::new(
+                    (Left(values), Right(offsets)) => Left(BinaryArray::new(
                         self.data_type,
                         offsets.into(),
-                        self.values,
+                        values,
                         Some(mutable_bitmap.into()),
                     )),
-                    (Some(mutable_values), None) => Left(BinaryArray::new(
+                    (Right(values), Left(offsets)) => Left(BinaryArray::new(
                         self.data_type,
-                        self.offsets,
-                        mutable_values.into(),
+                        offsets,
+                        values.into(),
                         Some(mutable_bitmap.into()),
                     )),
-                    (Some(values), Some(offsets)) => Right(
+                    (Right(values), Right(offsets)) => Right(
                         MutableBinaryArray::try_new(
                             self.data_type,
                             offsets,
@@ -285,29 +283,23 @@ impl<O: Offset> BinaryArray<O> {
                 },
             }
         } else {
-            match (
-                self.values.get_mut().map(std::mem::take),
-                self.offsets.get_mut(),
-            ) {
-                (None, None) => Left(BinaryArray::new(
-                    self.data_type,
-                    self.offsets,
-                    self.values,
-                    None,
-                )),
-                (None, Some(offsets)) => Left(BinaryArray::new(
+            match (self.values.into_mut(), self.offsets.into_mut()) {
+                (Left(values), Left(offsets)) => {
+                    Left(BinaryArray::new(self.data_type, offsets, values, None))
+                }
+                (Left(values), Right(offsets)) => Left(BinaryArray::new(
                     self.data_type,
                     offsets.into(),
-                    self.values,
+                    values,
                     None,
                 )),
-                (Some(values), None) => Left(BinaryArray::new(
+                (Right(values), Left(offsets)) => Left(BinaryArray::new(
                     self.data_type,
-                    self.offsets,
+                    offsets,
                     values.into(),
                     None,
                 )),
-                (Some(values), Some(offsets)) => Right(
+                (Right(values), Right(offsets)) => Right(
                     MutableBinaryArray::try_new(self.data_type, offsets, values, None).unwrap(),
                 ),
             }

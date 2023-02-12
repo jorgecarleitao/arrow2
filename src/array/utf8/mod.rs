@@ -261,7 +261,8 @@ impl<O: Offset> Utf8Array<O> {
     }
 
     /// Try to convert this `Utf8Array` to a `MutableUtf8Array`
-    pub fn into_mut(mut self) -> Either<Self, MutableUtf8Array<O>> {
+    #[must_use]
+    pub fn into_mut(self) -> Either<Self, MutableUtf8Array<O>> {
         use Either::*;
         if let Some(bitmap) = self.validity {
             match bitmap.into_mut() {
@@ -274,44 +275,41 @@ impl<O: Offset> Utf8Array<O> {
                         Some(bitmap),
                     )
                 }),
-                Right(mutable_bitmap) => match (
-                    self.values.get_mut().map(std::mem::take),
-                    self.offsets.get_mut(),
-                ) {
-                    (None, None) => {
+                Right(mutable_bitmap) => match (self.values.into_mut(), self.offsets.into_mut()) {
+                    (Left(values), Left(offsets)) => {
                         // Safety: invariants are preserved
                         Left(unsafe {
                             Utf8Array::new_unchecked(
                                 self.data_type,
-                                self.offsets,
-                                self.values,
+                                offsets,
+                                values,
                                 Some(mutable_bitmap.into()),
                             )
                         })
                     }
-                    (None, Some(offsets)) => {
+                    (Left(values), Right(offsets)) => {
                         // Safety: invariants are preserved
                         Left(unsafe {
                             Utf8Array::new_unchecked(
                                 self.data_type,
                                 offsets.into(),
-                                self.values,
+                                values,
                                 Some(mutable_bitmap.into()),
                             )
                         })
                     }
-                    (Some(mutable_values), None) => {
+                    (Right(values), Left(offsets)) => {
                         // Safety: invariants are preserved
                         Left(unsafe {
                             Utf8Array::new_unchecked(
                                 self.data_type,
-                                self.offsets,
-                                mutable_values.into(),
+                                offsets,
+                                values.into(),
                                 Some(mutable_bitmap.into()),
                             )
                         })
                     }
-                    (Some(values), Some(offsets)) => Right(unsafe {
+                    (Right(values), Right(offsets)) => Right(unsafe {
                         MutableUtf8Array::new_unchecked(
                             self.data_type,
                             offsets,
@@ -322,20 +320,17 @@ impl<O: Offset> Utf8Array<O> {
                 },
             }
         } else {
-            match (
-                self.values.get_mut().map(std::mem::take),
-                self.offsets.get_mut(),
-            ) {
-                (None, None) => Left(unsafe {
-                    Utf8Array::new_unchecked(self.data_type, self.offsets, self.values, None)
+            match (self.values.into_mut(), self.offsets.into_mut()) {
+                (Left(values), Left(offsets)) => {
+                    Left(unsafe { Utf8Array::new_unchecked(self.data_type, offsets, values, None) })
+                }
+                (Left(values), Right(offsets)) => Left(unsafe {
+                    Utf8Array::new_unchecked(self.data_type, offsets.into(), values, None)
                 }),
-                (None, Some(offsets)) => Left(unsafe {
-                    Utf8Array::new_unchecked(self.data_type, offsets.into(), self.values, None)
+                (Right(values), Left(offsets)) => Left(unsafe {
+                    Utf8Array::new_unchecked(self.data_type, offsets, values.into(), None)
                 }),
-                (Some(values), None) => Left(unsafe {
-                    Utf8Array::new_unchecked(self.data_type, self.offsets, values.into(), None)
-                }),
-                (Some(values), Some(offsets)) => Right(unsafe {
+                (Right(values), Right(offsets)) => Right(unsafe {
                     MutableUtf8Array::new_unchecked(self.data_type, offsets, values, None)
                 }),
             }

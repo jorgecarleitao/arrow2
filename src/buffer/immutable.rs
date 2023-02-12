@@ -1,5 +1,7 @@
 use std::{iter::FromIterator, ops::Deref, sync::Arc, usize};
 
+use either::Either;
+
 use super::Bytes;
 use super::IntoIter;
 
@@ -159,11 +161,33 @@ impl<T> Buffer<T> {
     /// * has not been sliced with an offset
     /// * has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
     /// * has not been imported from the c data interface (FFI)
-    pub fn get_mut(&mut self) -> Option<&mut Vec<T>> {
+    pub fn into_mut(mut self) -> Either<Self, Vec<T>> {
+        if self.offset != 0 {
+            Either::Left(self)
+        } else {
+            match Arc::get_mut(&mut self.data)
+                .and_then(|b| b.get_vec())
+                .map(std::mem::take)
+            {
+                Some(inner) => Either::Right(inner),
+                None => Either::Left(self),
+            }
+        }
+    }
+
+    /// Returns a mutable reference to its underlying slice, if possible.
+    ///
+    /// This operation returns [`Some`] iff this [`Buffer`]:
+    /// * has not been sliced with an offset
+    /// * has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
+    /// * has not been imported from the c data interface (FFI)
+    pub fn get_mut(&mut self) -> Option<&mut [T]> {
         if self.offset != 0 {
             None
         } else {
-            Arc::get_mut(&mut self.data).and_then(|b| b.get_vec())
+            Arc::get_mut(&mut self.data)
+                .and_then(|b| b.get_vec())
+                .map(|x| x.as_mut())
         }
     }
 

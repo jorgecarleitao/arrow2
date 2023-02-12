@@ -363,16 +363,12 @@ impl<O: Offset> OffsetsBuffer<O> {
 
     /// Copy-on-write API to convert [`OffsetsBuffer`] into [`Offsets`].
     #[inline]
-    pub fn get_mut(&mut self) -> Option<Offsets<O>> {
+    pub fn into_mut(self) -> either::Either<Self, Offsets<O>> {
         self.0
-            .get_mut()
-            .map(|x| {
-                let mut new = vec![O::zero()];
-                std::mem::swap(x, &mut new);
-                new
-            })
+            .into_mut()
             // Safety: Offsets and OffsetsBuffer share invariants
-            .map(|offsets| unsafe { Offsets::new_unchecked(offsets) })
+            .map_right(|offsets| unsafe { Offsets::new_unchecked(offsets) })
+            .map_left(Self)
     }
 
     /// Returns a reference to its internal [`Buffer`].
