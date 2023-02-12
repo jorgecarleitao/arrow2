@@ -447,12 +447,6 @@
 <a href="#447" id="447">447</a>
 <a href="#448" id="448">448</a>
 <a href="#449" id="449">449</a>
-<a href="#450" id="450">450</a>
-<a href="#451" id="451">451</a>
-<a href="#452" id="452">452</a>
-<a href="#453" id="453">453</a>
-<a href="#454" id="454">454</a>
-<a href="#455" id="455">455</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::hint::unreachable_unchecked;
 
 <span class="kw">use crate</span>::{
@@ -746,27 +740,21 @@
         DataType::Dictionary(K::KEY_TYPE, Box::new(values_datatype), <span class="bool-val">false</span>)
     }
 
-    <span class="doccomment">/// Creates a new [`DictionaryArray`] by slicing the existing [`DictionaryArray`].
+    <span class="doccomment">/// Slices this [`DictionaryArray`].
     /// # Panics
     /// iff `offset + length &gt; self.len()`.
-    </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            data_type: <span class="self">self</span>.data_type.clone(),
-            keys: <span class="self">self</span>.keys.clone().slice(offset, length),
-            values: <span class="self">self</span>.values.clone(),
-        }
+    </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
+        <span class="self">self</span>.keys.slice(offset, length);
     }
 
-    <span class="doccomment">/// Creates a new [`DictionaryArray`] by slicing the existing [`DictionaryArray`].
+    <span class="doccomment">/// Slices this [`DictionaryArray`].
     /// # Safety
     /// Safe iff `offset + length &lt;= self.len()`.
-    </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            data_type: <span class="self">self</span>.data_type.clone(),
-            keys: <span class="self">self</span>.keys.clone().slice_unchecked(offset, length),
-            values: <span class="self">self</span>.values.clone(),
-        }
+    </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
+        <span class="self">self</span>.keys.slice_unchecked(offset, length);
     }
+
+    <span class="macro">impl_sliced!</span>();
 
     <span class="doccomment">/// Returns this [`DictionaryArray`] with a new validity.
     /// # Panic
@@ -892,12 +880,12 @@
         <span class="self">self</span>.keys.validity()
     }
 
-    <span class="kw">fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        Box::new(<span class="self">self</span>.slice(offset, length))
+    <span class="kw">fn </span>slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
+        <span class="self">self</span>.slice(offset, length)
     }
 
-    <span class="kw">unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        Box::new(<span class="self">self</span>.slice_unchecked(offset, length))
+    <span class="kw">unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
+        <span class="self">self</span>.slice_unchecked(offset, length)
     }
 
     <span class="kw">fn </span>with_validity(<span class="kw-2">&amp;</span><span class="self">self</span>, validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {

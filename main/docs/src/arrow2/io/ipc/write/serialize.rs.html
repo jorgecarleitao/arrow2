@@ -990,7 +990,7 @@
     write(
         array
             .values()
-            .slice(first.to_usize(), last.to_usize() - first.to_usize())
+            .sliced(first.to_usize(), last.to_usize() - first.to_usize())
             .as_ref(),
         buffers,
         arrow_data,
@@ -1118,7 +1118,7 @@
     write(
         array
             .field()
-            .slice(first <span class="kw">as </span>usize, last <span class="kw">as </span>usize - first <span class="kw">as </span>usize)
+            .sliced(first <span class="kw">as </span>usize, last <span class="kw">as </span>usize - first <span class="kw">as </span>usize)
             .as_ref(),
         buffers,
         arrow_data,

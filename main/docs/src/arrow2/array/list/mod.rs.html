@@ -296,11 +296,6 @@
 <a href="#296" id="296">296</a>
 <a href="#297" id="297">297</a>
 <a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
@@ -420,10 +415,10 @@
 }
 
 <span class="kw">impl</span>&lt;O: Offset&gt; ListArray&lt;O&gt; {
-    <span class="doccomment">/// Returns a slice of this [`ListArray`].
+    <span class="doccomment">/// Slices this [`ListArray`].
     /// # Panics
     /// panics iff `offset + length &gt;= self.len()`
-    </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
         <span class="macro">assert!</span>(
             offset + length &lt;= <span class="self">self</span>.len(),
             <span class="string">&quot;the offset of the new Buffer cannot exceed the existing length&quot;
@@ -431,23 +426,18 @@
         <span class="kw">unsafe </span>{ <span class="self">self</span>.slice_unchecked(offset, length) }
     }
 
-    <span class="doccomment">/// Returns a slice of this [`ListArray`].
+    <span class="doccomment">/// Slices this [`ListArray`].
     /// # Safety
     /// The caller must ensure that `offset + length &lt; self.len()`.
-    </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>validity = <span class="self">self
-            </span>.validity
-            .clone()
-            .map(|bitmap| bitmap.slice_unchecked(offset, length))
-            .and_then(|bitmap| (bitmap.unset_bits() &gt; <span class="number">0</span>).then(|| bitmap));
-        <span class="kw">let </span>offsets = <span class="self">self</span>.offsets.clone().slice_unchecked(offset, length + <span class="number">1</span>);
-        <span class="self">Self </span>{
-            data_type: <span class="self">self</span>.data_type.clone(),
-            offsets,
-            values: <span class="self">self</span>.values.clone(),
-            validity,
-        }
+    </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
+        <span class="self">self</span>.validity.as_mut().and_then(|bitmap| {
+            bitmap.slice_unchecked(offset, length);
+            (bitmap.unset_bits() &gt; <span class="number">0</span>).then(|| bitmap)
+        });
+        <span class="self">self</span>.offsets.slice_unchecked(offset, length + <span class="number">1</span>);
     }
+
+    <span class="macro">impl_sliced!</span>();
 
     <span class="doccomment">/// Returns this [`ListArray`] with a new validity.
     /// # Panic
@@ -497,7 +487,7 @@
         <span class="kw">let </span>length = end - start;
 
         <span class="comment">// safety: the invariant of the struct
-        </span><span class="self">self</span>.values.slice_unchecked(start, length)
+        </span><span class="self">self</span>.values.sliced_unchecked(start, length)
     }
 
     <span class="doccomment">/// The optional validity.
@@ -588,12 +578,12 @@
         <span class="self">self</span>.validity.as_ref()
     }
 
-    <span class="kw">fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        Box::new(<span class="self">self</span>.slice(offset, length))
+    <span class="kw">fn </span>slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
+        <span class="self">self</span>.slice(offset, length)
     }
 
-    <span class="kw">unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        Box::new(<span class="self">self</span>.slice_unchecked(offset, length))
+    <span class="kw">unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
+        <span class="self">self</span>.slice_unchecked(offset, length)
     }
 
     <span class="kw">fn </span>with_validity(<span class="kw-2">&amp;</span><span class="self">self</span>, validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {

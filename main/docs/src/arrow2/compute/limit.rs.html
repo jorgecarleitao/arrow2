@@ -24,7 +24,7 @@
 /// * it slices from offset 0
 </span><span class="kw">pub fn </span>limit(array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array, num_elements: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
     <span class="kw">let </span>lim = num_elements.min(array.len());
-    array.slice(<span class="number">0</span>, lim)
+    array.sliced(<span class="number">0</span>, lim)
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (585f3eef2 2023-02-11)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

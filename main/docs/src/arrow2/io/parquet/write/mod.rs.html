@@ -860,7 +860,7 @@
     <span class="kw">if </span>is_nested {
         (array.to_boxed(), nested)
     } <span class="kw">else </span>{
-        (array.slice(offset, length), nested)
+        (array.to_boxed().sliced(offset, length), nested)
     }
 }
 

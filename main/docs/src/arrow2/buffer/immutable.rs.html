@@ -215,6 +215,29 @@
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, ops::Deref, sync::Arc, usize};
 
 <span class="kw">use </span><span class="kw">super</span>::Bytes;
@@ -243,8 +266,9 @@
 ///
 /// // cloning and slicing is `O(1)` (data is shared)
 /// let mut buffer: Buffer&lt;u32&gt; = vec![1, 2, 3].into();
-/// let slice = buffer.clone().slice(1, 1);
-/// assert_eq!(slice.as_ref(), [2].as_ref());
+/// let mut sliced = buffer.clone();
+/// sliced.slice(1, 1);
+/// assert_eq!(sliced.as_ref(), [2].as_ref());
 /// // but cloning forbids getting mut since `slice` and `buffer` now share data
 /// assert_eq!(buffer.get_mut(), None);
 /// ```
@@ -338,7 +362,20 @@
     /// # Panics
     /// Panics iff `offset` is larger than `len`.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>slice(<span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>sliced(<span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
+        <span class="macro">assert!</span>(
+            offset + length &lt;= <span class="self">self</span>.len(),
+            <span class="string">&quot;the offset of the new Buffer cannot exceed the existing length&quot;
+        </span>);
+        <span class="comment">// Safety: we just checked bounds
+        </span><span class="kw">unsafe </span>{ <span class="self">self</span>.sliced_unchecked(offset, length) }
+    }
+
+    <span class="doccomment">/// Slices this buffer starting at `offset`.
+    /// # Panics
+    /// Panics iff `offset` is larger than `len`.
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
         <span class="macro">assert!</span>(
             offset + length &lt;= <span class="self">self</span>.len(),
             <span class="string">&quot;the offset of the new Buffer cannot exceed the existing length&quot;
@@ -352,11 +389,20 @@
     /// # Safety
     /// The caller must ensure `offset + length &lt;= self.len()`
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">mut </span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.offset += offset;
-        <span class="self">self</span>.length = length;
+    #[must_use]
+    </span><span class="kw">pub unsafe fn </span>sliced_unchecked(<span class="kw-2">mut </span><span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.slice_unchecked(offset, length);
         <span class="self">self
     </span>}
+
+    <span class="doccomment">/// Slices this buffer starting at `offset`.
+    /// # Safety
+    /// The caller must ensure `offset + length &lt;= self.len()`
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
+        <span class="self">self</span>.offset += offset;
+        <span class="self">self</span>.length = length;
+    }
 
     <span class="doccomment">/// Returns a pointer to the start of this buffer.
     </span><span class="attr">#[inline]

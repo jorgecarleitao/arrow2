@@ -140,9 +140,6 @@
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{bitmap::Bitmap, datatypes::DataType};
 
 <span class="kw">use crate</span>::{
@@ -205,11 +202,8 @@
 
 <span class="kw">impl </span>NullArray {
     <span class="doccomment">/// Returns a slice of the [`NullArray`].
-    </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, _offset: usize, length: usize) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            data_type: <span class="self">self</span>.data_type.clone(),
-            length,
-        }
+    </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _offset: usize, length: usize) {
+        <span class="self">self</span>.length = length;
     }
 
     <span class="attr">#[inline]
@@ -236,19 +230,19 @@
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
-        <span class="kw-2">&amp;</span>DataType::Null
+        <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
     }
 
     <span class="kw">fn </span>validity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Bitmap&gt; {
         <span class="prelude-val">None
     </span>}
 
-    <span class="kw">fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        Box::new(<span class="self">self</span>.slice(offset, length))
+    <span class="kw">fn </span>slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
+        <span class="self">self</span>.slice(offset, length)
     }
 
-    <span class="kw">unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize, length: usize) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        Box::new(<span class="self">self</span>.slice(offset, length))
+    <span class="kw">unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
+        <span class="self">self</span>.slice(offset, length)
     }
 
     <span class="kw">fn </span>with_validity(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {

@@ -114,7 +114,7 @@
     <span class="comment">// Compute slice
     </span><span class="kw">let </span>slice_offset = clamp(-offset, <span class="number">0</span>, array.len() <span class="kw">as </span>i64) <span class="kw">as </span>usize;
     <span class="kw">let </span>length = array.len() - abs(offset) <span class="kw">as </span>usize;
-    <span class="kw">let </span>slice = array.slice(slice_offset, length);
+    <span class="kw">let </span>slice = array.sliced(slice_offset, length);
 
     <span class="comment">// Generate array with remaining `null` items
     </span><span class="kw">let </span>nulls = abs(offset) <span class="kw">as </span>usize;

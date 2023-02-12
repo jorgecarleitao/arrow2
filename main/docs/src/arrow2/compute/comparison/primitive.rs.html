@@ -925,9 +925,9 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_eq_with_slice() {
         <span class="kw">let </span>a = Int64Array::from_slice([<span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">8</span>, <span class="number">10</span>]);
-        <span class="kw">let </span>b = Int64Array::from_slice([<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span>]);
-        <span class="kw">let </span>c = b.slice(<span class="number">5</span>, <span class="number">5</span>);
-        <span class="kw">let </span>d = eq(<span class="kw-2">&amp;</span>c, <span class="kw-2">&amp;</span>a);
+        <span class="kw">let </span><span class="kw-2">mut </span>b = Int64Array::from_slice([<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span>]);
+        b.slice(<span class="number">5</span>, <span class="number">5</span>);
+        <span class="kw">let </span>d = eq(<span class="kw-2">&amp;</span>b, <span class="kw-2">&amp;</span>a);
         <span class="macro">assert_eq!</span>(d, BooleanArray::from_slice([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>]));
     }
 
@@ -1153,10 +1153,10 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_compare_slice() {
-        <span class="kw">let </span>a = (<span class="number">0</span>..<span class="number">100</span>).map(<span class="prelude-val">Some</span>).collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
-        <span class="kw">let </span>a = a.slice(<span class="number">50</span>, <span class="number">50</span>);
-        <span class="kw">let </span>b = (<span class="number">100</span>..<span class="number">200</span>).map(<span class="prelude-val">Some</span>).collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
-        <span class="kw">let </span>b = b.slice(<span class="number">50</span>, <span class="number">50</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>a = (<span class="number">0</span>..<span class="number">100</span>).map(<span class="prelude-val">Some</span>).collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
+        a.slice(<span class="number">50</span>, <span class="number">50</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>b = (<span class="number">100</span>..<span class="number">200</span>).map(<span class="prelude-val">Some</span>).collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
+        b.slice(<span class="number">50</span>, <span class="number">50</span>);
         <span class="kw">let </span>actual = lt(<span class="kw-2">&amp;</span>a, <span class="kw-2">&amp;</span>b);
         <span class="kw">let </span>expected: BooleanArray = (<span class="number">0</span>..<span class="number">50</span>).map(|<span class="kw">_</span>| <span class="prelude-val">Some</span>(<span class="bool-val">true</span>)).collect();
         <span class="macro">assert_eq!</span>(expected, actual);
@@ -1164,8 +1164,8 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_primitive_array_compare_scalar_slice() {
-        <span class="kw">let </span>a = (<span class="number">0</span>..<span class="number">100</span>).map(<span class="prelude-val">Some</span>).collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
-        <span class="kw">let </span>a = a.slice(<span class="number">50</span>, <span class="number">50</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>a = (<span class="number">0</span>..<span class="number">100</span>).map(<span class="prelude-val">Some</span>).collect::&lt;PrimitiveArray&lt;i32&gt;&gt;();
+        a.slice(<span class="number">50</span>, <span class="number">50</span>);
         <span class="kw">let </span>actual = lt_scalar(<span class="kw-2">&amp;</span>a, <span class="number">200</span>);
         <span class="kw">let </span>expected: BooleanArray = (<span class="number">0</span>..<span class="number">50</span>).map(|<span class="kw">_</span>| <span class="prelude-val">Some</span>(<span class="bool-val">true</span>)).collect();
         <span class="macro">assert_eq!</span>(expected, actual);

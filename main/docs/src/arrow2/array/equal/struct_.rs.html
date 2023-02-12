@@ -67,7 +67,7 @@
                     l_validity.iter().zip(r_validity.iter()).enumerate().all(
                         |(i, (lhs_is_valid, rhs_is_valid))| {
                             <span class="kw">if </span>lhs_is_valid &amp;&amp; rhs_is_valid {
-                                lhs.slice(i, <span class="number">1</span>) == rhs.slice(i, <span class="number">1</span>)
+                                lhs.sliced(i, <span class="number">1</span>) == rhs.sliced(i, <span class="number">1</span>)
                             } <span class="kw">else </span>{
                                 lhs_is_valid == rhs_is_valid
                             }
@@ -81,7 +81,7 @@
                     .all(|(lhs, rhs)| {
                         l_validity.iter().enumerate().all(|(i, lhs_is_valid)| {
                             <span class="kw">if </span>lhs_is_valid {
-                                lhs.slice(i, <span class="number">1</span>) == rhs.slice(i, <span class="number">1</span>)
+                                lhs.sliced(i, <span class="number">1</span>) == rhs.sliced(i, <span class="number">1</span>)
                             } <span class="kw">else </span>{
                                 <span class="comment">// rhs is always valid =&gt; different
                                 </span><span class="bool-val">false
@@ -96,7 +96,7 @@
                     .all(|(lhs, rhs)| {
                         r_validity.iter().enumerate().all(|(i, rhs_is_valid)| {
                             <span class="kw">if </span>rhs_is_valid {
-                                lhs.slice(i, <span class="number">1</span>) == rhs.slice(i, <span class="number">1</span>)
+                                lhs.sliced(i, <span class="number">1</span>) == rhs.sliced(i, <span class="number">1</span>)
                             } <span class="kw">else </span>{
                                 <span class="comment">// lhs is always valid =&gt; different
                                 </span><span class="bool-val">false

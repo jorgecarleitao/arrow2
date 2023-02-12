@@ -788,7 +788,7 @@
     <span class="kw">let </span>offset = buffer_offset(array, data_type, index);
     <span class="kw">let </span>bytes = Bytes::from_foreign(ptr, len, owner);
 
-    <span class="prelude-val">Ok</span>(Buffer::from_bytes(bytes).slice(offset, len - offset))
+    <span class="prelude-val">Ok</span>(Buffer::from_bytes(bytes).sliced(offset, len - offset))
 }
 
 <span class="doccomment">/// returns the buffer `i` of `array` interpreted as a [`Bitmap`].
@@ -809,7 +809,7 @@
     <span class="kw">let </span>bytes_len = bytes_for(offset + len);
     <span class="kw">let </span>bytes = Bytes::from_foreign(ptr, bytes_len, owner);
 
-    <span class="prelude-val">Ok</span>(Bitmap::from_bytes(bytes, offset + len).slice(offset, len))
+    <span class="prelude-val">Ok</span>(Bitmap::from_bytes(bytes, offset + len).sliced(offset, len))
 }
 
 <span class="kw">fn </span>buffer_offset(array: <span class="kw-2">&amp;</span>ArrowArray, data_type: <span class="kw-2">&amp;</span>DataType, i: usize) -&gt; usize {

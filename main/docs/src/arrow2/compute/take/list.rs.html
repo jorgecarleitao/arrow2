@@ -99,7 +99,7 @@
         .iter()
         .map(|index| {
             <span class="kw">let </span>index = index.to_usize();
-            <span class="kw">let </span>slice = values.slice(index, <span class="number">1</span>);
+            <span class="kw">let </span>slice = values.clone().sliced(index, <span class="number">1</span>);
             capacity += slice.len();
             slice
         })

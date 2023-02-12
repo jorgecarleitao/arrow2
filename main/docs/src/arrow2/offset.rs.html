@@ -506,6 +506,20 @@
 <a href="#506" id="506">506</a>
 <a href="#507" id="507">507</a>
 <a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains the declaration of [`Offset`]
 </span><span class="kw">use </span>std::hint::unreachable_unchecked;
 
@@ -901,7 +915,22 @@
         <span class="self">self</span>.<span class="number">0</span>.as_slice()
     }
 
-    <span class="doccomment">/// Returns the last offset of this container, which is guaranteed to exist.
+    <span class="doccomment">/// Returns the range of the offsets.
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>range(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; O {
+        <span class="kw-2">*</span><span class="self">self</span>.last() - <span class="kw-2">*</span><span class="self">self</span>.first()
+    }
+
+    <span class="doccomment">/// Returns the first offset.
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>first(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>O {
+        <span class="kw">match </span><span class="self">self</span>.<span class="number">0</span>.first() {
+            <span class="prelude-val">Some</span>(element) =&gt; element,
+            <span class="prelude-val">None </span>=&gt; <span class="kw">unsafe </span>{ unreachable_unchecked() },
+        }
+    }
+
+    <span class="doccomment">/// Returns the last offset.
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>last(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>O {
         <span class="kw">match </span><span class="self">self</span>.<span class="number">0</span>.last() {
@@ -931,13 +960,12 @@
         (start, end)
     }
 
-    <span class="doccomment">/// Returns a new [`OffsetsBuffer`] that is a slice of this buffer starting at `offset`.
-    /// Doing so allows the same memory region to be shared between buffers.
+    <span class="doccomment">/// Slices this [`OffsetsBuffer`] starting at `offset`.
     /// # Safety
     /// The caller must ensure `offset + length &lt;= self.len()`
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>(<span class="self">self</span>.<span class="number">0</span>.slice_unchecked(offset, length))
+    </span><span class="kw">pub unsafe fn </span>slice_unchecked(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
+        <span class="self">self</span>.<span class="number">0</span>.slice_unchecked(offset, length);
     }
 
     <span class="doccomment">/// Returns an iterator with the lengths of the offsets

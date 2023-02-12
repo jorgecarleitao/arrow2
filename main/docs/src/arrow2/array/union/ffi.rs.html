@@ -108,7 +108,7 @@
             .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;&gt;&gt;()<span class="question-mark">?</span>;
 
         <span class="kw">if </span>offset &gt; <span class="number">0 </span>{
-            types = types.slice(offset, length);
+            types.slice(offset, length);
         };
 
         <span class="self">Self</span>::try_new(data_type, types, fields, offsets)
