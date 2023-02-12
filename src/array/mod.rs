@@ -106,6 +106,7 @@ pub trait Array: Send + Sync + dyn_clone::DynClone + 'static {
     /// This operation is `O(1)` over `len`.
     /// # Panic
     /// This function panics iff `offset + length > self.len()`.
+    #[must_use]
     fn sliced(&self, offset: usize, length: usize) -> Box<dyn Array> {
         let mut new = self.to_boxed();
         new.slice(offset, length);
@@ -118,6 +119,7 @@ pub trait Array: Send + Sync + dyn_clone::DynClone + 'static {
     /// and moving the struct to the heap.
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`
+    #[must_use]
     unsafe fn sliced_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
         let mut new = self.to_boxed();
         new.slice_unchecked(offset, length);
@@ -402,6 +404,7 @@ macro_rules! impl_sliced {
         /// # Panics
         /// iff `offset + length > self.len()`.
         #[inline]
+        #[must_use]
         pub fn sliced(self, offset: usize, length: usize) -> Self {
             assert!(
                 offset + length <= self.len(),
@@ -416,6 +419,7 @@ macro_rules! impl_sliced {
         /// # Safety
         /// The caller must ensure that `offset + length <= self.len()`.
         #[inline]
+        #[must_use]
         pub fn sliced_unchecked(mut self, offset: usize, length: usize) -> Self {
             unsafe { self.slice_unchecked(offset, length) };
             self
