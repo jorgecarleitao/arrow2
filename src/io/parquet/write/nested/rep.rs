@@ -10,9 +10,11 @@ fn iter<'a>(nested: &'a [Nested]) -> Vec<Box<dyn DebugIter + 'a>> {
         .iter()
         .filter_map(|nested| match nested {
             Nested::Primitive(_, _, _) => None,
-            Nested::List(nested) => Some(Box::new(to_length(nested.offsets)) as Box<dyn DebugIter>),
+            Nested::List(nested) => {
+                Some(Box::new(to_length(&nested.offsets)) as Box<dyn DebugIter>)
+            }
             Nested::LargeList(nested) => {
-                Some(Box::new(to_length(nested.offsets)) as Box<dyn DebugIter>)
+                Some(Box::new(to_length(&nested.offsets)) as Box<dyn DebugIter>)
             }
             Nested::Struct(_, _, _) => None,
         })
@@ -171,7 +173,7 @@ mod tests {
         let nested = vec![
             Nested::List(ListNested {
                 is_optional: false,
-                offsets: &[0, 2, 2, 5, 8, 8, 11, 11, 12],
+                offsets: vec![0, 2, 2, 5, 8, 8, 11, 11, 12].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Primitive(None, false, 12),
@@ -186,12 +188,12 @@ mod tests {
         let nested = vec![
             Nested::List(ListNested {
                 is_optional: false,
-                offsets: &[0, 2, 2, 4],
+                offsets: vec![0, 2, 2, 4].try_into().unwrap(),
                 validity: None,
             }),
             Nested::List(ListNested {
                 is_optional: false,
-                offsets: &[0, 3, 7, 8, 10],
+                offsets: vec![0, 3, 7, 8, 10].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Primitive(None, false, 10),
@@ -211,7 +213,7 @@ mod tests {
         let nested = vec![
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0, 1, 2],
+                offsets: vec![0, 1, 2].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Struct(None, true, 2),
@@ -227,13 +229,13 @@ mod tests {
         let nested = vec![
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0, 2, 3],
+                offsets: vec![0, 2, 3].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Struct(None, true, 3),
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0, 3, 6, 7],
+                offsets: vec![0, 3, 6, 7].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Primitive(None, true, 7),
@@ -252,7 +254,7 @@ mod tests {
             Nested::Struct(None, true, 1),
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0, 4],
+                offsets: vec![0, 4].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Primitive(None, true, 4),
@@ -267,12 +269,12 @@ mod tests {
         let nested = vec![
             Nested::List(ListNested {
                 is_optional: false,
-                offsets: &[0, 1, 1, 3, 5, 5, 8, 8, 9],
+                offsets: vec![0, 1, 1, 3, 5, 5, 8, 8, 9].try_into().unwrap(),
                 validity: None,
             }),
             Nested::List(ListNested {
                 is_optional: false,
-                offsets: &[0, 2, 4, 5, 7, 8, 9, 10, 11, 12],
+                offsets: vec![0, 2, 4, 5, 7, 8, 9, 10, 11, 12].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Primitive(None, false, 12),
@@ -300,13 +302,13 @@ mod tests {
         let nested = vec![
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0, 2, 2, 5, 8, 8, 11, 11, 12],
+                offsets: vec![0, 2, 2, 5, 8, 8, 11, 11, 12].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Struct(None, true, 12),
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0, 1, 2, 3, 3, 4, 4, 4, 4, 5, 6, 8],
+                offsets: vec![0, 1, 2, 3, 3, 4, 4, 4, 4, 5, 6, 8].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Primitive(None, true, 8),
@@ -327,13 +329,13 @@ mod tests {
         let nested = vec![
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0, 1],
+                offsets: vec![0, 1].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Struct(None, true, 12),
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0, 0],
+                offsets: vec![0, 0].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Primitive(None, true, 0),
@@ -348,13 +350,13 @@ mod tests {
         let nested = vec![
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0, 1, 1],
+                offsets: vec![0, 1, 1].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Struct(None, true, 12),
             Nested::List(ListNested {
                 is_optional: true,
-                offsets: &[0, 0],
+                offsets: vec![0, 0].try_into().unwrap(),
                 validity: None,
             }),
             Nested::Primitive(None, true, 0),

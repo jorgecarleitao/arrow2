@@ -438,6 +438,14 @@ impl<O: Offset> OffsetsBuffer<O> {
         (start, end)
     }
 
+    /// Slices this [`OffsetsBuffer`].
+    /// # Panics
+    /// Panics iff `offset + length` is larger than `len`.
+    #[inline]
+    pub fn slice(&mut self, offset: usize, length: usize) {
+        self.0.slice(offset, length);
+    }
+
     /// Slices this [`OffsetsBuffer`] starting at `offset`.
     /// # Safety
     /// The caller must ensure `offset + length <= self.len()`
@@ -518,5 +526,14 @@ impl TryFrom<Offsets<i64>> for Offsets<i32> {
                 .map(|x| *x as i32)
                 .collect::<Vec<_>>(),
         ))
+    }
+}
+
+impl<O: Offset> std::ops::Deref for OffsetsBuffer<O> {
+    type Target = [O];
+
+    #[inline]
+    fn deref(&self) -> &[O] {
+        self.0.as_slice()
     }
 }

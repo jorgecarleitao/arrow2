@@ -7,7 +7,7 @@ use super::super::utils;
 use super::super::WriteOptions;
 use super::basic::{build_statistics, encode_plain};
 use crate::io::parquet::read::schema::is_nullable;
-use crate::io::parquet::write::{slice_nested_leaf, Nested};
+use crate::io::parquet::write::Nested;
 use crate::{
     array::{Array, PrimitiveArray},
     error::Result,
@@ -29,27 +29,14 @@ where
 
     let mut buffer = vec![];
 
-    // we slice the leaf by the offsets as dremel only computes lengths and thus
-    // does NOT take the starting offset into account.
-    // By slicing the leaf array we also don't write too many values.
-    let (start, len) = slice_nested_leaf(nested);
-
-    let mut nested = nested.to_vec();
-    let array = array.clone().sliced(start, len);
-    if let Some(Nested::Primitive(_, _, c)) = nested.last_mut() {
-        *c = len;
-    } else {
-        unreachable!("")
-    }
-
     let (repetition_levels_byte_length, definition_levels_byte_length) =
-        nested::write_rep_and_def(options.version, &nested, &mut buffer)?;
+        nested::write_rep_and_def(options.version, nested, &mut buffer)?;
 
-    let buffer = encode_plain(&array, is_optional, buffer);
+    let buffer = encode_plain(array, is_optional, buffer);
 
     let statistics = if options.write_statistics {
         Some(serialize_statistics(&build_statistics(
-            &array,
+            array,
             type_.clone(),
         )))
     } else {
@@ -58,7 +45,7 @@ where
 
     utils::build_plain_page(
         buffer,
-        nested::num_values(&nested),
+        nested::num_values(nested),
         nested[0].len(),
         array.null_count(),
         repetition_levels_byte_length,

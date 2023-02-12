@@ -120,7 +120,7 @@ impl<T> Buffer<T> {
     /// Returns a new [`Buffer`] that is a slice of this buffer starting at `offset`.
     /// Doing so allows the same memory region to be shared between buffers.
     /// # Panics
-    /// Panics iff `offset` is larger than `len`.
+    /// Panics iff `offset + length` is larger than `len`.
     #[inline]
     pub fn sliced(self, offset: usize, length: usize) -> Self {
         assert!(

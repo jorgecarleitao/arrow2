@@ -6,7 +6,7 @@ use crate::array::{ListArray, StructArray};
 use crate::bitmap::Bitmap;
 use crate::datatypes::PhysicalType;
 use crate::io::parquet::read::schema::is_nullable;
-use crate::offset::Offset;
+use crate::offset::{Offset, OffsetsBuffer};
 use crate::{
     array::Array,
     error::{Error, Result},
@@ -15,14 +15,14 @@ use crate::{
 use super::{array_to_pages, Encoding, WriteOptions};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ListNested<'a, O: Offset> {
+pub struct ListNested<O: Offset> {
     pub is_optional: bool,
-    pub offsets: &'a [O],
-    pub validity: Option<&'a Bitmap>,
+    pub offsets: OffsetsBuffer<O>,
+    pub validity: Option<Bitmap>,
 }
 
-impl<'a, O: Offset> ListNested<'a, O> {
-    pub fn new(offsets: &'a [O], validity: Option<&'a Bitmap>, is_optional: bool) -> Self {
+impl<O: Offset> ListNested<O> {
+    pub fn new(offsets: OffsetsBuffer<O>, validity: Option<Bitmap>, is_optional: bool) -> Self {
         Self {
             is_optional,
             offsets,
@@ -33,43 +33,43 @@ impl<'a, O: Offset> ListNested<'a, O> {
 
 /// Descriptor of nested information of a field
 #[derive(Debug, Clone, PartialEq)]
-pub enum Nested<'a> {
+pub enum Nested {
     /// a primitive (leaf or parquet column)
     /// bitmap, _, length
-    Primitive(Option<&'a Bitmap>, bool, usize),
+    Primitive(Option<Bitmap>, bool, usize),
     /// a list
-    List(ListNested<'a, i32>),
+    List(ListNested<i32>),
     /// a list
-    LargeList(ListNested<'a, i64>),
+    LargeList(ListNested<i64>),
     /// a struct
-    Struct(Option<&'a Bitmap>, bool, usize),
+    Struct(Option<Bitmap>, bool, usize),
 }
 
-impl Nested<'_> {
+impl Nested {
     /// Returns the length (number of rows) of the element
     pub fn len(&self) -> usize {
         match self {
             Nested::Primitive(_, _, length) => *length,
-            Nested::List(nested) => nested.offsets.len() - 1,
-            Nested::LargeList(nested) => nested.offsets.len() - 1,
+            Nested::List(nested) => nested.offsets.len(),
+            Nested::LargeList(nested) => nested.offsets.len(),
             Nested::Struct(_, _, len) => *len,
         }
     }
 }
 
 /// Constructs the necessary `Vec<Vec<Nested>>` to write the rep and def levels of `array` to parquet
-pub fn to_nested<'a>(array: &'a dyn Array, type_: &ParquetType) -> Result<Vec<Vec<Nested<'a>>>> {
+pub fn to_nested(array: &dyn Array, type_: &ParquetType) -> Result<Vec<Vec<Nested>>> {
     let mut nested = vec![];
 
     to_nested_recursive(array, type_, &mut nested, vec![])?;
     Ok(nested)
 }
 
-fn to_nested_recursive<'a>(
-    array: &'a dyn Array,
+fn to_nested_recursive(
+    array: &dyn Array,
     type_: &ParquetType,
-    nested: &mut Vec<Vec<Nested<'a>>>,
-    mut parents: Vec<Nested<'a>>,
+    nested: &mut Vec<Vec<Nested>>,
+    mut parents: Vec<Nested>,
 ) -> Result<()> {
     let is_optional = is_nullable(type_.get_field_info());
 
@@ -85,7 +85,11 @@ fn to_nested_recursive<'a>(
                 ));
             };
 
-            parents.push(Nested::Struct(array.validity(), is_optional, array.len()));
+            parents.push(Nested::Struct(
+                array.validity().cloned(),
+                is_optional,
+                array.len(),
+            ));
 
             for (type_, array) in fields.iter().zip(array.values()) {
                 to_nested_recursive(array.as_ref(), type_, nested, parents.clone())?;
@@ -108,8 +112,8 @@ fn to_nested_recursive<'a>(
             };
 
             parents.push(Nested::List(ListNested::new(
-                array.offsets().buffer(),
-                array.validity(),
+                array.offsets().clone(),
+                array.validity().cloned(),
                 is_optional,
             )));
             to_nested_recursive(array.values().as_ref(), type_, nested, parents)?;
@@ -131,15 +135,15 @@ fn to_nested_recursive<'a>(
             };
 
             parents.push(Nested::LargeList(ListNested::new(
-                array.offsets().buffer(),
-                array.validity(),
+                array.offsets().clone(),
+                array.validity().cloned(),
                 is_optional,
             )));
             to_nested_recursive(array.values().as_ref(), type_, nested, parents)?;
         }
         _ => {
             parents.push(Nested::Primitive(
-                array.validity(),
+                array.validity().cloned(),
                 is_optional,
                 array.len(),
             ));
@@ -290,11 +294,11 @@ mod tests {
             a,
             vec![
                 vec![
-                    Nested::Struct(Some(&Bitmap::from([true, true, false, true])), true, 4),
+                    Nested::Struct(Some(Bitmap::from([true, true, false, true])), true, 4),
                     Nested::Primitive(None, false, 4),
                 ],
                 vec![
-                    Nested::Struct(Some(&Bitmap::from([true, true, false, true])), true, 4),
+                    Nested::Struct(Some(Bitmap::from([true, true, false, true])), true, 4),
                     Nested::Primitive(None, false, 4),
                 ],
             ]
@@ -379,25 +383,25 @@ mod tests {
                 // a.b.b
                 vec![
                     Nested::Struct(None, false, 4),
-                    Nested::Struct(Some(&Bitmap::from([true, true, false, true])), true, 4),
+                    Nested::Struct(Some(Bitmap::from([true, true, false, true])), true, 4),
                     Nested::Primitive(None, false, 4),
                 ],
                 // a.b.c
                 vec![
                     Nested::Struct(None, false, 4),
-                    Nested::Struct(Some(&Bitmap::from([true, true, false, true])), true, 4),
+                    Nested::Struct(Some(Bitmap::from([true, true, false, true])), true, 4),
                     Nested::Primitive(None, false, 4),
                 ],
                 // a.c.b
                 vec![
                     Nested::Struct(None, false, 4),
-                    Nested::Struct(Some(&Bitmap::from([true, true, false, true])), true, 4),
+                    Nested::Struct(Some(Bitmap::from([true, true, false, true])), true, 4),
                     Nested::Primitive(None, false, 4),
                 ],
                 // a.c.c
                 vec![
                     Nested::Struct(None, false, 4),
-                    Nested::Struct(Some(&Bitmap::from([true, true, false, true])), true, 4),
+                    Nested::Struct(Some(Bitmap::from([true, true, false, true])), true, 4),
                     Nested::Primitive(None, false, 4),
                 ],
             ]
@@ -487,19 +491,19 @@ mod tests {
                 vec![
                     Nested::List(ListNested::<i32> {
                         is_optional: false,
-                        offsets: &[0, 2, 4],
+                        offsets: vec![0, 2, 4].try_into().unwrap(),
                         validity: None,
                     }),
-                    Nested::Struct(Some(&Bitmap::from([true, true, false, true])), true, 4),
+                    Nested::Struct(Some(Bitmap::from([true, true, false, true])), true, 4),
                     Nested::Primitive(None, false, 4),
                 ],
                 vec![
                     Nested::List(ListNested::<i32> {
                         is_optional: false,
-                        offsets: &[0, 2, 4],
+                        offsets: vec![0, 2, 4].try_into().unwrap(),
                         validity: None,
                     }),
-                    Nested::Struct(Some(&Bitmap::from([true, true, false, true])), true, 4),
+                    Nested::Struct(Some(Bitmap::from([true, true, false, true])), true, 4),
                     Nested::Primitive(None, false, 4),
                 ],
             ]

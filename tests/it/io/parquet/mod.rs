@@ -1701,6 +1701,24 @@ fn list_binary() -> Result<()> {
 }
 
 #[test]
+fn list_slice() -> Result<()> {
+    let data = vec![
+        Some(vec![None, Some(2)]),
+        Some(vec![Some(3), Some(4)]),
+        Some(vec![Some(5), Some(6)]),
+    ];
+    let mut array = MutableListArray::<i32, _>::new_with_field(
+        MutablePrimitiveArray::<i32>::new(),
+        "item",
+        true,
+    );
+    array.try_extend(data).unwrap();
+    let a: ListArray<i32> = array.into();
+    let a = a.sliced(2, 1);
+    list_array_generic(false, a, None)
+}
+
+#[test]
 fn large_list_large_binary() -> Result<()> {
     let data = vec![
         Some(vec![Some(b"a".to_vec())]),
