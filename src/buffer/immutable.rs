@@ -23,15 +23,15 @@ use super::IntoIter;
 /// assert_eq!(buffer.as_ref(), [1, 2, 3].as_ref());
 ///
 /// // it supports copy-on-write semantics (i.e. back to a `Vec`)
-/// let vec: &mut [u32] = buffer.get_mut().unwrap();
-/// assert_eq!(vec, &mut [1, 2, 3]);
+/// let vec: Vec<u32> = buffer.into_mut().right().unwrap();
+/// assert_eq!(vec, vec![1, 2, 3]);
 ///
 /// // cloning and slicing is `O(1)` (data is shared)
 /// let mut buffer: Buffer<u32> = vec![1, 2, 3].into();
 /// let slice = buffer.clone().slice(1, 1);
 /// assert_eq!(slice.as_ref(), [2].as_ref());
 /// // but cloning forbids getting mut since `slice` and `buffer` now share data
-/// assert_eq!(buffer.get_mut(), None);
+/// assert_eq!(buffer.get_mut_slice(), None);
 /// ```
 #[derive(Clone)]
 pub struct Buffer<T> {
@@ -157,38 +157,45 @@ impl<T> Buffer<T> {
 
     /// Returns a mutable reference to its underlying [`Vec`], if possible.
     ///
-    /// This operation returns [`Some`] iff this [`Buffer`]:
-    /// * has not been sliced with an offset
+    /// This operation returns [`Either::Right`] iff this [`Buffer`]:
     /// * has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
     /// * has not been imported from the c data interface (FFI)
+    #[inline]
     pub fn into_mut(mut self) -> Either<Self, Vec<T>> {
-        if self.offset != 0 {
-            Either::Left(self)
-        } else {
-            match Arc::get_mut(&mut self.data)
-                .and_then(|b| b.get_vec())
-                .map(std::mem::take)
-            {
-                Some(inner) => Either::Right(inner),
-                None => Either::Left(self),
-            }
+        match Arc::get_mut(&mut self.data)
+            .and_then(|b| b.get_vec())
+            .map(std::mem::take)
+        {
+            Some(inner) => Either::Right(inner),
+            None => Either::Left(self),
         }
     }
 
-    /// Returns a mutable reference to its underlying slice, if possible.
+    /// Returns a mutable reference to its underlying `Vec`, if possible.
+    /// Note that only `[self.offset(), self.offset() + self.len()[` in this vector is visible
+    /// by this buffer.
     ///
     /// This operation returns [`Some`] iff this [`Buffer`]:
-    /// * has not been sliced with an offset
     /// * has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
     /// * has not been imported from the c data interface (FFI)
-    pub fn get_mut(&mut self) -> Option<&mut [T]> {
-        if self.offset != 0 {
-            None
-        } else {
-            Arc::get_mut(&mut self.data)
-                .and_then(|b| b.get_vec())
-                .map(|x| x.as_mut())
-        }
+    /// # Safety
+    /// The caller must ensure that the vector in the mutable reference keeps a length of at least `self.offset() + self.len() - 1`.
+    #[inline]
+    pub unsafe fn get_mut(&mut self) -> Option<&mut Vec<T>> {
+        Arc::get_mut(&mut self.data).and_then(|b| b.get_vec())
+    }
+
+    /// Returns a mutable reference to its slice, if possible.
+    ///
+    /// This operation returns [`Some`] iff this [`Buffer`]:
+    /// * has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
+    /// * has not been imported from the c data interface (FFI)
+    #[inline]
+    pub fn get_mut_slice(&mut self) -> Option<&mut [T]> {
+        Arc::get_mut(&mut self.data)
+            .and_then(|b| b.get_vec())
+            // Safety: the invariant of this struct
+            .map(|x| unsafe { x.get_unchecked_mut(self.offset..self.offset + self.length) })
     }
 
     /// Get the strong count of underlying `Arc` data buffer.

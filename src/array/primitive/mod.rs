@@ -294,7 +294,7 @@ impl<T: NativeType> PrimitiveArray<T> {
 
     /// Returns an option of a mutable reference to the values of this [`PrimitiveArray`].
     pub fn get_mut_values(&mut self) -> Option<&mut [T]> {
-        self.values.get_mut()
+        self.values.get_mut_slice()
     }
 
     /// Returns its internal representation
