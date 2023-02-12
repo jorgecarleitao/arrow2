@@ -35,7 +35,8 @@ use super::{
 ///
 /// // slicing is 'O(1)' (data is shared)
 /// let bitmap = Bitmap::try_new(vec![0b00001101], 5).unwrap();
-/// let sliced = bitmap.slice(1, 4);
+/// let mut sliced = bitmap.clone();
+/// sliced.slice(1, 4);
 /// assert_eq!(sliced.as_slice(), ([0b00001101u8].as_ref(), 1, 4)); // 1 here is the offset:
 /// assert_eq!(format!("{:?}", sliced), "[0b___0110_]".to_string());
 /// // when sliced (or cloned), it is no longer possible to `into_mut`.

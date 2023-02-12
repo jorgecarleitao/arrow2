@@ -26,8 +26,9 @@ use super::IntoIter;
 ///
 /// // cloning and slicing is `O(1)` (data is shared)
 /// let mut buffer: Buffer<u32> = vec![1, 2, 3].into();
-/// let slice = buffer.clone().slice(1, 1);
-/// assert_eq!(slice.as_ref(), [2].as_ref());
+/// let mut sliced = buffer.clone();
+/// sliced.slice(1, 1);
+/// assert_eq!(sliced.as_ref(), [2].as_ref());
 /// // but cloning forbids getting mut since `slice` and `buffer` now share data
 /// assert_eq!(buffer.get_mut(), None);
 /// ```
