@@ -3,7 +3,6 @@ use crate::{
     datatypes::{DataType, Field},
     error::Error,
 };
-use std::sync::Arc;
 
 use super::{new_empty_array, new_null_array, Array};
 
@@ -97,16 +96,6 @@ impl FixedSizeListArray {
         let values = new_null_array(field.data_type().clone(), length * size);
         Self::new(data_type, values, Some(Bitmap::new_zeroed(length)))
     }
-
-    /// Boxes self into a [`Box<dyn Array>`].
-    pub fn boxed(self) -> Box<dyn Array> {
-        Box::new(self)
-    }
-
-    /// Boxes self into a [`Arc<dyn Array>`].
-    pub fn arced(self) -> Arc<dyn Array> {
-        Arc::new(self)
-    }
 }
 
 // must use
@@ -139,25 +128,8 @@ impl FixedSizeListArray {
     }
 
     impl_sliced!();
-
-    /// Returns this [`FixedSizeListArray`] with a new validity.
-    /// # Panic
-    /// This function panics iff `validity.len() != self.len()`.
-    #[must_use]
-    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
-        self.set_validity(validity);
-        self
-    }
-
-    /// Sets the validity of this [`FixedSizeListArray`].
-    /// # Panics
-    /// This function panics iff `validity.len() != self.len()`.
-    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
-        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity must be equal to the array's length")
-        }
-        self.validity = validity;
-    }
+    impl_mut_validity!();
+    impl_into_array!();
 }
 
 // accessors

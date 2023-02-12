@@ -323,6 +323,8 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         self.keys.set_validity(validity);
     }
 
+    impl_into_array!();
+
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
@@ -382,16 +384,6 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         // safety - invariant of this struct
         let index = unsafe { self.keys.value(index).as_usize() };
         new_scalar(self.values.as_ref(), index)
-    }
-
-    /// Boxes self into a [`Box<dyn Array>`].
-    pub fn boxed(self) -> Box<dyn Array> {
-        Box::new(self)
-    }
-
-    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
-    pub fn arced(self) -> std::sync::Arc<dyn Array> {
-        std::sync::Arc::new(self)
     }
 
     pub(crate) fn try_get_child(data_type: &DataType) -> Result<&DataType, Error> {

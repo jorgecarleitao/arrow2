@@ -104,35 +104,6 @@ impl MapArray {
         let field = new_empty_array(Self::get_field(&data_type).data_type().clone());
         Self::new(data_type, OffsetsBuffer::default(), field, None)
     }
-
-    /// Returns this [`MapArray`] with a new validity.
-    /// # Panics
-    /// This function panics iff `validity.len() != self.len()`.
-    #[must_use]
-    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
-        self.set_validity(validity);
-        self
-    }
-
-    /// Sets the validity of this [`MapArray`].
-    /// # Panics
-    /// This function panics iff `validity.len() != self.len()`.
-    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
-        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity's length must be equal to the array's length")
-        }
-        self.validity = validity;
-    }
-
-    /// Boxes self into a [`Box<dyn Array>`].
-    pub fn boxed(self) -> Box<dyn Array> {
-        Box::new(self)
-    }
-
-    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
-    pub fn arced(self) -> std::sync::Arc<dyn Array> {
-        std::sync::Arc::new(self)
-    }
 }
 
 impl MapArray {
@@ -160,6 +131,8 @@ impl MapArray {
     }
 
     impl_sliced!();
+    impl_mut_validity!();
+    impl_into_array!();
 
     pub(crate) fn try_get_field(data_type: &DataType) -> Result<&Field, Error> {
         if let DataType::Map(field, _) = data_type.to_logical_type() {

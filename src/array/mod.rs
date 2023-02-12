@@ -427,6 +427,45 @@ macro_rules! impl_sliced {
     };
 }
 
+macro_rules! impl_mut_validity {
+    () => {
+        /// Returns this array with a new validity.
+        /// # Panic
+        /// Panics iff `validity.len() != self.len()`.
+        #[must_use]
+        #[inline]
+        pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
+            self.set_validity(validity);
+            self
+        }
+
+        /// Sets the validity of this array.
+        /// # Panics
+        /// This function panics iff `values.len() != self.len()`.
+        #[inline]
+        pub fn set_validity(&mut self, validity: Option<Bitmap>) {
+            if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+                panic!("validity must be equal to the array's length")
+            }
+            self.validity = validity;
+        }
+    }
+}
+
+macro_rules! impl_into_array {
+    () => {
+        /// Boxes this array into a [`Box<dyn Array>`].
+        pub fn boxed(self) -> Box<dyn Array> {
+            Box::new(self)
+        }
+
+        /// Arcs this array into a [`std::sync::Arc<dyn Array>`].
+        pub fn arced(self) -> std::sync::Arc<dyn Array> {
+            std::sync::Arc::new(self)
+        }
+    };
+}
+
 /// Clones a dynamic [`Array`].
 /// # Implementation
 /// This operation is `O(1)` over `len`, as it amounts to increase two ref counts
