@@ -399,43 +399,14 @@ impl<K: DictionaryKey> DictionaryArray<K> {
 }
 
 impl<K: DictionaryKey> Array for DictionaryArray<K> {
-    #[inline]
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    #[inline]
-    fn data_type(&self) -> &DataType {
-        &self.data_type
-    }
+    impl_common_array!();
 
     fn validity(&self) -> Option<&Bitmap> {
         self.keys.validity()
     }
 
-    fn slice(&mut self, offset: usize, length: usize) {
-        self.slice(offset, length)
-    }
-
-    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
-        self.slice_unchecked(offset, length)
-    }
-
+    #[inline]
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.clone().with_validity(validity))
-    }
-
-    fn to_boxed(&self) -> Box<dyn Array> {
-        Box::new(self.clone())
     }
 }

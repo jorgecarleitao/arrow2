@@ -227,44 +227,14 @@ impl<O: Offset> ListArray<O> {
 }
 
 impl<O: Offset> Array for ListArray<O> {
-    #[inline]
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
+    impl_common_array!();
 
-    #[inline]
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    #[inline]
-    fn data_type(&self) -> &DataType {
-        &self.data_type
-    }
-
-    #[inline]
     fn validity(&self) -> Option<&Bitmap> {
         self.validity.as_ref()
     }
 
-    fn slice(&mut self, offset: usize, length: usize) {
-        self.slice(offset, length)
-    }
-
-    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
-        self.slice_unchecked(offset, length)
-    }
-
+    #[inline]
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.clone().with_validity(validity))
-    }
-
-    fn to_boxed(&self) -> Box<dyn Array> {
-        Box::new(self.clone())
     }
 }

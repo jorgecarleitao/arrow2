@@ -396,6 +396,7 @@ macro_rules! clone_dyn {
     }};
 }
 
+// macro implementing `sliced` and `sliced_unchecked`
 macro_rules! impl_sliced {
     () => {
         /// Returns this array sliced.
@@ -427,6 +428,7 @@ macro_rules! impl_sliced {
     };
 }
 
+// macro implementing `with_validity` and `set_validity`
 macro_rules! impl_mut_validity {
     () => {
         /// Returns this array with a new validity.
@@ -452,6 +454,7 @@ macro_rules! impl_mut_validity {
     }
 }
 
+// macro implementing `boxed` and `arced`
 macro_rules! impl_into_array {
     () => {
         /// Boxes this array into a [`Box<dyn Array>`].
@@ -462,6 +465,46 @@ macro_rules! impl_into_array {
         /// Arcs this array into a [`std::sync::Arc<dyn Array>`].
         pub fn arced(self) -> std::sync::Arc<dyn Array> {
             std::sync::Arc::new(self)
+        }
+    };
+}
+
+// macro implementing common methods of trait `Array`
+macro_rules! impl_common_array {
+    () => {
+        #[inline]
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+
+        #[inline]
+        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+            self
+        }
+
+        #[inline]
+        fn len(&self) -> usize {
+            self.len()
+        }
+
+        #[inline]
+        fn data_type(&self) -> &DataType {
+            &self.data_type
+        }
+
+        #[inline]
+        fn slice(&mut self, offset: usize, length: usize) {
+            self.slice(offset, length);
+        }
+
+        #[inline]
+        unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+            self.slice_unchecked(offset, length);
+        }
+
+        #[inline]
+        fn to_boxed(&self) -> Box<dyn Array> {
+            Box::new(self.clone())
         }
     };
 }
