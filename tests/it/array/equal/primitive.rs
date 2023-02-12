@@ -81,9 +81,9 @@ fn test_primitive_slice() {
 
     for (lhs, slice_lhs, rhs, slice_rhs, expected) in cases {
         let lhs = Int32Array::from(&lhs);
-        let lhs = lhs.slice(slice_lhs.0, slice_lhs.1);
+        let lhs = lhs.sliced(slice_lhs.0, slice_lhs.1);
         let rhs = Int32Array::from(&rhs);
-        let rhs = rhs.slice(slice_rhs.0, slice_rhs.1);
+        let rhs = rhs.sliced(slice_rhs.0, slice_rhs.1);
 
         test_equal(&lhs, &rhs, expected);
     }

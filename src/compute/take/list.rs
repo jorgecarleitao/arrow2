@@ -34,7 +34,7 @@ pub fn take<I: Offset, O: Index>(
         .iter()
         .map(|index| {
             let index = index.to_usize();
-            let slice = values.slice(index, 1);
+            let slice = values.clone().sliced(index, 1);
             capacity += slice.len();
             slice
         })

@@ -19,7 +19,7 @@ fn basics() {
 #[test]
 fn offset() {
     let b = PrimitiveArray::<u8>::from(vec![Some(1), Some(2), Some(3)]);
-    let b = b.slice(1, 2);
+    let b = b.sliced(1, 2);
     let mut a = GrowablePrimitive::new(vec![&b], false, 2);
     a.extend(0, 0, 2);
     assert_eq!(a.len(), 2);
@@ -32,7 +32,7 @@ fn offset() {
 #[test]
 fn null_offset() {
     let b = PrimitiveArray::<u8>::from(vec![Some(1), None, Some(3)]);
-    let b = b.slice(1, 2);
+    let b = b.sliced(1, 2);
     let mut a = GrowablePrimitive::new(vec![&b], false, 2);
     a.extend(0, 0, 2);
     assert_eq!(a.len(), 2);
@@ -44,7 +44,7 @@ fn null_offset() {
 #[test]
 fn null_offset_validity() {
     let b = PrimitiveArray::<u8>::from(&[Some(1), Some(2), Some(3)]);
-    let b = b.slice(1, 2);
+    let b = b.sliced(1, 2);
     let mut a = GrowablePrimitive::new(vec![&b], true, 2);
     a.extend(0, 0, 2);
     a.extend_validity(3);

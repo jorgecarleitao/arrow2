@@ -171,8 +171,7 @@ impl Bitmap {
     /// Panics iff `offset + length > self.length`, i.e. if the offset and `length`
     /// exceeds the allocated capacity of `self`.
     #[inline]
-    #[must_use]
-    pub fn slice(self, offset: usize, length: usize) -> Self {
+    pub fn slice(&mut self, offset: usize, length: usize) {
         assert!(offset + length <= self.length);
         unsafe { self.slice_unchecked(offset, length) }
     }
@@ -181,7 +180,7 @@ impl Bitmap {
     /// # Safety
     /// The caller must ensure that `self.offset + offset + length <= self.len()`
     #[inline]
-    pub unsafe fn slice_unchecked(mut self, offset: usize, length: usize) -> Self {
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
         // count the smallest chunk
         if length < self.length / 2 {
             // count the null values in the slice
@@ -195,6 +194,26 @@ impl Bitmap {
         }
         self.offset += offset;
         self.length = length;
+    }
+
+    /// Slices `self`, offsetting by `offset` and truncating up to `length` bits.
+    /// # Panic
+    /// Panics iff `offset + length > self.length`, i.e. if the offset and `length`
+    /// exceeds the allocated capacity of `self`.
+    #[inline]
+    #[must_use]
+    pub fn sliced(self, offset: usize, length: usize) -> Self {
+        assert!(offset + length <= self.length);
+        unsafe { self.sliced_unchecked(offset, length) }
+    }
+
+    /// Slices `self`, offseting by `offset` and truncating up to `length` bits.
+    /// # Safety
+    /// The caller must ensure that `self.offset + offset + length <= self.len()`
+    #[inline]
+    #[must_use]
+    pub unsafe fn sliced_unchecked(mut self, offset: usize, length: usize) -> Self {
+        self.slice_unchecked(offset, length);
         self
     }
 

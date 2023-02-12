@@ -71,7 +71,7 @@ fn byte() {
 
 #[test]
 fn offset() {
-    let a = Bitmap::from([true, false, true, false, false, true, true, false, true]).slice(1, 8);
+    let a = Bitmap::from([true, false, true, false, false, true, true, false, true]).sliced(1, 8);
     let a = Some(a.iter());
     let values = vec![0, 1, 2, 3, 4, 5, 6, 7];
     let zip = ZipValidity::new(values.into_iter(), a);
@@ -94,7 +94,7 @@ fn none() {
 
 #[test]
 fn rev() {
-    let a = Bitmap::from([true, false, true, false, false, true, true, false, true]).slice(1, 8);
+    let a = Bitmap::from([true, false, true, false, false, true, true, false, true]).sliced(1, 8);
     let a = Some(a.iter());
     let values = vec![0, 1, 2, 3, 4, 5, 6, 7];
     let zip = ZipValidity::new(values.into_iter(), a);

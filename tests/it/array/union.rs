@@ -75,7 +75,7 @@ fn slice() -> Result<()> {
 
     let array = UnionArray::new(data_type.clone(), types, fields.clone(), None);
 
-    let result = array.slice(1, 2);
+    let result = array.sliced(1, 2);
 
     let sliced_types = Buffer::from(vec![0, 1]);
     let sliced_fields = vec![
@@ -169,7 +169,7 @@ fn iter_sparse_slice() -> Result<()> {
     ];
 
     let array = UnionArray::new(data_type, types, fields.clone(), None);
-    let array_slice = array.slice(1, 1);
+    let array_slice = array.sliced(1, 1);
     let mut iter = array_slice.iter();
 
     assert_eq!(
@@ -196,7 +196,7 @@ fn iter_dense_slice() -> Result<()> {
     ];
 
     let array = UnionArray::new(data_type, types, fields.clone(), Some(offsets));
-    let array_slice = array.slice(1, 1);
+    let array_slice = array.sliced(1, 1);
     let mut iter = array_slice.iter();
 
     assert_eq!(

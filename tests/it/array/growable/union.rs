@@ -28,7 +28,7 @@ fn sparse() -> Result<()> {
             a.extend(0, index, length);
             assert_eq!(a.len(), length);
 
-            let expected = array.slice(index, length);
+            let expected = array.clone().sliced(index, length);
 
             let result: UnionArray = a.into();
 
@@ -61,7 +61,7 @@ fn dense() -> Result<()> {
 
             a.extend(0, index, length);
             assert_eq!(a.len(), length);
-            let expected = array.slice(index, length);
+            let expected = array.clone().sliced(index, length);
 
             let result: UnionArray = a.into();
 

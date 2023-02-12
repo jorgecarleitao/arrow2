@@ -10,5 +10,5 @@ use crate::array::Array;
 /// * it slices from offset 0
 pub fn limit(array: &dyn Array, num_elements: usize) -> Box<dyn Array> {
     let lim = num_elements.min(array.len());
-    array.slice(0, lim)
+    array.sliced(0, lim)
 }

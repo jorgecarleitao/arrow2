@@ -31,7 +31,7 @@ fn basics() {
     );
     assert_eq!(array, array2);
 
-    let array = array.slice(1, 2);
+    let array = array.sliced(1, 2);
     assert_eq!(array.value(0), 0);
     assert_eq!(array.value(1), 10);
     assert_eq!(array.values().as_slice(), &[0, 10]);

@@ -39,7 +39,7 @@ fn basics() {
         )) as Box<dyn Array>
     );
 
-    let sliced = array.slice(1, 1);
+    let sliced = array.sliced(1, 1);
     assert_eq!(
         sliced.value(0),
         Box::new(StructArray::new(

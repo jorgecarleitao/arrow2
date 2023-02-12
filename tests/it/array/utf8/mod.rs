@@ -35,7 +35,7 @@ fn basics() {
     );
     assert_eq!(array, array2);
 
-    let array = array.slice(1, 2);
+    let array = array.sliced(1, 2);
     assert_eq!(array.value(0), "");
     assert_eq!(array.value(1), "hello2");
     // note how this keeps everything: the offsets were sliced

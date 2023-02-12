@@ -16,7 +16,7 @@ fn basics() {
     assert_eq!(array.value(0), [1, 2]);
     assert_eq!(array.value(2), [5, 6]);
 
-    let array = array.slice(1, 2);
+    let array = array.sliced(1, 2);
 
     assert_eq!(array.value(1), [5, 6]);
 }

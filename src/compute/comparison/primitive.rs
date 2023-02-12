@@ -332,9 +332,9 @@ mod tests {
     #[test]
     fn test_primitive_array_eq_with_slice() {
         let a = Int64Array::from_slice([6, 7, 8, 8, 10]);
-        let b = Int64Array::from_slice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-        let c = b.slice(5, 5);
-        let d = eq(&c, &a);
+        let mut b = Int64Array::from_slice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        b.slice(5, 5);
+        let d = eq(&b, &a);
         assert_eq!(d, BooleanArray::from_slice([true, true, true, false, true]));
     }
 
@@ -560,10 +560,10 @@ mod tests {
 
     #[test]
     fn test_primitive_array_compare_slice() {
-        let a = (0..100).map(Some).collect::<PrimitiveArray<i32>>();
-        let a = a.slice(50, 50);
-        let b = (100..200).map(Some).collect::<PrimitiveArray<i32>>();
-        let b = b.slice(50, 50);
+        let mut a = (0..100).map(Some).collect::<PrimitiveArray<i32>>();
+        a.slice(50, 50);
+        let mut b = (100..200).map(Some).collect::<PrimitiveArray<i32>>();
+        b.slice(50, 50);
         let actual = lt(&a, &b);
         let expected: BooleanArray = (0..50).map(|_| Some(true)).collect();
         assert_eq!(expected, actual);
@@ -571,8 +571,8 @@ mod tests {
 
     #[test]
     fn test_primitive_array_compare_scalar_slice() {
-        let a = (0..100).map(Some).collect::<PrimitiveArray<i32>>();
-        let a = a.slice(50, 50);
+        let mut a = (0..100).map(Some).collect::<PrimitiveArray<i32>>();
+        a.slice(50, 50);
         let actual = lt_scalar(&a, 200);
         let expected: BooleanArray = (0..50).map(|_| Some(true)).collect();
         assert_eq!(expected, actual);

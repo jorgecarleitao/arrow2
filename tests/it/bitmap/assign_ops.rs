@@ -30,10 +30,10 @@ fn binary_assign_oob() {
     let b = MutableBitmap::from_iter(std::iter::repeat(true).take(65));
 
     let a: Bitmap = a.into();
-    let a = a.slice(10, 20);
+    let a = a.sliced(10, 20);
 
     let b: Bitmap = b.into();
-    let b = b.slice(10, 20);
+    let b = b.sliced(10, 20);
 
     let mut a = a.make_mut();
 

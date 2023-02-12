@@ -26,7 +26,8 @@ fn add_benchmark(c: &mut Criterion) {
             &format!("bitmap count zeros 85% slice 2^{log2_size}"),
             |b| {
                 b.iter(|| {
-                    let r = bitmap.clone().slice(offset, len);
+                    let mut r = bitmap.clone();
+                    r.slice(offset, len);
                     assert!(r.unset_bits() > 0);
                 })
             },
@@ -39,13 +40,15 @@ fn add_benchmark(c: &mut Criterion) {
             &format!("bitmap count zeros 51% slice 2^{log2_size}"),
             |b| {
                 b.iter(|| {
-                    let r = bitmap.clone().slice(offset, len);
+                    let mut r = bitmap.clone();
+                    r.slice(offset, len);
                     assert!(r.unset_bits() > 0);
                 })
             },
         );
 
-        let bitmap1 = bitmap.clone().slice(1, size - 1);
+        let mut bitmap1 = bitmap.clone();
+        bitmap1.slice(1, size - 1);
         c.bench_function(&format!("bitmap not 2^{log2_size}"), |b| {
             b.iter(|| {
                 let r = !&bitmap1;

@@ -186,7 +186,7 @@ pub fn slice_parquet_array<'a>(
     if is_nested {
         (array.to_boxed(), nested)
     } else {
-        (array.slice(offset, length), nested)
+        (array.to_boxed().sliced(offset, length), nested)
     }
 }
 

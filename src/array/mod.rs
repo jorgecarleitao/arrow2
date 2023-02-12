@@ -87,21 +87,42 @@ pub trait Array: Send + Sync + dyn_clone::DynClone + 'static {
         !self.is_null(i)
     }
 
-    /// Slices the [`Array`], returning a new `Box<dyn Array>`.
+    /// Slices this [`Array`].
     /// # Implementation
-    /// This operation is `O(1)` over `len`, as it amounts to increase two ref counts
-    /// and moving the struct to the heap.
+    /// This operation is `O(1)` over `len`.
     /// # Panic
     /// This function panics iff `offset + length > self.len()`.
-    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array>;
+    fn slice(&mut self, offset: usize, length: usize);
 
-    /// Slices the [`Array`], returning a new `Box<dyn Array>`.
+    /// Slices the [`Array`].
+    /// # Implementation
+    /// This operation is `O(1)`.
+    /// # Safety
+    /// The caller must ensure that `offset + length <= self.len()`
+    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize);
+
+    /// Returns a slice of this [`Array`].
+    /// # Implementation
+    /// This operation is `O(1)` over `len`.
+    /// # Panic
+    /// This function panics iff `offset + length > self.len()`.
+    fn sliced(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        let mut new = self.to_boxed();
+        new.slice(offset, length);
+        new
+    }
+
+    /// Returns a slice of this [`Array`].
     /// # Implementation
     /// This operation is `O(1)` over `len`, as it amounts to increase two ref counts
     /// and moving the struct to the heap.
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`
-    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array>;
+    unsafe fn sliced_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
+        let mut new = self.to_boxed();
+        new.slice_unchecked(offset, length);
+        new
+    }
 
     /// Clones this [`Array`] with a new new assigned bitmap.
     /// # Panic
@@ -371,6 +392,35 @@ macro_rules! clone_dyn {
         let f = |x: &$ty| Box::new(x.clone());
         general_dyn!($array, $ty, f)
     }};
+}
+
+macro_rules! impl_sliced {
+    () => {
+        /// Returns this array sliced.
+        /// # Implementation
+        /// This function is `O(1)`.
+        /// # Panics
+        /// iff `offset + length > self.len()`.
+        #[inline]
+        pub fn sliced(self, offset: usize, length: usize) -> Self {
+            assert!(
+                offset + length <= self.len(),
+                "the offset of the new Buffer cannot exceed the existing length"
+            );
+            unsafe { self.sliced_unchecked(offset, length) }
+        }
+
+        /// Returns this array sliced.
+        /// # Implementation
+        /// This function is `O(1)`.
+        /// # Safety
+        /// The caller must ensure that `offset + length <= self.len()`.
+        #[inline]
+        pub fn sliced_unchecked(mut self, offset: usize, length: usize) -> Self {
+            unsafe { self.slice_unchecked(offset, length) };
+            self
+        }
+    };
 }
 
 /// Clones a dynamic [`Array`].

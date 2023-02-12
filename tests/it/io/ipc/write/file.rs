@@ -337,7 +337,7 @@ fn write_boolean() -> Result<()> {
 #[cfg_attr(miri, ignore)] // compression uses FFI, which miri does not support
 fn write_sliced_utf8() -> Result<()> {
     let array = Utf8Array::<i32>::from_slice(["aa", "bb"])
-        .slice(1, 1)
+        .sliced(1, 1)
         .boxed();
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;
@@ -354,7 +354,7 @@ fn write_sliced_list() -> Result<()> {
 
     let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new();
     array.try_extend(data).unwrap();
-    let array: Box<dyn Array> = array.into_box().slice(1, 2);
+    let array: Box<dyn Array> = array.into_box().sliced(1, 2);
 
     let schema = Schema::from(vec![Field::new("a", array.data_type().clone(), true)]);
     let columns = Chunk::try_new(vec![array])?;

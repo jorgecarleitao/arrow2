@@ -117,10 +117,10 @@ impl<O: Offset> ListArray<O> {
 }
 
 impl<O: Offset> ListArray<O> {
-    /// Returns a slice of this [`ListArray`].
+    /// Slices this [`ListArray`].
     /// # Panics
     /// panics iff `offset + length >= self.len()`
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
+    pub fn slice(&mut self, offset: usize, length: usize) {
         assert!(
             offset + length <= self.len(),
             "the offset of the new Buffer cannot exceed the existing length"
@@ -128,23 +128,18 @@ impl<O: Offset> ListArray<O> {
         unsafe { self.slice_unchecked(offset, length) }
     }
 
-    /// Returns a slice of this [`ListArray`].
+    /// Slices this [`ListArray`].
     /// # Safety
     /// The caller must ensure that `offset + length < self.len()`.
-    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
-        let validity = self
-            .validity
-            .clone()
-            .map(|bitmap| bitmap.slice_unchecked(offset, length))
-            .and_then(|bitmap| (bitmap.unset_bits() > 0).then(|| bitmap));
-        let offsets = self.offsets.clone().slice_unchecked(offset, length + 1);
-        Self {
-            data_type: self.data_type.clone(),
-            offsets,
-            values: self.values.clone(),
-            validity,
-        }
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.validity.as_mut().and_then(|bitmap| {
+            bitmap.slice_unchecked(offset, length);
+            (bitmap.unset_bits() > 0).then(|| bitmap)
+        });
+        self.offsets.slice_unchecked(offset, length + 1);
     }
+
+    impl_sliced!();
 
     /// Returns this [`ListArray`] with a new validity.
     /// # Panic
@@ -194,7 +189,7 @@ impl<O: Offset> ListArray<O> {
         let length = end - start;
 
         // safety: the invariant of the struct
-        self.values.slice_unchecked(start, length)
+        self.values.sliced_unchecked(start, length)
     }
 
     /// The optional validity.
@@ -285,12 +280,12 @@ impl<O: Offset> Array for ListArray<O> {
         self.validity.as_ref()
     }
 
-    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice(offset, length))
+    fn slice(&mut self, offset: usize, length: usize) {
+        self.slice(offset, length)
     }
 
-    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice_unchecked(offset, length))
+    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.slice_unchecked(offset, length)
     }
 
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {

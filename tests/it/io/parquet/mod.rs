@@ -1553,7 +1553,7 @@ fn assert_roundtrip(
         let expected = chunk
             .into_arrays()
             .into_iter()
-            .map(|x| x.slice(0, limit))
+            .map(|x| x.sliced(0, limit))
             .collect::<Vec<_>>();
         Chunk::new(expected)
     } else {

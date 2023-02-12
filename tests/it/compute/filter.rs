@@ -4,8 +4,8 @@ use arrow2::compute::filter::*;
 
 #[test]
 fn array_slice() {
-    let a = Int32Array::from_slice([5, 6, 7, 8, 9]).slice(1, 4);
-    let b = BooleanArray::from_slice(vec![true, true, false, false, true]).slice(1, 4);
+    let a = Int32Array::from_slice([5, 6, 7, 8, 9]).sliced(1, 4);
+    let b = BooleanArray::from_slice(vec![true, true, false, false, true]).sliced(1, 4);
     let c = filter(&a, &b).unwrap();
 
     let expected = Int32Array::from_slice([6, 9]);

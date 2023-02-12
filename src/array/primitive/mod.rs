@@ -196,24 +196,11 @@ impl<T: NativeType> PrimitiveArray<T> {
         *self.values.get_unchecked(i)
     }
 
-    /// Returns a clone of this [`PrimitiveArray`] sliced by an offset and length.
+    /// Slices this [`PrimitiveArray`] by an offset and length.
     /// # Implementation
-    /// This operation is `O(1)` as it amounts to increase two ref counts.
-    /// # Examples
-    /// ```
-    /// use arrow2::array::PrimitiveArray;
-    ///
-    /// let array = PrimitiveArray::from_vec(vec![1, 2, 3]);
-    /// assert_eq!(format!("{:?}", array), "Int32[1, 2, 3]");
-    /// let sliced = array.slice(1, 1);
-    /// assert_eq!(format!("{:?}", sliced), "Int32[2]");
-    /// // note: `sliced` and `array` share the same memory region.
-    /// ```
-    /// # Panic
-    /// This function panics iff `offset + length > self.len()`.
+    /// This operation is `O(1)`.
     #[inline]
-    #[must_use]
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
+    pub fn slice(&mut self, offset: usize, length: usize) {
         assert!(
             offset + length <= self.len(),
             "offset + length may not exceed length of array"
@@ -221,25 +208,21 @@ impl<T: NativeType> PrimitiveArray<T> {
         unsafe { self.slice_unchecked(offset, length) }
     }
 
-    /// Returns a clone of this [`PrimitiveArray`] sliced by an offset and length.
+    /// Slices this [`PrimitiveArray`] by an offset and length.
     /// # Implementation
-    /// This operation is `O(1)` as it amounts to increase two ref counts.
+    /// This operation is `O(1)`.
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
     #[inline]
-    #[must_use]
-    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
-        let validity = self
-            .validity
-            .clone()
-            .map(|bitmap| bitmap.slice_unchecked(offset, length))
-            .and_then(|bitmap| (bitmap.unset_bits() > 0).then(|| bitmap));
-        Self {
-            data_type: self.data_type.clone(),
-            values: self.values.clone().slice_unchecked(offset, length),
-            validity,
-        }
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.validity.as_mut().and_then(|bitmap| {
+            bitmap.slice_unchecked(offset, length);
+            (bitmap.unset_bits() > 0).then(|| bitmap)
+        });
+        self.values.slice_unchecked(offset, length);
     }
+
+    impl_sliced!();
 
     /// Returns this [`PrimitiveArray`] with a new validity.
     /// # Panics
@@ -458,12 +441,14 @@ impl<T: NativeType> Array for PrimitiveArray<T> {
         self.validity.as_ref()
     }
 
-    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice(offset, length))
+    fn slice(&mut self, offset: usize, length: usize) {
+        self.slice(offset, length);
     }
-    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice_unchecked(offset, length))
+
+    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.slice_unchecked(offset, length);
     }
+
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.clone().with_validity(validity))
     }

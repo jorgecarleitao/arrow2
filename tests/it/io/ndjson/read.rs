@@ -139,7 +139,7 @@ fn read_nested_struct_batched() -> Result<()> {
 
     // create a chunked array by batch_size from the (un-chunked) expected
     let expected: Vec<Box<dyn Array>> = (0..(expected.len() + batch_size - 1) / batch_size)
-        .map(|offset| expected.slice(offset * batch_size, batch_size))
+        .map(|offset| expected.sliced(offset * batch_size, batch_size))
         .collect();
 
     let data_type = infer(&ndjson)?;

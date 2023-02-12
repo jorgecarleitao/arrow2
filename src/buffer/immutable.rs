@@ -121,7 +121,20 @@ impl<T> Buffer<T> {
     /// # Panics
     /// Panics iff `offset` is larger than `len`.
     #[inline]
-    pub fn slice(self, offset: usize, length: usize) -> Self {
+    pub fn sliced(self, offset: usize, length: usize) -> Self {
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        // Safety: we just checked bounds
+        unsafe { self.sliced_unchecked(offset, length) }
+    }
+
+    /// Slices this buffer starting at `offset`.
+    /// # Panics
+    /// Panics iff `offset` is larger than `len`.
+    #[inline]
+    pub fn slice(&mut self, offset: usize, length: usize) {
         assert!(
             offset + length <= self.len(),
             "the offset of the new Buffer cannot exceed the existing length"
@@ -135,10 +148,19 @@ impl<T> Buffer<T> {
     /// # Safety
     /// The caller must ensure `offset + length <= self.len()`
     #[inline]
-    pub unsafe fn slice_unchecked(mut self, offset: usize, length: usize) -> Self {
+    #[must_use]
+    pub unsafe fn sliced_unchecked(mut self, offset: usize, length: usize) -> Self {
+        self.slice_unchecked(offset, length);
+        self
+    }
+
+    /// Slices this buffer starting at `offset`.
+    /// # Safety
+    /// The caller must ensure `offset + length <= self.len()`
+    #[inline]
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
         self.offset += offset;
         self.length = length;
-        self
     }
 
     /// Returns a pointer to the start of this buffer.

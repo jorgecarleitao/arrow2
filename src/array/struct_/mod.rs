@@ -165,13 +165,12 @@ impl StructArray {
         (fields, values, validity)
     }
 
-    /// Creates a new [`StructArray`] that is a slice of `self`.
+    /// Slices this [`StructArray`].
     /// # Panics
     /// * `offset + length` must be smaller than `self.len()`.
     /// # Implementation
     /// This operation is `O(F)` where `F` is the number of fields.
-    #[must_use]
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
+    pub fn slice(&mut self, offset: usize, length: usize) {
         assert!(
             offset + length <= self.len(),
             "offset + length may not exceed length of array"
@@ -179,28 +178,22 @@ impl StructArray {
         unsafe { self.slice_unchecked(offset, length) }
     }
 
-    /// Creates a new [`StructArray`] that is a slice of `self`.
+    /// Slices this [`StructArray`].
     /// # Implementation
     /// This operation is `O(F)` where `F` is the number of fields.
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
-    #[must_use]
-    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
-        let validity = self
-            .validity
-            .clone()
-            .map(|bitmap| bitmap.slice_unchecked(offset, length))
-            .and_then(|bitmap| (bitmap.unset_bits() > 0).then(|| bitmap));
-        Self {
-            data_type: self.data_type.clone(),
-            values: self
-                .values
-                .iter()
-                .map(|x| x.slice_unchecked(offset, length))
-                .collect(),
-            validity,
-        }
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.validity.as_mut().and_then(|bitmap| {
+            bitmap.slice_unchecked(offset, length);
+            (bitmap.unset_bits() > 0).then(|| bitmap)
+        });
+        self.values
+            .iter_mut()
+            .for_each(|x| x.slice_unchecked(offset, length));
     }
+
+    impl_sliced!();
 
     /// Returns this [`StructArray`] with a new validity.
     /// # Panics
@@ -299,12 +292,12 @@ impl Array for StructArray {
         self.validity.as_ref()
     }
 
-    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice(offset, length))
+    fn slice(&mut self, offset: usize, length: usize) {
+        self.slice(offset, length)
     }
 
-    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice_unchecked(offset, length))
+    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.slice_unchecked(offset, length)
     }
 
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {

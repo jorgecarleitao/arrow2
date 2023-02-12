@@ -115,7 +115,7 @@ fn serialize_keys<K: DictionaryKey>(
     let (start, len) = slice_nested_leaf(nested);
 
     let mut nested = nested.to_vec();
-    let array = array.slice(start, len);
+    let array = array.clone().sliced(start, len);
     if let Some(Nested::Primitive(_, _, c)) = nested.last_mut() {
         *c = len;
     } else {

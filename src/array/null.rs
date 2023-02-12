@@ -60,11 +60,8 @@ impl NullArray {
 
 impl NullArray {
     /// Returns a slice of the [`NullArray`].
-    pub fn slice(&self, _offset: usize, length: usize) -> Self {
-        Self {
-            data_type: self.data_type.clone(),
-            length,
-        }
+    pub fn slice(&mut self, _offset: usize, length: usize) {
+        self.length = length;
     }
 
     #[inline]
@@ -91,19 +88,19 @@ impl Array for NullArray {
 
     #[inline]
     fn data_type(&self) -> &DataType {
-        &DataType::Null
+        &self.data_type
     }
 
     fn validity(&self) -> Option<&Bitmap> {
         None
     }
 
-    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice(offset, length))
+    fn slice(&mut self, offset: usize, length: usize) {
+        self.slice(offset, length)
     }
 
-    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice(offset, length))
+    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.slice(offset, length)
     }
 
     fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {

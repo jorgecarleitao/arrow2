@@ -238,7 +238,7 @@ impl UnionArray {
     /// # Panic
     /// This function panics iff `offset + length >= self.len()`.
     #[inline]
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
+    pub fn slice(&mut self, offset: usize, length: usize) {
         assert!(
             offset + length <= self.len(),
             "the offset of the new array cannot exceed the existing length"
@@ -252,20 +252,17 @@ impl UnionArray {
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
     #[inline]
-    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
         debug_assert!(offset + length <= self.len());
-        Self {
-            data_type: self.data_type.clone(),
-            fields: self.fields.clone(),
-            map: self.map,
-            types: self.types.clone().slice_unchecked(offset, length),
-            offsets: self
-                .offsets
-                .clone()
-                .map(|offsets| offsets.slice_unchecked(offset, length)),
-            offset: self.offset + offset,
+
+        self.types.slice_unchecked(offset, length);
+        if let Some(offsets) = self.offsets.as_mut() {
+            offsets.slice_unchecked(offset, length)
         }
+        self.offset += offset;
     }
+
+    impl_sliced!();
 }
 
 impl UnionArray {
@@ -368,12 +365,14 @@ impl Array for UnionArray {
         None
     }
 
-    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice(offset, length))
+    fn slice(&mut self, offset: usize, length: usize) {
+        self.slice(offset, length)
     }
-    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice_unchecked(offset, length))
+
+    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.slice_unchecked(offset, length)
     }
+
     fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {
         panic!("cannot set validity of a union array")
     }

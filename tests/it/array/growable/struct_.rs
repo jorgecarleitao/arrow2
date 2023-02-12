@@ -41,7 +41,7 @@ fn basic() {
 
     let expected = StructArray::new(
         fields,
-        vec![values[0].slice(1, 2), values[1].slice(1, 2)],
+        vec![values[0].sliced(1, 2), values[1].sliced(1, 2)],
         None,
     );
     assert_eq!(result, expected)
@@ -51,7 +51,7 @@ fn basic() {
 fn offset() {
     let (fields, values) = some_values();
 
-    let array = StructArray::new(fields.clone(), values.clone(), None).slice(1, 3);
+    let array = StructArray::new(fields.clone(), values.clone(), None).sliced(1, 3);
 
     let mut a = GrowableStruct::new(vec![&array], false, 0);
 
@@ -61,7 +61,7 @@ fn offset() {
 
     let expected = StructArray::new(
         fields,
-        vec![values[0].slice(2, 2), values[1].slice(2, 2)],
+        vec![values[0].sliced(2, 2), values[1].sliced(2, 2)],
         None,
     );
 
@@ -86,8 +86,8 @@ fn nulls() {
 
     let expected = StructArray::new(
         fields,
-        vec![values[0].slice(1, 2), values[1].slice(1, 2)],
-        Some(Bitmap::from_u8_slice([0b00000010], 5).slice(1, 2)),
+        vec![values[0].sliced(1, 2), values[1].sliced(1, 2)],
+        Some(Bitmap::from_u8_slice([0b00000010], 5).sliced(1, 2)),
     );
 
     assert_eq!(result, expected)

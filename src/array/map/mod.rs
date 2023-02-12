@@ -139,7 +139,7 @@ impl MapArray {
     /// Returns a slice of this [`MapArray`].
     /// # Panics
     /// panics iff `offset + length >= self.len()`
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
+    pub fn slice(&mut self, offset: usize, length: usize) {
         assert!(
             offset + length <= self.len(),
             "the offset of the new Buffer cannot exceed the existing length"
@@ -150,20 +150,16 @@ impl MapArray {
     /// Returns a slice of this [`MapArray`].
     /// # Safety
     /// The caller must ensure that `offset + length < self.len()`.
-    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
-        let offsets = self.offsets.clone().slice_unchecked(offset, length + 1);
-        let validity = self
-            .validity
-            .clone()
-            .map(|bitmap| bitmap.slice_unchecked(offset, length))
-            .and_then(|bitmap| (bitmap.unset_bits() > 0).then(|| bitmap));
-        Self {
-            data_type: self.data_type.clone(),
-            offsets,
-            field: self.field.clone(),
-            validity,
-        }
+    #[inline]
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.validity.as_mut().and_then(|bitmap| {
+            bitmap.slice_unchecked(offset, length);
+            (bitmap.unset_bits() > 0).then(|| bitmap)
+        });
+        self.offsets.slice_unchecked(offset, length + 1);
     }
+
+    impl_sliced!();
 
     pub(crate) fn try_get_field(data_type: &DataType) -> Result<&Field, Error> {
         if let DataType::Map(field, _) = data_type.to_logical_type() {
@@ -217,7 +213,7 @@ impl MapArray {
         let length = end - start;
 
         // soundness: the invariant of the struct
-        self.field.slice_unchecked(start, length)
+        self.field.sliced_unchecked(start, length)
     }
 }
 
@@ -247,12 +243,12 @@ impl Array for MapArray {
         self.validity.as_ref()
     }
 
-    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice(offset, length))
+    fn slice(&mut self, offset: usize, length: usize) {
+        self.slice(offset, length)
     }
 
-    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice_unchecked(offset, length))
+    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.slice_unchecked(offset, length)
     }
 
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {

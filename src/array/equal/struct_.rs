@@ -13,7 +13,7 @@ pub(super) fn equal(lhs: &StructArray, rhs: &StructArray) -> bool {
                     l_validity.iter().zip(r_validity.iter()).enumerate().all(
                         |(i, (lhs_is_valid, rhs_is_valid))| {
                             if lhs_is_valid && rhs_is_valid {
-                                lhs.slice(i, 1) == rhs.slice(i, 1)
+                                lhs.sliced(i, 1) == rhs.sliced(i, 1)
                             } else {
                                 lhs_is_valid == rhs_is_valid
                             }
@@ -27,7 +27,7 @@ pub(super) fn equal(lhs: &StructArray, rhs: &StructArray) -> bool {
                     .all(|(lhs, rhs)| {
                         l_validity.iter().enumerate().all(|(i, lhs_is_valid)| {
                             if lhs_is_valid {
-                                lhs.slice(i, 1) == rhs.slice(i, 1)
+                                lhs.sliced(i, 1) == rhs.sliced(i, 1)
                             } else {
                                 // rhs is always valid => different
                                 false
@@ -42,7 +42,7 @@ pub(super) fn equal(lhs: &StructArray, rhs: &StructArray) -> bool {
                     .all(|(lhs, rhs)| {
                         r_validity.iter().enumerate().all(|(i, rhs_is_valid)| {
                             if rhs_is_valid {
-                                lhs.slice(i, 1) == rhs.slice(i, 1)
+                                lhs.sliced(i, 1) == rhs.sliced(i, 1)
                             } else {
                                 // lhs is always valid => different
                                 false

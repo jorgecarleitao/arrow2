@@ -291,27 +291,21 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         DataType::Dictionary(K::KEY_TYPE, Box::new(values_datatype), false)
     }
 
-    /// Creates a new [`DictionaryArray`] by slicing the existing [`DictionaryArray`].
+    /// Slices this [`DictionaryArray`].
     /// # Panics
     /// iff `offset + length > self.len()`.
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
-        Self {
-            data_type: self.data_type.clone(),
-            keys: self.keys.clone().slice(offset, length),
-            values: self.values.clone(),
-        }
+    pub fn slice(&mut self, offset: usize, length: usize) {
+        self.keys.slice(offset, length);
     }
 
-    /// Creates a new [`DictionaryArray`] by slicing the existing [`DictionaryArray`].
+    /// Slices this [`DictionaryArray`].
     /// # Safety
     /// Safe iff `offset + length <= self.len()`.
-    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
-        Self {
-            data_type: self.data_type.clone(),
-            keys: self.keys.clone().slice_unchecked(offset, length),
-            values: self.values.clone(),
-        }
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.keys.slice_unchecked(offset, length);
     }
+
+    impl_sliced!();
 
     /// Returns this [`DictionaryArray`] with a new validity.
     /// # Panic
@@ -437,12 +431,12 @@ impl<K: DictionaryKey> Array for DictionaryArray<K> {
         self.keys.validity()
     }
 
-    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice(offset, length))
+    fn slice(&mut self, offset: usize, length: usize) {
+        self.slice(offset, length)
     }
 
-    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice_unchecked(offset, length))
+    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.slice_unchecked(offset, length)
     }
 
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {

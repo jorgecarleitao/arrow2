@@ -97,13 +97,12 @@ impl FixedSizeBinaryArray {
 
 // must use
 impl FixedSizeBinaryArray {
-    /// Returns a slice of this [`FixedSizeBinaryArray`].
+    /// Slices this [`FixedSizeBinaryArray`].
     /// # Implementation
-    /// This operation is `O(1)` as it amounts to increase 3 ref counts.
+    /// This operation is `O(1)`.
     /// # Panics
     /// panics iff `offset + length > self.len()`
-    #[must_use]
-    pub fn slice(&self, offset: usize, length: usize) -> Self {
+    pub fn slice(&mut self, offset: usize, length: usize) {
         assert!(
             offset + length <= self.len(),
             "the offset of the new Buffer cannot exceed the existing length"
@@ -111,29 +110,21 @@ impl FixedSizeBinaryArray {
         unsafe { self.slice_unchecked(offset, length) }
     }
 
-    /// Returns a slice of this [`FixedSizeBinaryArray`].
+    /// Slices this [`FixedSizeBinaryArray`].
     /// # Implementation
-    /// This operation is `O(1)` as it amounts to increase 3 ref counts.
+    /// This operation is `O(1)`.
     /// # Safety
     /// The caller must ensure that `offset + length <= self.len()`.
-    #[must_use]
-    pub unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Self {
-        let validity = self
-            .validity
-            .clone()
-            .map(|bitmap| bitmap.slice_unchecked(offset, length))
-            .and_then(|bitmap| (bitmap.unset_bits() > 0).then(|| bitmap));
-        let values = self
-            .values
-            .clone()
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.validity.as_mut().and_then(|bitmap| {
+            bitmap.slice_unchecked(offset, length);
+            (bitmap.unset_bits() > 0).then(|| bitmap)
+        });
+        self.values
             .slice_unchecked(offset * self.size, length * self.size);
-        Self {
-            data_type: self.data_type.clone(),
-            size: self.size,
-            values,
-            validity,
-        }
     }
+
+    impl_sliced!();
 
     /// Returns this [`FixedSizeBinaryArray`] with a new validity.
     /// # Panic
@@ -267,12 +258,12 @@ impl Array for FixedSizeBinaryArray {
         self.validity.as_ref()
     }
 
-    fn slice(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice(offset, length))
+    fn slice(&mut self, offset: usize, length: usize) {
+        self.slice(offset, length)
     }
 
-    unsafe fn slice_unchecked(&self, offset: usize, length: usize) -> Box<dyn Array> {
-        Box::new(self.slice_unchecked(offset, length))
+    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.slice_unchecked(offset, length)
     }
 
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
