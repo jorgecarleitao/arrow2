@@ -73,6 +73,7 @@ fn serialize_levels(
     length: usize,
     type_: &PrimitiveType,
     nested: &[Nested],
+    num_values: usize,
     options: WriteOptions,
     buffer: &mut Vec<u8>,
 ) -> Result<(usize, usize)> {
@@ -82,7 +83,7 @@ fn serialize_levels(
         let definition_levels_byte_length = buffer.len();
         Ok((0, definition_levels_byte_length))
     } else {
-        nested::write_rep_and_def(options.version, nested, buffer)
+        nested::write_rep_and_def(options.version, nested, num_values, buffer)
     }
 }
 
@@ -122,27 +123,24 @@ fn serialize_keys<K: DictionaryKey>(
         unreachable!("")
     }
 
+    let num_values = nested::num_values(&nested);
+
     let (repetition_levels_byte_length, definition_levels_byte_length) = serialize_levels(
         validity.as_ref(),
         array.len(),
         &type_,
         &nested,
+        num_values,
         options,
         &mut buffer,
     )?;
 
     serialize_keys_values(&array, validity.as_ref(), &mut buffer)?;
 
-    let (num_values, num_rows) = if nested.len() == 1 {
-        (array.len(), array.len())
-    } else {
-        (nested::num_values(&nested), nested[0].len())
-    };
-
     utils::build_plain_page(
         buffer,
         num_values,
-        num_rows,
+        array.len(),
         array.null_count(),
         repetition_levels_byte_length,
         definition_levels_byte_length,

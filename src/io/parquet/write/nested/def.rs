@@ -1,7 +1,6 @@
 use crate::{bitmap::Bitmap, offset::Offset};
 
 use super::super::pages::{ListNested, Nested};
-use super::rep::num_values;
 use super::to_length;
 
 trait DebugIter: Iterator<Item = (u32, usize)> + std::fmt::Debug {}
@@ -87,9 +86,7 @@ pub struct DefLevelsIter<'a> {
 }
 
 impl<'a> DefLevelsIter<'a> {
-    pub fn new(nested: &'a [Nested]) -> Self {
-        let remaining_values = num_values(nested);
-
+    pub fn new(nested: &'a [Nested], num_values: usize) -> Self {
         let iter = iter(nested);
         let remaining = vec![0; iter.len()];
         let validity = vec![0; iter.len()];
@@ -100,7 +97,7 @@ impl<'a> DefLevelsIter<'a> {
             validity,
             total: 0,
             current_level: 0,
-            remaining_values,
+            remaining_values: num_values,
         }
     }
 }
@@ -170,10 +167,11 @@ impl<'a> Iterator for DefLevelsIter<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::num_values;
     use super::*;
 
     fn test(nested: Vec<Nested>, expected: Vec<u32>) {
-        let mut iter = DefLevelsIter::new(&nested);
+        let mut iter = DefLevelsIter::new(&nested, num_values(&nested));
         assert_eq!(iter.size_hint().0, expected.len());
         let result = iter.by_ref().collect::<Vec<_>>();
         assert_eq!(result, expected);

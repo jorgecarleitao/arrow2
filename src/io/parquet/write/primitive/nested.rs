@@ -42,8 +42,10 @@ where
         unreachable!("")
     }
 
+    let num_values = nested::num_values(&nested);
+
     let (repetition_levels_byte_length, definition_levels_byte_length) =
-        nested::write_rep_and_def(options.version, &nested, &mut buffer)?;
+        nested::write_rep_and_def(options.version, &nested, num_values, &mut buffer)?;
 
     let buffer = encode_plain(&array, is_optional, buffer);
 
@@ -58,7 +60,7 @@ where
 
     utils::build_plain_page(
         buffer,
-        nested::num_values(&nested),
+        num_values,
         nested[0].len(),
         array.null_count(),
         repetition_levels_byte_length,

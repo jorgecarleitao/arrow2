@@ -60,9 +60,7 @@ pub struct RepLevelsIter<'a> {
 }
 
 impl<'a> RepLevelsIter<'a> {
-    pub fn new(nested: &'a [Nested]) -> Self {
-        let remaining_values = num_values(nested);
-
+    pub fn new(nested: &'a [Nested], num_values: usize) -> Self {
         let iter = iter(nested);
         let remaining = vec![0; iter.len()];
 
@@ -71,7 +69,7 @@ impl<'a> RepLevelsIter<'a> {
             remaining,
             total: 0,
             current_level: 0,
-            remaining_values,
+            remaining_values: num_values,
         }
     }
 }
@@ -138,7 +136,7 @@ mod tests {
     use super::*;
 
     fn test(nested: Vec<Nested>, expected: Vec<u32>) {
-        let mut iter = RepLevelsIter::new(&nested);
+        let mut iter = RepLevelsIter::new(&nested, num_values(&nested));
         assert_eq!(iter.size_hint().0, expected.len());
         assert_eq!(iter.by_ref().collect::<Vec<_>>(), expected);
         assert_eq!(iter.size_hint().0, 0);
