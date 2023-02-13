@@ -9,7 +9,6 @@ use arrow2::{
     io::parquet::read as p_read,
     io::parquet::read::statistics::*,
     io::parquet::write::*,
-    offset::Offset,
     types::{days_ms, NativeType},
 };
 
@@ -1576,7 +1575,7 @@ fn arrow_type() -> Result<()> {
 fn data<T: NativeType, I: Iterator<Item = T>>(
     mut iter: I,
     inner_is_nullable: bool,
-) -> ListArray<i32> {
+) -> Box<dyn Array> {
     // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
     let data = vec![
         Some(vec![Some(iter.next().unwrap()), Some(iter.next().unwrap())]),
@@ -1606,12 +1605,12 @@ fn data<T: NativeType, I: Iterator<Item = T>>(
         inner_is_nullable,
     );
     array.try_extend(data).unwrap();
-    array.into()
+    array.into_box()
 }
 
-fn list_array_generic<O: Offset>(
+fn assert_array_roundtrip(
     is_nullable: bool,
-    array: ListArray<O>,
+    array: Box<dyn Array>,
     limit: Option<usize>,
 ) -> Result<()> {
     let schema = Schema::from(vec![Field::new(
@@ -1619,22 +1618,22 @@ fn list_array_generic<O: Offset>(
         array.data_type().clone(),
         is_nullable,
     )]);
-    let chunk = Chunk::try_new(vec![array.boxed()])?;
+    let chunk = Chunk::try_new(vec![array])?;
 
     assert_roundtrip(schema, chunk, limit)
 }
 
 fn test_list_array_required_required(limit: Option<usize>) -> Result<()> {
-    list_array_generic(false, data(0..12i8, false), limit)?;
-    list_array_generic(false, data(0..12i16, false), limit)?;
-    list_array_generic(false, data(0..12i32, false), limit)?;
-    list_array_generic(false, data(0..12i64, false), limit)?;
-    list_array_generic(false, data(0..12u8, false), limit)?;
-    list_array_generic(false, data(0..12u16, false), limit)?;
-    list_array_generic(false, data(0..12u32, false), limit)?;
-    list_array_generic(false, data(0..12u64, false), limit)?;
-    list_array_generic(false, data((0..12).map(|x| (x as f32) * 1.0), false), limit)?;
-    list_array_generic(
+    assert_array_roundtrip(false, data(0..12i8, false), limit)?;
+    assert_array_roundtrip(false, data(0..12i16, false), limit)?;
+    assert_array_roundtrip(false, data(0..12i32, false), limit)?;
+    assert_array_roundtrip(false, data(0..12i64, false), limit)?;
+    assert_array_roundtrip(false, data(0..12u8, false), limit)?;
+    assert_array_roundtrip(false, data(0..12u16, false), limit)?;
+    assert_array_roundtrip(false, data(0..12u32, false), limit)?;
+    assert_array_roundtrip(false, data(0..12u64, false), limit)?;
+    assert_array_roundtrip(false, data((0..12).map(|x| (x as f32) * 1.0), false), limit)?;
+    assert_array_roundtrip(
         false,
         data((0..12).map(|x| (x as f64) * 1.0f64), false),
         limit,
@@ -1648,17 +1647,17 @@ fn list_array_required_required() -> Result<()> {
 
 #[test]
 fn list_array_optional_optional() -> Result<()> {
-    list_array_generic(true, data(0..12, true), None)
+    assert_array_roundtrip(true, data(0..12, true), None)
 }
 
 #[test]
 fn list_array_required_optional() -> Result<()> {
-    list_array_generic(true, data(0..12, false), None)
+    assert_array_roundtrip(true, data(0..12, false), None)
 }
 
 #[test]
 fn list_array_optional_required() -> Result<()> {
-    list_array_generic(false, data(0..12, true), None)
+    assert_array_roundtrip(false, data(0..12, true), None)
 }
 
 #[test]
@@ -1671,7 +1670,7 @@ fn list_utf8() -> Result<()> {
     let mut array =
         MutableListArray::<i32, _>::new_with_field(MutableUtf8Array::<i32>::new(), "item", true);
     array.try_extend(data).unwrap();
-    list_array_generic(false, array.into(), None)
+    assert_array_roundtrip(false, array.into_box(), None)
 }
 
 #[test]
@@ -1684,7 +1683,7 @@ fn list_large_utf8() -> Result<()> {
     let mut array =
         MutableListArray::<i32, _>::new_with_field(MutableUtf8Array::<i64>::new(), "item", true);
     array.try_extend(data).unwrap();
-    list_array_generic(false, array.into(), None)
+    assert_array_roundtrip(false, array.into_box(), None)
 }
 
 #[test]
@@ -1697,7 +1696,7 @@ fn list_binary() -> Result<()> {
     let mut array =
         MutableListArray::<i32, _>::new_with_field(MutableBinaryArray::<i32>::new(), "item", true);
     array.try_extend(data).unwrap();
-    list_array_generic(false, array.into(), None)
+    assert_array_roundtrip(false, array.into_box(), None)
 }
 
 #[test]
@@ -1715,7 +1714,23 @@ fn list_slice() -> Result<()> {
     array.try_extend(data).unwrap();
     let a: ListArray<i32> = array.into();
     let a = a.sliced(2, 1);
-    list_array_generic(false, a, None)
+    assert_array_roundtrip(false, a.boxed(), None)
+}
+
+#[test]
+fn struct_slice() -> Result<()> {
+    let a = pyarrow_nested_nullable("struct_list_nullable");
+
+    let a = a.sliced(2, 1);
+    assert_array_roundtrip(true, a, None)
+}
+
+#[test]
+fn list_struct_slice() -> Result<()> {
+    let a = pyarrow_nested_nullable("list_struct_nullable");
+
+    let a = a.sliced(2, 1);
+    assert_array_roundtrip(true, a, None)
 }
 
 #[test]
@@ -1728,7 +1743,7 @@ fn large_list_large_binary() -> Result<()> {
     let mut array =
         MutableListArray::<i64, _>::new_with_field(MutableBinaryArray::<i64>::new(), "item", true);
     array.try_extend(data).unwrap();
-    list_array_generic(false, array.into(), None)
+    assert_array_roundtrip(false, array.into_box(), None)
 }
 
 #[test]
@@ -1744,7 +1759,7 @@ fn list_utf8_nullable() -> Result<()> {
     let mut array =
         MutableListArray::<i32, _>::new_with_field(MutableUtf8Array::<i32>::new(), "item", true);
     array.try_extend(data).unwrap();
-    list_array_generic(true, array.into(), None)
+    assert_array_roundtrip(true, array.into_box(), None)
 }
 
 #[test]
@@ -1763,7 +1778,7 @@ fn list_int_nullable() -> Result<()> {
         true,
     );
     array.try_extend(data).unwrap();
-    list_array_generic(true, array.into(), None)
+    assert_array_roundtrip(true, array.into_box(), None)
 }
 
 #[test]
