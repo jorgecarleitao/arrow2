@@ -506,6 +506,10 @@
 <a href="#506" id="506">506</a>
 <a href="#507" id="507">507</a>
 <a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
 </pre><pre class="rust"><code><span class="kw">use </span>parquet2::schema::types::{ParquetType, PrimitiveType <span class="kw">as </span>ParquetPrimitiveType};
 <span class="kw">use </span>parquet2::{page::Page, write::DynIter};
 <span class="kw">use </span>std::fmt::Debug;
@@ -514,7 +518,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::bitmap::Bitmap;
 <span class="kw">use </span><span class="kw">crate</span>::datatypes::PhysicalType;
 <span class="kw">use </span><span class="kw">crate</span>::io::parquet::read::schema::is_nullable;
-<span class="kw">use </span><span class="kw">crate</span>::offset::Offset;
+<span class="kw">use </span><span class="kw">crate</span>::offset::{Offset, OffsetsBuffer};
 <span class="kw">use crate</span>::{
     array::Array,
     error::{Error, <span class="prelude-ty">Result</span>},
@@ -523,14 +527,14 @@
 <span class="kw">use super</span>::{array_to_pages, Encoding, WriteOptions};
 
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
-</span><span class="kw">pub struct </span>ListNested&lt;<span class="lifetime">&#39;a</span>, O: Offset&gt; {
+</span><span class="kw">pub struct </span>ListNested&lt;O: Offset&gt; {
     <span class="kw">pub </span>is_optional: bool,
-    <span class="kw">pub </span>offsets: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[O],
-    <span class="kw">pub </span>validity: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt;,
+    <span class="kw">pub </span>offsets: OffsetsBuffer&lt;O&gt;,
+    <span class="kw">pub </span>validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, O: Offset&gt; ListNested&lt;<span class="lifetime">&#39;a</span>, O&gt; {
-    <span class="kw">pub fn </span>new(offsets: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[O], validity: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt;, is_optional: bool) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;O: Offset&gt; ListNested&lt;O&gt; {
+    <span class="kw">pub fn </span>new(offsets: OffsetsBuffer&lt;O&gt;, validity: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;, is_optional: bool) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             is_optional,
             offsets,
@@ -541,43 +545,43 @@
 
 <span class="doccomment">/// Descriptor of nested information of a field
 </span><span class="attr">#[derive(Debug, Clone, PartialEq)]
-</span><span class="kw">pub enum </span>Nested&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub enum </span>Nested {
     <span class="doccomment">/// a primitive (leaf or parquet column)
     /// bitmap, _, length
-    </span>Primitive(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt;, bool, usize),
+    </span>Primitive(<span class="prelude-ty">Option</span>&lt;Bitmap&gt;, bool, usize),
     <span class="doccomment">/// a list
-    </span>List(ListNested&lt;<span class="lifetime">&#39;a</span>, i32&gt;),
+    </span>List(ListNested&lt;i32&gt;),
     <span class="doccomment">/// a list
-    </span>LargeList(ListNested&lt;<span class="lifetime">&#39;a</span>, i64&gt;),
+    </span>LargeList(ListNested&lt;i64&gt;),
     <span class="doccomment">/// a struct
-    </span>Struct(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Bitmap&gt;, bool, usize),
+    </span>Struct(<span class="prelude-ty">Option</span>&lt;Bitmap&gt;, bool, usize),
 }
 
-<span class="kw">impl </span>Nested&lt;<span class="lifetime">&#39;_</span>&gt; {
+<span class="kw">impl </span>Nested {
     <span class="doccomment">/// Returns the length (number of rows) of the element
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="kw">match </span><span class="self">self </span>{
             Nested::Primitive(<span class="kw">_</span>, <span class="kw">_</span>, length) =&gt; <span class="kw-2">*</span>length,
-            Nested::List(nested) =&gt; nested.offsets.len() - <span class="number">1</span>,
-            Nested::LargeList(nested) =&gt; nested.offsets.len() - <span class="number">1</span>,
+            Nested::List(nested) =&gt; nested.offsets.len(),
+            Nested::LargeList(nested) =&gt; nested.offsets.len(),
             Nested::Struct(<span class="kw">_</span>, <span class="kw">_</span>, len) =&gt; <span class="kw-2">*</span>len,
         }
     }
 }
 
 <span class="doccomment">/// Constructs the necessary `Vec&lt;Vec&lt;Nested&gt;&gt;` to write the rep and def levels of `array` to parquet
-</span><span class="kw">pub fn </span>to_nested&lt;<span class="lifetime">&#39;a</span>&gt;(array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Array, type_: <span class="kw-2">&amp;</span>ParquetType) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Vec&lt;Nested&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;&gt; {
+</span><span class="kw">pub fn </span>to_nested(array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array, type_: <span class="kw-2">&amp;</span>ParquetType) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Vec&lt;Nested&gt;&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>nested = <span class="macro">vec!</span>[];
 
     to_nested_recursive(array, type_, <span class="kw-2">&amp;mut </span>nested, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(nested)
 }
 
-<span class="kw">fn </span>to_nested_recursive&lt;<span class="lifetime">&#39;a</span>&gt;(
-    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Array,
+<span class="kw">fn </span>to_nested_recursive(
+    array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array,
     type_: <span class="kw-2">&amp;</span>ParquetType,
-    nested: <span class="kw-2">&amp;mut </span>Vec&lt;Vec&lt;Nested&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;,
-    <span class="kw-2">mut </span>parents: Vec&lt;Nested&lt;<span class="lifetime">&#39;a</span>&gt;&gt;,
+    nested: <span class="kw-2">&amp;mut </span>Vec&lt;Vec&lt;Nested&gt;&gt;,
+    <span class="kw-2">mut </span>parents: Vec&lt;Nested&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span>is_optional = is_nullable(type_.get_field_info());
 
@@ -593,7 +597,11 @@
                 ));
             };
 
-            parents.push(Nested::Struct(array.validity(), is_optional, array.len()));
+            parents.push(Nested::Struct(
+                array.validity().cloned(),
+                is_optional,
+                array.len(),
+            ));
 
             <span class="kw">for </span>(type_, array) <span class="kw">in </span>fields.iter().zip(array.values()) {
                 to_nested_recursive(array.as_ref(), type_, nested, parents.clone())<span class="question-mark">?</span>;
@@ -616,8 +624,8 @@
             };
 
             parents.push(Nested::List(ListNested::new(
-                array.offsets().buffer(),
-                array.validity(),
+                array.offsets().clone(),
+                array.validity().cloned(),
                 is_optional,
             )));
             to_nested_recursive(array.values().as_ref(), type_, nested, parents)<span class="question-mark">?</span>;
@@ -639,15 +647,15 @@
             };
 
             parents.push(Nested::LargeList(ListNested::new(
-                array.offsets().buffer(),
-                array.validity(),
+                array.offsets().clone(),
+                array.validity().cloned(),
                 is_optional,
             )));
             to_nested_recursive(array.values().as_ref(), type_, nested, parents)<span class="question-mark">?</span>;
         }
         <span class="kw">_ </span>=&gt; {
             parents.push(Nested::Primitive(
-                array.validity(),
+                array.validity().cloned(),
                 is_optional,
                 array.len(),
             ));
@@ -798,11 +806,11 @@
             a,
             <span class="macro">vec!</span>[
                 <span class="macro">vec!</span>[
-                    Nested::Struct(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
+                    Nested::Struct(<span class="prelude-val">Some</span>(Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
                     Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
                 ],
                 <span class="macro">vec!</span>[
-                    Nested::Struct(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
+                    Nested::Struct(<span class="prelude-val">Some</span>(Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
                     Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
                 ],
             ]
@@ -887,25 +895,25 @@
                 <span class="comment">// a.b.b
                 </span><span class="macro">vec!</span>[
                     Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
-                    Nested::Struct(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
+                    Nested::Struct(<span class="prelude-val">Some</span>(Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
                     Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
                 ],
                 <span class="comment">// a.b.c
                 </span><span class="macro">vec!</span>[
                     Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
-                    Nested::Struct(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
+                    Nested::Struct(<span class="prelude-val">Some</span>(Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
                     Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
                 ],
                 <span class="comment">// a.c.b
                 </span><span class="macro">vec!</span>[
                     Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
-                    Nested::Struct(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
+                    Nested::Struct(<span class="prelude-val">Some</span>(Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
                     Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
                 ],
                 <span class="comment">// a.c.c
                 </span><span class="macro">vec!</span>[
                     Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
-                    Nested::Struct(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
+                    Nested::Struct(<span class="prelude-val">Some</span>(Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
                     Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
                 ],
             ]
@@ -995,19 +1003,19 @@
                 <span class="macro">vec!</span>[
                     Nested::List(ListNested::&lt;i32&gt; {
                         is_optional: <span class="bool-val">false</span>,
-                        offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">4</span>],
+                        offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">4</span>].try_into().unwrap(),
                         validity: <span class="prelude-val">None</span>,
                     }),
-                    Nested::Struct(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
+                    Nested::Struct(<span class="prelude-val">Some</span>(Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
                     Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
                 ],
                 <span class="macro">vec!</span>[
                     Nested::List(ListNested::&lt;i32&gt; {
                         is_optional: <span class="bool-val">false</span>,
-                        offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">4</span>],
+                        offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">4</span>].try_into().unwrap(),
                         validity: <span class="prelude-val">None</span>,
                     }),
-                    Nested::Struct(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
+                    Nested::Struct(<span class="prelude-val">Some</span>(Bitmap::from([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>])), <span class="bool-val">true</span>, <span class="number">4</span>),
                     Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">4</span>),
                 ],
             ]
@@ -1015,4 +1023,4 @@
     }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (585f3eef2 2023-02-11)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (5b8f28453 2023-02-12)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

@@ -360,7 +360,7 @@
     <span class="doccomment">/// Returns a new [`Buffer`] that is a slice of this buffer starting at `offset`.
     /// Doing so allows the same memory region to be shared between buffers.
     /// # Panics
-    /// Panics iff `offset` is larger than `len`.
+    /// Panics iff `offset + length` is larger than `len`.
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>sliced(<span class="self">self</span>, offset: usize, length: usize) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(
@@ -479,4 +479,4 @@
     }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (585f3eef2 2023-02-11)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (5b8f28453 2023-02-12)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

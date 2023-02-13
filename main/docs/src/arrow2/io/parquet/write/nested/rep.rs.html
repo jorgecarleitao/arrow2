@@ -366,6 +366,8 @@
 <a href="#366" id="366">366</a>
 <a href="#367" id="367">367</a>
 <a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::pages::Nested;
 <span class="kw">use </span><span class="kw">super</span>::to_length;
 
@@ -378,9 +380,11 @@
         .iter()
         .filter_map(|nested| <span class="kw">match </span>nested {
             Nested::Primitive(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
-            Nested::List(nested) =&gt; <span class="prelude-val">Some</span>(Box::new(to_length(nested.offsets)) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>DebugIter&gt;),
+            Nested::List(nested) =&gt; {
+                <span class="prelude-val">Some</span>(Box::new(to_length(<span class="kw-2">&amp;</span>nested.offsets)) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>DebugIter&gt;)
+            }
             Nested::LargeList(nested) =&gt; {
-                <span class="prelude-val">Some</span>(Box::new(to_length(nested.offsets)) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>DebugIter&gt;)
+                <span class="prelude-val">Some</span>(Box::new(to_length(<span class="kw-2">&amp;</span>nested.offsets)) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>DebugIter&gt;)
             }
             Nested::Struct(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
         })
@@ -539,7 +543,7 @@
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">false</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">5</span>, <span class="number">8</span>, <span class="number">8</span>, <span class="number">11</span>, <span class="number">11</span>, <span class="number">12</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">5</span>, <span class="number">8</span>, <span class="number">8</span>, <span class="number">11</span>, <span class="number">11</span>, <span class="number">12</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">12</span>),
@@ -554,12 +558,12 @@
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">false</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">4</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">4</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">false</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">3</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">10</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">3</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">10</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">10</span>),
@@ -579,7 +583,7 @@
         </span><span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">true</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">2</span>),
@@ -595,13 +599,13 @@
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">true</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">3</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">3</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">3</span>),
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">true</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">3</span>, <span class="number">6</span>, <span class="number">7</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">3</span>, <span class="number">6</span>, <span class="number">7</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">7</span>),
@@ -620,7 +624,7 @@
             Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">1</span>),
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">true</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">4</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">4</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">4</span>),
@@ -635,12 +639,12 @@
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">false</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">3</span>, <span class="number">5</span>, <span class="number">5</span>, <span class="number">8</span>, <span class="number">8</span>, <span class="number">9</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">3</span>, <span class="number">5</span>, <span class="number">5</span>, <span class="number">8</span>, <span class="number">8</span>, <span class="number">9</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">false</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span>, <span class="number">11</span>, <span class="number">12</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span>, <span class="number">11</span>, <span class="number">12</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">12</span>),
@@ -668,13 +672,13 @@
         </span><span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">true</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">5</span>, <span class="number">8</span>, <span class="number">8</span>, <span class="number">11</span>, <span class="number">11</span>, <span class="number">12</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">5</span>, <span class="number">8</span>, <span class="number">8</span>, <span class="number">11</span>, <span class="number">11</span>, <span class="number">12</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">12</span>),
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">true</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">4</span>, <span class="number">4</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">8</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">4</span>, <span class="number">4</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">8</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">8</span>),
@@ -695,13 +699,13 @@
         </span><span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">true</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">1</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">12</span>),
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">true</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">0</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">0</span>),
@@ -716,13 +720,13 @@
         <span class="kw">let </span>nested = <span class="macro">vec!</span>[
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">true</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">1</span>, <span class="number">1</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>, <span class="number">1</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Struct(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">12</span>),
             Nested::List(ListNested {
                 is_optional: <span class="bool-val">true</span>,
-                offsets: <span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">0</span>],
+                offsets: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>].try_into().unwrap(),
                 validity: <span class="prelude-val">None</span>,
             }),
             Nested::Primitive(<span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="number">0</span>),
@@ -735,4 +739,4 @@
     }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (585f3eef2 2023-02-11)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (5b8f28453 2023-02-12)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

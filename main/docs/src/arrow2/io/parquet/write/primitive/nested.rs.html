@@ -56,19 +56,6 @@
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
 </pre><pre class="rust"><code><span class="kw">use </span>parquet2::schema::types::PrimitiveType;
 <span class="kw">use </span>parquet2::statistics::serialize_statistics;
 <span class="kw">use </span>parquet2::{encoding::Encoding, page::DataPage, types::NativeType};
@@ -78,7 +65,7 @@
 <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::WriteOptions;
 <span class="kw">use </span><span class="kw">super</span>::basic::{build_statistics, encode_plain};
 <span class="kw">use </span><span class="kw">crate</span>::io::parquet::read::schema::is_nullable;
-<span class="kw">use </span><span class="kw">crate</span>::io::parquet::write::{slice_nested_leaf, Nested};
+<span class="kw">use </span><span class="kw">crate</span>::io::parquet::write::Nested;
 <span class="kw">use crate</span>::{
     array::{Array, PrimitiveArray},
     error::Result,
@@ -100,27 +87,14 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
 
-    <span class="comment">// we slice the leaf by the offsets as dremel only computes lengths and thus
-    // does NOT take the starting offset into account.
-    // By slicing the leaf array we also don&#39;t write too many values.
-    </span><span class="kw">let </span>(start, len) = slice_nested_leaf(nested);
-
-    <span class="kw">let </span><span class="kw-2">mut </span>nested = nested.to_vec();
-    <span class="kw">let </span>array = array.clone().sliced(start, len);
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Nested::Primitive(<span class="kw">_</span>, <span class="kw">_</span>, c)) = nested.last_mut() {
-        <span class="kw-2">*</span>c = len;
-    } <span class="kw">else </span>{
-        <span class="macro">unreachable!</span>(<span class="string">&quot;&quot;</span>)
-    }
-
     <span class="kw">let </span>(repetition_levels_byte_length, definition_levels_byte_length) =
-        nested::write_rep_and_def(options.version, <span class="kw-2">&amp;</span>nested, <span class="kw-2">&amp;mut </span>buffer)<span class="question-mark">?</span>;
+        nested::write_rep_and_def(options.version, nested, <span class="kw-2">&amp;mut </span>buffer)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>buffer = encode_plain(<span class="kw-2">&amp;</span>array, is_optional, buffer);
+    <span class="kw">let </span>buffer = encode_plain(array, is_optional, buffer);
 
     <span class="kw">let </span>statistics = <span class="kw">if </span>options.write_statistics {
         <span class="prelude-val">Some</span>(serialize_statistics(<span class="kw-2">&amp;</span>build_statistics(
-            <span class="kw-2">&amp;</span>array,
+            array,
             type_.clone(),
         )))
     } <span class="kw">else </span>{
@@ -129,7 +103,7 @@
 
     utils::build_plain_page(
         buffer,
-        nested::num_values(<span class="kw-2">&amp;</span>nested),
+        nested::num_values(nested),
         nested[<span class="number">0</span>].len(),
         array.null_count(),
         repetition_levels_byte_length,
@@ -141,4 +115,4 @@
     )
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (585f3eef2 2023-02-11)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (5b8f28453 2023-02-12)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

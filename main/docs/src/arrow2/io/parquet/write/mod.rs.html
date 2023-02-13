@@ -659,19 +659,6 @@
 <a href="#659" id="659">659</a>
 <a href="#660" id="660">660</a>
 <a href="#661" id="661">661</a>
-<a href="#662" id="662">662</a>
-<a href="#663" id="663">663</a>
-<a href="#664" id="664">664</a>
-<a href="#665" id="665">665</a>
-<a href="#666" id="666">666</a>
-<a href="#667" id="667">667</a>
-<a href="#668" id="668">668</a>
-<a href="#669" id="669">669</a>
-<a href="#670" id="670">670</a>
-<a href="#671" id="671">671</a>
-<a href="#672" id="672">672</a>
-<a href="#673" id="673">673</a>
-<a href="#674" id="674">674</a>
 </pre><pre class="rust"><code><span class="doccomment">//! APIs to write to Parquet format.
 //!
 //! # Arrow/Parquet Interoperability
@@ -754,13 +741,13 @@
     <span class="kw">for </span>nested <span class="kw">in </span>nested.iter().rev() {
         <span class="kw">match </span>nested {
             Nested::LargeList(l_nested) =&gt; {
-                <span class="kw">let </span>start = <span class="kw-2">*</span>l_nested.offsets.first().unwrap();
-                <span class="kw">let </span>end = <span class="kw-2">*</span>l_nested.offsets.last().unwrap();
+                <span class="kw">let </span>start = <span class="kw-2">*</span>l_nested.offsets.first();
+                <span class="kw">let </span>end = <span class="kw-2">*</span>l_nested.offsets.last();
                 <span class="kw">return </span>(start <span class="kw">as </span>usize, (end - start) <span class="kw">as </span>usize);
             }
             Nested::List(l_nested) =&gt; {
-                <span class="kw">let </span>start = <span class="kw-2">*</span>l_nested.offsets.first().unwrap();
-                <span class="kw">let </span>end = <span class="kw-2">*</span>l_nested.offsets.last().unwrap();
+                <span class="kw">let </span>start = <span class="kw-2">*</span>l_nested.offsets.first();
+                <span class="kw">let </span>end = <span class="kw-2">*</span>l_nested.offsets.last();
                 <span class="kw">return </span>(start <span class="kw">as </span>usize, (end - start) <span class="kw">as </span>usize);
             }
             Nested::Primitive(<span class="kw">_</span>, <span class="kw">_</span>, len) =&gt; out = (<span class="number">0</span>, <span class="kw-2">*</span>len),
@@ -832,137 +819,124 @@
 }
 
 <span class="doccomment">/// Slices the [`Array`] to `Box&lt;dyn Array&gt;` and `Vec&lt;Nested&gt;`.
-</span><span class="kw">pub fn </span>slice_parquet_array&lt;<span class="lifetime">&#39;a</span>&gt;(
-    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Array,
-    nested: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Nested&lt;<span class="lifetime">&#39;a</span>&gt;],
-    offset: usize,
-    length: usize,
-) -&gt; (Box&lt;<span class="kw">dyn </span>Array&gt;, Vec&lt;Nested&lt;<span class="lifetime">&#39;a</span>&gt;&gt;) {
-    <span class="kw">let </span><span class="kw-2">mut </span>nested = nested.to_vec();
-
-    <span class="kw">let </span><span class="kw-2">mut </span>is_nested = <span class="bool-val">false</span>;
+</span><span class="kw">pub fn </span>slice_parquet_array(
+    primitive_array: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Array,
+    nested: <span class="kw-2">&amp;mut </span>[Nested],
+    <span class="kw-2">mut </span>current_offset: usize,
+    <span class="kw-2">mut </span>current_length: usize,
+) {
     <span class="kw">for </span>nested <span class="kw">in </span>nested.iter_mut() {
         <span class="kw">match </span>nested {
             Nested::LargeList(l_nested) =&gt; {
-                is_nested = <span class="bool-val">true</span>;
-                <span class="comment">// the slice is a bit awkward because we always want the latest value to compute the next length;
-                </span>l_nested.offsets = <span class="kw-2">&amp;</span>l_nested.offsets
-                    [offset..offset + std::cmp::min(length + <span class="number">1</span>, l_nested.offsets.len())];
+                l_nested.offsets.slice(current_offset, current_length + <span class="number">1</span>);
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = l_nested.validity.as_mut() {
+                    validity.slice(current_offset, current_length)
+                };
+
+                current_length = l_nested.offsets.range() <span class="kw">as </span>usize;
+                current_offset = <span class="kw-2">*</span>l_nested.offsets.first() <span class="kw">as </span>usize;
             }
             Nested::List(l_nested) =&gt; {
-                is_nested = <span class="bool-val">true</span>;
-                l_nested.offsets = <span class="kw-2">&amp;</span>l_nested.offsets
-                    [offset..offset + std::cmp::min(length + <span class="number">1</span>, l_nested.offsets.len())];
+                l_nested.offsets.slice(current_offset, current_length + <span class="number">1</span>);
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = l_nested.validity.as_mut() {
+                    validity.slice(current_offset, current_length)
+                };
+
+                current_length = l_nested.offsets.range() <span class="kw">as </span>usize;
+                current_offset = <span class="kw-2">*</span>l_nested.offsets.first() <span class="kw">as </span>usize;
             }
-            <span class="kw">_ </span>=&gt; {}
+            Nested::Struct(validity, <span class="kw">_</span>, length) =&gt; {
+                <span class="kw-2">*</span>length = current_length;
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = validity.as_mut() {
+                    validity.slice(current_offset, current_length)
+                };
+            }
+            Nested::Primitive(validity, <span class="kw">_</span>, length) =&gt; {
+                <span class="kw-2">*</span>length = current_length;
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = validity.as_mut() {
+                    validity.slice(current_offset, current_length)
+                };
+                primitive_array.slice(current_offset, current_length);
+            }
         }
-    }
-    <span class="kw">if </span>is_nested {
-        (array.to_boxed(), nested)
-    } <span class="kw">else </span>{
-        (array.to_boxed().sliced(offset, length), nested)
     }
 }
 
 <span class="doccomment">/// Get the length of [`Array`] that should be sliced.
-</span><span class="kw">pub fn </span>get_max_length(array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array, nested: <span class="kw-2">&amp;</span>[Nested]) -&gt; usize {
-    <span class="comment">// the inner nested structure that
-    // dictates how often the primitive should be repeated
-    </span><span class="kw">for </span>nested <span class="kw">in </span>nested.iter().rev() {
+</span><span class="kw">pub fn </span>get_max_length(nested: <span class="kw-2">&amp;</span>[Nested]) -&gt; usize {
+    <span class="kw">let </span><span class="kw-2">mut </span>length = <span class="number">0</span>;
+    <span class="kw">for </span>nested <span class="kw">in </span>nested.iter() {
         <span class="kw">match </span>nested {
-            Nested::LargeList(l_nested) =&gt; <span class="kw">return </span>l_nested.offsets.len() - <span class="number">1</span>,
-            Nested::List(l_nested) =&gt; <span class="kw">return </span>l_nested.offsets.len() - <span class="number">1</span>,
+            Nested::LargeList(l_nested) =&gt; length += l_nested.offsets.range() <span class="kw">as </span>usize,
+            Nested::List(l_nested) =&gt; length += l_nested.offsets.range() <span class="kw">as </span>usize,
             <span class="kw">_ </span>=&gt; {}
         }
     }
-    array.len()
+    length
 }
 
 <span class="doccomment">/// Returns an iterator of [`Page`].
-</span><span class="attr">#[allow(clippy::needless_collect)]
 </span><span class="kw">pub fn </span>array_to_pages(
-    array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array,
+    primitive_array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array,
     type_: ParquetPrimitiveType,
     nested: <span class="kw-2">&amp;</span>[Nested],
     options: WriteOptions,
     encoding: Encoding,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;DynIter&lt;<span class="lifetime">&#39;static</span>, <span class="prelude-ty">Result</span>&lt;Page&gt;&gt;&gt; {
-    <span class="comment">// maximum page size is 2^31 e.g. i32::MAX
-    // we split at 2^31 - 2^25 to err on the safe side
-    // we also check for an array.len &gt; 3 to prevent infinite recursion
-    // still have to figure out how to deal with values that are i32::MAX size, such as very large
-    // strings or a list column with many elements
-
-    </span><span class="kw">let </span>array_byte_size = estimated_bytes_size(array);
-    <span class="kw">if </span>array_byte_size &gt;= (<span class="number">2u32</span>.pow(<span class="number">31</span>) - <span class="number">2u32</span>.pow(<span class="number">25</span>)) <span class="kw">as </span>usize &amp;&amp; array.len() &gt; <span class="number">3 </span>{
-        <span class="kw">let </span>length = get_max_length(array, nested);
-        <span class="kw">let </span>split_at = length / <span class="number">2</span>;
-        <span class="kw">let </span>(sub_array_left, subnested_left) = slice_parquet_array(array, nested, <span class="number">0</span>, split_at);
-        <span class="kw">let </span>(sub_array_right, subnested_right) =
-            slice_parquet_array(array, nested, split_at, length - split_at);
-
-        <span class="prelude-val">Ok</span>(DynIter::new(
-            array_to_pages(
-                sub_array_left.as_ref(),
-                type_.clone(),
-                subnested_left.as_ref(),
-                options,
-                encoding,
-            )<span class="question-mark">?
-            </span>.chain(array_to_pages(
-                sub_array_right.as_ref(),
+    <span class="kw">if let </span>DataType::Dictionary(key_type, <span class="kw">_</span>, <span class="kw">_</span>) = primitive_array.data_type().to_logical_type() {
+        <span class="kw">return </span><span class="macro">match_integer_type!</span>(key_type, |<span class="macro-nonterminal">$T</span>| {
+            dictionary::array_to_pages::&lt;<span class="macro-nonterminal">$T</span>&gt;(
+                primitive_array.as_any().downcast_ref().unwrap(),
                 type_,
-                subnested_right.as_ref(),
+                <span class="kw-2">&amp;</span>nested,
                 options,
                 encoding,
-            )<span class="question-mark">?</span>),
-        ))
-    } <span class="kw">else </span>{
-        <span class="kw">match </span>array.data_type() {
-            DataType::Dictionary(key_type, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
-                <span class="macro">match_integer_type!</span>(key_type, |<span class="macro-nonterminal">$T</span>| {
-                    dictionary::array_to_pages::&lt;<span class="macro-nonterminal">$T</span>&gt;(
-                        array.as_any().downcast_ref().unwrap(),
-                        type_,
-                        nested,
-                        options,
-                        encoding,
-                    )
-                })
-            }
-            <span class="kw">_ </span>=&gt; {
-                <span class="kw">const </span>DEFAULT_PAGE_SIZE: usize = <span class="number">1024 </span>* <span class="number">1024</span>;
-                <span class="kw">let </span>page_size = options.data_pagesize_limit.unwrap_or(DEFAULT_PAGE_SIZE);
-                <span class="kw">let </span>bytes_per_row =
-                    ((array_byte_size <span class="kw">as </span>f64) / ((array.len() + <span class="number">1</span>) <span class="kw">as </span>f64)) <span class="kw">as </span>usize;
-                <span class="kw">let </span>rows_per_page = (page_size / (bytes_per_row + <span class="number">1</span>)).max(<span class="number">1</span>);
+            )
+        });
+    };
 
-                <span class="kw">let </span>length = get_max_length(array, nested);
-                <span class="kw">let </span>vs: Vec&lt;<span class="prelude-ty">Result</span>&lt;Page&gt;&gt; = (<span class="number">0</span>..length)
-                    .step_by(rows_per_page)
-                    .map(|offset| {
-                        <span class="kw">let </span>length = <span class="kw">if </span>offset + rows_per_page &gt; length {
-                            length - offset
-                        } <span class="kw">else </span>{
-                            rows_per_page
-                        };
+    <span class="kw">let </span>nested = nested.to_vec();
+    <span class="kw">let </span>primitive_array = primitive_array.to_boxed();
 
-                        <span class="kw">let </span>(sub_array, subnested) =
-                            slice_parquet_array(array, nested, offset, length);
-                        array_to_page(
-                            sub_array.as_ref(),
-                            type_.clone(),
-                            <span class="kw-2">&amp;</span>subnested,
-                            options,
-                            encoding,
-                        )
-                    })
-                    .collect();
+    <span class="kw">let </span>number_of_rows = nested[<span class="number">0</span>].len();
 
-                <span class="prelude-val">Ok</span>(DynIter::new(vs.into_iter()))
-            }
-        }
-    }
+    <span class="comment">// note: this is not correct if the array is sliced - the estimation should happen on the
+    // primitive after sliced for parquet
+    </span><span class="kw">let </span>byte_size = estimated_bytes_size(primitive_array.as_ref());
+
+    <span class="kw">const </span>DEFAULT_PAGE_SIZE: usize = <span class="number">1024 </span>* <span class="number">1024</span>;
+    <span class="kw">let </span>max_page_size = options.data_pagesize_limit.unwrap_or(DEFAULT_PAGE_SIZE);
+    <span class="kw">let </span>max_page_size = max_page_size.min(<span class="number">2usize</span>.pow(<span class="number">31</span>) - <span class="number">2usize</span>.pow(<span class="number">25</span>)); <span class="comment">// allowed maximum page size
+    </span><span class="kw">let </span>bytes_per_row = <span class="kw">if </span>number_of_rows == <span class="number">0 </span>{
+        <span class="number">0
+    </span>} <span class="kw">else </span>{
+        ((byte_size <span class="kw">as </span>f64) / (number_of_rows <span class="kw">as </span>f64)) <span class="kw">as </span>usize
+    };
+    <span class="kw">let </span>rows_per_page = (max_page_size / (bytes_per_row + <span class="number">1</span>)).max(<span class="number">1</span>);
+
+    <span class="kw">let </span>pages = (<span class="number">0</span>..number_of_rows)
+        .step_by(rows_per_page)
+        .map(<span class="kw">move </span>|offset| {
+            <span class="kw">let </span>length = <span class="kw">if </span>offset + rows_per_page &gt; number_of_rows {
+                number_of_rows - offset
+            } <span class="kw">else </span>{
+                rows_per_page
+            };
+
+            <span class="kw">let </span><span class="kw-2">mut </span>right_array = primitive_array.clone();
+            <span class="kw">let </span><span class="kw-2">mut </span>right_nested = nested.clone();
+            slice_parquet_array(right_array.as_mut(), <span class="kw-2">&amp;mut </span>right_nested, offset, length);
+
+            array_to_page(
+                right_array.as_ref(),
+                type_.clone(),
+                <span class="kw-2">&amp;</span>right_nested,
+                options,
+                encoding,
+            )
+        });
+
+    <span class="prelude-val">Ok</span>(DynIter::new(pages))
 }
 
 <span class="doccomment">/// Converts an [`Array`] to a [`CompressedPage`] based on options, descriptor and `encoding`.
@@ -1347,4 +1321,4 @@
     encodings
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (585f3eef2 2023-02-11)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (5b8f28453 2023-02-12)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
