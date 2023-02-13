@@ -523,11 +523,6 @@
 <a href="#523" id="523">523</a>
 <a href="#524" id="524">524</a>
 <a href="#525" id="525">525</a>
-<a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::{
         utils::{BitmapIter, ZipValidity},
@@ -756,7 +751,8 @@
     <span class="macro">impl_into_array!</span>();
 
     <span class="doccomment">/// Try to convert this `Utf8Array` to a `MutableUtf8Array`
-    </span><span class="kw">pub fn </span>into_mut(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; Either&lt;<span class="self">Self</span>, MutableUtf8Array&lt;O&gt;&gt; {
+    </span><span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>into_mut(<span class="self">self</span>) -&gt; Either&lt;<span class="self">Self</span>, MutableUtf8Array&lt;O&gt;&gt; {
         <span class="kw">use </span>Either::<span class="kw-2">*</span>;
         <span class="kw">if let </span><span class="prelude-val">Some</span>(bitmap) = <span class="self">self</span>.validity {
             <span class="kw">match </span>bitmap.into_mut() {
@@ -769,44 +765,41 @@
                         <span class="prelude-val">Some</span>(bitmap),
                     )
                 }),
-                Right(mutable_bitmap) =&gt; <span class="kw">match </span>(
-                    <span class="self">self</span>.values.get_mut().map(std::mem::take),
-                    <span class="self">self</span>.offsets.get_mut(),
-                ) {
-                    (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; {
+                Right(mutable_bitmap) =&gt; <span class="kw">match </span>(<span class="self">self</span>.values.into_mut(), <span class="self">self</span>.offsets.into_mut()) {
+                    (Left(values), Left(offsets)) =&gt; {
                         <span class="comment">// Safety: invariants are preserved
                         </span>Left(<span class="kw">unsafe </span>{
                             Utf8Array::new_unchecked(
                                 <span class="self">self</span>.data_type,
-                                <span class="self">self</span>.offsets,
-                                <span class="self">self</span>.values,
+                                offsets,
+                                values,
                                 <span class="prelude-val">Some</span>(mutable_bitmap.into()),
                             )
                         })
                     }
-                    (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(offsets)) =&gt; {
+                    (Left(values), Right(offsets)) =&gt; {
                         <span class="comment">// Safety: invariants are preserved
                         </span>Left(<span class="kw">unsafe </span>{
                             Utf8Array::new_unchecked(
                                 <span class="self">self</span>.data_type,
                                 offsets.into(),
-                                <span class="self">self</span>.values,
+                                values,
                                 <span class="prelude-val">Some</span>(mutable_bitmap.into()),
                             )
                         })
                     }
-                    (<span class="prelude-val">Some</span>(mutable_values), <span class="prelude-val">None</span>) =&gt; {
+                    (Right(values), Left(offsets)) =&gt; {
                         <span class="comment">// Safety: invariants are preserved
                         </span>Left(<span class="kw">unsafe </span>{
                             Utf8Array::new_unchecked(
                                 <span class="self">self</span>.data_type,
-                                <span class="self">self</span>.offsets,
-                                mutable_values.into(),
+                                offsets,
+                                values.into(),
                                 <span class="prelude-val">Some</span>(mutable_bitmap.into()),
                             )
                         })
                     }
-                    (<span class="prelude-val">Some</span>(values), <span class="prelude-val">Some</span>(offsets)) =&gt; Right(<span class="kw">unsafe </span>{
+                    (Right(values), Right(offsets)) =&gt; Right(<span class="kw">unsafe </span>{
                         MutableUtf8Array::new_unchecked(
                             <span class="self">self</span>.data_type,
                             offsets,
@@ -817,20 +810,17 @@
                 },
             }
         } <span class="kw">else </span>{
-            <span class="kw">match </span>(
-                <span class="self">self</span>.values.get_mut().map(std::mem::take),
-                <span class="self">self</span>.offsets.get_mut(),
-            ) {
-                (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; Left(<span class="kw">unsafe </span>{
-                    Utf8Array::new_unchecked(<span class="self">self</span>.data_type, <span class="self">self</span>.offsets, <span class="self">self</span>.values, <span class="prelude-val">None</span>)
+            <span class="kw">match </span>(<span class="self">self</span>.values.into_mut(), <span class="self">self</span>.offsets.into_mut()) {
+                (Left(values), Left(offsets)) =&gt; {
+                    Left(<span class="kw">unsafe </span>{ Utf8Array::new_unchecked(<span class="self">self</span>.data_type, offsets, values, <span class="prelude-val">None</span>) })
+                }
+                (Left(values), Right(offsets)) =&gt; Left(<span class="kw">unsafe </span>{
+                    Utf8Array::new_unchecked(<span class="self">self</span>.data_type, offsets.into(), values, <span class="prelude-val">None</span>)
                 }),
-                (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(offsets)) =&gt; Left(<span class="kw">unsafe </span>{
-                    Utf8Array::new_unchecked(<span class="self">self</span>.data_type, offsets.into(), <span class="self">self</span>.values, <span class="prelude-val">None</span>)
+                (Right(values), Left(offsets)) =&gt; Left(<span class="kw">unsafe </span>{
+                    Utf8Array::new_unchecked(<span class="self">self</span>.data_type, offsets, values.into(), <span class="prelude-val">None</span>)
                 }),
-                (<span class="prelude-val">Some</span>(values), <span class="prelude-val">None</span>) =&gt; Left(<span class="kw">unsafe </span>{
-                    Utf8Array::new_unchecked(<span class="self">self</span>.data_type, <span class="self">self</span>.offsets, values.into(), <span class="prelude-val">None</span>)
-                }),
-                (<span class="prelude-val">Some</span>(values), <span class="prelude-val">Some</span>(offsets)) =&gt; Right(<span class="kw">unsafe </span>{
+                (Right(values), Right(offsets)) =&gt; Right(<span class="kw">unsafe </span>{
                     MutableUtf8Array::new_unchecked(<span class="self">self</span>.data_type, offsets, values, <span class="prelude-val">None</span>)
                 }),
             }

@@ -731,7 +731,7 @@
 
     <span class="doccomment">/// Returns an option of a mutable reference to the values of this [`PrimitiveArray`].
     </span><span class="kw">pub fn </span>get_mut_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>[T]&gt; {
-        <span class="self">self</span>.values.get_mut().map(|x| x.as_mut())
+        <span class="self">self</span>.values.get_mut_slice()
     }
 
     <span class="doccomment">/// Returns its internal representation
@@ -753,7 +753,7 @@
     ///
     /// This function is primarily used to re-use memory regions.
     </span><span class="attr">#[must_use]
-    </span><span class="kw">pub fn </span>into_mut(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; Either&lt;<span class="self">Self</span>, MutablePrimitiveArray&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>into_mut(<span class="self">self</span>) -&gt; Either&lt;<span class="self">Self</span>, MutablePrimitiveArray&lt;T&gt;&gt; {
         <span class="kw">use </span>Either::<span class="kw-2">*</span>;
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(bitmap) = <span class="self">self</span>.validity {
@@ -763,8 +763,8 @@
                     <span class="self">self</span>.values,
                     <span class="prelude-val">Some</span>(bitmap),
                 )),
-                Right(mutable_bitmap) =&gt; <span class="kw">match </span><span class="self">self</span>.values.get_mut().map(std::mem::take) {
-                    <span class="prelude-val">Some</span>(values) =&gt; Right(
+                Right(mutable_bitmap) =&gt; <span class="kw">match </span><span class="self">self</span>.values.into_mut() {
+                    Right(values) =&gt; Right(
                         MutablePrimitiveArray::try_new(
                             <span class="self">self</span>.data_type,
                             values,
@@ -772,19 +772,19 @@
                         )
                         .unwrap(),
                     ),
-                    <span class="prelude-val">None </span>=&gt; Left(PrimitiveArray::new(
+                    Left(values) =&gt; Left(PrimitiveArray::new(
                         <span class="self">self</span>.data_type,
-                        <span class="self">self</span>.values,
+                        values,
                         <span class="prelude-val">Some</span>(mutable_bitmap.into()),
                     )),
                 },
             }
         } <span class="kw">else </span>{
-            <span class="kw">match </span><span class="self">self</span>.values.get_mut().map(std::mem::take) {
-                <span class="prelude-val">Some</span>(values) =&gt; {
+            <span class="kw">match </span><span class="self">self</span>.values.into_mut() {
+                Right(values) =&gt; {
                     Right(MutablePrimitiveArray::try_new(<span class="self">self</span>.data_type, values, <span class="prelude-val">None</span>).unwrap())
                 }
-                <span class="prelude-val">None </span>=&gt; Left(PrimitiveArray::new(<span class="self">self</span>.data_type, <span class="self">self</span>.values, <span class="prelude-val">None</span>)),
+                Left(values) =&gt; Left(PrimitiveArray::new(<span class="self">self</span>.data_type, values, <span class="prelude-val">None</span>)),
             }
         }
     }
