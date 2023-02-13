@@ -83,16 +83,6 @@ impl FixedSizeBinaryArray {
             Some(Bitmap::new_zeroed(length)),
         )
     }
-
-    /// Boxes self into a [`Box<dyn Array>`].
-    pub fn boxed(self) -> Box<dyn Array> {
-        Box::new(self)
-    }
-
-    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
-    pub fn arced(self) -> std::sync::Arc<dyn Array> {
-        std::sync::Arc::new(self)
-    }
 }
 
 // must use
@@ -125,25 +115,8 @@ impl FixedSizeBinaryArray {
     }
 
     impl_sliced!();
-
-    /// Returns this [`FixedSizeBinaryArray`] with a new validity.
-    /// # Panic
-    /// This function panics iff `validity.len() != self.len()`.
-    #[must_use]
-    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
-        self.set_validity(validity);
-        self
-    }
-
-    /// Sets the validity of this [`FixedSizeBinaryArray`].
-    /// # Panics
-    /// This function panics iff `validity.len() != self.len()`.
-    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
-        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity must be equal to the array's length")
-        }
-        self.validity = validity;
-    }
+    impl_mut_validity!();
+    impl_into_array!();
 }
 
 // accessors
@@ -234,44 +207,15 @@ impl FixedSizeBinaryArray {
 }
 
 impl Array for FixedSizeBinaryArray {
-    #[inline]
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    #[inline]
-    fn data_type(&self) -> &DataType {
-        &self.data_type
-    }
+    impl_common_array!();
 
     fn validity(&self) -> Option<&Bitmap> {
         self.validity.as_ref()
     }
 
-    fn slice(&mut self, offset: usize, length: usize) {
-        self.slice(offset, length)
-    }
-
-    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
-        self.slice_unchecked(offset, length)
-    }
-
+    #[inline]
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.clone().with_validity(validity))
-    }
-
-    fn to_boxed(&self) -> Box<dyn Array> {
-        Box::new(self.clone())
     }
 }
 

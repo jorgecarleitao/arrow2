@@ -323,6 +323,8 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         self.keys.set_validity(validity);
     }
 
+    impl_into_array!();
+
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
@@ -384,16 +386,6 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         new_scalar(self.values.as_ref(), index)
     }
 
-    /// Boxes self into a [`Box<dyn Array>`].
-    pub fn boxed(self) -> Box<dyn Array> {
-        Box::new(self)
-    }
-
-    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
-    pub fn arced(self) -> std::sync::Arc<dyn Array> {
-        std::sync::Arc::new(self)
-    }
-
     pub(crate) fn try_get_child(data_type: &DataType) -> Result<&DataType, Error> {
         Ok(match data_type.to_logical_type() {
             DataType::Dictionary(_, values, _) => values.as_ref(),
@@ -407,43 +399,14 @@ impl<K: DictionaryKey> DictionaryArray<K> {
 }
 
 impl<K: DictionaryKey> Array for DictionaryArray<K> {
-    #[inline]
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    #[inline]
-    fn data_type(&self) -> &DataType {
-        &self.data_type
-    }
+    impl_common_array!();
 
     fn validity(&self) -> Option<&Bitmap> {
         self.keys.validity()
     }
 
-    fn slice(&mut self, offset: usize, length: usize) {
-        self.slice(offset, length)
-    }
-
-    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
-        self.slice_unchecked(offset, length)
-    }
-
+    #[inline]
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.clone().with_validity(validity))
-    }
-
-    fn to_boxed(&self) -> Box<dyn Array> {
-        Box::new(self.clone())
     }
 }

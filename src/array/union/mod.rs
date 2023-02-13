@@ -219,16 +219,6 @@ impl UnionArray {
             panic!("Union struct must be created with the corresponding Union DataType")
         }
     }
-
-    /// Boxes self into a [`Box<dyn Array>`].
-    pub fn boxed(self) -> Box<dyn Array> {
-        Box::new(self)
-    }
-
-    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
-    pub fn arced(self) -> std::sync::Arc<dyn Array> {
-        std::sync::Arc::new(self)
-    }
 }
 
 impl UnionArray {
@@ -263,6 +253,7 @@ impl UnionArray {
     }
 
     impl_sliced!();
+    impl_into_array!();
 }
 
 impl UnionArray {
@@ -344,40 +335,14 @@ impl UnionArray {
 }
 
 impl Array for UnionArray {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    fn data_type(&self) -> &DataType {
-        &self.data_type
-    }
+    impl_common_array!();
 
     fn validity(&self) -> Option<&Bitmap> {
         None
     }
 
-    fn slice(&mut self, offset: usize, length: usize) {
-        self.slice(offset, length)
-    }
-
-    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
-        self.slice_unchecked(offset, length)
-    }
-
     fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {
         panic!("cannot set validity of a union array")
-    }
-    fn to_boxed(&self) -> Box<dyn Array> {
-        Box::new(self.clone())
     }
 }
 

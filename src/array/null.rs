@@ -47,20 +47,26 @@ impl NullArray {
         Self::new(data_type, length)
     }
 
-    /// Boxes self into a [`Box<dyn Array>`].
-    pub fn boxed(self) -> Box<dyn Array> {
-        Box::new(self)
-    }
-
-    /// Boxes self into a [`std::sync::Arc<dyn Array>`].
-    pub fn arced(self) -> std::sync::Arc<dyn Array> {
-        std::sync::Arc::new(self)
-    }
+    impl_sliced!();
+    impl_into_array!();
 }
 
 impl NullArray {
     /// Returns a slice of the [`NullArray`].
-    pub fn slice(&mut self, _offset: usize, length: usize) {
+    /// # Panic
+    /// This function panics iff `offset + length > self.len()`.
+    pub fn slice(&mut self, offset: usize, length: usize) {
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new array cannot exceed the arrays' length"
+        );
+        unsafe { self.slice_unchecked(offset, length) };
+    }
+
+    /// Returns a slice of the [`NullArray`].
+    /// # Safety
+    /// The caller must ensure that `offset + length < self.len()`.
+    pub unsafe fn slice_unchecked(&mut self, _offset: usize, length: usize) {
         self.length = length;
     }
 
@@ -71,44 +77,14 @@ impl NullArray {
 }
 
 impl Array for NullArray {
-    #[inline]
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    #[inline]
-    fn data_type(&self) -> &DataType {
-        &self.data_type
-    }
+    impl_common_array!();
 
     fn validity(&self) -> Option<&Bitmap> {
         None
     }
 
-    fn slice(&mut self, offset: usize, length: usize) {
-        self.slice(offset, length)
-    }
-
-    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
-        self.slice(offset, length)
-    }
-
     fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {
         panic!("cannot set validity of a null array")
-    }
-
-    fn to_boxed(&self) -> Box<dyn Array> {
-        Box::new(self.clone())
     }
 }
 

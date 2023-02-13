@@ -4,7 +4,6 @@ use crate::{
     error::Error,
     offset::{Offset, Offsets, OffsetsBuffer},
 };
-use std::sync::Arc;
 
 use super::{new_empty_array, specification::try_check_offsets_bounds, Array};
 
@@ -104,16 +103,6 @@ impl<O: Offset> ListArray<O> {
             Some(Bitmap::new_zeroed(length)),
         )
     }
-
-    /// Boxes self into a [`Box<dyn Array>`].
-    pub fn boxed(self) -> Box<dyn Array> {
-        Box::new(self)
-    }
-
-    /// Boxes self into a [`Arc<dyn Array>`].
-    pub fn arced(self) -> Arc<dyn Array> {
-        Arc::new(self)
-    }
 }
 
 impl<O: Offset> ListArray<O> {
@@ -140,25 +129,8 @@ impl<O: Offset> ListArray<O> {
     }
 
     impl_sliced!();
-
-    /// Returns this [`ListArray`] with a new validity.
-    /// # Panic
-    /// This function panics iff `validity.len() != self.len()`.
-    #[must_use]
-    pub fn with_validity(mut self, validity: Option<Bitmap>) -> Self {
-        self.set_validity(validity);
-        self
-    }
-
-    /// Sets the validity of this [`ListArray`].
-    /// # Panics
-    /// This function panics iff `validity.len() != self.len()`.
-    pub fn set_validity(&mut self, validity: Option<Bitmap>) {
-        if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
-            panic!("validity must be equal to the array's length")
-        }
-        self.validity = validity;
-    }
+    impl_mut_validity!();
+    impl_into_array!();
 }
 
 // Accessors
@@ -255,44 +227,14 @@ impl<O: Offset> ListArray<O> {
 }
 
 impl<O: Offset> Array for ListArray<O> {
-    #[inline]
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
+    impl_common_array!();
 
-    #[inline]
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    #[inline]
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    #[inline]
-    fn data_type(&self) -> &DataType {
-        &self.data_type
-    }
-
-    #[inline]
     fn validity(&self) -> Option<&Bitmap> {
         self.validity.as_ref()
     }
 
-    fn slice(&mut self, offset: usize, length: usize) {
-        self.slice(offset, length)
-    }
-
-    unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
-        self.slice_unchecked(offset, length)
-    }
-
+    #[inline]
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
         Box::new(self.clone().with_validity(validity))
-    }
-
-    fn to_boxed(&self) -> Box<dyn Array> {
-        Box::new(self.clone())
     }
 }
