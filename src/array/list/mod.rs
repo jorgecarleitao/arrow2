@@ -103,38 +103,7 @@ impl<O: Offset> ListArray<O> {
             Some(Bitmap::new_zeroed(length)),
         )
     }
-}
 
-impl<O: Offset> ListArray<O> {
-    /// Slices this [`ListArray`].
-    /// # Panics
-    /// panics iff `offset + length >= self.len()`
-    pub fn slice(&mut self, offset: usize, length: usize) {
-        assert!(
-            offset + length <= self.len(),
-            "the offset of the new Buffer cannot exceed the existing length"
-        );
-        unsafe { self.slice_unchecked(offset, length) }
-    }
-
-    /// Slices this [`ListArray`].
-    /// # Safety
-    /// The caller must ensure that `offset + length < self.len()`.
-    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
-        self.validity.as_mut().and_then(|bitmap| {
-            bitmap.slice_unchecked(offset, length);
-            (bitmap.unset_bits() > 0).then(|| bitmap)
-        });
-        self.offsets.slice_unchecked(offset, length + 1);
-    }
-
-    impl_sliced!();
-    impl_mut_validity!();
-    impl_into_array!();
-}
-
-// Accessors
-impl<O: Offset> ListArray<O> {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
@@ -181,9 +150,33 @@ impl<O: Offset> ListArray<O> {
     pub fn values(&self) -> &Box<dyn Array> {
         &self.values
     }
-}
 
-impl<O: Offset> ListArray<O> {
+    /// Slices this [`ListArray`].
+    /// # Panics
+    /// panics iff `offset + length >= self.len()`
+    pub fn slice(&mut self, offset: usize, length: usize) {
+        assert!(
+            offset + length <= self.len(),
+            "the offset of the new Buffer cannot exceed the existing length"
+        );
+        unsafe { self.slice_unchecked(offset, length) }
+    }
+
+    /// Slices this [`ListArray`].
+    /// # Safety
+    /// The caller must ensure that `offset + length < self.len()`.
+    pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        self.validity.as_mut().and_then(|bitmap| {
+            bitmap.slice_unchecked(offset, length);
+            (bitmap.unset_bits() > 0).then(|| bitmap)
+        });
+        self.offsets.slice_unchecked(offset, length + 1);
+    }
+
+    impl_sliced!();
+    impl_mut_validity!();
+    impl_into_array!();
+
     /// Returns a default [`DataType`]: inner field is named "item" and is nullable
     pub fn default_datatype(data_type: DataType) -> DataType {
         let field = Box::new(Field::new("item", data_type, true));
@@ -194,16 +187,16 @@ impl<O: Offset> ListArray<O> {
         }
     }
 
-    /// Returns a the inner [`Field`]
+    /// Returns the inner [`Field`]
     /// # Panics
     /// Panics iff the logical type is not consistent with this struct.
     pub fn get_child_field(data_type: &DataType) -> &Field {
         Self::try_get_child(data_type).unwrap()
     }
 
-    /// Returns a the inner [`Field`]
+    /// Returns the inner [`Field`]
     /// # Errors
-    /// Panics iff the logical type is not consistent with this struct.
+    /// Errors iff the logical type is not consistent with this struct.
     pub fn try_get_child(data_type: &DataType) -> Result<&Field, Error> {
         if O::IS_LARGE {
             match data_type.to_logical_type() {
@@ -218,7 +211,7 @@ impl<O: Offset> ListArray<O> {
         }
     }
 
-    /// Returns a the inner [`DataType`]
+    /// Returns the inner [`DataType`]
     /// # Panics
     /// Panics iff the logical type is not consistent with this struct.
     pub fn get_child_type(data_type: &DataType) -> &DataType {
