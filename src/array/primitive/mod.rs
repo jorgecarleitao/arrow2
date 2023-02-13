@@ -260,7 +260,7 @@ impl<T: NativeType> PrimitiveArray<T> {
 
     /// Returns an option of a mutable reference to the values of this [`PrimitiveArray`].
     pub fn get_mut_values(&mut self) -> Option<&mut [T]> {
-        self.values.get_mut().map(|x| x.as_mut())
+        self.values.get_mut_slice()
     }
 
     /// Returns its internal representation
@@ -282,7 +282,7 @@ impl<T: NativeType> PrimitiveArray<T> {
     ///
     /// This function is primarily used to re-use memory regions.
     #[must_use]
-    pub fn into_mut(mut self) -> Either<Self, MutablePrimitiveArray<T>> {
+    pub fn into_mut(self) -> Either<Self, MutablePrimitiveArray<T>> {
         use Either::*;
 
         if let Some(bitmap) = self.validity {
@@ -292,8 +292,8 @@ impl<T: NativeType> PrimitiveArray<T> {
                     self.values,
                     Some(bitmap),
                 )),
-                Right(mutable_bitmap) => match self.values.get_mut().map(std::mem::take) {
-                    Some(values) => Right(
+                Right(mutable_bitmap) => match self.values.into_mut() {
+                    Right(values) => Right(
                         MutablePrimitiveArray::try_new(
                             self.data_type,
                             values,
@@ -301,19 +301,19 @@ impl<T: NativeType> PrimitiveArray<T> {
                         )
                         .unwrap(),
                     ),
-                    None => Left(PrimitiveArray::new(
+                    Left(values) => Left(PrimitiveArray::new(
                         self.data_type,
-                        self.values,
+                        values,
                         Some(mutable_bitmap.into()),
                     )),
                 },
             }
         } else {
-            match self.values.get_mut().map(std::mem::take) {
-                Some(values) => {
+            match self.values.into_mut() {
+                Right(values) => {
                     Right(MutablePrimitiveArray::try_new(self.data_type, values, None).unwrap())
                 }
-                None => Left(PrimitiveArray::new(self.data_type, self.values, None)),
+                Left(values) => Left(PrimitiveArray::new(self.data_type, values, None)),
             }
         }
     }
