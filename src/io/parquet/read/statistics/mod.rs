@@ -454,9 +454,17 @@ fn push(
             ))),
         },
         Int32 => primitive::push::<i32, i32, _>(from, min, max, Ok),
-        Int64 | Date64 | Time64(_) | Duration(_) => {
-            primitive::push::<i64, i64, _>(from, min, max, Ok)
-        }
+        Date64 => match physical_type {
+            ParquetPhysicalType::Int64 => primitive::push::<i64, i64, _>(from, min, max, Ok),
+            // some implementations of parquet write arrow's date64 into i32.
+            ParquetPhysicalType::Int32 => {
+                primitive::push(from, min, max, |x: i32| Ok(x as i64 * 86400000))
+            }
+            other => Err(Error::NotYetImplemented(format!(
+                "Can't decode Date64 type from parquet type {other:?}"
+            ))),
+        },
+        Int64 | Time64(_) | Duration(_) => primitive::push::<i64, i64, _>(from, min, max, Ok),
         UInt64 => primitive::push(from, min, max, |x: i64| Ok(x as u64)),
         Timestamp(time_unit, _) => {
             let time_unit = *time_unit;
