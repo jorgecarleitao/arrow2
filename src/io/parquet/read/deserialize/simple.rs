@@ -6,7 +6,7 @@ use parquet2::{
 };
 
 use crate::{
-    array::{Array, BinaryArray, DictionaryKey, MutablePrimitiveArray, PrimitiveArray, Utf8Array},
+    array::{Array, DictionaryKey, MutablePrimitiveArray, PrimitiveArray},
     datatypes::{DataType, IntervalUnit, TimeUnit},
     error::{Error, Result},
     types::{days_ms, NativeType},
@@ -278,16 +278,10 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
             |x: f64| x,
         ))),
 
-        Binary => dyn_iter(binary::Iter::<i32, BinaryArray<i32>, _>::new(
+        Utf8 | Binary => Box::new(binary::Iter::<i32, _>::new(
             pages, data_type, chunk_size, num_rows,
         )),
-        LargeBinary => dyn_iter(binary::Iter::<i64, BinaryArray<i64>, _>::new(
-            pages, data_type, chunk_size, num_rows,
-        )),
-        Utf8 => dyn_iter(binary::Iter::<i32, Utf8Array<i32>, _>::new(
-            pages, data_type, chunk_size, num_rows,
-        )),
-        LargeUtf8 => dyn_iter(binary::Iter::<i64, Utf8Array<i64>, _>::new(
+        LargeBinary | LargeUtf8 => Box::new(binary::Iter::<i64, _>::new(
             pages, data_type, chunk_size, num_rows,
         )),
 

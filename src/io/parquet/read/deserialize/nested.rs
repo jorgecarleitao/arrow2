@@ -1,13 +1,27 @@
 use parquet2::schema::types::PrimitiveType;
 
 use crate::{
-    array::{BinaryArray, MapArray, Utf8Array},
+    array::MapArray,
     datatypes::{DataType, Field},
     error::{Error, Result},
 };
 
 use super::nested_utils::{InitNested, NestedArrayIter};
 use super::*;
+
+/// Converts an iterator of arrays to a trait object returning trait objects
+#[inline]
+fn remove_nested<'a, I>(iter: I) -> NestedArrayIter<'a>
+where
+    I: Iterator<Item = Result<(NestedState, Box<dyn Array>)>> + Send + Sync + 'a,
+{
+    Box::new(iter.map(|x| {
+        x.map(|(mut nested, array)| {
+            let _ = nested.nested.pop().unwrap(); // the primitive
+            (nested, array)
+        })
+    }))
+}
 
 /// Converts an iterator of arrays to a trait object returning trait objects
 #[inline]
@@ -185,10 +199,10 @@ where
                 |x: f64| x,
             ))
         }
-        Utf8 => {
+        Binary | Utf8 => {
             init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
-            primitive(binary::NestedIter::<i32, Utf8Array<i32>, _>::new(
+            remove_nested(binary::NestedIter::<i32, _>::new(
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
@@ -196,32 +210,10 @@ where
                 chunk_size,
             ))
         }
-        LargeUtf8 => {
+        LargeBinary | LargeUtf8 => {
             init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
-            primitive(binary::NestedIter::<i64, Utf8Array<i64>, _>::new(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-            ))
-        }
-        Binary => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive(binary::NestedIter::<i32, BinaryArray<i32>, _>::new(
-                columns.pop().unwrap(),
-                init,
-                field.data_type().clone(),
-                num_rows,
-                chunk_size,
-            ))
-        }
-        LargeBinary => {
-            init.push(InitNested::Primitive(field.is_nullable));
-            types.pop();
-            primitive(binary::NestedIter::<i64, BinaryArray<i64>, _>::new(
+            remove_nested(binary::NestedIter::<i64, _>::new(
                 columns.pop().unwrap(),
                 init,
                 field.data_type().clone(),
