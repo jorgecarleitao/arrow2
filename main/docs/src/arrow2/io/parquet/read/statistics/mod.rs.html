@@ -547,6 +547,14 @@
 <a href="#547" id="547">547</a>
 <a href="#548" id="548">548</a>
 <a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
 </pre><pre class="rust"><code><span class="doccomment">//! APIs exposing `parquet2`&#39;s statistics as arrow&#39;s statistics.
 </span><span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::sync::Arc;
@@ -1003,9 +1011,17 @@
             </span>))),
         },
         Int32 =&gt; primitive::push::&lt;i32, i32, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>),
-        Int64 | Date64 | Time64(<span class="kw">_</span>) | Duration(<span class="kw">_</span>) =&gt; {
-            primitive::push::&lt;i64, i64, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>)
-        }
+        Date64 =&gt; <span class="kw">match </span>physical_type {
+            ParquetPhysicalType::Int64 =&gt; primitive::push::&lt;i64, i64, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>),
+            <span class="comment">// some implementations of parquet write arrow&#39;s date64 into i32.
+            </span>ParquetPhysicalType::Int32 =&gt; {
+                primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>i64 * <span class="number">86400000</span>))
+            }
+            other =&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
+                <span class="string">&quot;Can&#39;t decode Date64 type from parquet type {other:?}&quot;
+            </span>))),
+        },
+        Int64 | Time64(<span class="kw">_</span>) | Duration(<span class="kw">_</span>) =&gt; primitive::push::&lt;i64, i64, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>),
         UInt64 =&gt; primitive::push(from, min, max, |x: i64| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>u64)),
         Timestamp(time_unit, <span class="kw">_</span>) =&gt; {
             <span class="kw">let </span>time_unit = <span class="kw-2">*</span>time_unit;

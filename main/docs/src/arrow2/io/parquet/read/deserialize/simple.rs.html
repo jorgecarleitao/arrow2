@@ -529,18 +529,6 @@
 <a href="#529" id="529">529</a>
 <a href="#530" id="530">530</a>
 <a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
-<a href="#542" id="542">542</a>
-<a href="#543" id="543">543</a>
 </pre><pre class="rust"><code><span class="kw">use </span>parquet2::{
     schema::types::{
         PhysicalType, PrimitiveLogicalType, PrimitiveType, TimeUnit <span class="kw">as </span>ParquetTimeUnit,
@@ -611,68 +599,57 @@
     <span class="kw">let </span>physical_type = <span class="kw-2">&amp;</span>type_.physical_type;
     <span class="kw">let </span>logical_type = <span class="kw-2">&amp;</span>type_.logical_type;
 
-    <span class="prelude-val">Ok</span>(<span class="kw">match </span>data_type.to_logical_type() {
-        Null =&gt; null::iter_to_arrays(pages, data_type, chunk_size, num_rows),
-        Boolean =&gt; dyn_iter(boolean::Iter::new(pages, data_type, chunk_size, num_rows)),
-        UInt8 =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+    <span class="prelude-val">Ok</span>(<span class="kw">match </span>(physical_type, data_type.to_logical_type()) {
+        (<span class="kw">_</span>, Null) =&gt; null::iter_to_arrays(pages, data_type, chunk_size, num_rows),
+        (PhysicalType::Boolean, Boolean) =&gt; {
+            dyn_iter(boolean::Iter::new(pages, data_type, chunk_size, num_rows))
+        }
+        (PhysicalType::Int32, UInt8) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x <span class="kw">as </span>u8,
         ))),
-        UInt16 =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+        (PhysicalType::Int32, UInt16) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x <span class="kw">as </span>u16,
         ))),
-        UInt32 =&gt; <span class="kw">match </span>physical_type {
-            PhysicalType::Int32 =&gt; dyn_iter(iden(primitive::IntegerIter::new(
-                pages,
-                data_type,
-                num_rows,
-                chunk_size,
-                |x: i32| x <span class="kw">as </span>u32,
-            ))),
-            <span class="comment">// some implementations of parquet write arrow&#39;s u32 into i64.
-            </span>PhysicalType::Int64 =&gt; dyn_iter(iden(primitive::IntegerIter::new(
-                pages,
-                data_type,
-                num_rows,
-                chunk_size,
-                |x: i64| x <span class="kw">as </span>u32,
-            ))),
-            other =&gt; {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
-                    <span class="string">&quot;Reading uin32 from {other:?}-encoded parquet still not implemented&quot;
-                </span>)))
-            }
-        },
-        Int8 =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+        (PhysicalType::Int32, UInt32) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+            pages,
+            data_type,
+            num_rows,
+            chunk_size,
+            |x: i32| x <span class="kw">as </span>u32,
+        ))),
+        (PhysicalType::Int64, UInt32) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+            pages,
+            data_type,
+            num_rows,
+            chunk_size,
+            |x: i64| x <span class="kw">as </span>u32,
+        ))),
+        (PhysicalType::Int32, Int8) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x <span class="kw">as </span>i8,
         ))),
-        Int16 =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+        (PhysicalType::Int32, Int16) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x <span class="kw">as </span>i16,
         ))),
-        Int32 | Date32 | Time32(<span class="kw">_</span>) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
-            pages,
-            data_type,
-            num_rows,
-            chunk_size,
-            |x: i32| x,
-        ))),
-
-        Timestamp(time_unit, <span class="kw">_</span>) =&gt; {
+        (PhysicalType::Int32, Int32 | Date32 | Time32(<span class="kw">_</span>)) =&gt; dyn_iter(iden(
+            primitive::IntegerIter::new(pages, data_type, num_rows, chunk_size, |x: i32| x),
+        )),
+        (PhysicalType::Int64 | PhysicalType::Int96, Timestamp(time_unit, <span class="kw">_</span>)) =&gt; {
             <span class="kw">let </span>time_unit = <span class="kw-2">*</span>time_unit;
             <span class="kw">return </span>timestamp(
                 pages,
@@ -684,12 +661,10 @@
                 time_unit,
             );
         }
-
-        FixedSizeBinary(<span class="kw">_</span>) =&gt; dyn_iter(fixed_size_binary::Iter::new(
-            pages, data_type, num_rows, chunk_size,
-        )),
-
-        Interval(IntervalUnit::YearMonth) =&gt; {
+        (PhysicalType::FixedLenByteArray(<span class="kw">_</span>), FixedSizeBinary(<span class="kw">_</span>)) =&gt; dyn_iter(
+            fixed_size_binary::Iter::new(pages, data_type, num_rows, chunk_size),
+        ),
+        (PhysicalType::FixedLenByteArray(<span class="number">12</span>), Interval(IntervalUnit::YearMonth)) =&gt; {
             <span class="kw">let </span>n = <span class="number">12</span>;
             <span class="kw">let </span>pages = fixed_size_binary::Iter::new(
                 pages,
@@ -714,8 +689,7 @@
 
             Box::new(arrays) <span class="kw">as _
         </span>}
-
-        Interval(IntervalUnit::DayTime) =&gt; {
+        (PhysicalType::FixedLenByteArray(<span class="number">12</span>), Interval(IntervalUnit::DayTime)) =&gt; {
             <span class="kw">let </span>n = <span class="number">12</span>;
             <span class="kw">let </span>pages = fixed_size_binary::Iter::new(
                 pages,
@@ -740,80 +714,83 @@
 
             Box::new(arrays) <span class="kw">as _
         </span>}
+        (PhysicalType::Int32, Decimal(<span class="kw">_</span>, <span class="kw">_</span>)) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+            pages,
+            data_type,
+            num_rows,
+            chunk_size,
+            |x: i32| x <span class="kw">as </span>i128,
+        ))),
+        (PhysicalType::Int64, Decimal(<span class="kw">_</span>, <span class="kw">_</span>)) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+            pages,
+            data_type,
+            num_rows,
+            chunk_size,
+            |x: i64| x <span class="kw">as </span>i128,
+        ))),
+        (PhysicalType::FixedLenByteArray(n), Decimal(<span class="kw">_</span>, <span class="kw">_</span>)) <span class="kw">if </span><span class="kw-2">*</span>n &gt; <span class="number">16 </span>=&gt; {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
+                <span class="string">&quot;Can&#39;t decode Decimal128 type from Fixed Size Byte Array of len {n:?}&quot;
+            </span>)))
+        }
+        (PhysicalType::FixedLenByteArray(n), Decimal(<span class="kw">_</span>, <span class="kw">_</span>)) =&gt; {
+            <span class="kw">let </span>n = <span class="kw-2">*</span>n;
 
-        Decimal(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="kw">match </span>physical_type {
-            PhysicalType::Int32 =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+            <span class="kw">let </span>pages = fixed_size_binary::Iter::new(
                 pages,
-                data_type,
+                DataType::FixedSizeBinary(n),
                 num_rows,
                 chunk_size,
-                |x: i32| x <span class="kw">as </span>i128,
-            ))),
-            PhysicalType::Int64 =&gt; dyn_iter(iden(primitive::IntegerIter::new(
-                pages,
-                data_type,
-                num_rows,
-                chunk_size,
-                |x: i64| x <span class="kw">as </span>i128,
-            ))),
-            PhysicalType::FixedLenByteArray(n) <span class="kw">if </span><span class="kw-2">*</span>n &gt; <span class="number">16 </span>=&gt; {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
-                    <span class="string">&quot;Can&#39;t decode Decimal128 type from Fixed Size Byte Array of len {n:?}&quot;
-                </span>)))
-            }
-            PhysicalType::FixedLenByteArray(n) =&gt; {
-                <span class="kw">let </span>n = <span class="kw-2">*</span>n;
+            );
 
-                <span class="kw">let </span>pages = fixed_size_binary::Iter::new(
-                    pages,
-                    DataType::FixedSizeBinary(n),
-                    num_rows,
-                    chunk_size,
-                );
+            <span class="kw">let </span>pages = pages.map(<span class="kw">move </span>|maybe_array| {
+                <span class="kw">let </span>array = maybe_array<span class="question-mark">?</span>;
+                <span class="kw">let </span>values = array
+                    .values()
+                    .chunks_exact(n)
+                    .map(|value: <span class="kw-2">&amp;</span>[u8]| <span class="kw">super</span>::<span class="kw">super</span>::convert_i128(value, n))
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                <span class="kw">let </span>validity = array.validity().cloned();
 
-                <span class="kw">let </span>pages = pages.map(<span class="kw">move </span>|maybe_array| {
-                    <span class="kw">let </span>array = maybe_array<span class="question-mark">?</span>;
-                    <span class="kw">let </span>values = array
-                        .values()
-                        .chunks_exact(n)
-                        .map(|value: <span class="kw-2">&amp;</span>[u8]| <span class="kw">super</span>::<span class="kw">super</span>::convert_i128(value, n))
-                        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-                    <span class="kw">let </span>validity = array.validity().cloned();
+                PrimitiveArray::&lt;i128&gt;::try_new(data_type.clone(), values.into(), validity)
+            });
 
-                    PrimitiveArray::&lt;i128&gt;::try_new(data_type.clone(), values.into(), validity)
-                });
+            <span class="kw">let </span>arrays = pages.map(|x| x.map(|x| x.boxed()));
 
-                <span class="kw">let </span>arrays = pages.map(|x| x.map(|x| x.boxed()));
-
-                Box::new(arrays) <span class="kw">as _
-            </span>}
-            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
-        },
-
-        <span class="comment">// INT64
-        </span>Int64 | Date64 | Time64(<span class="kw">_</span>) | Duration(<span class="kw">_</span>) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+            Box::new(arrays) <span class="kw">as _
+        </span>}
+        (PhysicalType::Int32, Date64) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+            pages,
+            data_type,
+            num_rows,
+            chunk_size,
+            |x: i32| x <span class="kw">as </span>i64 * <span class="number">86400000</span>,
+        ))),
+        (PhysicalType::Int64, Date64) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
             chunk_size,
             |x: i64| x,
         ))),
-        UInt64 =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+        (PhysicalType::Int64, Int64 | Time64(<span class="kw">_</span>) | Duration(<span class="kw">_</span>)) =&gt; dyn_iter(iden(
+            primitive::IntegerIter::new(pages, data_type, num_rows, chunk_size, |x: i64| x),
+        )),
+        (PhysicalType::Int64, UInt64) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
             num_rows,
             chunk_size,
             |x: i64| x <span class="kw">as </span>u64,
         ))),
-
-        Float32 =&gt; dyn_iter(iden(primitive::Iter::new(
+        (PhysicalType::Float, Float32) =&gt; dyn_iter(iden(primitive::Iter::new(
             pages,
             data_type,
             num_rows,
             chunk_size,
             |x: f32| x,
         ))),
-        Float64 =&gt; dyn_iter(iden(primitive::Iter::new(
+        (PhysicalType::Double, Float64) =&gt; dyn_iter(iden(primitive::Iter::new(
             pages,
             data_type,
             num_rows,
@@ -821,22 +798,21 @@
             |x: f64| x,
         ))),
 
-        Utf8 | Binary =&gt; Box::new(binary::Iter::&lt;i32, <span class="kw">_</span>&gt;::new(
+        (PhysicalType::ByteArray, Utf8 | Binary) =&gt; Box::new(binary::Iter::&lt;i32, <span class="kw">_</span>&gt;::new(
             pages, data_type, chunk_size, num_rows,
         )),
-        LargeBinary | LargeUtf8 =&gt; Box::new(binary::Iter::&lt;i64, <span class="kw">_</span>&gt;::new(
-            pages, data_type, chunk_size, num_rows,
-        )),
+        (PhysicalType::ByteArray, LargeBinary | LargeUtf8) =&gt; Box::new(
+            binary::Iter::&lt;i64, <span class="kw">_</span>&gt;::new(pages, data_type, chunk_size, num_rows),
+        ),
 
-        Dictionary(key_type, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+        (<span class="kw">_</span>, Dictionary(key_type, <span class="kw">_</span>, <span class="kw">_</span>)) =&gt; {
             <span class="kw">return </span><span class="macro">match_integer_type!</span>(key_type, |<span class="macro-nonterminal">$K</span>| {
                 dict_read::&lt;<span class="macro-nonterminal">$K</span>, <span class="kw">_</span>&gt;(pages, physical_type, logical_type, data_type, num_rows, chunk_size)
             })
         }
-
-        other =&gt; {
+        (from, to) =&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
-                <span class="string">&quot;Reading {other:?} from parquet still not implemented&quot;
+                <span class="string">&quot;Reading parquet type {from:?} to {to:?} still not implemented&quot;
             </span>)))
         }
     })
@@ -978,50 +954,50 @@
         <span class="macro">panic!</span>()
     };
 
-    <span class="prelude-val">Ok</span>(<span class="kw">match </span>values_data_type.to_logical_type() {
-        UInt8 =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
+    <span class="prelude-val">Ok</span>(<span class="kw">match </span>(physical_type, values_data_type.to_logical_type()) {
+        (PhysicalType::Int32, UInt8) =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
             iter,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x <span class="kw">as </span>u8,
         )),
-        UInt16 =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
+        (PhysicalType::Int32, UInt16) =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
             iter,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x <span class="kw">as </span>u16,
         )),
-        UInt32 =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
+        (PhysicalType::Int32, UInt32) =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
             iter,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x <span class="kw">as </span>u32,
         )),
-        UInt64 =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
+        (PhysicalType::Int64, UInt64) =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
             iter,
             data_type,
             num_rows,
             chunk_size,
             |x: i64| x <span class="kw">as </span>u64,
         )),
-        Int8 =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
+        (PhysicalType::Int32, Int8) =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
             iter,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x <span class="kw">as </span>i8,
         )),
-        Int16 =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
+        (PhysicalType::Int32, Int16) =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
             iter,
             data_type,
             num_rows,
             chunk_size,
             |x: i32| x <span class="kw">as </span>i16,
         )),
-        Int32 | Date32 | Time32(<span class="kw">_</span>) | Interval(IntervalUnit::YearMonth) =&gt; {
+        (PhysicalType::Int32, Int32 | Date32 | Time32(<span class="kw">_</span>) | Interval(IntervalUnit::YearMonth)) =&gt; {
             dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
                 iter,
                 data_type,
@@ -1031,7 +1007,7 @@
             ))
         }
 
-        Timestamp(time_unit, <span class="kw">_</span>) =&gt; {
+        (PhysicalType::Int64, Timestamp(time_unit, <span class="kw">_</span>)) =&gt; {
             <span class="kw">let </span>time_unit = <span class="kw-2">*</span>time_unit;
             <span class="kw">return </span>timestamp_dict::&lt;K, <span class="kw">_</span>&gt;(
                 iter,
@@ -1044,7 +1020,7 @@
             );
         }
 
-        Int64 | Date64 | Time64(<span class="kw">_</span>) | Duration(<span class="kw">_</span>) =&gt; {
+        (PhysicalType::Int64, Int64 | Date64 | Time64(<span class="kw">_</span>) | Duration(<span class="kw">_</span>)) =&gt; {
             dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
                 iter,
                 data_type,
@@ -1053,14 +1029,14 @@
                 |x: i64| x,
             ))
         }
-        Float32 =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
+        (PhysicalType::Float, Float32) =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
             iter,
             data_type,
             num_rows,
             chunk_size,
             |x: f32| x,
         )),
-        Float64 =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
+        (PhysicalType::Double, Float64) =&gt; dyn_iter(primitive::DictIter::&lt;K, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(
             iter,
             data_type,
             num_rows,
@@ -1068,15 +1044,15 @@
             |x: f64| x,
         )),
 
-        Utf8 | Binary =&gt; dyn_iter(binary::DictIter::&lt;K, i32, <span class="kw">_</span>&gt;::new(
+        (PhysicalType::ByteArray, Utf8 | Binary) =&gt; dyn_iter(binary::DictIter::&lt;K, i32, <span class="kw">_</span>&gt;::new(
             iter, data_type, num_rows, chunk_size,
         )),
-        LargeUtf8 | LargeBinary =&gt; dyn_iter(binary::DictIter::&lt;K, i64, <span class="kw">_</span>&gt;::new(
-            iter, data_type, num_rows, chunk_size,
-        )),
-        FixedSizeBinary(<span class="kw">_</span>) =&gt; dyn_iter(fixed_size_binary::DictIter::&lt;K, <span class="kw">_</span>&gt;::new(
-            iter, data_type, num_rows, chunk_size,
-        )),
+        (PhysicalType::ByteArray, LargeUtf8 | LargeBinary) =&gt; dyn_iter(
+            binary::DictIter::&lt;K, i64, <span class="kw">_</span>&gt;::new(iter, data_type, num_rows, chunk_size),
+        ),
+        (PhysicalType::FixedLenByteArray(<span class="kw">_</span>), FixedSizeBinary(<span class="kw">_</span>)) =&gt; dyn_iter(
+            fixed_size_binary::DictIter::&lt;K, <span class="kw">_</span>&gt;::new(iter, data_type, num_rows, chunk_size),
+        ),
         other =&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::nyi(<span class="macro">format!</span>(
                 <span class="string">&quot;Reading dictionaries of type {other:?}&quot;
