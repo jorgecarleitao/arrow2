@@ -7,8 +7,8 @@ use parquet2::{
 };
 
 use crate::{
-    bitmap::MutableBitmap, datatypes::DataType, error::Result, io::parquet::read::Pages,
-    offset::Offset,
+    array::Array, bitmap::MutableBitmap, datatypes::DataType, error::Result,
+    io::parquet::read::Pages, offset::Offset,
 };
 
 use super::super::utils::MaybeNext;
@@ -17,7 +17,7 @@ use super::utils::*;
 use super::{super::nested_utils::*, basic::deserialize_plain};
 use super::{
     super::utils,
-    basic::{finish, Dict, TraitBinaryArray},
+    basic::{finish, Dict},
 };
 
 #[derive(Debug)]
@@ -136,7 +136,7 @@ impl<'a, O: Offset> NestedDecoder<'a> for BinaryDecoder<O> {
     }
 }
 
-pub struct NestedIter<O: Offset, A: TraitBinaryArray<O>, I: Pages> {
+pub struct NestedIter<O: Offset, I: Pages> {
     iter: I,
     data_type: DataType,
     init: Vec<InitNested>,
@@ -144,10 +144,9 @@ pub struct NestedIter<O: Offset, A: TraitBinaryArray<O>, I: Pages> {
     dict: Option<Dict>,
     chunk_size: Option<usize>,
     remaining: usize,
-    phantom_a: std::marker::PhantomData<A>,
 }
 
-impl<O: Offset, A: TraitBinaryArray<O>, I: Pages> NestedIter<O, A, I> {
+impl<O: Offset, I: Pages> NestedIter<O, I> {
     pub fn new(
         iter: I,
         init: Vec<InitNested>,
@@ -163,13 +162,12 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: Pages> NestedIter<O, A, I> {
             dict: None,
             chunk_size,
             remaining: num_rows,
-            phantom_a: Default::default(),
         }
     }
 }
 
-impl<O: Offset, A: TraitBinaryArray<O>, I: Pages> Iterator for NestedIter<O, A, I> {
-    type Item = Result<(NestedState, A)>;
+impl<O: Offset, I: Pages> Iterator for NestedIter<O, I> {
+    type Item = Result<(NestedState, Box<dyn Array>)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let maybe_state = next(

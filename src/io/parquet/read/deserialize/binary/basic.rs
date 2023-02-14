@@ -10,11 +10,10 @@ use parquet2::{
 
 use crate::{
     array::{Array, BinaryArray, Utf8Array},
-    bitmap::{Bitmap, MutableBitmap},
-    buffer::Buffer,
-    datatypes::DataType,
+    bitmap::MutableBitmap,
+    datatypes::{DataType, PhysicalType},
     error::{Error, Result},
-    offset::{Offset, OffsetsBuffer},
+    offset::Offset,
 };
 
 use super::super::utils::{
@@ -222,39 +221,6 @@ impl<'a> utils::PageState<'a> for State<'a> {
             State::FilteredRequiredDictionary(values) => values.len(),
             State::FilteredOptionalDictionary(optional, _) => optional.len(),
         }
-    }
-}
-
-pub trait TraitBinaryArray<O: Offset>: Array + 'static {
-    fn try_new(
-        data_type: DataType,
-        offsets: OffsetsBuffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Result<Self>
-    where
-        Self: Sized;
-}
-
-impl<O: Offset> TraitBinaryArray<O> for BinaryArray<O> {
-    fn try_new(
-        data_type: DataType,
-        offsets: OffsetsBuffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Result<Self> {
-        Self::try_new(data_type, offsets, values, validity)
-    }
-}
-
-impl<O: Offset> TraitBinaryArray<O> for Utf8Array<O> {
-    fn try_new(
-        data_type: DataType,
-        offsets: OffsetsBuffer<O>,
-        values: Buffer<u8>,
-        validity: Option<Bitmap>,
-    ) -> Result<Self> {
-        Self::try_new(data_type, offsets, values, validity)
     }
 }
 
@@ -475,34 +441,44 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
     }
 }
 
-pub(super) fn finish<O: Offset, A: TraitBinaryArray<O>>(
+pub(super) fn finish<O: Offset>(
     data_type: &DataType,
     mut values: Binary<O>,
     mut validity: MutableBitmap,
-) -> Result<A> {
+) -> Result<Box<dyn Array>> {
     values.offsets.shrink_to_fit();
     values.values.shrink_to_fit();
     validity.shrink_to_fit();
 
-    A::try_new(
-        data_type.clone(),
-        values.offsets.into(),
-        values.values.into(),
-        validity.into(),
-    )
+    match data_type.to_physical_type() {
+        PhysicalType::Binary | PhysicalType::LargeBinary => BinaryArray::<O>::try_new(
+            data_type.clone(),
+            values.offsets.into(),
+            values.values.into(),
+            validity.into(),
+        )
+        .map(|x| x.boxed()),
+        PhysicalType::Utf8 | PhysicalType::LargeUtf8 => Utf8Array::<O>::try_new(
+            data_type.clone(),
+            values.offsets.into(),
+            values.values.into(),
+            validity.into(),
+        )
+        .map(|x| x.boxed()),
+        _ => unreachable!(),
+    }
 }
 
-pub struct Iter<O: Offset, A: TraitBinaryArray<O>, I: Pages> {
+pub struct Iter<O: Offset, I: Pages> {
     iter: I,
     data_type: DataType,
     items: VecDeque<(Binary<O>, MutableBitmap)>,
     dict: Option<Dict>,
     chunk_size: Option<usize>,
     remaining: usize,
-    phantom_a: std::marker::PhantomData<A>,
 }
 
-impl<O: Offset, A: TraitBinaryArray<O>, I: Pages> Iter<O, A, I> {
+impl<O: Offset, I: Pages> Iter<O, I> {
     pub fn new(iter: I, data_type: DataType, chunk_size: Option<usize>, num_rows: usize) -> Self {
         Self {
             iter,
@@ -511,13 +487,12 @@ impl<O: Offset, A: TraitBinaryArray<O>, I: Pages> Iter<O, A, I> {
             dict: None,
             chunk_size,
             remaining: num_rows,
-            phantom_a: Default::default(),
         }
     }
 }
 
-impl<O: Offset, A: TraitBinaryArray<O>, I: Pages> Iterator for Iter<O, A, I> {
-    type Item = Result<A>;
+impl<O: Offset, I: Pages> Iterator for Iter<O, I> {
+    type Item = Result<Box<dyn Array>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let maybe_state = next(
