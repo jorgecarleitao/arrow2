@@ -515,6 +515,27 @@
 <a href="#515" id="515">515</a>
 <a href="#516" id="516">516</a>
 <a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, sync::Arc};
 
 <span class="kw">use </span><span class="kw">crate</span>::array::{physical_binary::<span class="kw-2">*</span>, TryExtendFromSelf};
@@ -728,6 +749,27 @@
     <span class="doccomment">/// Returns an iterator of `&amp;str`
     </span><span class="kw">pub fn </span>values_iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MutableUtf8ValuesIter&lt;O&gt; {
         <span class="self">self</span>.values.iter()
+    }
+
+    <span class="doccomment">/// Sets the validity.
+    /// # Panic
+    /// Panics iff the validity&#39;s len is not equal to the existing values&#39; length.
+    </span><span class="kw">pub fn </span>set_validity(<span class="kw-2">&amp;mut </span><span class="self">self</span>, validity: <span class="prelude-ty">Option</span>&lt;MutableBitmap&gt;) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="kw-2">&amp;</span>validity {
+            <span class="macro">assert_eq!</span>(<span class="self">self</span>.values.len(), validity.len())
+        }
+        <span class="self">self</span>.validity = validity;
+    }
+
+    <span class="doccomment">/// Applies a function `f` to the validity of this array.
+    ///
+    /// This is an API to leverage clone-on-write
+    /// # Panics
+    /// This function panics if the function `f` modifies the length of the [`Bitmap`].
+    </span><span class="kw">pub fn </span>apply_validity&lt;F: FnOnce(MutableBitmap) -&gt; MutableBitmap&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, f: F) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.validity) {
+            <span class="self">self</span>.set_validity(<span class="prelude-val">Some</span>(f(validity)))
+        }
     }
 }
 
