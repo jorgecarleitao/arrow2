@@ -311,12 +311,12 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
                 // this is an upper bound - we may not consume the whole page.
                 // we do not know how many nulls are there, so we do not know how many
                 // valid items are there to discount over the sequence.
-                Binary::<O>::with_capacity(capacity, values.num_bytes()),
+                Binary::<O>::with_capacity(capacity, Some(values.num_bytes())),
                 MutableBitmap::with_capacity(capacity),
             ),
             State::Required(values) => (
                 // this is an upper bound - we may not consume the whole page.
-                Binary::<O>::with_capacity(capacity, values.values.num_bytes()),
+                Binary::<O>::with_capacity(capacity, Some(values.values.num_bytes())),
                 MutableBitmap::new(),
             ),
             State::FilteredRequiredDictionary(_)
@@ -324,7 +324,7 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
             | State::RequiredDictionary(_)
             | State::Delta(_)
             | State::FilteredDelta(_) => (
-                Binary::<O>::with_capacity(capacity, 0),
+                Binary::<O>::with_capacity(capacity, None),
                 MutableBitmap::new(),
             ),
             State::FilteredOptionalDictionary(_, _)
@@ -332,7 +332,7 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
             | State::OptionalDictionary(_, _)
             | State::OptionalDelta(_, _)
             | State::FilteredOptionalDelta(_, _) => (
-                Binary::<O>::with_capacity(capacity, 0),
+                Binary::<O>::with_capacity(capacity, None),
                 MutableBitmap::with_capacity(capacity),
             ),
         }

@@ -36,7 +36,8 @@ impl<O: Offset> Pushable<usize> for Offsets<O> {
 
 impl<O: Offset> Binary<O> {
     #[inline]
-    pub fn with_capacity(capacity: usize, values_capacity: usize) -> Self {
+    pub fn with_capacity(capacity: usize, values_capacity: Option<usize>) -> Self {
+        let values_capacity = values_capacity.unwrap_or(capacity.min(100) * 24);
         Self {
             offsets: Offsets::with_capacity(capacity),
             values: Vec::with_capacity(values_capacity),
