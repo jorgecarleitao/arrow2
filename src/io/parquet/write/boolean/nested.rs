@@ -18,18 +18,7 @@ pub fn array_to_page(
 ) -> Result<DataPage> {
     let is_optional = is_nullable(&type_.field_info);
 
-    // we slice the leaf by the offsets as dremel only computes lengths and thus
-    // does NOT take the starting offset into account.
-    // By slicing the leaf array we also don't write too many values.
-    let (start, len) = slice_nested_leaf(nested);
-
     let mut nested = nested.to_vec();
-    let array = array.clone().sliced(start, len);
-    if let Some(Nested::Primitive(_, _, c)) = nested.last_mut() {
-        *c = len;
-    } else {
-        unreachable!("")
-    }
 
     let mut buffer = vec![];
     let (repetition_levels_byte_length, definition_levels_byte_length) =
