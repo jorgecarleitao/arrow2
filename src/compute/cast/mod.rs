@@ -132,7 +132,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
             is_numeric(to_type) || matches!(to_type, LargeBinary | Utf8 | LargeUtf8)
         }
         (LargeBinary, to_type) => is_numeric(to_type) || matches!(to_type, Binary | LargeUtf8),
-
+        (FixedSizeBinary(_), to_type) => matches!(to_type, Binary | LargeBinary),
         (Timestamp(_, _), Utf8) => true,
         (Timestamp(_, _), LargeUtf8) => true,
         (_, Utf8) => is_numeric(from_type) || from_type == &Binary,
@@ -682,6 +682,21 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 binary_to_utf8::<i64>(array.as_any().downcast_ref().unwrap(), to_type.clone())
                     .map(|x| x.boxed())
             }
+            _ => Err(Error::NotYetImplemented(format!(
+                "Casting from {from_type:?} to {to_type:?} not supported",
+            ))),
+        },
+        (FixedSizeBinary(_), _) => match to_type {
+            Binary => Ok(fixed_size_binary_to_binary(
+                array.as_any().downcast_ref().unwrap(),
+                to_type.clone(),
+            )
+            .boxed()),
+            LargeBinary => Ok(fixed_size_binary_to_large_binary(
+                array.as_any().downcast_ref().unwrap(),
+                to_type.clone(),
+            )
+            .boxed()),
             _ => Err(Error::NotYetImplemented(format!(
                 "Casting from {from_type:?} to {to_type:?} not supported",
             ))),

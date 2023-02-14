@@ -87,6 +87,12 @@ impl FixedSizeBinaryArray {
 
 // must use
 impl FixedSizeBinaryArray {
+    /// Retrieve the size of the binary elements
+    /// in this ['FixedSizeBinaryArray']
+    pub fn fixed_size(&self) -> usize {
+        self.size
+    }
+
     /// Slices this [`FixedSizeBinaryArray`].
     /// # Implementation
     /// This operation is `O(1)`.
