@@ -199,3 +199,44 @@ fn extend_from_self() {
         MutableUtf8Array::<i32>::from([Some("aa"), None, Some("aa"), None])
     );
 }
+
+#[test]
+fn test_set_validity() {
+    let mut array = MutableUtf8Array::<i32>::from([Some("Red"), Some("Green"), Some("Blue")]);
+    array.set_validity(Some([false, false, true].into()));
+
+    assert!(!array.is_valid(0));
+    assert!(!array.is_valid(1));
+    assert!(array.is_valid(2));
+}
+
+#[test]
+fn test_apply_validity() {
+    let mut array = MutableUtf8Array::<i32>::from([Some("Red"), Some("Green"), Some("Blue")]);
+    array.set_validity(Some([true, true, true].into()));
+
+    array.apply_validity(|mut mut_bitmap| {
+        mut_bitmap.set(1, false);
+        mut_bitmap.set(2, false);
+        mut_bitmap
+    });
+
+    assert!(array.is_valid(0));
+    assert!(!array.is_valid(1));
+    assert!(!array.is_valid(2));
+}
+
+#[test]
+fn test_apply_validity_with_no_validity_inited() {
+    let mut array = MutableUtf8Array::<i32>::from([Some("Red"), Some("Green"), Some("Blue")]);
+
+    array.apply_validity(|mut mut_bitmap| {
+        mut_bitmap.set(1, false);
+        mut_bitmap.set(2, false);
+        mut_bitmap
+    });
+
+    assert!(array.is_valid(0));
+    assert!(array.is_valid(1));
+    assert!(array.is_valid(2));
+}

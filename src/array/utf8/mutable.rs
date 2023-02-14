@@ -212,6 +212,27 @@ impl<O: Offset> MutableUtf8Array<O> {
     pub fn values_iter(&self) -> MutableUtf8ValuesIter<O> {
         self.values.iter()
     }
+
+    /// Sets the validity.
+    /// # Panic
+    /// Panics iff the validity's len is not equal to the existing values' length.
+    pub fn set_validity(&mut self, validity: Option<MutableBitmap>) {
+        if let Some(validity) = &validity {
+            assert_eq!(self.values.len(), validity.len())
+        }
+        self.validity = validity;
+    }
+
+    /// Applies a function `f` to the validity of this array.
+    ///
+    /// This is an API to leverage clone-on-write
+    /// # Panics
+    /// This function panics if the function `f` modifies the length of the [`Bitmap`].
+    pub fn apply_validity<F: FnOnce(MutableBitmap) -> MutableBitmap>(&mut self, f: F) {
+        if let Some(validity) = std::mem::take(&mut self.validity) {
+            self.set_validity(Some(f(validity)))
+        }
+    }
 }
 
 impl<O: Offset> MutableUtf8Array<O> {
