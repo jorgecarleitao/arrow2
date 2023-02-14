@@ -98,7 +98,7 @@ multiversion = { version = "0.6.1", optional = true }
 odbc-api = { version = "0.36", optional = true }
 
 # Faster hashing
-ahash = { version = "0.8", features=["runtime-rng"] }
+ahash = "0.8"
 
 [target.wasm32-unknown-unknown.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
