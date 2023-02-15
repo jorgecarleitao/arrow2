@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose, Engine as _};
 use parquet2::{
     metadata::KeyValue,
     schema::{
@@ -8,7 +9,6 @@ use parquet2::{
         Repetition,
     },
 };
-use base64::{Engine as _, engine::general_purpose};
 
 use crate::{
     datatypes::{DataType, Field, Schema, TimeUnit},
