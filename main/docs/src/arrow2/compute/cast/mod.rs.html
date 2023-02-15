@@ -943,6 +943,21 @@
 <a href="#943" id="943">943</a>
 <a href="#944" id="944">944</a>
 <a href="#945" id="945">945</a>
+<a href="#946" id="946">946</a>
+<a href="#947" id="947">947</a>
+<a href="#948" id="948">948</a>
+<a href="#949" id="949">949</a>
+<a href="#950" id="950">950</a>
+<a href="#951" id="951">951</a>
+<a href="#952" id="952">952</a>
+<a href="#953" id="953">953</a>
+<a href="#954" id="954">954</a>
+<a href="#955" id="955">955</a>
+<a href="#956" id="956">956</a>
+<a href="#957" id="957">957</a>
+<a href="#958" id="958">958</a>
+<a href="#959" id="959">959</a>
+<a href="#960" id="960">960</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Defines different casting operators such as [`cast`] or [`primitive_to_binary`].
 
 </span><span class="kw">mod </span>binary_to;
@@ -1077,7 +1092,7 @@
             is_numeric(to_type) || <span class="macro">matches!</span>(to_type, LargeBinary | Utf8 | LargeUtf8)
         }
         (LargeBinary, to_type) =&gt; is_numeric(to_type) || <span class="macro">matches!</span>(to_type, Binary | LargeUtf8),
-
+        (FixedSizeBinary(<span class="kw">_</span>), to_type) =&gt; <span class="macro">matches!</span>(to_type, Binary | LargeBinary),
         (Timestamp(<span class="kw">_</span>, <span class="kw">_</span>), Utf8) =&gt; <span class="bool-val">true</span>,
         (Timestamp(<span class="kw">_</span>, <span class="kw">_</span>), LargeUtf8) =&gt; <span class="bool-val">true</span>,
         (<span class="kw">_</span>, Utf8) =&gt; is_numeric(from_type) || from_type == <span class="kw-2">&amp;</span>Binary,
@@ -1627,6 +1642,21 @@
                 binary_to_utf8::&lt;i64&gt;(array.as_any().downcast_ref().unwrap(), to_type.clone())
                     .map(|x| x.boxed())
             }
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
+                <span class="string">&quot;Casting from {from_type:?} to {to_type:?} not supported&quot;</span>,
+            ))),
+        },
+        (FixedSizeBinary(<span class="kw">_</span>), <span class="kw">_</span>) =&gt; <span class="kw">match </span>to_type {
+            Binary =&gt; <span class="prelude-val">Ok</span>(fixed_size_binary_binary::&lt;i32&gt;(
+                array.as_any().downcast_ref().unwrap(),
+                to_type.clone(),
+            )
+            .boxed()),
+            LargeBinary =&gt; <span class="prelude-val">Ok</span>(fixed_size_binary_binary::&lt;i64&gt;(
+                array.as_any().downcast_ref().unwrap(),
+                to_type.clone(),
+            )
+            .boxed()),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
                 <span class="string">&quot;Casting from {from_type:?} to {to_type:?} not supported&quot;</span>,
             ))),

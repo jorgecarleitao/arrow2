@@ -118,8 +118,34 @@
 <a href="#118" id="118">118</a>
 <a href="#119" id="119">119</a>
 <a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::error::Result;
-<span class="kw">use </span><span class="kw">crate</span>::offset::Offset;
+<span class="kw">use </span><span class="kw">crate</span>::offset::{Offset, Offsets};
 <span class="kw">use crate</span>::{array::<span class="kw-2">*</span>, datatypes::DataType, types::NativeType};
 
 <span class="kw">use </span><span class="kw">super</span>::CastOptions;
@@ -237,6 +263,32 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt; {
     <span class="kw">let </span>values = from.as_any().downcast_ref().unwrap();
     binary_to_dictionary::&lt;O, K&gt;(values).map(|x| Box::new(x) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Array&gt;)
+}
+
+<span class="kw">fn </span>fixed_size_to_offsets&lt;O: Offset&gt;(values_len: usize, fixed_size: usize) -&gt; Offsets&lt;O&gt; {
+    <span class="kw">let </span>offsets = (<span class="number">0</span>..(values_len + <span class="number">1</span>))
+        .step_by(fixed_size)
+        .map(|v| O::from_usize(v).unwrap())
+        .collect();
+    <span class="comment">// Safety
+    // * every element is `&gt;= 0`
+    // * element at position `i` is &gt;= than element at position `i-1`.
+    </span><span class="kw">unsafe </span>{ Offsets::new_unchecked(offsets) }
+}
+
+<span class="doccomment">/// Conversion of `FixedSizeBinary` to `Binary`.
+</span><span class="kw">pub fn </span>fixed_size_binary_binary&lt;O: Offset&gt;(
+    from: <span class="kw-2">&amp;</span>FixedSizeBinaryArray,
+    to_data_type: DataType,
+) -&gt; BinaryArray&lt;O&gt; {
+    <span class="kw">let </span>values = from.values().clone();
+    <span class="kw">let </span>offsets = fixed_size_to_offsets(values.len(), from.size());
+    BinaryArray::&lt;O&gt;::new(
+        to_data_type,
+        offsets.into(),
+        values,
+        from.validity().cloned(),
+    )
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (0416b1a6f 2023-02-14)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
