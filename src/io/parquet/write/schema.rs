@@ -8,6 +8,7 @@ use parquet2::{
         Repetition,
     },
 };
+use base64::{Engine as _, engine::general_purpose};
 
 use crate::{
     datatypes::{DataType, Field, Schema, TimeUnit},
@@ -30,7 +31,7 @@ pub fn schema_to_metadata_key(schema: &Schema) -> KeyValue {
     len_prefix_schema.extend_from_slice(&(schema_len as u32).to_le_bytes());
     len_prefix_schema.extend_from_slice(&serialized_schema);
 
-    let encoded = base64::encode(&len_prefix_schema);
+    let encoded = general_purpose::STANDARD.encode(&len_prefix_schema);
 
     KeyValue {
         key: ARROW_SCHEMA_META_KEY.to_string(),

@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose, Engine as _};
 pub use parquet2::metadata::KeyValue;
 
 use crate::datatypes::{Metadata, Schema};
@@ -18,7 +19,7 @@ pub fn read_schema_from_metadata(metadata: &mut Metadata) -> Result<Option<Schem
 
 /// Try to convert Arrow schema metadata into a schema
 fn get_arrow_schema_from_metadata(encoded_meta: &str) -> Result<Schema> {
-    let decoded = base64::decode(encoded_meta);
+    let decoded = general_purpose::STANDARD.decode(encoded_meta);
     match decoded {
         Ok(bytes) => {
             let slice = if bytes[0..4] == [255u8; 4] {
