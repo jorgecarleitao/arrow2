@@ -97,13 +97,11 @@ multiversion = { version = "0.6.1", optional = true }
 # For support for odbc
 odbc-api = { version = "0.36", optional = true }
 
-# faster hashing
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-ahash = { version = "0.8", features=["compile-time-rng"] }
-getrandom = { version = "0.2", features = ["js"] }
+# Faster hashing
+ahash = "0.8"
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-ahash = { version = "0.8", features=["runtime-rng"] }
+[target.wasm32-unknown-unknown.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
 
 # parquet support
 [dependencies.parquet2]
