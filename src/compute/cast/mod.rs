@@ -687,12 +687,12 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             ))),
         },
         (FixedSizeBinary(_), _) => match to_type {
-            Binary => Ok(fixed_size_binary_to_binary(
+            Binary => Ok(fixed_size_binary_binary::<i32>(
                 array.as_any().downcast_ref().unwrap(),
                 to_type.clone(),
             )
             .boxed()),
-            LargeBinary => Ok(fixed_size_binary_to_large_binary(
+            LargeBinary => Ok(fixed_size_binary_binary::<i64>(
                 array.as_any().downcast_ref().unwrap(),
                 to_type.clone(),
             )
