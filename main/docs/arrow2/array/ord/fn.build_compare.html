@@ -2,7 +2,7 @@
     left: &amp;dyn <a class="trait" href="../trait.Array.html" title="trait arrow2::array::Array">Array</a>,
     right: &amp;dyn <a class="trait" href="../trait.Array.html" title="trait arrow2::array::Array">Array</a>
 ) -&gt; <a class="type" href="../../error/type.Result.html" title="type arrow2::error::Result">Result</a>&lt;<a class="type" href="type.DynComparator.html" title="type arrow2::array::ord::DynComparator">DynComparator</a>&gt;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>returns a comparison function that compares values at two different slots
-between two <a href="../trait.Array.html" title="Array"><code>Array</code></a>.</p>
+between two <a href="../trait.Array.html" title="trait arrow2::array::Array"><code>Array</code></a>.</p>
 <h2 id="example"><a href="#example">Example</a></h2>
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>arrow2::array::{ord::build_compare, PrimitiveArray};
 
@@ -14,5 +14,5 @@ between two <a href="../trait.Array.html" title="Array"><code>Array</code></a>.<
 <span class="comment">// 1 (index 0 of array1) is smaller than 4 (index 1 of array2)
 </span><span class="macro">assert_eq!</span>(std::cmp::Ordering::Less, (cmp)(<span class="number">0</span>, <span class="number">1</span>));</code></pre></div>
 <h2 id="error"><a href="#error">Error</a></h2>
-<p>The arrays’ <a href="../../datatypes/enum.DataType.html" title="DataType"><code>DataType</code></a> must be equal and the types must have a natural order.</p>
-</div></details></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (065852def 2023-02-13)" data-search-js="search-abe1d547ad11c273.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+<p>The arrays’ <a href="../../datatypes/enum.DataType.html" title="enum arrow2::datatypes::DataType"><code>DataType</code></a> must be equal and the types must have a natural order.</p>
+</div></details></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (0416b1a6f 2023-02-14)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

@@ -2,7 +2,7 @@
     json: &amp;Value&lt;'_&gt;,
     schema: &amp;<a class="struct" href="../../../datatypes/struct.Schema.html" title="struct arrow2::datatypes::Schema">Schema</a>
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="../../../chunk/struct.Chunk.html" title="struct arrow2::chunk::Chunk">Chunk</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="../../../array/trait.Array.html" title="trait arrow2::array::Array">Array</a>&gt;&gt;, <a class="enum" href="../../../error/enum.Error.html" title="enum arrow2::error::Error">Error</a>&gt;</code></pre><span class="item-info"><div class="stab portability">Available on <strong>crate feature <code>io_json</code></strong> only.</div></span><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Deserializes a <code>json</code> [<code>Value</code>] serialized in Pandas record format into
-a <a href="../../../chunk/struct.Chunk.html" title="Chunk"><code>Chunk</code></a>.</p>
+a <a href="../../../chunk/struct.Chunk.html" title="struct arrow2::chunk::Chunk"><code>Chunk</code></a>.</p>
 <p>Uses the <code>Schema</code> provided, which can be inferred from arbitrary JSON with
 [<code>infer_records_schema</code>].</p>
 <p>This is CPU-bounded.</p>
@@ -12,10 +12,10 @@ a <a href="../../../chunk/struct.Chunk.html" title="Chunk"><code>Chunk</code></a
 <li><code>json</code> is not a [<code>Value::Array</code>]</li>
 <li><code>data_type</code> contains any incompatible types:
 <ul>
-<li><a href="../../../datatypes/enum.DataType.html#variant.Struct" title="DataType::Struct"><code>DataType::Struct</code></a></li>
-<li><a href="../../../datatypes/enum.DataType.html#variant.Dictionary" title="DataType::Dictionary"><code>DataType::Dictionary</code></a></li>
-<li><a href="../../../datatypes/enum.DataType.html#variant.LargeList" title="DataType::LargeList"><code>DataType::LargeList</code></a></li>
+<li><a href="../../../datatypes/enum.DataType.html#variant.Struct" title="variant arrow2::datatypes::DataType::Struct"><code>DataType::Struct</code></a></li>
+<li><a href="../../../datatypes/enum.DataType.html#variant.Dictionary" title="variant arrow2::datatypes::DataType::Dictionary"><code>DataType::Dictionary</code></a></li>
+<li><a href="../../../datatypes/enum.DataType.html#variant.LargeList" title="variant arrow2::datatypes::DataType::LargeList"><code>DataType::LargeList</code></a></li>
 </ul>
 </li>
 </ul>
-</div></details></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (065852def 2023-02-13)" data-search-js="search-abe1d547ad11c273.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</div></details></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (0416b1a6f 2023-02-14)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

@@ -5,12 +5,12 @@
 ) -&gt; <a class="struct" href="../../array/struct.PrimitiveArray.html" title="struct arrow2::array::PrimitiveArray">PrimitiveArray</a>&lt;O&gt;<span class="where fmt-newline">where
     I: <a class="trait" href="../../types/trait.NativeType.html" title="trait arrow2::types::NativeType">NativeType</a>,
     O: <a class="trait" href="../../types/trait.NativeType.html" title="trait arrow2::types::NativeType">NativeType</a>,
-    F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/function/trait.Fn.html" title="trait core::ops::function::Fn">Fn</a>(I) -&gt; O,</span></code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Applies an unary and infallible function to a <a href="../../array/struct.PrimitiveArray.html" title="PrimitiveArray"><code>PrimitiveArray</code></a>. This is the
-fastest way to perform an operation on a <a href="../../array/struct.PrimitiveArray.html" title="PrimitiveArray"><code>PrimitiveArray</code></a> when the benefits
+    F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/function/trait.Fn.html" title="trait core::ops::function::Fn">Fn</a>(I) -&gt; O,</span></code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Applies an unary and infallible function to a <a href="../../array/struct.PrimitiveArray.html" title="struct arrow2::array::PrimitiveArray"><code>PrimitiveArray</code></a>. This is the
+fastest way to perform an operation on a <a href="../../array/struct.PrimitiveArray.html" title="struct arrow2::array::PrimitiveArray"><code>PrimitiveArray</code></a> when the benefits
 of a vectorized operation outweighs the cost of branching nulls and
 non-nulls.</p>
 <h2 id="implementation"><a href="#implementation">Implementation</a></h2>
 <p>This will apply the function for all values, including those on null slots.
 This implies that the operation must be infallible for any value of the
 corresponding type or this function may panic.</p>
-</div></details></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (065852def 2023-02-13)" data-search-js="search-abe1d547ad11c273.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</div></details></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (0416b1a6f 2023-02-14)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
