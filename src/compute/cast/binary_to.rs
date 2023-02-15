@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::offset::Offset;
+use crate::offset::{Offset, Offsets};
 use crate::{array::*, datatypes::DataType, types::NativeType};
 
 use super::CastOptions;
@@ -117,4 +117,30 @@ pub(super) fn binary_to_dictionary_dyn<O: Offset, K: DictionaryKey>(
 ) -> Result<Box<dyn Array>> {
     let values = from.as_any().downcast_ref().unwrap();
     binary_to_dictionary::<O, K>(values).map(|x| Box::new(x) as Box<dyn Array>)
+}
+
+fn fixed_size_to_offsets<O: Offset>(values_len: usize, fixed_size: usize) -> Offsets<O> {
+    let offsets = (0..(values_len + 1))
+        .step_by(fixed_size)
+        .map(|v| O::from_usize(v).unwrap())
+        .collect();
+    // Safety
+    // * every element is `>= 0`
+    // * element at position `i` is >= than element at position `i-1`.
+    unsafe { Offsets::new_unchecked(offsets) }
+}
+
+/// Conversion of `FixedSizeBinary` to `Binary`.
+pub fn fixed_size_binary_binary<O: Offset>(
+    from: &FixedSizeBinaryArray,
+    to_data_type: DataType,
+) -> BinaryArray<O> {
+    let values = from.values().clone();
+    let offsets = fixed_size_to_offsets(values.len(), from.size());
+    BinaryArray::<O>::new(
+        to_data_type,
+        offsets.into(),
+        values,
+        from.validity().cloned(),
+    )
 }

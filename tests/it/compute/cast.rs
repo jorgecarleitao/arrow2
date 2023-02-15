@@ -228,6 +228,38 @@ fn binary_to_i32_partial() {
 }
 
 #[test]
+fn fixed_size_binary_to_binary() {
+    let slice = [[0, 1], [2, 3]];
+    let array = FixedSizeBinaryArray::from_slice(slice);
+
+    // large-binary
+    let b = cast(
+        &array,
+        &DataType::LargeBinary,
+        CastOptions {
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let c = b.as_any().downcast_ref::<BinaryArray<i64>>().unwrap();
+    let expected = BinaryArray::<i64>::from_slice(slice);
+    assert_eq!(c, &expected);
+
+    // binary
+    let b = cast(
+        &array,
+        &DataType::Binary,
+        CastOptions {
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let c = b.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
+    let expected = BinaryArray::<i32>::from_slice(slice);
+    assert_eq!(c, &expected);
+}
+
+#[test]
 fn utf8_to_i32() {
     let array = Utf8Array::<i32>::from_slice(["5", "6", "seven", "8", "9.1"]);
     let b = cast(&array, &DataType::Int32, CastOptions::default()).unwrap();
