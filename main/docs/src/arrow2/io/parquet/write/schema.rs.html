@@ -324,7 +324,9 @@
 <a href="#324" id="324">324</a>
 <a href="#325" id="325">325</a>
 <a href="#326" id="326">326</a>
-</pre><pre class="rust"><code><span class="kw">use </span>parquet2::{
+<a href="#327" id="327">327</a>
+</pre><pre class="rust"><code><span class="kw">use </span>base64::{engine::general_purpose, Engine <span class="kw">as _</span>};
+<span class="kw">use </span>parquet2::{
     metadata::KeyValue,
     schema::{
         types::{
@@ -356,7 +358,7 @@
     len_prefix_schema.extend_from_slice(<span class="kw-2">&amp;</span>(schema_len <span class="kw">as </span>u32).to_le_bytes());
     len_prefix_schema.extend_from_slice(<span class="kw-2">&amp;</span>serialized_schema);
 
-    <span class="kw">let </span>encoded = base64::encode(<span class="kw-2">&amp;</span>len_prefix_schema);
+    <span class="kw">let </span>encoded = general_purpose::STANDARD.encode(<span class="kw-2">&amp;</span>len_prefix_schema);
 
     KeyValue {
         key: ARROW_SCHEMA_META_KEY.to_string(),
@@ -651,4 +653,4 @@
     }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (0416b1a6f 2023-02-14)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (2d14db321 2023-02-15)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

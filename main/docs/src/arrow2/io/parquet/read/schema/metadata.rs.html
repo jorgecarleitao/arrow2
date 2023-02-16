@@ -52,7 +52,9 @@
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
-</pre><pre class="rust"><code><span class="kw">pub use </span>parquet2::metadata::KeyValue;
+<a href="#55" id="55">55</a>
+</pre><pre class="rust"><code><span class="kw">use </span>base64::{engine::general_purpose, Engine <span class="kw">as _</span>};
+<span class="kw">pub use </span>parquet2::metadata::KeyValue;
 
 <span class="kw">use </span><span class="kw">crate</span>::datatypes::{Metadata, Schema};
 <span class="kw">use </span><span class="kw">crate</span>::error::{Error, <span class="prelude-ty">Result</span>};
@@ -72,7 +74,7 @@
 
 <span class="doccomment">/// Try to convert Arrow schema metadata into a schema
 </span><span class="kw">fn </span>get_arrow_schema_from_metadata(encoded_meta: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Schema&gt; {
-    <span class="kw">let </span>decoded = base64::decode(encoded_meta);
+    <span class="kw">let </span>decoded = general_purpose::STANDARD.decode(encoded_meta);
     <span class="kw">match </span>decoded {
         <span class="prelude-val">Ok</span>(bytes) =&gt; {
             <span class="kw">let </span>slice = <span class="kw">if </span>bytes[<span class="number">0</span>..<span class="number">4</span>] == [<span class="number">255u8</span>; <span class="number">4</span>] {
@@ -107,4 +109,4 @@
         .unwrap_or_default()
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (0416b1a6f 2023-02-14)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (2d14db321 2023-02-15)" data-search-js="search-14421e1532aead08.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
