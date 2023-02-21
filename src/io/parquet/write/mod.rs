@@ -30,6 +30,7 @@ use crate::array::*;
 use crate::datatypes::*;
 use crate::error::{Error, Result};
 use crate::types::days_ms;
+use crate::types::i256;
 use crate::types::NativeType;
 
 pub use nested::write_rep_and_def;
@@ -462,6 +463,34 @@ pub fn array_to_page_simple(
             };
 
             fixed_len_bytes::array_to_page(array, options, type_, statistics)
+        }
+        DataType::Decimal256(precision, _) => {
+            let type_ = type_;
+            let precision = *precision;
+            let size = 16;
+            println!("the array is {:?}", array.clone());
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<i256>>()
+                .unwrap();
+            let mut values = Vec::<u8>::with_capacity(size * array.len());
+            array.values().iter().for_each(|x| {
+                let bytes = &x.to_be_bytes()[16 - size..];
+                values.extend_from_slice(bytes)
+            });
+            let array = FixedSizeBinaryArray::new(
+                DataType::FixedSizeBinary(size),
+                values.into(),
+                array.validity().cloned(),
+            );
+            let statistics = if options.write_statistics {
+                let stats = fixed_len_bytes::build_statistics(&array, type_.clone());
+                Some(stats)
+            } else {
+                None
+            };
+
+            fixed_len_bytes::array_to_page(&array, options, type_, statistics)
         }
         DataType::Decimal(precision, _) => {
             let type_ = type_;

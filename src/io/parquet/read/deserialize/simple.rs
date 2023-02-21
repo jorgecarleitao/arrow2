@@ -5,6 +5,7 @@ use parquet2::{
     types::int96_to_i64_ns,
 };
 
+use crate::types::i256;
 use crate::{
     array::{Array, DictionaryKey, MutablePrimitiveArray, PrimitiveArray},
     datatypes::{DataType, IntervalUnit, TimeUnit},
@@ -222,6 +223,37 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
                 let validity = array.validity().cloned();
 
                 PrimitiveArray::<i128>::try_new(data_type.clone(), values.into(), validity)
+            });
+
+            let arrays = pages.map(|x| x.map(|x| x.boxed()));
+
+            Box::new(arrays) as _
+        }
+        (PhysicalType::FixedLenByteArray(n), Decimal256(_, _)) if *n > 16 => {
+            return Err(Error::NotYetImplemented(format!(
+                "Can't decode Decimal256 type from Fixed Size Byte Array of len {n:?}"
+            )))
+        }
+        (PhysicalType::FixedLenByteArray(n), Decimal256(_, _)) => {
+            let n = *n;
+
+            let pages = fixed_size_binary::Iter::new(
+                pages,
+                DataType::FixedSizeBinary(16),
+                num_rows,
+                chunk_size,
+            );
+
+            let pages = pages.map(move |maybe_array| {
+                let array = maybe_array?;
+                let values = array
+                    .values()
+                    .chunks_exact(16)
+                    .map(|value: &[u8]| super::super::convert_i256(value, n))
+                    .collect::<Vec<_>>();
+                let validity = array.validity().cloned();
+
+                PrimitiveArray::<i256>::try_new(data_type.clone(), values.into(), validity)
             });
 
             let arrays = pages.map(|x| x.map(|x| x.boxed()));
