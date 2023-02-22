@@ -591,7 +591,7 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
 
             Statistics {
                 distinct_count: UInt64Array::from([None]).boxed(),
-                null_count: UInt64Array::from([Some(0)]).boxed(),
+                null_count: UInt64Array::from([Some(1)]).boxed(),
                 min_value: new_dict(Box::new(Int32Array::from_slice([10]))),
                 max_value: new_dict(Box::new(Int32Array::from_slice([200]))),
             }
