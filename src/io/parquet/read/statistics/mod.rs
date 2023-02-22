@@ -515,6 +515,13 @@ fn push(
             ParquetPhysicalType::FixedLenByteArray(n) => fixlen::push_i128(from, *n, min, max),
             _ => unreachable!(),
         },
+        Decimal256(_, _) => match physical_type {
+            ParquetPhysicalType::FixedLenByteArray(n) if *n > 16 => Err(Error::NotYetImplemented(
+                format!("Can't decode Decimal256 type from Fixed Size Byte Array of len {n:?}"),
+            )),
+            ParquetPhysicalType::FixedLenByteArray(n) => fixlen::push_i256(from, *n, min, max),
+            _ => unreachable!(),
+        },
         Binary => binary::push::<i32>(from, min, max),
         LargeBinary => binary::push::<i64>(from, min, max),
         Utf8 => utf8::push::<i32>(from, min, max),

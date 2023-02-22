@@ -1,5 +1,6 @@
 use parquet2::indexes::PageIndex;
 
+use crate::types::{i256, NativeType};
 use crate::{
     array::{Array, FixedSizeBinaryArray, MutableFixedSizeBinaryArray, PrimitiveArray},
     datatypes::{DataType, PhysicalType, PrimitiveType},
@@ -39,6 +40,16 @@ fn deserialize_binary_iter<'a, I: TrustedLen<Item = Option<&'a Vec<u8>>>>(
                     let mut bytes = [0u8; 16];
                     bytes[..n].copy_from_slice(x);
                     i128::from_be_bytes(bytes) >> (8 * (16 - n))
+                })
+            })))
+        }
+        PhysicalType::Primitive(PrimitiveType::Int256) => {
+            Box::new(PrimitiveArray::from_trusted_len_iter(iter.map(|v| {
+                v.map(|x| {
+                    let n = x.len();
+                    let mut bytes = [0u8; 32];
+                    bytes[..n].copy_from_slice(x);
+                    i256::from_be_bytes(bytes)
                 })
             })))
         }

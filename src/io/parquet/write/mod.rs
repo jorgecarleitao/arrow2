@@ -464,11 +464,9 @@ pub fn array_to_page_simple(
 
             fixed_len_bytes::array_to_page(array, options, type_, statistics)
         }
-        DataType::Decimal256(precision, _) => {
+        DataType::Decimal256(_, _) => {
             let type_ = type_;
-            let precision = *precision;
             let size = 16;
-            println!("the array is {:?}", array.clone());
             let array = array
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i256>>()
