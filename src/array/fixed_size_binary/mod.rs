@@ -157,6 +157,19 @@ impl FixedSizeBinaryArray {
             .get_unchecked(i * self.size..(i + 1) * self.size)
     }
 
+    /// Returns the element at index `i` or `None` if it is null
+    /// # Panics
+    /// iff `i >= self.len()`
+    #[inline]
+    pub fn get(&self, i: usize) -> Option<&[u8]> {
+        if !self.is_null(i) {
+            // soundness: Array::is_null panics if i >= self.len
+            unsafe { Some(self.value_unchecked(i)) }
+        } else {
+            None
+        }
+    }
+
     /// Returns a new [`FixedSizeBinaryArray`] with a different logical type.
     /// This is `O(1)`.
     /// # Panics

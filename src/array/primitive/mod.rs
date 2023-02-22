@@ -196,6 +196,19 @@ impl<T: NativeType> PrimitiveArray<T> {
         *self.values.get_unchecked(i)
     }
 
+    /// Returns the element at index `i` or `None` if it is null
+    /// # Panics
+    /// iff `i >= self.len()`
+    #[inline]
+    pub fn get(&self, i: usize) -> Option<T> {
+        if !self.is_null(i) {
+            // soundness: Array::is_null panics if i >= self.len
+            unsafe { Some(self.value_unchecked(i)) }
+        } else {
+            None
+        }
+    }
+
     /// Slices this [`PrimitiveArray`] by an offset and length.
     /// # Implementation
     /// This operation is `O(1)`.

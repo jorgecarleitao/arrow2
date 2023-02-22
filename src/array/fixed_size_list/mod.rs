@@ -166,6 +166,19 @@ impl FixedSizeListArray {
     pub unsafe fn value_unchecked(&self, i: usize) -> Box<dyn Array> {
         self.values.sliced_unchecked(i * self.size, self.size)
     }
+
+    /// Returns the element at index `i` or `None` if it is null
+    /// # Panics
+    /// iff `i >= self.len()`
+    #[inline]
+    pub fn get(&self, i: usize) -> Option<Box<dyn Array>> {
+        if !self.is_null(i) {
+            // soundness: Array::is_null panics if i >= self.len
+            unsafe { Some(self.value_unchecked(i)) }
+        } else {
+            None
+        }
+    }
 }
 
 impl FixedSizeListArray {

@@ -151,6 +151,19 @@ impl<O: Offset> BinaryArray<O> {
         self.values.get_unchecked(start..end)
     }
 
+    /// Returns the element at index `i` or `None` if it is null
+    /// # Panics
+    /// iff `i >= self.len()`
+    #[inline]
+    pub fn get(&self, i: usize) -> Option<&[u8]> {
+        if !self.is_null(i) {
+            // soundness: Array::is_null panics if i >= self.len
+            unsafe { Some(self.value_unchecked(i)) }
+        } else {
+            None
+        }
+    }
+
     /// Returns the [`DataType`] of this array.
     #[inline]
     pub fn data_type(&self) -> &DataType {

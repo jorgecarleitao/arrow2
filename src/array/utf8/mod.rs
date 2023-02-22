@@ -171,6 +171,19 @@ impl<O: Offset> Utf8Array<O> {
         std::str::from_utf8_unchecked(slice)
     }
 
+    /// Returns the element at index `i` or `None` if it is null
+    /// # Panics
+    /// iff `i >= self.len()`
+    #[inline]
+    pub fn get(&self, i: usize) -> Option<&str> {
+        if !self.is_null(i) {
+            // soundness: Array::is_null panics if i >= self.len
+            unsafe { Some(self.value_unchecked(i)) }
+        } else {
+            None
+        }
+    }
+
     /// Returns the [`DataType`] of this array.
     #[inline]
     pub fn data_type(&self) -> &DataType {
