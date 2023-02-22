@@ -466,14 +466,14 @@ pub fn array_to_page_simple(
         }
         DataType::Decimal256(_, _) => {
             let type_ = type_;
-            let size = 16;
+            let size = 32;
             let array = array
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i256>>()
                 .unwrap();
             let mut values = Vec::<u8>::with_capacity(size * array.len());
             array.values().iter().for_each(|x| {
-                let bytes = &x.to_be_bytes()[16 - size..];
+                let bytes = &x.to_be_bytes()[32 - size..];
                 values.extend_from_slice(bytes)
             });
             let array = FixedSizeBinaryArray::new(

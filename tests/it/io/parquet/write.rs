@@ -71,6 +71,7 @@ fn round_trip_opt_stats(
     let data = writer.into_inner().into_inner();
 
     let (result, stats) = read_column(&mut Cursor::new(data), "a1")?;
+
     assert_eq!(array.as_ref(), result.as_ref());
     if check_stats {
         assert_eq!(statistics, stats);

@@ -229,7 +229,7 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
 
             Box::new(arrays) as _
         }
-        (PhysicalType::FixedLenByteArray(n), Decimal256(_, _)) if *n > 16 => {
+        (PhysicalType::FixedLenByteArray(n), Decimal256(_, _)) if *n > 32 => {
             return Err(Error::NotYetImplemented(format!(
                 "Can't decode Decimal256 type from Fixed Size Byte Array of len {n:?}"
             )))
@@ -239,7 +239,7 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
 
             let pages = fixed_size_binary::Iter::new(
                 pages,
-                DataType::FixedSizeBinary(16),
+                DataType::FixedSizeBinary(n),
                 num_rows,
                 chunk_size,
             );
@@ -248,7 +248,7 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
                 let array = maybe_array?;
                 let values = array
                     .values()
-                    .chunks_exact(16)
+                    .chunks_exact(n)
                     .map(|value: &[u8]| super::super::convert_i256(value, n))
                     .collect::<Vec<_>>();
                 let validity = array.validity().cloned();

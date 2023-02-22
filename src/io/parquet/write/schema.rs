@@ -297,7 +297,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
         }
         DataType::Decimal256(_, _) => Ok(ParquetType::try_from_primitive(
             name,
-            PhysicalType::FixedLenByteArray(16),
+            PhysicalType::FixedLenByteArray(32),
             repetition,
             None,
             None,
