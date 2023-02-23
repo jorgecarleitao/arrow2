@@ -464,13 +464,20 @@ pub fn array_to_page_simple(
 
             fixed_len_bytes::array_to_page(array, options, type_, statistics)
         }
-        DataType::Decimal256(_, _) => {
+        DataType::Decimal256(precision, _) => {
             let type_ = type_;
-            let size = 32;
+            let size = decimal_length_from_precision(*precision);
             let array = array
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i256>>()
                 .unwrap();
+            let statistics = if options.write_statistics {
+                let stats =
+                    fixed_len_bytes::build_statistics_decimal256(array, type_.clone(), size);
+                Some(stats)
+            } else {
+                None
+            };
             let mut values = Vec::<u8>::with_capacity(size * array.len());
             array.values().iter().for_each(|x| {
                 let bytes = &x.to_be_bytes()[32 - size..];
@@ -481,12 +488,6 @@ pub fn array_to_page_simple(
                 values.into(),
                 array.validity().cloned(),
             );
-            let statistics = if options.write_statistics {
-                let stats = fixed_len_bytes::build_statistics(&array, type_.clone());
-                Some(stats)
-            } else {
-                None
-            };
 
             fixed_len_bytes::array_to_page(&array, options, type_, statistics)
         }

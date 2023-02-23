@@ -513,7 +513,7 @@ impl NativeType for f16 {
 }
 
 /// Physical representation of a decimal
-#[derive(Clone, Copy, Default, Eq, Hash, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
 pub struct i256(pub ethnum::I256);
