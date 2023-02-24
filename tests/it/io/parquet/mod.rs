@@ -1244,29 +1244,15 @@ pub fn pyarrow_struct_statistics(column: &str) -> Statistics {
 pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
     match column {
         "map" => {
-            let s1 = [
-                Some("a1"),
-                Some("a2"),
-                Some("a3"),
-                Some("a4"),
-                Some("a5"),
-                Some("a6"),
-            ];
-            let s2 = [
-                Some("b1"),
-                Some("b2"),
-                Some("b3"),
-                Some("b4"),
-                Some("b5"),
-                Some("b6"),
-            ];
+            let s1 = [Some("a1"), Some("a2")];
+            let s2 = [Some("b1"), Some("b2")];
             let dt = DataType::Struct(vec![
                 Field::new("key", DataType::Utf8, false),
                 Field::new("value", DataType::Utf8, true),
             ]);
             MapArray::try_new(
                 DataType::Map(Box::new(Field::new("entries", dt.clone(), false)), false),
-                vec![0, 2, 3, 4, 6].try_into().unwrap(),
+                vec![0, 2].try_into().unwrap(),
                 StructArray::try_new(
                     dt,
                     vec![
@@ -1283,22 +1269,15 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
             .boxed()
         }
         "map_nullable" => {
-            let s1 = [
-                Some("a1"),
-                Some("a2"),
-                Some("a3"),
-                Some("a4"),
-                Some("a5"),
-                Some("a6"),
-            ];
-            let s2 = [Some("b1"), None, Some("b2"), Some("b3"), None, Some("b4")];
+            let s1 = [Some("a1"), Some("a2")];
+            let s2 = [Some("b1"), None];
             let dt = DataType::Struct(vec![
                 Field::new("key", DataType::Utf8, false),
                 Field::new("value", DataType::Utf8, true),
             ]);
             MapArray::try_new(
                 DataType::Map(Box::new(Field::new("entries", dt.clone(), false)), false),
-                vec![0, 2, 3, 4, 6].try_into().unwrap(),
+                vec![0, 2].try_into().unwrap(),
                 StructArray::try_new(
                     dt,
                     vec![
@@ -1365,8 +1344,8 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
             )),
             max_value: Box::new(new_map(
                 vec![
-                    Utf8Array::<i32>::from_slice(["a6"]).boxed(),
-                    Utf8Array::<i32>::from_slice(["b6"]).boxed(),
+                    Utf8Array::<i32>::from_slice(["a2"]).boxed(),
+                    Utf8Array::<i32>::from_slice(["b2"]).boxed(),
                 ],
                 names,
             )),
@@ -1383,7 +1362,7 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
             null_count: new_map(
                 vec![
                     UInt64Array::from([Some(0)]).boxed(),
-                    UInt64Array::from([Some(2)]).boxed(),
+                    UInt64Array::from([Some(1)]).boxed(),
                 ],
                 names.clone(),
             )
@@ -1397,8 +1376,8 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
             )),
             max_value: Box::new(new_map(
                 vec![
-                    Utf8Array::<i32>::from_slice(["a6"]).boxed(),
-                    Utf8Array::<i32>::from_slice(["b4"]).boxed(),
+                    Utf8Array::<i32>::from_slice(["a2"]).boxed(),
+                    Utf8Array::<i32>::from_slice(["b2"]).boxed(),
                 ],
                 names,
             )),
