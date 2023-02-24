@@ -186,6 +186,9 @@ io_parquet_lz4_flex = ["parquet2/lz4_flex"]
 io_parquet_lz4 = ["parquet2/lz4"]
 io_parquet_brotli = ["parquet2/brotli"]
 
+# parquet bloom filter functions
+io_parquet_bloom_filter = ["parquet2/bloom_filter"]
+
 io_avro = ["avro-schema", "streaming-iterator"]
 io_avro_compression = [
     "avro-schema/compression",
