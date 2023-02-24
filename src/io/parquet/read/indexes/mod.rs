@@ -207,7 +207,7 @@ fn deserialize(
             }
         }
         PhysicalType::Map => {
-            if let DataType::Map(inner) = data_type.to_logical_type() {
+            if let DataType::Map(inner, _) = data_type.to_logical_type() {
                 deserialize(indexes, inner.data_type.clone())
             } else {
                 unreachable!()
