@@ -143,6 +143,19 @@ impl BooleanArray {
         self.values.get_bit_unchecked(i)
     }
 
+    /// Returns the element at index `i` or `None` if it is null
+    /// # Panics
+    /// iff `i >= self.len()`
+    #[inline]
+    pub fn get(&self, i: usize) -> Option<bool> {
+        if !self.is_null(i) {
+            // soundness: Array::is_null panics if i >= self.len
+            unsafe { Some(self.value_unchecked(i)) }
+        } else {
+            None
+        }
+    }
+
     /// Slices this [`BooleanArray`].
     /// # Implementation
     /// This operation is `O(1)` as it amounts to increase up to two ref counts.
