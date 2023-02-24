@@ -37,6 +37,7 @@ fn round_trip_opt_stats(
             pyarrow_required_statistics(column),
         ),
         "struct" => (pyarrow_struct(column), pyarrow_struct_statistics(column)),
+        "map" => (pyarrow_map(column), pyarrow_map_statistics(column)),
         "nested_edge" => (
             pyarrow_nested_edge(column),
             pyarrow_nested_edge_statistics(column),
@@ -620,6 +621,28 @@ fn struct_v2() -> Result<()> {
     round_trip(
         "struct",
         "struct",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain, Encoding::Plain],
+    )
+}
+
+#[test]
+fn map_v1() -> Result<()> {
+    round_trip(
+        "map",
+        "map",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain, Encoding::Plain],
+    )
+}
+
+#[test]
+fn map_v2() -> Result<()> {
+    round_trip(
+        "map",
+        "map",
         Version::V2,
         CompressionOptions::Uncompressed,
         vec![Encoding::Plain, Encoding::Plain],
