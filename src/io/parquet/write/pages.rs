@@ -148,12 +148,12 @@ fn to_nested_recursive(
                     &fields[0]
                 } else {
                     return Err(Error::InvalidArgumentError(
-                        "Parquet type must be a group for a list array".to_string(),
+                        "Parquet type must be a group for a map array".to_string(),
                     ));
                 }
             } else {
                 return Err(Error::InvalidArgumentError(
-                    "Parquet type must be a group for a list array".to_string(),
+                    "Parquet type must be a group for a map array".to_string(),
                 ));
             };
 
