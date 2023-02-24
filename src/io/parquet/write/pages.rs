@@ -619,7 +619,7 @@ mod tests {
                         offsets: vec![0, 2, 3, 4, 6].try_into().unwrap(),
                         validity: None,
                     }),
-                    Nested::Struct(None, false, 6),
+                    Nested::Struct(None, true, 6),
                     Nested::Primitive(None, false, 6),
                 ],
                 vec![
@@ -628,8 +628,8 @@ mod tests {
                         offsets: vec![0, 2, 3, 4, 6].try_into().unwrap(),
                         validity: None,
                     }),
-                    Nested::Struct(None, false, 6),
-                    Nested::Primitive(None, false, 4),
+                    Nested::Struct(None, true, 6),
+                    Nested::Primitive(None, false, 6),
                 ],
             ]
         );
