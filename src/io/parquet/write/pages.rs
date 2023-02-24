@@ -258,6 +258,7 @@ pub fn array_to_columns<A: AsRef<dyn Array> + Send + Sync>(
 
 #[cfg(test)]
 mod tests {
+    use parquet2::schema::types::{GroupLogicalType, PrimitiveConvertedType, PrimitiveLogicalType};
     use parquet2::schema::Repetition;
 
     use super::*;
@@ -548,10 +549,12 @@ mod tests {
 
         let key_array = Utf8Array::<i32>::from_slice(["k1", "k2", "k3", "k4", "k5", "k6"]).boxed();
         let val_array = Int32Array::from_slice([42, 28, 19, 31, 21, 17]).boxed();
-        let kv_array = StructArray::try_new(kv_type, vec![key_array, val_array], None)?.boxed();
+        let kv_array = StructArray::try_new(kv_type, vec![key_array, val_array], None)
+            .unwrap()
+            .boxed();
         let offsets = OffsetsBuffer::try_from(vec![0, 2, 3, 4, 6]).unwrap();
 
-        let array = MapArray::try_new(map_type, offsets, kv_array, None)?;
+        let array = MapArray::try_new(map_type, offsets, kv_array, None).unwrap();
 
         let type_ = ParquetType::GroupType {
             field_info: FieldInfo {

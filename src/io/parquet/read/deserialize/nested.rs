@@ -1,7 +1,6 @@
 use parquet2::schema::types::PrimitiveType;
 
 use crate::{
-    array::MapArray,
     datatypes::{DataType, Field},
     error::{Error, Result},
 };
