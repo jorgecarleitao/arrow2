@@ -1377,7 +1377,7 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
             max_value: Box::new(new_map(
                 vec![
                     Utf8Array::<i32>::from_slice(["a2"]).boxed(),
-                    Utf8Array::<i32>::from_slice(["b2"]).boxed(),
+                    Utf8Array::<i32>::from_slice(["b1"]).boxed(),
                 ],
                 names,
             )),
