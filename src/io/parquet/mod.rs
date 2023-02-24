@@ -3,6 +3,7 @@ use crate::error::Error;
 
 pub mod read;
 pub mod write;
+pub use parquet2::bloom_filter;
 
 const ARROW_SCHEMA_META_KEY: &str = "ARROW:schema";
 

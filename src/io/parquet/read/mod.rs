@@ -14,7 +14,6 @@ use futures::{AsyncRead, AsyncSeek};
 
 // re-exports of parquet2's relevant APIs
 pub use parquet2::{
-    bloom_filter,
     error::Error as ParquetError,
     fallible_streaming_iterator,
     metadata::{ColumnChunkMetaData, ColumnDescriptor, RowGroupMetaData},

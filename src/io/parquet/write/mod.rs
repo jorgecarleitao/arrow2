@@ -36,7 +36,6 @@ pub use nested::write_rep_and_def;
 pub use pages::{to_leaves, to_nested, to_parquet_leaves};
 use parquet2::schema::types::PrimitiveType as ParquetPrimitiveType;
 pub use parquet2::{
-    bloom_filter,
     compression::{BrotliLevel, CompressionOptions, GzipLevel, ZstdLevel},
     encoding::Encoding,
     fallible_streaming_iterator,
