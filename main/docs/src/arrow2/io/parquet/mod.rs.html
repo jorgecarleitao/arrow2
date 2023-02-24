@@ -25,11 +25,19 @@
 <a href="#25" id="25">25</a>
 <a href="#26" id="26">26</a>
 <a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
 </pre><pre class="rust"><code><span class="doccomment">//! APIs to read from and write to Parquet format.
 </span><span class="kw">use </span><span class="kw">crate</span>::error::Error;
 
 <span class="kw">pub mod </span>read;
 <span class="kw">pub mod </span>write;
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;io_parquet_bloom_filter&quot;</span>)]
+#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_parquet_bloom_filter&quot;</span>)))]
+</span><span class="kw">pub use </span>parquet2::bloom_filter;
 
 <span class="kw">const </span>ARROW_SCHEMA_META_KEY: <span class="kw-2">&amp;</span>str = <span class="string">&quot;ARROW:schema&quot;</span>;
 
