@@ -283,16 +283,12 @@ where
                     num_rows,
                     chunk_size,
                 )?;
-                Box::new(iter.map(move |x| {
-                    let (nested, inner) = x?;
-                    let array = MapArray::new(
-                        field.data_type().clone(),
-                        vec![0, inner.len() as i32].try_into().unwrap(),
-                        inner,
-                        None,
-                    );
-                    Ok((nested, array.boxed()))
-                }))
+                let iter = iter.map(move |x| {
+                    let (mut nested, array) = x?;
+                    let array = create_map(field.data_type().clone(), &mut nested, array);
+                    Ok((nested, array))
+                });
+                Box::new(iter) as _
             }
             other => {
                 return Err(Error::nyi(format!(

@@ -2,7 +2,7 @@ use parquet2::schema::types::{ParquetType, PrimitiveType as ParquetPrimitiveType
 use parquet2::{page::Page, write::DynIter};
 use std::fmt::Debug;
 
-use crate::array::{ListArray, StructArray};
+use crate::array::{ListArray, MapArray, StructArray};
 use crate::bitmap::Bitmap;
 use crate::datatypes::PhysicalType;
 use crate::io::parquet::read::schema::is_nullable;
@@ -141,6 +141,29 @@ fn to_nested_recursive(
             )));
             to_nested_recursive(array.values().as_ref(), type_, nested, parents)?;
         }
+        Map => {
+            let array = array.as_any().downcast_ref::<MapArray>().unwrap();
+            let type_ = if let ParquetType::GroupType { fields, .. } = type_ {
+                if let ParquetType::GroupType { fields, .. } = &fields[0] {
+                    &fields[0]
+                } else {
+                    return Err(Error::InvalidArgumentError(
+                        "Parquet type must be a group for a list array".to_string(),
+                    ));
+                }
+            } else {
+                return Err(Error::InvalidArgumentError(
+                    "Parquet type must be a group for a list array".to_string(),
+                ));
+            };
+
+            parents.push(Nested::List(ListNested::new(
+                array.offsets().clone(),
+                array.validity().cloned(),
+                is_optional,
+            )));
+            to_nested_recursive(array.field().as_ref(), type_, nested, parents)?;
+        }
         _ => {
             parents.push(Nested::Primitive(
                 array.validity().cloned(),
@@ -177,6 +200,10 @@ fn to_leaves_recursive<'a>(array: &'a dyn Array, leaves: &mut Vec<&'a dyn Array>
         LargeList => {
             let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             to_leaves_recursive(array.values().as_ref(), leaves);
+        }
+        Map => {
+            let array = array.as_any().downcast_ref::<MapArray>().unwrap();
+            to_leaves_recursive(array.field().as_ref(), leaves);
         }
         Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
         | LargeUtf8 | Dictionary(_) => leaves.push(array),
@@ -504,6 +531,101 @@ mod tests {
                         validity: None,
                     }),
                     Nested::Struct(Some(Bitmap::from([true, true, false, true])), true, 4),
+                    Nested::Primitive(None, false, 4),
+                ],
+            ]
+        );
+    }
+
+    #[test]
+    fn test_map() {
+        let kv_type = DataType::Struct(vec![
+            Field::new("k", DataType::Utf8, false),
+            Field::new("v", DataType::Int32, false),
+        ]);
+        let kv_field = Field::new("kv", kv_type.clone(), false);
+        let map_type = DataType::Map(Box::new(kv_field.clone()), false);
+
+        let key_array = Utf8Array::<i32>::from_slice(["k1", "k2", "k3", "k4", "k5", "k6"]).boxed();
+        let val_array = Int32Array::from_slice([42, 28, 19, 31, 21, 17]).boxed();
+        let kv_array = StructArray::try_new(kv_type, vec![key_array, val_array], None)?.boxed();
+        let offsets = OffsetsBuffer::try_from(vec![0, 2, 3, 4, 6]).unwrap();
+
+        let array = MapArray::try_new(map_type, offsets, kv_array, None)?;
+
+        let type_ = ParquetType::GroupType {
+            field_info: FieldInfo {
+                name: "kv".to_string(),
+                repetition: Repetition::Optional,
+                id: None,
+            },
+            logical_type: None,
+            converted_type: None,
+            fields: vec![
+                ParquetType::PrimitiveType(ParquetPrimitiveType {
+                    field_info: FieldInfo {
+                        name: "k".to_string(),
+                        repetition: Repetition::Required,
+                        id: None,
+                    },
+                    logical_type: Some(PrimitiveLogicalType::String),
+                    converted_type: Some(PrimitiveConvertedType::Utf8),
+                    physical_type: ParquetPhysicalType::ByteArray,
+                }),
+                ParquetType::PrimitiveType(ParquetPrimitiveType {
+                    field_info: FieldInfo {
+                        name: "v".to_string(),
+                        repetition: Repetition::Required,
+                        id: None,
+                    },
+                    logical_type: None,
+                    converted_type: None,
+                    physical_type: ParquetPhysicalType::Int32,
+                }),
+            ],
+        };
+
+        let type_ = ParquetType::GroupType {
+            field_info: FieldInfo {
+                name: "m".to_string(),
+                repetition: Repetition::Required,
+                id: None,
+            },
+            logical_type: Some(GroupLogicalType::Map),
+            converted_type: None,
+            fields: vec![ParquetType::GroupType {
+                field_info: FieldInfo {
+                    name: "map".to_string(),
+                    repetition: Repetition::Repeated,
+                    id: None,
+                },
+                logical_type: None,
+                converted_type: None,
+                fields: vec![type_],
+            }],
+        };
+
+        let a = to_nested(&array, &type_).unwrap();
+
+        assert_eq!(
+            a,
+            vec![
+                vec![
+                    Nested::List(ListNested::<i32> {
+                        is_optional: false,
+                        offsets: vec![0, 2, 3, 4, 6].try_into().unwrap(),
+                        validity: None,
+                    }),
+                    Nested::Struct(None, false, 6),
+                    Nested::Primitive(None, false, 6),
+                ],
+                vec![
+                    Nested::List(ListNested::<i32> {
+                        is_optional: false,
+                        offsets: vec![0, 2, 3, 4, 6].try_into().unwrap(),
+                        validity: None,
+                    }),
+                    Nested::Struct(None, false, 6),
                     Nested::Primitive(None, false, 4),
                 ],
             ]

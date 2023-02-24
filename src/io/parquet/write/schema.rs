@@ -320,6 +320,21 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 None,
             ))
         }
+        DataType::Map(f, _) => Ok(ParquetType::from_group(
+            name,
+            repetition,
+            None,
+            Some(GroupLogicalType::Map),
+            vec![ParquetType::from_group(
+                "map".to_string(),
+                Repetition::Repeated,
+                None,
+                None,
+                vec![to_parquet_type(f)?],
+                None,
+            )],
+            None,
+        )),
         other => Err(Error::NotYetImplemented(format!(
             "Writing the data type {other:?} is not yet implemented"
         ))),

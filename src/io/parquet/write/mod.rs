@@ -633,8 +633,20 @@ fn transverse_recursive<T, F: Fn(&DataType) -> T + Clone>(
                 unreachable!()
             }
         }
+        Map => {
+            if let DataType::Map(field, _) = data_type.to_logical_type() {
+                if let DataType::Struct(fields) = field.data_type.to_logical_type() {
+                    for field in fields {
+                        transverse_recursive(&field.data_type, map.clone(), encodings)
+                    }
+                } else {
+                    unreachable!()
+                }
+            } else {
+                unreachable!()
+            }
+        }
         Union => todo!(),
-        Map => todo!(),
     }
 }
 
