@@ -73,6 +73,7 @@ def variations():
             "generated_datetime",
             "generated_decimal",
             "generated_interval",
+            "generated_nested",
             # see https://issues.apache.org/jira/browse/ARROW-13486 and
             # https://issues.apache.org/jira/browse/ARROW-13487
             # "generated_dictionary",
