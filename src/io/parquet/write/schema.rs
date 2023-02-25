@@ -3,8 +3,8 @@ use parquet2::{
     metadata::KeyValue,
     schema::{
         types::{
-            GroupLogicalType, IntegerType, ParquetType, PhysicalType, PrimitiveConvertedType,
-            PrimitiveLogicalType, TimeUnit as ParquetTimeUnit,
+            GroupConvertedType, GroupLogicalType, IntegerType, ParquetType, PhysicalType,
+            PrimitiveConvertedType, PrimitiveLogicalType, TimeUnit as ParquetTimeUnit,
         },
         Repetition,
     },
@@ -307,7 +307,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             Ok(ParquetType::from_group(
                 name,
                 repetition,
-                None,
+                Some(GroupConvertedType::List),
                 Some(GroupLogicalType::List),
                 vec![ParquetType::from_group(
                     "list".to_string(),
@@ -323,7 +323,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
         DataType::Map(f, _) => Ok(ParquetType::from_group(
             name,
             repetition,
-            None,
+            Some(GroupConvertedType::Map),
             Some(GroupLogicalType::Map),
             vec![ParquetType::from_group(
                 "map".to_string(),

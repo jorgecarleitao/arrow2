@@ -174,6 +174,14 @@ pub fn n_columns(data_type: &DataType) -> usize {
                 unreachable!()
             }
         }
+        Map => {
+            let a = data_type.to_logical_type();
+            if let DataType::Map(inner, _) = a {
+                n_columns(&inner.data_type)
+            } else {
+                unreachable!()
+            }
+        }
         Struct => {
             if let DataType::Struct(fields) = data_type.to_logical_type() {
                 fields.iter().map(|inner| n_columns(&inner.data_type)).sum()
