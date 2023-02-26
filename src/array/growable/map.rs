@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     array::{Array, MapArray},
     bitmap::MutableBitmap,
-    offset::{Offset, Offsets},
+    offset::Offsets,
 };
 
 use super::{
