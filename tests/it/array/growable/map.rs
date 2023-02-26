@@ -37,11 +37,11 @@ fn basic() {
     let (fields, values) = some_values();
 
     let kv_array = StructArray::new(fields.clone(), values, None).boxed();
-    let kv_field = Field::new("kv", fields.clone(), false);
+    let kv_field = Field::new("kv", fields, false);
     let data_type = DataType::Map(Box::new(kv_field), false);
     let offsets = OffsetsBuffer::try_from(vec![0, 1, 2, 4, 6]).unwrap();
 
-    let array = MapArray::new(data_type.clone(), offsets.clone(), kv_array.clone(), None);
+    let array = MapArray::new(data_type.clone(), offsets, kv_array.clone(), None);
 
     let mut a = GrowableMap::new(vec![&array], false, 0);
 
@@ -61,12 +61,11 @@ fn offset() {
     let (fields, values) = some_values();
 
     let kv_array = StructArray::new(fields.clone(), values, None).boxed();
-    let kv_field = Field::new("kv", fields.clone(), false);
+    let kv_field = Field::new("kv", fields, false);
     let data_type = DataType::Map(Box::new(kv_field), false);
     let offsets = OffsetsBuffer::try_from(vec![0, 1, 2, 4, 6]).unwrap();
 
-    let array =
-        MapArray::new(data_type.clone(), offsets.clone(), kv_array.clone(), None).sliced(1, 3);
+    let array = MapArray::new(data_type.clone(), offsets, kv_array.clone(), None).sliced(1, 3);
 
     let mut a = GrowableMap::new(vec![&array], false, 0);
 
@@ -86,13 +85,13 @@ fn nulls() {
     let (fields, values) = some_values();
 
     let kv_array = StructArray::new(fields.clone(), values, None).boxed();
-    let kv_field = Field::new("kv", fields.clone(), false);
+    let kv_field = Field::new("kv", fields, false);
     let data_type = DataType::Map(Box::new(kv_field), false);
     let offsets = OffsetsBuffer::try_from(vec![0, 1, 2, 4, 6]).unwrap();
 
     let array = MapArray::new(
         data_type.clone(),
-        offsets.clone(),
+        offsets,
         kv_array.clone(),
         Some(Bitmap::from_u8_slice([0b00000010], 4)),
     );
