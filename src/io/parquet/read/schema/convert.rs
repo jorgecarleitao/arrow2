@@ -12,7 +12,6 @@ use crate::datatypes::{DataType, Field, IntervalUnit, TimeUnit};
 /// Converts [`ParquetType`]s to a [`Field`], ignoring parquet fields that do not contain
 /// any physical column.
 pub fn parquet_to_arrow_schema(fields: &[ParquetType]) -> Vec<Field> {
-    println!("in parquet_to_arrow_schema");
     fields.iter().filter_map(to_field).collect::<Vec<_>>()
 }
 

@@ -335,7 +335,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                     PhysicalType::FixedLenByteArray(len),
                     repetition,
                     None,
-                    logical_type,
+                    None,
                     None,
                 )?)
             }

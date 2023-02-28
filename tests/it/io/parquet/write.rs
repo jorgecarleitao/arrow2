@@ -607,6 +607,28 @@ fn decimal256_26_required_v1() -> Result<()> {
 }
 
 #[test]
+fn decimal256_39_optional_v1() -> Result<()> {
+    round_trip(
+        "decimal256_39",
+        "nullable",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+    )
+}
+
+#[test]
+fn decimal256_39_required_v1() -> Result<()> {
+    round_trip(
+        "decimal256_39",
+        "required",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+    )
+}
+
+#[test]
 fn decimal_9_optional_v2() -> Result<()> {
     round_trip(
         "decimal_9",
@@ -731,6 +753,28 @@ fn decimal256_26_optional_v2() -> Result<()> {
 fn decimal256_26_required_v2() -> Result<()> {
     round_trip(
         "decimal256_26",
+        "required",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+    )
+}
+
+#[test]
+fn decimal256_39_optional_v2() -> Result<()> {
+    round_trip(
+        "decimal256_39",
+        "nullable",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+    )
+}
+
+#[test]
+fn decimal256_39_required_v2() -> Result<()> {
+    round_trip(
+        "decimal256_39",
         "required",
         Version::V2,
         CompressionOptions::Uncompressed,

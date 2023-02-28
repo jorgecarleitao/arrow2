@@ -35,6 +35,7 @@ def case_basic_nullable() -> Tuple[dict, pa.Schema, str]:
         pa.field("decimal256_9", pa.decimal256(9, 0)),
         pa.field("decimal256_18", pa.decimal256(18, 0)),
         pa.field("decimal256_26", pa.decimal256(26, 0)),
+        pa.field("decimal256_39", pa.decimal256(39, 0)),
         pa.field("timestamp_us", pa.timestamp("us")),
         pa.field("timestamp_s", pa.timestamp("s")),
         pa.field("emoji", pa.utf8()),
@@ -56,6 +57,7 @@ def case_basic_nullable() -> Tuple[dict, pa.Schema, str]:
             "decimal256_9": decimal,
             "decimal256_18": decimal,
             "decimal256_26": decimal,
+            "decimal256_39": decimal,
             "timestamp_us": int64,
             "timestamp_s": int64,
             "emoji": emoji,
@@ -91,6 +93,7 @@ def case_basic_required() -> Tuple[dict, pa.Schema, str]:
         pa.field("decimal256_9", pa.decimal256(9, 0), nullable=False),
         pa.field("decimal256_18", pa.decimal256(18, 0), nullable=False),
         pa.field("decimal256_26", pa.decimal256(26, 0), nullable=False),
+        pa.field("decimal256_39", pa.decimal256(39, 0), nullable=False),
     ]
     schema = pa.schema(fields)
 
@@ -108,6 +111,7 @@ def case_basic_required() -> Tuple[dict, pa.Schema, str]:
             "decimal256_9": decimal,
             "decimal256_18": decimal,
             "decimal256_26": decimal,
+            "decimal256_39": decimal,
         },
         schema,
         f"basic_required_10.parquet",

@@ -21,7 +21,6 @@ use self::metadata::parse_key_value_metadata;
 /// This function errors iff the key `"ARROW:schema"` exists but is not correctly encoded,
 /// indicating that that the file's arrow metadata was incorrectly written.
 pub fn infer_schema(file_metadata: &FileMetaData) -> Result<Schema> {
-    println!("in infer_schema");
     let mut metadata = parse_key_value_metadata(file_metadata.key_value_metadata());
 
     let schema = read_schema_from_metadata(&mut metadata)?;
