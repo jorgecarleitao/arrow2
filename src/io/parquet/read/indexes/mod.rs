@@ -111,6 +111,21 @@ fn deserialize(
         PhysicalType::Primitive(PrimitiveType::Int256) => {
             let index = indexes.pop_front().unwrap();
             match index.physical_type() {
+                ParquetPhysicalType::Int32 => {
+                    let index = index.as_any().downcast_ref::<NativeIndex<i32>>().unwrap();
+                    Ok(primitive::deserialize_i32(&index.indexes, data_type).into())
+                }
+                parquet2::schema::types::PhysicalType::Int64 => {
+                    let index = index.as_any().downcast_ref::<NativeIndex<i64>>().unwrap();
+                    Ok(
+                        primitive::deserialize_i64(
+                            &index.indexes,
+                            &index.primitive_type,
+                            data_type,
+                        )
+                        .into(),
+                    )
+                }
                 parquet2::schema::types::PhysicalType::FixedLenByteArray(_) => {
                     let index = index.as_any().downcast_ref::<FixedLenByteIndex>().unwrap();
                     Ok(fixed_len_binary::deserialize(&index.indexes, data_type).into())

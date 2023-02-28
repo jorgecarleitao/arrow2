@@ -466,30 +466,83 @@ pub fn array_to_page_simple(
         }
         DataType::Decimal256(precision, _) => {
             let type_ = type_;
-            let size = decimal_length_from_precision(*precision);
+            let precision = *precision;
             let array = array
                 .as_any()
                 .downcast_ref::<PrimitiveArray<i256>>()
                 .unwrap();
-            let statistics = if options.write_statistics {
-                let stats =
-                    fixed_len_bytes::build_statistics_decimal256(array, type_.clone(), size);
-                Some(stats)
-            } else {
-                None
-            };
-            let mut values = Vec::<u8>::with_capacity(size * array.len());
-            array.values().iter().for_each(|x| {
-                let bytes = &x.to_be_bytes()[32 - size..];
-                values.extend_from_slice(bytes)
-            });
-            let array = FixedSizeBinaryArray::new(
-                DataType::FixedSizeBinary(size),
-                values.into(),
-                array.validity().cloned(),
-            );
+            if precision <= 9 {
+                let values = array
+                    .values()
+                    .iter()
+                    .map(|x| x.0.as_i32())
+                    .collect::<Vec<_>>()
+                    .into();
 
-            fixed_len_bytes::array_to_page(&array, options, type_, statistics)
+                let array =
+                    PrimitiveArray::<i32>::new(DataType::Int32, values, array.validity().cloned());
+                primitive::array_to_page_integer::<i32, i32>(&array, options, type_, encoding)
+            } else if precision <= 18 {
+                let values = array
+                    .values()
+                    .iter()
+                    .map(|x| x.0.as_i64())
+                    .collect::<Vec<_>>()
+                    .into();
+
+                let array =
+                    PrimitiveArray::<i64>::new(DataType::Int64, values, array.validity().cloned());
+                primitive::array_to_page_integer::<i64, i64>(&array, options, type_, encoding)
+            } else if precision <= 38 {
+                let size = decimal_length_from_precision(precision);
+                let statistics = if options.write_statistics {
+                    let stats = fixed_len_bytes::build_statistics_decimal256_with_i128(
+                        array,
+                        type_.clone(),
+                        size,
+                    );
+                    Some(stats)
+                } else {
+                    None
+                };
+
+                let mut values = Vec::<u8>::with_capacity(size * array.len());
+                array.values().iter().for_each(|x| {
+                    let bytes = &x.0.low().to_be_bytes()[16 - size..];
+                    values.extend_from_slice(bytes)
+                });
+                let array = FixedSizeBinaryArray::new(
+                    DataType::FixedSizeBinary(size),
+                    values.into(),
+                    array.validity().cloned(),
+                );
+                fixed_len_bytes::array_to_page(&array, options, type_, statistics)
+            } else {
+                let size = decimal_length_from_precision(precision);
+                let array = array
+                    .as_any()
+                    .downcast_ref::<PrimitiveArray<i256>>()
+                    .unwrap();
+                let statistics = if options.write_statistics {
+                    let stats =
+                        fixed_len_bytes::build_statistics_decimal256(array, type_.clone(), size);
+                    Some(stats)
+                } else {
+                    None
+                };
+                let mut values = Vec::<u8>::with_capacity(size * array.len());
+                array.values().iter().for_each(|x| {
+                    let bytes = &x.to_be_bytes()[32 - size..];
+                    values.extend_from_slice(bytes)
+                });
+                let array = FixedSizeBinaryArray::new(
+                    DataType::FixedSizeBinary(size),
+                    values.into(),
+                    array.validity().cloned(),
+                );
+
+                fixed_len_bytes::array_to_page(&array, options, type_, statistics)
+            }
         }
         DataType::Decimal(precision, _) => {
             let type_ = type_;

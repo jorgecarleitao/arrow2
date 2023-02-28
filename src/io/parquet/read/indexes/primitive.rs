@@ -1,3 +1,4 @@
+use ethnum::I256;
 use parquet2::indexes::PageIndex;
 use parquet2::schema::types::{PrimitiveLogicalType, PrimitiveType, TimeUnit as ParquetTimeUnit};
 use parquet2::types::int96_to_i64_ns;
@@ -5,7 +6,7 @@ use parquet2::types::int96_to_i64_ns;
 use crate::array::{Array, MutablePrimitiveArray, PrimitiveArray};
 use crate::datatypes::{DataType, TimeUnit};
 use crate::trusted_len::TrustedLen;
-use crate::types::NativeType;
+use crate::types::{i256, NativeType};
 
 use super::ColumnPageStatistics;
 
@@ -32,6 +33,12 @@ fn deserialize_int32<I: TrustedLen<Item = Option<i32>>>(
             PrimitiveArray::<i128>::from_trusted_len_iter(iter.map(|x| x.map(|x| x as i128)))
                 .to(data_type),
         ),
+        Decimal256(_, _) => Box::new(
+            PrimitiveArray::<i256>::from_trusted_len_iter(
+                iter.map(|x| x.map(|x| i256(I256::new(x.into())))),
+            )
+            .to(data_type),
+        ) as _,
         _ => Box::new(PrimitiveArray::<i32>::from_trusted_len_iter(iter).to(data_type)),
     }
 }
@@ -109,6 +116,12 @@ fn deserialize_int64<I: TrustedLen<Item = Option<i64>>>(
         Decimal(_, _) => Box::new(
             PrimitiveArray::<i128>::from_trusted_len_iter(iter.map(|x| x.map(|x| x as i128)))
                 .to(data_type),
+        ) as _,
+        Decimal256(_, _) => Box::new(
+            PrimitiveArray::<i256>::from_trusted_len_iter(
+                iter.map(|x| x.map(|x| i256(I256::new(x.into())))),
+            )
+            .to(data_type),
         ) as _,
         Timestamp(time_unit, _) => {
             let mut array =

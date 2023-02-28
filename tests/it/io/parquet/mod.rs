@@ -530,12 +530,26 @@ pub fn pyarrow_nullable(column: &str) -> Box<dyn Array> {
                 .collect::<Vec<_>>();
             Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(26, 0)))
         }
-        "decimal_39" => {
+        "decimal256_9" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| i256(x.as_i256())))
                 .collect::<Vec<_>>();
-            Box::new(PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(39, 0)))
+            Box::new(PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(9, 0)))
+        }
+        "decimal256_18" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| i256(x.as_i256())))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(18, 0)))
+        }
+        "decimal256_26" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| i256(x.as_i256())))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(26, 0)))
         }
         "timestamp_us" => Box::new(
             PrimitiveArray::<i64>::from(i64_values)
@@ -623,14 +637,34 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
             min_value: Box::new(Int128Array::from_slice([-256]).to(DataType::Decimal(26, 0))),
             max_value: Box::new(Int128Array::from_slice([9]).to(DataType::Decimal(26, 0))),
         },
-        "decimal_39" => Statistics {
+        "decimal256_9" => Statistics {
             distinct_count: UInt64Array::from([None]).boxed(),
             null_count: UInt64Array::from([Some(3)]).boxed(),
             min_value: Box::new(
-                Int256Array::from_slice([i256(-(256.as_i256()))]).to(DataType::Decimal256(39, 0)),
+                Int256Array::from_slice([i256(-(256.as_i256()))]).to(DataType::Decimal256(9, 0)),
             ),
             max_value: Box::new(
-                Int256Array::from_slice([i256(9.as_i256())]).to(DataType::Decimal256(39, 0)),
+                Int256Array::from_slice([i256(9.as_i256())]).to(DataType::Decimal256(9, 0)),
+            ),
+        },
+        "decimal256_18" => Statistics {
+            distinct_count: UInt64Array::from([None]).boxed(),
+            null_count: UInt64Array::from([Some(3)]).boxed(),
+            min_value: Box::new(
+                Int256Array::from_slice([i256(-(256.as_i256()))]).to(DataType::Decimal256(18, 0)),
+            ),
+            max_value: Box::new(
+                Int256Array::from_slice([i256(9.as_i256())]).to(DataType::Decimal256(18, 0)),
+            ),
+        },
+        "decimal256_26" => Statistics {
+            distinct_count: UInt64Array::from([None]).boxed(),
+            null_count: UInt64Array::from([Some(3)]).boxed(),
+            min_value: Box::new(
+                Int256Array::from_slice([i256(-(256.as_i256()))]).to(DataType::Decimal256(26, 0)),
+            ),
+            max_value: Box::new(
+                Int256Array::from_slice([i256(9.as_i256())]).to(DataType::Decimal256(26, 0)),
             ),
         },
         "timestamp_us" => Statistics {
@@ -713,12 +747,26 @@ pub fn pyarrow_required(column: &str) -> Box<dyn Array> {
                 .collect::<Vec<_>>();
             Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(26, 0)))
         }
-        "decimal_39" => {
+        "decimal256_9" => {
             let values = i64_values
                 .iter()
                 .map(|x| x.map(|x| i256(x.as_i256())))
                 .collect::<Vec<_>>();
-            Box::new(PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(39, 0)))
+            Box::new(PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(9, 0)))
+        }
+        "decimal256_18" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| i256(x.as_i256())))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(18, 0)))
+        }
+        "decimal256_26" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| i256(x.as_i256())))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(26, 0)))
         }
         _ => unreachable!(),
     }

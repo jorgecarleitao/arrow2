@@ -1,4 +1,5 @@
 //! APIs exposing `parquet2`'s statistics as arrow's statistics.
+use ethnum::I256;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
@@ -17,6 +18,7 @@ use crate::datatypes::IntervalUnit;
 use crate::datatypes::{DataType, Field, PhysicalType};
 use crate::error::Error;
 use crate::error::Result;
+use crate::types::i256;
 
 mod binary;
 mod boolean;
@@ -516,10 +518,24 @@ fn push(
             _ => unreachable!(),
         },
         Decimal256(_, _) => match physical_type {
+            ParquetPhysicalType::Int32 => {
+                primitive::push(from, min, max, |x: i32| Ok(i256(I256::new(x.into()))))
+            }
+            ParquetPhysicalType::Int64 => {
+                println!("in push static Decimal256");
+                primitive::push(from, min, max, |x: i64| Ok(i256(I256::new(x.into()))))
+            }
+            ParquetPhysicalType::FixedLenByteArray(n) if *n <= 16 => {
+                println!("in push FixedLenByteArray n {:?}", n);
+                fixlen::push_i256_with_i128(from, *n, min, max)
+            }
             ParquetPhysicalType::FixedLenByteArray(n) if *n > 32 => Err(Error::NotYetImplemented(
                 format!("Can't decode Decimal256 type from Fixed Size Byte Array of len {n:?}"),
             )),
-            ParquetPhysicalType::FixedLenByteArray(n) => fixlen::push_i256(from, *n, min, max),
+            ParquetPhysicalType::FixedLenByteArray(n) => {
+                println!("in push FixedLenByteArray n {:?}", n);
+                fixlen::push_i256(from, *n, min, max)
+            }
             _ => unreachable!(),
         },
         Binary => binary::push::<i32>(from, min, max),

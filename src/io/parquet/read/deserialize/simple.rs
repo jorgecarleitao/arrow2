@@ -1,3 +1,4 @@
+use ethnum::I256;
 use parquet2::{
     schema::types::{
         PhysicalType, PrimitiveLogicalType, PrimitiveType, TimeUnit as ParquetTimeUnit,
@@ -229,12 +230,47 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
 
             Box::new(arrays) as _
         }
-        (PhysicalType::FixedLenByteArray(n), Decimal256(_, _)) if *n > 32 => {
-            return Err(Error::NotYetImplemented(format!(
-                "Can't decode Decimal256 type from Fixed Size Byte Array of len {n:?}"
-            )))
+        (PhysicalType::Int32, Decimal256(_, _)) => dyn_iter(iden(primitive::IntegerIter::new(
+            pages,
+            data_type,
+            num_rows,
+            chunk_size,
+            |x: i32| i256(I256::new(x as i128)),
+        ))),
+        (PhysicalType::Int64, Decimal256(_, _)) => dyn_iter(iden(primitive::IntegerIter::new(
+            pages,
+            data_type,
+            num_rows,
+            chunk_size,
+            |x: i64| i256(I256::new(x as i128)),
+        ))),
+        (PhysicalType::FixedLenByteArray(n), Decimal256(_, _)) if *n <= 16 => {
+            let n = *n;
+
+            let pages = fixed_size_binary::Iter::new(
+                pages,
+                DataType::FixedSizeBinary(n),
+                num_rows,
+                chunk_size,
+            );
+
+            let pages = pages.map(move |maybe_array| {
+                let array = maybe_array?;
+                let values = array
+                    .values()
+                    .chunks_exact(n)
+                    .map(|value: &[u8]| i256(I256::new(super::super::convert_i128(value, n))))
+                    .collect::<Vec<_>>();
+                let validity = array.validity().cloned();
+
+                PrimitiveArray::<i256>::try_new(data_type.clone(), values.into(), validity)
+            });
+
+            let arrays = pages.map(|x| x.map(|x| x.boxed()));
+
+            Box::new(arrays) as _
         }
-        (PhysicalType::FixedLenByteArray(n), Decimal256(_, _)) => {
+        (PhysicalType::FixedLenByteArray(n), Decimal256(_, _)) if *n <= 32 => {
             let n = *n;
 
             let pages = fixed_size_binary::Iter::new(
@@ -259,6 +295,11 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
             let arrays = pages.map(|x| x.map(|x| x.boxed()));
 
             Box::new(arrays) as _
+        }
+        (PhysicalType::FixedLenByteArray(n), Decimal256(_, _)) if *n > 32 => {
+            return Err(Error::NotYetImplemented(format!(
+                "Can't decode Decimal256 type from Fixed Size Byte Array of len {n:?}"
+            )))
         }
         (PhysicalType::Int32, Date64) => dyn_iter(iden(primitive::IntegerIter::new(
             pages,
