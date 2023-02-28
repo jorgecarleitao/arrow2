@@ -60,7 +60,7 @@ pub fn date64_to_date(milliseconds: i64) -> NaiveDate {
     date64_to_datetime(milliseconds).date()
 }
 
-/// converts a `i32` representing a `time32(s)` to [`NaiveDateTime`]
+/// converts a `i32` representing a `time32(s)` to [`NaiveTime`]
 #[inline]
 pub fn time32s_to_time(v: i32) -> NaiveTime {
     NaiveTime::from_num_seconds_from_midnight_opt(v as u32, 0).expect("invalid time")
@@ -78,7 +78,7 @@ pub fn time32ms_to_time(v: i32) -> NaiveTime {
         .expect("invalid time")
 }
 
-/// converts a `i64` representing a `time64(us)` to [`NaiveDateTime`]
+/// converts a `i64` representing a `time64(us)` to [`NaiveTime`]
 #[inline]
 pub fn time64us_to_time(v: i64) -> NaiveTime {
     NaiveTime::from_num_seconds_from_midnight_opt(
@@ -91,7 +91,7 @@ pub fn time64us_to_time(v: i64) -> NaiveTime {
     .expect("invalid time")
 }
 
-/// converts a `i64` representing a `time64(ns)` to [`NaiveDateTime`]
+/// converts a `i64` representing a `time64(ns)` to [`NaiveTime`]
 #[inline]
 pub fn time64ns_to_time(v: i64) -> NaiveTime {
     NaiveTime::from_num_seconds_from_midnight_opt(
