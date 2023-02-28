@@ -1,4 +1,4 @@
-use chrono::Datelike;
+use chrono::{Datelike, NaiveTime, Timelike};
 
 use crate::{
     array::*,
@@ -201,6 +201,37 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
             to_utf8(bytes)
                 .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                 .map(|x| x.timestamp_millis())
+        }),
+        Time32(time_unit) => deserialize_primitive(rows, column, datatype, |bytes| {
+            let factor = match time_unit {
+                TimeUnit::Second => 1,
+                TimeUnit::Millisecond => 1_000,
+                TimeUnit::Microsecond => 0, // FIXME: Should not happen but I don't know how to throw at this point
+                TimeUnit::Nanosecond => 0,
+            };
+            to_utf8(bytes)
+                .and_then(|x| x.parse::<chrono::NaiveTime>().ok())
+                .map(|x| {
+                    (x.hour() * 3_600 * factor
+                        + x.minute() * 60 * factor
+                        + x.second() * factor
+                        + x.nanosecond() / (1_000_000_000 / factor)) as i32
+                })
+        }),
+        Time64(time_unit) => deserialize_primitive(rows, column, datatype, |bytes| {
+            to_utf8(bytes)
+                .and_then(|x| x.parse::<chrono::NaiveTime>().ok())
+                .map(|x| {
+                    (x.hour() * 3_600_000
+                        + x.minute() * 60_000
+                        + x.second() * 1000
+                        + match time_unit {
+                            TimeUnit::Second => 0,
+                            TimeUnit::Millisecond => 0, // FIXME: Should not happen but I don't know how to throw at this point
+                            TimeUnit::Microsecond => x.nanosecond() / 1_000,
+                            TimeUnit::Nanosecond => x.nanosecond(),
+                        }) as i64
+                })
         }),
         Timestamp(time_unit, None) => deserialize_primitive(rows, column, datatype, |bytes| {
             to_utf8(bytes)
