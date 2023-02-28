@@ -303,6 +303,30 @@ fn date64() -> Result<()> {
 }
 
 #[test]
+fn time32_s() -> Result<()> {
+    let result = test_deserialize(
+        "00:00:00,\n23:59:59,\n11:00:11,\n",
+        DataType::Time32(TimeUnit::Second),
+    )?;
+    let expected = Int32Array::from(&[Some(0), Some(86399), Some(39611)])
+        .to(DataType::Time32(TimeUnit::Second));
+    assert_eq!(expected, result.as_ref());
+    Ok(())
+}
+
+#[test]
+fn time32_ms() -> Result<()> {
+    let result = test_deserialize(
+        "00:00:00.000,\n23:59:59.999,\n00:00:00.999,\n",
+        DataType::Time32(TimeUnit::Millisecond),
+    )?;
+    let expected = Int32Array::from(&[Some(0), Some(86_399_999), Some(999)])
+        .to(DataType::Time32(TimeUnit::Millisecond));
+    assert_eq!(expected, result.as_ref());
+    Ok(())
+}
+
+#[test]
 fn decimal() -> Result<()> {
     let result = test_deserialize("1.1,\n1.2,\n1.22,\n1.3,\n", DataType::Decimal(2, 1))?;
     let expected =
