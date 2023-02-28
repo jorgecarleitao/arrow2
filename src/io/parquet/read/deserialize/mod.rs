@@ -15,7 +15,7 @@ use parquet2::read::get_page_iterator as _get_page_iterator;
 use parquet2::schema::types::PrimitiveType;
 
 use crate::{
-    array::{Array, DictionaryKey, FixedSizeListArray, ListArray},
+    array::{Array, DictionaryKey, FixedSizeListArray, ListArray, MapArray},
     datatypes::{DataType, Field, IntervalUnit},
     error::Result,
     offset::Offsets,
@@ -87,6 +87,33 @@ pub fn create_list(
     }
 }
 
+/// Creates a new [`MapArray`].
+pub fn create_map(
+    data_type: DataType,
+    nested: &mut NestedState,
+    values: Box<dyn Array>,
+) -> Box<dyn Array> {
+    let (mut offsets, validity) = nested.nested.pop().unwrap().inner();
+    match data_type.to_logical_type() {
+        DataType::Map(_, _) => {
+            offsets.push(values.len() as i64);
+            let offsets = offsets.iter().map(|x| *x as i32).collect::<Vec<_>>();
+
+            let offsets: Offsets<i32> = offsets
+                .try_into()
+                .expect("i64 offsets do not fit in i32 offsets");
+
+            Box::new(MapArray::new(
+                data_type,
+                offsets.into(),
+                values,
+                validity.and_then(|x| x.into()),
+            ))
+        }
+        _ => unreachable!(),
+    }
+}
+
 fn is_primitive(data_type: &DataType) -> bool {
     matches!(
         data_type.to_physical_type(),
@@ -142,6 +169,14 @@ pub fn n_columns(data_type: &DataType) -> usize {
             } else if let DataType::LargeList(inner) = a {
                 n_columns(&inner.data_type)
             } else if let DataType::FixedSizeList(inner, _) = a {
+                n_columns(&inner.data_type)
+            } else {
+                unreachable!()
+            }
+        }
+        Map => {
+            let a = data_type.to_logical_type();
+            if let DataType::Map(inner, _) = a {
                 n_columns(&inner.data_type)
             } else {
                 unreachable!()

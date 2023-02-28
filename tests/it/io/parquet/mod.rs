@@ -1298,15 +1298,19 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
 }
 
 pub fn pyarrow_map_statistics(column: &str) -> Statistics {
-    let new_map = |arrays: Vec<Box<dyn Array>>, names: Vec<String>| {
-        let fields = names
+    let new_map = |arrays: Vec<Box<dyn Array>>, fields: Vec<Field>| {
+        let fields = fields
             .into_iter()
             .zip(arrays.iter())
-            .map(|(n, a)| Field::new(n, a.data_type().clone(), true))
+            .map(|(f, a)| Field::new(f.name, a.data_type().clone(), f.is_nullable))
             .collect::<Vec<_>>();
         MapArray::new(
             DataType::Map(
-                Box::new(Field::new("items", DataType::Struct(fields.clone()), false)),
+                Box::new(Field::new(
+                    "entries",
+                    DataType::Struct(fields.clone()),
+                    false,
+                )),
                 false,
             ),
             vec![0, arrays[0].len() as i32].try_into().unwrap(),
@@ -1315,7 +1319,10 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
         )
     };
 
-    let names = vec!["key".to_string(), "value".to_string()];
+    let fields = vec![
+        Field::new("key", DataType::Utf8, false),
+        Field::new("value", DataType::Utf8, true),
+    ];
 
     match column {
         "map" => Statistics {
@@ -1324,7 +1331,7 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
                     UInt64Array::from([None]).boxed(),
                     UInt64Array::from([None]).boxed(),
                 ],
-                names.clone(),
+                fields.clone(),
             )
             .boxed(),
             null_count: new_map(
@@ -1332,7 +1339,7 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
                     UInt64Array::from([Some(0)]).boxed(),
                     UInt64Array::from([Some(0)]).boxed(),
                 ],
-                names.clone(),
+                fields.clone(),
             )
             .boxed(),
             min_value: Box::new(new_map(
@@ -1340,14 +1347,14 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
                     Utf8Array::<i32>::from_slice(["a1"]).boxed(),
                     Utf8Array::<i32>::from_slice(["b1"]).boxed(),
                 ],
-                names.clone(),
+                fields.clone(),
             )),
             max_value: Box::new(new_map(
                 vec![
                     Utf8Array::<i32>::from_slice(["a2"]).boxed(),
                     Utf8Array::<i32>::from_slice(["b2"]).boxed(),
                 ],
-                names,
+                fields,
             )),
         },
         "map_nullable" => Statistics {
@@ -1356,7 +1363,7 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
                     UInt64Array::from([None]).boxed(),
                     UInt64Array::from([None]).boxed(),
                 ],
-                names.clone(),
+                fields.clone(),
             )
             .boxed(),
             null_count: new_map(
@@ -1364,7 +1371,7 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
                     UInt64Array::from([Some(0)]).boxed(),
                     UInt64Array::from([Some(1)]).boxed(),
                 ],
-                names.clone(),
+                fields.clone(),
             )
             .boxed(),
             min_value: Box::new(new_map(
@@ -1372,14 +1379,14 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
                     Utf8Array::<i32>::from_slice(["a1"]).boxed(),
                     Utf8Array::<i32>::from_slice(["b1"]).boxed(),
                 ],
-                names.clone(),
+                fields.clone(),
             )),
             max_value: Box::new(new_map(
                 vec![
                     Utf8Array::<i32>::from_slice(["a2"]).boxed(),
                     Utf8Array::<i32>::from_slice(["b1"]).boxed(),
                 ],
-                names,
+                fields,
             )),
         },
         _ => unreachable!(),

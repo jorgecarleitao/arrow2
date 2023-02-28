@@ -19,6 +19,8 @@ mod primitive;
 pub use primitive::GrowablePrimitive;
 mod list;
 pub use list::GrowableList;
+mod map;
+pub use map::GrowableMap;
 mod structure;
 pub use structure::GrowableStruct;
 mod fixed_size_list;
@@ -123,7 +125,7 @@ pub fn make_growable<'a>(
                 .collect::<Vec<_>>();
             Box::new(union::GrowableUnion::new(arrays, capacity))
         }
-        Map => todo!(),
+        Map => dyn_growable!(map::GrowableMap, arrays, use_validity, capacity),
         Dictionary(key_type) => {
             match_integer_type!(key_type, |$T| {
                 let arrays = arrays

@@ -206,6 +206,13 @@ fn deserialize(
                 unreachable!()
             }
         }
+        PhysicalType::Map => {
+            if let DataType::Map(inner, _) = data_type.to_logical_type() {
+                deserialize(indexes, inner.data_type.clone())
+            } else {
+                unreachable!()
+            }
+        }
         PhysicalType::Struct => {
             let children_fields = if let DataType::Struct(children) = data_type.to_logical_type() {
                 children

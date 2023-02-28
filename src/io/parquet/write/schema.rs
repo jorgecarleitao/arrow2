@@ -3,8 +3,8 @@ use parquet2::{
     metadata::KeyValue,
     schema::{
         types::{
-            GroupLogicalType, IntegerType, ParquetType, PhysicalType, PrimitiveConvertedType,
-            PrimitiveLogicalType, TimeUnit as ParquetTimeUnit,
+            GroupConvertedType, GroupLogicalType, IntegerType, ParquetType, PhysicalType,
+            PrimitiveConvertedType, PrimitiveLogicalType, TimeUnit as ParquetTimeUnit,
         },
         Repetition,
     },
@@ -307,7 +307,7 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
             Ok(ParquetType::from_group(
                 name,
                 repetition,
-                None,
+                Some(GroupConvertedType::List),
                 Some(GroupLogicalType::List),
                 vec![ParquetType::from_group(
                     "list".to_string(),
@@ -320,6 +320,21 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 None,
             ))
         }
+        DataType::Map(f, _) => Ok(ParquetType::from_group(
+            name,
+            repetition,
+            Some(GroupConvertedType::Map),
+            Some(GroupLogicalType::Map),
+            vec![ParquetType::from_group(
+                "map".to_string(),
+                Repetition::Repeated,
+                None,
+                None,
+                vec![to_parquet_type(f)?],
+                None,
+            )],
+            None,
+        )),
         other => Err(Error::NotYetImplemented(format!(
             "Writing the data type {other:?} is not yet implemented"
         ))),
