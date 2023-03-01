@@ -68,12 +68,12 @@ fn test_decimal256() {
     let col = Int256Array::from_iter([
         None,
         Some(i256::from_words(i128::MIN, i128::MIN)),
-        Some(i256::from_words(0, -1)),
-        Some(i256::from_words(i128::MAX, -1)),
-        Some(i256::from_words(i128::MAX, 0)),
         Some(i256::from_words(0, 46_i128)),
+        Some(i256::from_words(0, -1)),
         Some(i256::from_words(5, 46_i128)),
+        Some(i256::from_words(i128::MAX, 0)),
         Some(i256::from_words(i128::MAX, i128::MAX)),
+        Some(i256::from_words(i128::MAX, -1)),
     ])
     .to(DataType::Decimal256(76, 7))
     .to_boxed();
