@@ -327,6 +327,30 @@ fn time32_ms() -> Result<()> {
 }
 
 #[test]
+fn time64_us() -> Result<()> {
+    let result = test_deserialize(
+        "00:00:00.000000,\n23:59:59.999999,\n00:00:00.000001,\n",
+        DataType::Time64(TimeUnit::Microsecond),
+    )?;
+    let expected = Int64Array::from(&[Some(0), Some(86_399_999_999), Some(1)])
+        .to(DataType::Time64(TimeUnit::Microsecond));
+    assert_eq!(expected, result.as_ref());
+    Ok(())
+}
+
+#[test]
+fn time64_ns() -> Result<()> {
+    let result = test_deserialize(
+        "00:00:00.000000000,\n23:59:59.999999999,\n00:00:00.000000001,\n",
+        DataType::Time64(TimeUnit::Nanosecond),
+    )?;
+    let expected = Int64Array::from(&[Some(0), Some(86_399_999_999_999), Some(1)])
+        .to(DataType::Time64(TimeUnit::Nanosecond));
+    assert_eq!(expected, result.as_ref());
+    Ok(())
+}
+
+#[test]
 fn decimal() -> Result<()> {
     let result = test_deserialize("1.1,\n1.2,\n1.22,\n1.3,\n", DataType::Decimal(2, 1))?;
     let expected =
