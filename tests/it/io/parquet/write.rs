@@ -44,36 +44,40 @@ fn round_trip_opt_stats(
         ),
         _ => unreachable!(),
     };
+    let len = array.len();
 
-    let field = Field::new("a1", array.data_type().clone(), true);
-    let schema = Schema::from(vec![field]);
+    for (start, len) in [(0usize, len), (2, len - 2)] {
+        let array = array.sliced(start, len);
+        let field = Field::new("a1", array.data_type().clone(), true);
+        let schema = Schema::from(vec![field]);
 
-    let options = WriteOptions {
-        write_statistics: true,
-        compression,
-        version,
-        data_pagesize_limit: None,
-    };
+        let options = WriteOptions {
+            write_statistics: true,
+            compression,
+            version,
+            data_pagesize_limit: None,
+        };
 
-    let iter = vec![Chunk::try_new(vec![array.clone()])];
+        let iter = vec![Chunk::try_new(vec![array.clone()])];
 
-    let row_groups =
-        RowGroupIterator::try_new(iter.into_iter(), &schema, options, vec![encodings])?;
+        let row_groups =
+            RowGroupIterator::try_new(iter.into_iter(), &schema, options, vec![encodings.clone()])?;
 
-    let writer = Cursor::new(vec![]);
-    let mut writer = FileWriter::try_new(writer, schema, options)?;
+        let writer = Cursor::new(vec![]);
+        let mut writer = FileWriter::try_new(writer, schema, options)?;
 
-    for group in row_groups {
-        writer.write(group?)?;
-    }
-    writer.end(None)?;
+        for group in row_groups {
+            writer.write(group?)?;
+        }
+        writer.end(None)?;
 
-    let data = writer.into_inner().into_inner();
+        let data = writer.into_inner().into_inner();
 
-    let (result, stats) = read_column(&mut Cursor::new(data), "a1")?;
-    assert_eq!(array.as_ref(), result.as_ref());
-    if check_stats {
-        assert_eq!(statistics, stats);
+        let (result, stats) = read_column(&mut Cursor::new(data), "a1")?;
+        assert_eq!(array.as_ref(), result.as_ref());
+        if check_stats {
+            assert_eq!(statistics, stats);
+        }
     }
     Ok(())
 }
