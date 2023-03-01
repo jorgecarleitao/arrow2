@@ -285,7 +285,7 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
                 let values = array
                     .values()
                     .chunks_exact(n)
-                    .map(|value: &[u8]| super::super::convert_i256(value, n))
+                    .map(super::super::convert_i256)
                     .collect::<Vec<_>>();
                 let validity = array.validity().cloned();
 

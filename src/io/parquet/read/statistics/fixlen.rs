@@ -3,9 +3,10 @@ use parquet2::statistics::{FixedLenStatistics, Statistics as ParquetStatistics};
 
 use crate::array::*;
 use crate::error::Result;
+use crate::io::parquet::read::convert_i256;
 use crate::types::{days_ms, i256};
 
-use super::super::{convert_days_ms, convert_i128, convert_i256};
+use super::super::{convert_days_ms, convert_i128};
 
 pub(super) fn push_i128(
     from: Option<&dyn ParquetStatistics>,
@@ -61,7 +62,6 @@ pub(super) fn push_i256_with_i128(
 
 pub(super) fn push_i256(
     from: Option<&dyn ParquetStatistics>,
-    n: usize,
     min: &mut dyn MutableArray,
     max: &mut dyn MutableArray,
 ) -> Result<()> {
@@ -75,8 +75,8 @@ pub(super) fn push_i256(
         .unwrap();
     let from = from.map(|s| s.as_any().downcast_ref::<FixedLenStatistics>().unwrap());
 
-    min.push(from.and_then(|s| s.min_value.as_deref().map(|x| convert_i256(x, n))));
-    max.push(from.and_then(|s| s.max_value.as_deref().map(|x| convert_i256(x, n))));
+    min.push(from.and_then(|s| s.min_value.as_deref().map(convert_i256)));
+    max.push(from.and_then(|s| s.max_value.as_deref().map(convert_i256)));
 
     Ok(())
 }

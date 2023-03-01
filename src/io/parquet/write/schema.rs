@@ -329,10 +329,9 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                     None,
                 )?)
             } else {
-                let len = decimal_length_from_precision(precision);
                 Ok(ParquetType::try_from_primitive(
                     name,
-                    PhysicalType::FixedLenByteArray(len),
+                    PhysicalType::FixedLenByteArray(32),
                     repetition,
                     None,
                     None,

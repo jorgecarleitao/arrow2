@@ -83,9 +83,14 @@ fn convert_i128(value: &[u8], n: usize) -> i128 {
     i128::from_be_bytes(bytes) >> (8 * (16 - n))
 }
 
-fn convert_i256(value: &[u8], n: usize) -> i256 {
+fn convert_i256(value: &[u8]) -> i256 {
     let mut bytes = [0u8; 32];
-    bytes[..n].copy_from_slice(value);
-
-    i256(i256::from_be_bytes(bytes).0 >> (8 * (32 - n)))
+    let mut neg_bytes = [255u8; 32];
+    if value[0] >= 128 {
+        neg_bytes[32 - value.len()..].copy_from_slice(value);
+        i256::from_be_bytes(neg_bytes)
+    } else {
+        bytes[32 - value.len()..].copy_from_slice(value);
+        i256::from_be_bytes(bytes)
+    }
 }

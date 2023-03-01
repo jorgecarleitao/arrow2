@@ -518,7 +518,7 @@ pub fn array_to_page_simple(
                 );
                 fixed_len_bytes::array_to_page(&array, options, type_, statistics)
             } else {
-                let size = decimal_length_from_precision(precision);
+                let size = 32;
                 let array = array
                     .as_any()
                     .downcast_ref::<PrimitiveArray<i256>>()
@@ -532,7 +532,7 @@ pub fn array_to_page_simple(
                 };
                 let mut values = Vec::<u8>::with_capacity(size * array.len());
                 array.values().iter().for_each(|x| {
-                    let bytes = &x.to_be_bytes()[32 - size..];
+                    let bytes = &x.to_be_bytes();
                     values.extend_from_slice(bytes)
                 });
                 let array = FixedSizeBinaryArray::new(

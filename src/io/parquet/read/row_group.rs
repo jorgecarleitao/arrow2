@@ -225,9 +225,6 @@ pub fn to_deserializer<'a>(
 
         (columns, types)
     } else {
-        for (meta, chunk) in columns.clone() {
-            println!("the meta is {:?},\nthe chunk is {:?}", meta, chunk);
-        }
         let (columns, types): (Vec<_>, Vec<_>) = columns
             .into_iter()
             .map(|(column_meta, chunk)| {
