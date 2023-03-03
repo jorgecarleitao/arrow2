@@ -295,6 +295,50 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                 None,
             )?)
         }
+        DataType::Decimal256(precision, scale) => {
+            let precision = *precision;
+            let scale = *scale;
+            let logical_type = Some(PrimitiveLogicalType::Decimal(precision, scale));
+
+            if precision <= 9 {
+                Ok(ParquetType::try_from_primitive(
+                    name,
+                    PhysicalType::Int32,
+                    repetition,
+                    Some(PrimitiveConvertedType::Decimal(precision, scale)),
+                    logical_type,
+                    None,
+                )?)
+            } else if precision <= 18 {
+                Ok(ParquetType::try_from_primitive(
+                    name,
+                    PhysicalType::Int64,
+                    repetition,
+                    Some(PrimitiveConvertedType::Decimal(precision, scale)),
+                    logical_type,
+                    None,
+                )?)
+            } else if precision <= 38 {
+                let len = decimal_length_from_precision(precision);
+                Ok(ParquetType::try_from_primitive(
+                    name,
+                    PhysicalType::FixedLenByteArray(len),
+                    repetition,
+                    Some(PrimitiveConvertedType::Decimal(precision, scale)),
+                    logical_type,
+                    None,
+                )?)
+            } else {
+                Ok(ParquetType::try_from_primitive(
+                    name,
+                    PhysicalType::FixedLenByteArray(32),
+                    repetition,
+                    None,
+                    None,
+                    None,
+                )?)
+            }
+        }
         DataType::Interval(_) => Ok(ParquetType::try_from_primitive(
             name,
             PhysicalType::FixedLenByteArray(12),

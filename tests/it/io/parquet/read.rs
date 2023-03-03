@@ -402,6 +402,56 @@ fn v1_decimal_26_required() -> Result<()> {
 }
 
 #[test]
+fn v1_decimal256_9_nullable() -> Result<()> {
+    test_pyarrow_integration("decimal256_9", 1, "basic", false, false, None)
+}
+
+#[test]
+fn v1_decimal256_9_required() -> Result<()> {
+    test_pyarrow_integration("decimal256_9", 1, "basic", false, true, None)
+}
+
+#[test]
+fn v1_decimal256_18_nullable() -> Result<()> {
+    test_pyarrow_integration("decimal256_18", 1, "basic", false, false, None)
+}
+
+#[test]
+fn v1_decimal256_18_required() -> Result<()> {
+    test_pyarrow_integration("decimal256_18", 1, "basic", false, true, None)
+}
+
+#[test]
+fn v1_decimal256_26_nullable() -> Result<()> {
+    test_pyarrow_integration("decimal256_26", 1, "basic", false, false, None)
+}
+
+#[test]
+fn v1_decimal256_26_required() -> Result<()> {
+    test_pyarrow_integration("decimal256_26", 1, "basic", false, true, None)
+}
+
+#[test]
+fn v1_decimal256_39_nullable() -> Result<()> {
+    test_pyarrow_integration("decimal256_39", 1, "basic", false, false, None)
+}
+
+#[test]
+fn v1_decimal256_39_required() -> Result<()> {
+    test_pyarrow_integration("decimal256_39", 1, "basic", false, true, None)
+}
+
+#[test]
+fn v1_decimal256_76_nullable() -> Result<()> {
+    test_pyarrow_integration("decimal256_76", 1, "basic", false, false, None)
+}
+
+#[test]
+fn v1_decimal256_76_required() -> Result<()> {
+    test_pyarrow_integration("decimal256_76", 1, "basic", false, true, None)
+}
+
+#[test]
 fn v2_decimal_9_nullable() -> Result<()> {
     test_pyarrow_integration("decimal_9", 2, "basic", false, false, None)
 }
@@ -437,6 +487,31 @@ fn v2_decimal_26_nullable() -> Result<()> {
 }
 
 #[test]
+fn v2_decimal256_9_nullable() -> Result<()> {
+    test_pyarrow_integration("decimal256_9", 2, "basic", false, false, None)
+}
+
+#[test]
+fn v2_decimal256_18_nullable() -> Result<()> {
+    test_pyarrow_integration("decimal256_18", 2, "basic", false, false, None)
+}
+
+#[test]
+fn v2_decimal256_26_nullable() -> Result<()> {
+    test_pyarrow_integration("decimal256_26", 2, "basic", false, false, None)
+}
+
+#[test]
+fn v2_decimal256_39_nullable() -> Result<()> {
+    test_pyarrow_integration("decimal256_39", 2, "basic", false, false, None)
+}
+
+#[test]
+fn v2_decimal256_76_nullable() -> Result<()> {
+    test_pyarrow_integration("decimal256_76", 2, "basic", false, false, None)
+}
+
+#[test]
 fn v1_timestamp_us_nullable() -> Result<()> {
     test_pyarrow_integration("timestamp_us", 1, "basic", false, false, None)
 }
@@ -464,6 +539,56 @@ fn v2_decimal_26_required() -> Result<()> {
 #[test]
 fn v2_decimal_26_required_dict() -> Result<()> {
     test_pyarrow_integration("decimal_26", 2, "basic", true, true, None)
+}
+
+#[test]
+fn v2_decimal256_9_required() -> Result<()> {
+    test_pyarrow_integration("decimal256_9", 2, "basic", false, true, None)
+}
+
+#[test]
+fn v2_decimal256_9_required_dict() -> Result<()> {
+    test_pyarrow_integration("decimal256_9", 2, "basic", true, true, None)
+}
+
+#[test]
+fn v2_decimal256_18_required() -> Result<()> {
+    test_pyarrow_integration("decimal256_18", 2, "basic", false, true, None)
+}
+
+#[test]
+fn v2_decimal256_18_required_dict() -> Result<()> {
+    test_pyarrow_integration("decimal256_18", 2, "basic", true, true, None)
+}
+
+#[test]
+fn v2_decimal256_26_required() -> Result<()> {
+    test_pyarrow_integration("decimal256_26", 2, "basic", false, true, None)
+}
+
+#[test]
+fn v2_decimal256_26_required_dict() -> Result<()> {
+    test_pyarrow_integration("decimal256_26", 2, "basic", true, true, None)
+}
+
+#[test]
+fn v2_decimal256_39_required() -> Result<()> {
+    test_pyarrow_integration("decimal256_39", 2, "basic", false, true, None)
+}
+
+#[test]
+fn v2_decimal256_39_required_dict() -> Result<()> {
+    test_pyarrow_integration("decimal256_39", 2, "basic", true, true, None)
+}
+
+#[test]
+fn v2_decimal256_76_required() -> Result<()> {
+    test_pyarrow_integration("decimal256_76", 2, "basic", false, true, None)
+}
+
+#[test]
+fn v2_decimal256_76_required_dict() -> Result<()> {
+    test_pyarrow_integration("decimal256_76", 2, "basic", true, true, None)
 }
 
 #[test]

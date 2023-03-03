@@ -6,6 +6,7 @@ use parquet2::{
 };
 
 use super::{binary::ord_binary, utils, WriteOptions};
+use crate::types::i256;
 use crate::{
     array::{Array, FixedSizeBinaryArray, PrimitiveArray},
     error::Result,
@@ -101,5 +102,49 @@ pub(super) fn build_statistics_decimal(
             .flatten()
             .min()
             .map(|x| x.to_be_bytes()[16 - size..].to_vec()),
+    }
+}
+
+pub(super) fn build_statistics_decimal256_with_i128(
+    array: &PrimitiveArray<i256>,
+    primitive_type: PrimitiveType,
+    size: usize,
+) -> FixedLenStatistics {
+    FixedLenStatistics {
+        primitive_type,
+        null_count: Some(array.null_count() as i64),
+        distinct_count: None,
+        max_value: array
+            .iter()
+            .flatten()
+            .max()
+            .map(|x| x.0.low().to_be_bytes()[16 - size..].to_vec()),
+        min_value: array
+            .iter()
+            .flatten()
+            .min()
+            .map(|x| x.0.low().to_be_bytes()[16 - size..].to_vec()),
+    }
+}
+
+pub(super) fn build_statistics_decimal256(
+    array: &PrimitiveArray<i256>,
+    primitive_type: PrimitiveType,
+    size: usize,
+) -> FixedLenStatistics {
+    FixedLenStatistics {
+        primitive_type,
+        null_count: Some(array.null_count() as i64),
+        distinct_count: None,
+        max_value: array
+            .iter()
+            .flatten()
+            .max()
+            .map(|x| x.0.to_be_bytes()[32 - size..].to_vec()),
+        min_value: array
+            .iter()
+            .flatten()
+            .min()
+            .map(|x| x.0.to_be_bytes()[32 - size..].to_vec()),
     }
 }

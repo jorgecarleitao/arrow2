@@ -513,7 +513,7 @@ impl NativeType for f16 {
 }
 
 /// Physical representation of a decimal
-#[derive(Clone, Copy, Default, Eq, Hash, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
 pub struct i256(pub ethnum::I256);
@@ -577,14 +577,14 @@ impl NativeType for i256 {
         let mut bytes = [0u8; 32];
         let (a, b) = self.0.into_words();
 
-        let b = b.to_be_bytes();
-        (0..16).for_each(|i| {
-            bytes[i] = b[i];
-        });
-
         let a = a.to_be_bytes();
         (0..16).for_each(|i| {
-            bytes[i + 16] = a[i];
+            bytes[i] = a[i];
+        });
+
+        let b = b.to_be_bytes();
+        (0..16).for_each(|i| {
+            bytes[i + 16] = b[i];
         });
 
         bytes
@@ -592,7 +592,7 @@ impl NativeType for i256 {
 
     #[inline]
     fn from_be_bytes(bytes: Self::Bytes) -> Self {
-        let (b, a) = bytes.split_at(16);
+        let (a, b) = bytes.split_at(16);
         let a: [u8; 16] = a.try_into().unwrap();
         let b: [u8; 16] = b.try_into().unwrap();
         let a = i128::from_be_bytes(a);
