@@ -1,3 +1,4 @@
+use arrow2::datatypes::IntegerType;
 use arrow2::{
     array::*,
     bitmap::Bitmap,
@@ -48,6 +49,22 @@ fn utf8() -> Result<()> {
     let array = Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
     let expected = r#"["a","b","c","d",null]"#;
+
+    test!(array, expected)
+}
+
+#[test]
+fn dictionary_utf8() -> Result<()> {
+    let values = Utf8Array::<i64>::from([Some("a"), Some("b"), Some("c"), Some("d")]);
+    let keys = PrimitiveArray::from_slice([0u32, 1, 2, 3, 1]);
+    let array = DictionaryArray::try_new(
+        DataType::Dictionary(IntegerType::UInt32, Box::new(DataType::LargeUtf8), false),
+        keys,
+        Box::new(values),
+    )
+    .unwrap();
+
+    let expected = r#"["a","b","c","d","b"]"#;
 
     test!(array, expected)
 }

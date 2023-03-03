@@ -4,7 +4,7 @@ use std::io::Write;
 use streaming_iterator::StreamingIterator;
 
 use crate::bitmap::utils::ZipValidity;
-use crate::datatypes::TimeUnit;
+use crate::datatypes::{IntegerType, TimeUnit};
 use crate::io::iterator::BufStreamingIterator;
 use crate::offset::Offset;
 use crate::temporal_conversions::{
@@ -63,6 +63,24 @@ where
                 }
             } else {
                 buf.extend(b"null")
+            }
+        },
+        vec![],
+    ))
+}
+
+fn dictionary_utf8_serializer<'a, K: DictionaryKey, O: Offset>(
+    array: &'a DictionaryArray<K>,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
+    let iter = array.iter_typed::<Utf8Array<O>>().unwrap();
+
+    Box::new(BufStreamingIterator::new(
+        iter,
+        |x, buf| {
+            if let Some(x) = x {
+                utf8::write_str(buf, x).unwrap();
+            } else {
+                buf.extend_from_slice(b"null")
             }
         },
         vec![],
@@ -257,6 +275,18 @@ pub(crate) fn new_serializer<'a>(
         }
         DataType::List(_) => list_serializer::<i32>(array.as_any().downcast_ref().unwrap()),
         DataType::LargeList(_) => list_serializer::<i64>(array.as_any().downcast_ref().unwrap()),
+        other @ DataType::Dictionary(k, v, _) => match (k, &**v) {
+            (IntegerType::UInt32, DataType::LargeUtf8) => {
+                let array = array
+                    .as_any()
+                    .downcast_ref::<DictionaryArray<u32>>()
+                    .unwrap();
+                dictionary_utf8_serializer::<u32, i64>(array)
+            }
+            _ => {
+                todo!("Writing {:?} to JSON", other)
+            }
+        },
         DataType::Date32 => date_serializer(array.as_any().downcast_ref().unwrap(), date32_to_date),
         DataType::Date64 => date_serializer(array.as_any().downcast_ref().unwrap(), date64_to_date),
         DataType::Timestamp(tu, tz) => {
