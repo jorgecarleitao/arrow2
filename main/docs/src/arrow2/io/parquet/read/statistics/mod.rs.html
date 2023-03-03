@@ -555,8 +555,27 @@
 <a href="#555" id="555">555</a>
 <a href="#556" id="556">556</a>
 <a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
 </pre><pre class="rust"><code><span class="doccomment">//! APIs exposing `parquet2`&#39;s statistics as arrow&#39;s statistics.
-</span><span class="kw">use </span>std::collections::VecDeque;
+</span><span class="kw">use </span>ethnum::I256;
+<span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>parquet2::metadata::RowGroupMetaData;
@@ -574,6 +593,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::datatypes::{DataType, Field, PhysicalType};
 <span class="kw">use </span><span class="kw">crate</span>::error::Error;
 <span class="kw">use </span><span class="kw">crate</span>::error::Result;
+<span class="kw">use </span><span class="kw">crate</span>::types::i256;
 
 <span class="kw">mod </span>binary;
 <span class="kw">mod </span>boolean;
@@ -1072,6 +1092,22 @@
             ParquetPhysicalType::FixedLenByteArray(n) =&gt; fixlen::push_i128(from, <span class="kw-2">*</span>n, min, max),
             <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
         },
+        Decimal256(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="kw">match </span>physical_type {
+            ParquetPhysicalType::Int32 =&gt; {
+                primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(i256(I256::new(x.into()))))
+            }
+            ParquetPhysicalType::Int64 =&gt; {
+                primitive::push(from, min, max, |x: i64| <span class="prelude-val">Ok</span>(i256(I256::new(x.into()))))
+            }
+            ParquetPhysicalType::FixedLenByteArray(n) <span class="kw">if </span><span class="kw-2">*</span>n &lt;= <span class="number">16 </span>=&gt; {
+                fixlen::push_i256_with_i128(from, <span class="kw-2">*</span>n, min, max)
+            }
+            ParquetPhysicalType::FixedLenByteArray(n) <span class="kw">if </span><span class="kw-2">*</span>n &gt; <span class="number">32 </span>=&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(
+                <span class="macro">format!</span>(<span class="string">&quot;Can&#39;t decode Decimal256 type from Fixed Size Byte Array of len {n:?}&quot;</span>),
+            )),
+            ParquetPhysicalType::FixedLenByteArray(<span class="kw">_</span>) =&gt; fixlen::push_i256(from, min, max),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
+        },
         Binary =&gt; binary::push::&lt;i32&gt;(from, min, max),
         LargeBinary =&gt; binary::push::&lt;i64&gt;(from, min, max),
         Utf8 =&gt; utf8::push::&lt;i32&gt;(from, min, max),
@@ -1113,4 +1149,4 @@
     <span class="prelude-val">Ok</span>(statistics.into())
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (7281249a1 2023-02-27)" data-search-js="search-d5a6cd8418084717.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (13471d3b2 2023-03-02)" data-search-js="search-2cde8914278f97ed.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

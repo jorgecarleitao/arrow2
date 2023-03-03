@@ -57,8 +57,20 @@
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
 </pre><pre class="rust"><code><span class="kw">use </span>parquet2::indexes::PageIndex;
 
+<span class="kw">use </span><span class="kw">crate</span>::types::{i256, NativeType};
 <span class="kw">use crate</span>::{
     array::{Array, FixedSizeBinaryArray, MutableFixedSizeBinaryArray, PrimitiveArray},
     datatypes::{DataType, PhysicalType, PrimitiveType},
@@ -101,6 +113,16 @@
                 })
             })))
         }
+        PhysicalType::Primitive(PrimitiveType::Int256) =&gt; {
+            Box::new(PrimitiveArray::from_trusted_len_iter(iter.map(|v| {
+                v.map(|x| {
+                    <span class="kw">let </span>n = x.len();
+                    <span class="kw">let </span><span class="kw-2">mut </span>bytes = [<span class="number">0u8</span>; <span class="number">32</span>];
+                    bytes[..n].copy_from_slice(x);
+                    i256::from_be_bytes(bytes)
+                })
+            })))
+        }
         <span class="kw">_ </span>=&gt; {
             <span class="kw">let </span><span class="kw-2">mut </span>a = MutableFixedSizeBinaryArray::try_new(
                 data_type,
@@ -117,4 +139,4 @@
     }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (7281249a1 2023-02-27)" data-search-js="search-d5a6cd8418084717.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (13471d3b2 2023-03-02)" data-search-js="search-2cde8914278f97ed.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

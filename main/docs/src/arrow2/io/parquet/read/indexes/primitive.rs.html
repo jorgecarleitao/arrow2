@@ -208,14 +208,28 @@
 <a href="#208" id="208">208</a>
 <a href="#209" id="209">209</a>
 <a href="#210" id="210">210</a>
-</pre><pre class="rust"><code><span class="kw">use </span>parquet2::indexes::PageIndex;
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+</pre><pre class="rust"><code><span class="kw">use </span>ethnum::I256;
+<span class="kw">use </span>parquet2::indexes::PageIndex;
 <span class="kw">use </span>parquet2::schema::types::{PrimitiveLogicalType, PrimitiveType, TimeUnit <span class="kw">as </span>ParquetTimeUnit};
 <span class="kw">use </span>parquet2::types::int96_to_i64_ns;
 
 <span class="kw">use </span><span class="kw">crate</span>::array::{Array, MutablePrimitiveArray, PrimitiveArray};
 <span class="kw">use </span><span class="kw">crate</span>::datatypes::{DataType, TimeUnit};
 <span class="kw">use </span><span class="kw">crate</span>::trusted_len::TrustedLen;
-<span class="kw">use </span><span class="kw">crate</span>::types::NativeType;
+<span class="kw">use </span><span class="kw">crate</span>::types::{i256, NativeType};
 
 <span class="kw">use </span><span class="kw">super</span>::ColumnPageStatistics;
 
@@ -242,6 +256,12 @@
             PrimitiveArray::&lt;i128&gt;::from_trusted_len_iter(iter.map(|x| x.map(|x| x <span class="kw">as </span>i128)))
                 .to(data_type),
         ),
+        Decimal256(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; Box::new(
+            PrimitiveArray::&lt;i256&gt;::from_trusted_len_iter(
+                iter.map(|x| x.map(|x| i256(I256::new(x.into())))),
+            )
+            .to(data_type),
+        ) <span class="kw">as _</span>,
         <span class="kw">_ </span>=&gt; Box::new(PrimitiveArray::&lt;i32&gt;::from_trusted_len_iter(iter).to(data_type)),
     }
 }
@@ -319,6 +339,12 @@
         Decimal(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; Box::new(
             PrimitiveArray::&lt;i128&gt;::from_trusted_len_iter(iter.map(|x| x.map(|x| x <span class="kw">as </span>i128)))
                 .to(data_type),
+        ) <span class="kw">as _</span>,
+        Decimal256(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; Box::new(
+            PrimitiveArray::&lt;i256&gt;::from_trusted_len_iter(
+                iter.map(|x| x.map(|x| i256(I256::new(x.into())))),
+            )
+            .to(data_type),
         ) <span class="kw">as _</span>,
         Timestamp(time_unit, <span class="kw">_</span>) =&gt; {
             <span class="kw">let </span><span class="kw-2">mut </span>array =
@@ -419,4 +445,4 @@
     }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (7281249a1 2023-02-27)" data-search-js="search-d5a6cd8418084717.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (13471d3b2 2023-03-02)" data-search-js="search-2cde8914278f97ed.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

@@ -340,6 +340,50 @@
 <a href="#340" id="340">340</a>
 <a href="#341" id="341">341</a>
 <a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
 </pre><pre class="rust"><code><span class="kw">use </span>base64::{engine::general_purpose, Engine <span class="kw">as _</span>};
 <span class="kw">use </span>parquet2::{
     metadata::KeyValue,
@@ -637,6 +681,50 @@
                 <span class="prelude-val">None</span>,
             )<span class="question-mark">?</span>)
         }
+        DataType::Decimal256(precision, scale) =&gt; {
+            <span class="kw">let </span>precision = <span class="kw-2">*</span>precision;
+            <span class="kw">let </span>scale = <span class="kw-2">*</span>scale;
+            <span class="kw">let </span>logical_type = <span class="prelude-val">Some</span>(PrimitiveLogicalType::Decimal(precision, scale));
+
+            <span class="kw">if </span>precision &lt;= <span class="number">9 </span>{
+                <span class="prelude-val">Ok</span>(ParquetType::try_from_primitive(
+                    name,
+                    PhysicalType::Int32,
+                    repetition,
+                    <span class="prelude-val">Some</span>(PrimitiveConvertedType::Decimal(precision, scale)),
+                    logical_type,
+                    <span class="prelude-val">None</span>,
+                )<span class="question-mark">?</span>)
+            } <span class="kw">else if </span>precision &lt;= <span class="number">18 </span>{
+                <span class="prelude-val">Ok</span>(ParquetType::try_from_primitive(
+                    name,
+                    PhysicalType::Int64,
+                    repetition,
+                    <span class="prelude-val">Some</span>(PrimitiveConvertedType::Decimal(precision, scale)),
+                    logical_type,
+                    <span class="prelude-val">None</span>,
+                )<span class="question-mark">?</span>)
+            } <span class="kw">else if </span>precision &lt;= <span class="number">38 </span>{
+                <span class="kw">let </span>len = decimal_length_from_precision(precision);
+                <span class="prelude-val">Ok</span>(ParquetType::try_from_primitive(
+                    name,
+                    PhysicalType::FixedLenByteArray(len),
+                    repetition,
+                    <span class="prelude-val">Some</span>(PrimitiveConvertedType::Decimal(precision, scale)),
+                    logical_type,
+                    <span class="prelude-val">None</span>,
+                )<span class="question-mark">?</span>)
+            } <span class="kw">else </span>{
+                <span class="prelude-val">Ok</span>(ParquetType::try_from_primitive(
+                    name,
+                    PhysicalType::FixedLenByteArray(<span class="number">32</span>),
+                    repetition,
+                    <span class="prelude-val">None</span>,
+                    <span class="prelude-val">None</span>,
+                    <span class="prelude-val">None</span>,
+                )<span class="question-mark">?</span>)
+            }
+        }
         DataType::Interval(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(ParquetType::try_from_primitive(
             name,
             PhysicalType::FixedLenByteArray(<span class="number">12</span>),
@@ -683,4 +771,4 @@
     }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (7281249a1 2023-02-27)" data-search-js="search-d5a6cd8418084717.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (13471d3b2 2023-03-02)" data-search-js="search-2cde8914278f97ed.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

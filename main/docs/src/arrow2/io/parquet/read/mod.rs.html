@@ -81,6 +81,19 @@
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
 </pre><pre class="rust"><code><span class="doccomment">//! APIs to read from Parquet format.
 </span><span class="attr">#![allow(clippy::type_complexity)]
 
@@ -117,6 +130,7 @@
 
 <span class="kw">use crate</span>::{array::Array, error::Result};
 
+<span class="kw">use </span><span class="kw">crate</span>::types::{i256, NativeType};
 <span class="kw">pub use </span>deserialize::{
     column_iter_to_arrays, create_list, create_map, get_page_iterator, init_nested, n_columns,
     InitNested, NestedArrayIter, NestedState, StructIterator,
@@ -164,5 +178,17 @@
     bytes[..n].copy_from_slice(value);
     i128::from_be_bytes(bytes) &gt;&gt; (<span class="number">8 </span>* (<span class="number">16 </span>- n))
 }
+
+<span class="kw">fn </span>convert_i256(value: <span class="kw-2">&amp;</span>[u8]) -&gt; i256 {
+    <span class="kw">if </span>value[<span class="number">0</span>] &gt;= <span class="number">128 </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>neg_bytes = [<span class="number">255u8</span>; <span class="number">32</span>];
+        neg_bytes[<span class="number">32 </span>- value.len()..].copy_from_slice(value);
+        i256::from_be_bytes(neg_bytes)
+    } <span class="kw">else </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>bytes = [<span class="number">0u8</span>; <span class="number">32</span>];
+        bytes[<span class="number">32 </span>- value.len()..].copy_from_slice(value);
+        i256::from_be_bytes(bytes)
+    }
+}
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (7281249a1 2023-02-27)" data-search-js="search-d5a6cd8418084717.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (13471d3b2 2023-03-02)" data-search-js="search-2cde8914278f97ed.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

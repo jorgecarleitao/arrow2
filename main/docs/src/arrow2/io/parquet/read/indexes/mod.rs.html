@@ -356,6 +356,33 @@
 <a href="#356" id="356">356</a>
 <a href="#357" id="357">357</a>
 <a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
 </pre><pre class="rust"><code><span class="doccomment">//! API to perform page-level filtering (also known as indexes)
 </span><span class="kw">use </span>parquet2::error::Error <span class="kw">as </span>ParquetError;
 <span class="kw">use </span>parquet2::indexes::{
@@ -440,6 +467,33 @@
             <span class="prelude-val">Ok</span>(boolean::deserialize(<span class="kw-2">&amp;</span>index.indexes).into())
         }
         PhysicalType::Primitive(PrimitiveType::Int128) =&gt; {
+            <span class="kw">let </span>index = indexes.pop_front().unwrap();
+            <span class="kw">match </span>index.physical_type() {
+                ParquetPhysicalType::Int32 =&gt; {
+                    <span class="kw">let </span>index = index.as_any().downcast_ref::&lt;NativeIndex&lt;i32&gt;&gt;().unwrap();
+                    <span class="prelude-val">Ok</span>(primitive::deserialize_i32(<span class="kw-2">&amp;</span>index.indexes, data_type).into())
+                }
+                parquet2::schema::types::PhysicalType::Int64 =&gt; {
+                    <span class="kw">let </span>index = index.as_any().downcast_ref::&lt;NativeIndex&lt;i64&gt;&gt;().unwrap();
+                    <span class="prelude-val">Ok</span>(
+                        primitive::deserialize_i64(
+                            <span class="kw-2">&amp;</span>index.indexes,
+                            <span class="kw-2">&amp;</span>index.primitive_type,
+                            data_type,
+                        )
+                        .into(),
+                    )
+                }
+                parquet2::schema::types::PhysicalType::FixedLenByteArray(<span class="kw">_</span>) =&gt; {
+                    <span class="kw">let </span>index = index.as_any().downcast_ref::&lt;FixedLenByteIndex&gt;().unwrap();
+                    <span class="prelude-val">Ok</span>(fixed_len_binary::deserialize(<span class="kw-2">&amp;</span>index.indexes, data_type).into())
+                }
+                other =&gt; <span class="prelude-val">Err</span>(Error::nyi(<span class="macro">format!</span>(
+                    <span class="string">&quot;Deserialize {other:?} to arrow&#39;s int64&quot;
+                </span>))),
+            }
+        }
+        PhysicalType::Primitive(PrimitiveType::Int256) =&gt; {
             <span class="kw">let </span>index = indexes.pop_front().unwrap();
             <span class="kw">match </span>index.physical_type() {
                 ParquetPhysicalType::Int32 =&gt; {
@@ -715,4 +769,4 @@
         .collect()
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (7281249a1 2023-02-27)" data-search-js="search-d5a6cd8418084717.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (13471d3b2 2023-03-02)" data-search-js="search-2cde8914278f97ed.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

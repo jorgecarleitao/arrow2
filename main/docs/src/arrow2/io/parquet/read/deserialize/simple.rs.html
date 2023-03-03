@@ -529,13 +529,88 @@
 <a href="#529" id="529">529</a>
 <a href="#530" id="530">530</a>
 <a href="#531" id="531">531</a>
-</pre><pre class="rust"><code><span class="kw">use </span>parquet2::{
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+</pre><pre class="rust"><code><span class="kw">use </span>ethnum::I256;
+<span class="kw">use </span>parquet2::{
     schema::types::{
         PhysicalType, PrimitiveLogicalType, PrimitiveType, TimeUnit <span class="kw">as </span>ParquetTimeUnit,
     },
     types::int96_to_i64_ns,
 };
 
+<span class="kw">use </span><span class="kw">crate</span>::types::i256;
 <span class="kw">use crate</span>::{
     array::{Array, DictionaryKey, MutablePrimitiveArray, PrimitiveArray},
     datatypes::{DataType, IntervalUnit, TimeUnit},
@@ -759,6 +834,77 @@
 
             Box::new(arrays) <span class="kw">as _
         </span>}
+        (PhysicalType::Int32, Decimal256(<span class="kw">_</span>, <span class="kw">_</span>)) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+            pages,
+            data_type,
+            num_rows,
+            chunk_size,
+            |x: i32| i256(I256::new(x <span class="kw">as </span>i128)),
+        ))),
+        (PhysicalType::Int64, Decimal256(<span class="kw">_</span>, <span class="kw">_</span>)) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
+            pages,
+            data_type,
+            num_rows,
+            chunk_size,
+            |x: i64| i256(I256::new(x <span class="kw">as </span>i128)),
+        ))),
+        (PhysicalType::FixedLenByteArray(n), Decimal256(<span class="kw">_</span>, <span class="kw">_</span>)) <span class="kw">if </span><span class="kw-2">*</span>n &lt;= <span class="number">16 </span>=&gt; {
+            <span class="kw">let </span>n = <span class="kw-2">*</span>n;
+
+            <span class="kw">let </span>pages = fixed_size_binary::Iter::new(
+                pages,
+                DataType::FixedSizeBinary(n),
+                num_rows,
+                chunk_size,
+            );
+
+            <span class="kw">let </span>pages = pages.map(<span class="kw">move </span>|maybe_array| {
+                <span class="kw">let </span>array = maybe_array<span class="question-mark">?</span>;
+                <span class="kw">let </span>values = array
+                    .values()
+                    .chunks_exact(n)
+                    .map(|value: <span class="kw-2">&amp;</span>[u8]| i256(I256::new(<span class="kw">super</span>::<span class="kw">super</span>::convert_i128(value, n))))
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                <span class="kw">let </span>validity = array.validity().cloned();
+
+                PrimitiveArray::&lt;i256&gt;::try_new(data_type.clone(), values.into(), validity)
+            });
+
+            <span class="kw">let </span>arrays = pages.map(|x| x.map(|x| x.boxed()));
+
+            Box::new(arrays) <span class="kw">as _
+        </span>}
+        (PhysicalType::FixedLenByteArray(n), Decimal256(<span class="kw">_</span>, <span class="kw">_</span>)) <span class="kw">if </span><span class="kw-2">*</span>n &lt;= <span class="number">32 </span>=&gt; {
+            <span class="kw">let </span>n = <span class="kw-2">*</span>n;
+
+            <span class="kw">let </span>pages = fixed_size_binary::Iter::new(
+                pages,
+                DataType::FixedSizeBinary(n),
+                num_rows,
+                chunk_size,
+            );
+
+            <span class="kw">let </span>pages = pages.map(<span class="kw">move </span>|maybe_array| {
+                <span class="kw">let </span>array = maybe_array<span class="question-mark">?</span>;
+                <span class="kw">let </span>values = array
+                    .values()
+                    .chunks_exact(n)
+                    .map(<span class="kw">super</span>::<span class="kw">super</span>::convert_i256)
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                <span class="kw">let </span>validity = array.validity().cloned();
+
+                PrimitiveArray::&lt;i256&gt;::try_new(data_type.clone(), values.into(), validity)
+            });
+
+            <span class="kw">let </span>arrays = pages.map(|x| x.map(|x| x.boxed()));
+
+            Box::new(arrays) <span class="kw">as _
+        </span>}
+        (PhysicalType::FixedLenByteArray(n), Decimal256(<span class="kw">_</span>, <span class="kw">_</span>)) <span class="kw">if </span><span class="kw-2">*</span>n &gt; <span class="number">32 </span>=&gt; {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
+                <span class="string">&quot;Can&#39;t decode Decimal256 type from Fixed Size Byte Array of len {n:?}&quot;
+            </span>)))
+        }
         (PhysicalType::Int32, Date64) =&gt; dyn_iter(iden(primitive::IntegerIter::new(
             pages,
             data_type,
@@ -1061,4 +1207,4 @@
     })
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (7281249a1 2023-02-27)" data-search-js="search-d5a6cd8418084717.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (13471d3b2 2023-03-02)" data-search-js="search-2cde8914278f97ed.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
