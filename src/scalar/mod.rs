@@ -161,7 +161,7 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
         Map => {
             let array = array.as_any().downcast_ref::<MapArray>().unwrap();
             let value = if array.is_valid(index) {
-                Some(array.value(index).into())
+                Some(array.value(index))
             } else {
                 None
             };

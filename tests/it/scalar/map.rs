@@ -30,13 +30,13 @@ fn equal() {
     )
     .unwrap();
 
-    let dt = DataType::Map(Box::new(Field::new("entriesa", kv_dt.clone(), true)), false);
-    let a = MapScalar::new(dt.clone(), Some(kv_array1));
+    let dt = DataType::Map(Box::new(Field::new("entries", kv_dt.clone(), true)), false);
+    let a = MapScalar::new(dt.clone(), Some(Box::new(kv_array1)));
     let b = MapScalar::new(dt.clone(), None);
     assert_eq!(a, a);
     assert_eq!(b, b);
     assert!(a != b);
-    let b = MapScalar::new(dt, Some(kv_array2));
+    let b = MapScalar::new(dt, Some(Box::new(kv_array2)));
     assert!(a != b);
     assert_eq!(b, b);
 }
@@ -57,8 +57,8 @@ fn basics() {
     )
     .unwrap();
 
-    let dt = DataType::Map(Box::new(Field::new("entriesa", kv_dt.clone(), true)), false);
-    let a = MapScalar::new(dt.clone(), Some(kv_array.clone()));
+    let dt = DataType::Map(Box::new(Field::new("entries", kv_dt.clone(), true)), false);
+    let a = MapScalar::new(dt.clone(), Some(Box::new(kv_array.clone())));
 
     assert_eq!(kv_array, a.values().as_ref());
     assert_eq!(a.data_type(), &dt);
