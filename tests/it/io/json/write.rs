@@ -28,18 +28,34 @@ fn int32() -> Result<()> {
 
 #[test]
 fn f32() -> Result<()> {
-    let array = Float32Array::from([Some(1.5), Some(2.5), Some(f32::NAN), None, Some(5.5)]);
+    let array = Float32Array::from([
+        Some(1.5),
+        Some(2.5),
+        Some(f32::NAN),
+        Some(f32::INFINITY),
+        Some(f32::NEG_INFINITY),
+        None,
+        Some(5.5),
+    ]);
 
-    let expected = r#"[1.5,2.5,null,null,5.5]"#;
+    let expected = r#"[1.5,2.5,null,null,null,null,5.5]"#;
 
     test!(array, expected)
 }
 
 #[test]
 fn f64() -> Result<()> {
-    let array = Float64Array::from([Some(1.5), Some(2.5), Some(f64::NAN), None, Some(5.5)]);
+    let array = Float64Array::from([
+        Some(1.5),
+        Some(2.5),
+        Some(f64::NAN),
+        Some(f64::INFINITY),
+        Some(f64::NEG_INFINITY),
+        None,
+        Some(5.5),
+    ]);
 
-    let expected = r#"[1.5,2.5,null,null,5.5]"#;
+    let expected = r#"[1.5,2.5,null,null,null,null,5.5]"#;
 
     test!(array, expected)
 }

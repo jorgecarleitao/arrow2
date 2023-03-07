@@ -11,6 +11,15 @@ The crate comes with additional submodules to aid with testing, to ensure you ha
 git clone --recurse-submodules https://github.com/jorgecarleitao/arrow2
 ```
 
+## Checks
+
+PRs will run the following checks:
+
+```bash
+cargo fmt --all -- --check
+cargo clippy --all --features=full --tests -- -D warnings
+```
+
 ## Testing
 
 The simplest way to test the crate is to run 

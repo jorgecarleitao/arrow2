@@ -56,7 +56,7 @@ where
         array.iter(),
         |x, buf| {
             if let Some(x) = x {
-                if T::is_nan(*x) {
+                if T::is_nan(*x) || T::is_infinite(*x) {
                     buf.extend(b"null")
                 } else {
                     lexical_to_bytes_mut(*x, buf)
