@@ -395,7 +395,7 @@
         array.iter(),
         |x, buf| {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
-                <span class="kw">if </span>T::is_nan(<span class="kw-2">*</span>x) {
+                <span class="kw">if </span>T::is_nan(<span class="kw-2">*</span>x) || T::is_infinite(<span class="kw-2">*</span>x) {
                     buf.extend(<span class="string">b&quot;null&quot;</span>)
                 } <span class="kw">else </span>{
                     lexical_to_bytes_mut(<span class="kw-2">*</span>x, buf)
