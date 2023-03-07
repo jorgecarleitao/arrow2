@@ -12,7 +12,7 @@ fn equal() {
         Field::new("value", DataType::Boolean, true),
     ]);
     let kv_array1 = StructArray::try_new(
-        kv_dt,
+        kv_dt.clone(),
         vec![
             Utf8Array::<i32>::from([Some("k1"), Some("k2")]).boxed(),
             BooleanArray::from_slice([true, false]).boxed(),
@@ -21,7 +21,7 @@ fn equal() {
     )
     .unwrap();
     let kv_array2 = StructArray::try_new(
-        kv_dt,
+        kv_dt.clone(),
         vec![
             Utf8Array::<i32>::from([Some("k1"), Some("k3")]).boxed(),
             BooleanArray::from_slice([true, true]).boxed(),
@@ -30,7 +30,7 @@ fn equal() {
     )
     .unwrap();
 
-    let dt = DataType::Map(Box::new(Field::new("entries", kv_dt.clone(), true)), false);
+    let dt = DataType::Map(Box::new(Field::new("entries", kv_dt, true)), false);
     let a = MapScalar::new(dt.clone(), Some(Box::new(kv_array1)));
     let b = MapScalar::new(dt.clone(), None);
     assert_eq!(a, a);
@@ -48,7 +48,7 @@ fn basics() {
         Field::new("value", DataType::Boolean, true),
     ]);
     let kv_array = StructArray::try_new(
-        kv_dt,
+        kv_dt.clone(),
         vec![
             Utf8Array::<i32>::from([Some("k1"), Some("k2")]).boxed(),
             BooleanArray::from_slice([true, false]).boxed(),
@@ -57,7 +57,7 @@ fn basics() {
     )
     .unwrap();
 
-    let dt = DataType::Map(Box::new(Field::new("entries", kv_dt.clone(), true)), false);
+    let dt = DataType::Map(Box::new(Field::new("entries", kv_dt, true)), false);
     let a = MapScalar::new(dt.clone(), Some(Box::new(kv_array.clone())));
 
     assert_eq!(kv_array, a.values().as_ref());
