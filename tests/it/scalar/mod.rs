@@ -3,6 +3,7 @@ mod boolean;
 mod fixed_size_binary;
 mod fixed_size_list;
 mod list;
+mod map;
 mod null;
 mod primitive;
 mod struct_;

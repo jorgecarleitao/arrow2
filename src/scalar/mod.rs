@@ -17,6 +17,8 @@ mod boolean;
 pub use boolean::*;
 mod list;
 pub use list::*;
+mod map;
+pub use map::*;
 mod null;
 pub use null::*;
 mod struct_;
@@ -156,7 +158,15 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
                 array.value(index),
             ))
         }
-        Map => todo!(),
+        Map => {
+            let array = array.as_any().downcast_ref::<MapArray>().unwrap();
+            let value = if array.is_valid(index) {
+                Some(array.value(index))
+            } else {
+                None
+            };
+            Box::new(MapScalar::new(array.data_type().clone(), value))
+        }
         Dictionary(key_type) => match_integer_type!(key_type, |$T| {
             let array = array
                 .as_any()
