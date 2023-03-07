@@ -178,6 +178,13 @@ impl<T> Buffer<T> {
         self.offset
     }
 
+    /// # Safety
+    /// The caller must ensure that the buffer was properly initialized up to `len`.
+    #[inline]
+    pub unsafe fn set_len(&mut self, len: usize) {
+        self.length = len;
+    }
+
     /// Returns a mutable reference to its underlying [`Vec`], if possible.
     ///
     /// This operation returns [`Either::Right`] iff this [`Buffer`]:
