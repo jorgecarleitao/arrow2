@@ -54,6 +54,6 @@ fn equal(lhs: &dyn Scalar, rhs: &dyn Scalar) -> bool {
         FixedSizeBinary => dyn_eq!(FixedSizeBinaryScalar, lhs, rhs),
         FixedSizeList => dyn_eq!(FixedSizeListScalar, lhs, rhs),
         Union => dyn_eq!(UnionScalar, lhs, rhs),
-        Map => unimplemented!("{:?}", Map),
+        Map => dyn_eq!(MapScalar, lhs, rhs),
     }
 }
