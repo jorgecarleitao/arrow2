@@ -1,4 +1,4 @@
-use chrono::Datelike;
+use chrono::{Datelike, Timelike};
 
 use crate::{
     array::*,
@@ -202,6 +202,29 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
                 .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
                 .map(|x| x.timestamp_millis())
         }),
+        Time32(time_unit) => deserialize_primitive(rows, column, datatype, |bytes| {
+            let factor = get_factor_from_timeunit(time_unit);
+            to_utf8(bytes)
+                .and_then(|x| x.parse::<chrono::NaiveTime>().ok())
+                .map(|x| {
+                    (x.hour() * 3_600 * factor
+                        + x.minute() * 60 * factor
+                        + x.second() * factor
+                        + x.nanosecond() / (1_000_000_000 / factor)) as i32
+                })
+        }),
+        Time64(time_unit) => deserialize_primitive(rows, column, datatype, |bytes| {
+            let factor: u64 = get_factor_from_timeunit(time_unit).into();
+            to_utf8(bytes)
+                .and_then(|x| x.parse::<chrono::NaiveTime>().ok())
+                .map(|x| {
+                    (x.hour() as u64 * 3_600 * factor
+                        + x.minute() as u64 * 60 * factor
+                        + x.second() as u64 * factor
+                        + x.nanosecond() as u64 / (1_000_000_000 / factor))
+                        as i64
+                })
+        }),
         Timestamp(time_unit, None) => deserialize_primitive(rows, column, datatype, |bytes| {
             to_utf8(bytes)
                 .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
@@ -273,4 +296,14 @@ where
         })
         .collect::<Result<Vec<_>>>()
         .and_then(Chunk::try_new)
+}
+
+// Return the factor by how small is a time unit compared to seconds
+fn get_factor_from_timeunit(time_unit: TimeUnit) -> u32 {
+    match time_unit {
+        TimeUnit::Second => 1,
+        TimeUnit::Millisecond => 1_000,
+        TimeUnit::Microsecond => 1_000_000,
+        TimeUnit::Nanosecond => 1_000_000_000,
+    }
 }
