@@ -269,6 +269,13 @@
 <a href="#269" id="269">269</a>
 <a href="#270" id="270">270</a>
 <a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, ops::Deref, sync::Arc, usize};
 
 <span class="kw">use </span>either::Either;
@@ -449,6 +456,13 @@
         <span class="self">self</span>.offset
     }
 
+    <span class="doccomment">/// # Safety
+    /// The caller must ensure that the buffer was properly initialized up to `len`.
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub unsafe fn </span>set_len(<span class="kw-2">&amp;mut </span><span class="self">self</span>, len: usize) {
+        <span class="self">self</span>.length = len;
+    }
+
     <span class="doccomment">/// Returns a mutable reference to its underlying [`Vec`], if possible.
     ///
     /// This operation returns [`Either::Right`] iff this [`Buffer`]:
@@ -541,4 +555,4 @@
     }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0-nightly (f63ccaf25 2023-03-06)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0-nightly (39f2657d1 2023-03-09)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
