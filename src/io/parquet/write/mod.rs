@@ -33,7 +33,7 @@ use crate::types::days_ms;
 use crate::types::i256;
 use crate::types::NativeType;
 
-pub use nested::write_rep_and_def;
+pub use nested::{num_values, write_rep_and_def};
 pub use pages::{to_leaves, to_nested, to_parquet_leaves};
 use parquet2::schema::types::PrimitiveType as ParquetPrimitiveType;
 pub use parquet2::{
