@@ -21,6 +21,7 @@ fn iter<'a>(nested: &'a [Nested]) -> Vec<Box<dyn DebugIter + 'a>> {
         .collect()
 }
 
+/// return number values of the nested
 pub fn num_values(nested: &[Nested]) -> usize {
     let pr = match nested.last().unwrap() {
         Nested::Primitive(_, _, len) => *len,
