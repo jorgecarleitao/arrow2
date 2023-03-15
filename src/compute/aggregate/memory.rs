@@ -63,7 +63,7 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         List => {
             let array = array.as_any().downcast_ref::<ListArray<i32>>().unwrap();
             estimated_bytes_size(array.values().as_ref())
-                + array.offsets().len() * std::mem::size_of::<i32>()
+                + array.offsets().len_proxy() * std::mem::size_of::<i32>()
                 + validity_size(array.validity())
         }
         FixedSizeList => {
@@ -73,7 +73,7 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         LargeList => {
             let array = array.as_any().downcast_ref::<ListArray<i64>>().unwrap();
             estimated_bytes_size(array.values().as_ref())
-                + array.offsets().len() * std::mem::size_of::<i64>()
+                + array.offsets().len_proxy() * std::mem::size_of::<i64>()
                 + validity_size(array.validity())
         }
         Struct => {
@@ -111,7 +111,7 @@ pub fn estimated_bytes_size(array: &dyn Array) -> usize {
         }),
         Map => {
             let array = array.as_any().downcast_ref::<MapArray>().unwrap();
-            let offsets = array.offsets().len() * std::mem::size_of::<i32>();
+            let offsets = array.offsets().len_proxy() * std::mem::size_of::<i32>();
             offsets + estimated_bytes_size(array.field().as_ref()) + validity_size(array.validity())
         }
     }

@@ -50,8 +50,8 @@ impl Nested {
     pub fn len(&self) -> usize {
         match self {
             Nested::Primitive(_, _, length) => *length,
-            Nested::List(nested) => nested.offsets.len(),
-            Nested::LargeList(nested) => nested.offsets.len(),
+            Nested::List(nested) => nested.offsets.len_proxy(),
+            Nested::LargeList(nested) => nested.offsets.len_proxy(),
             Nested::Struct(_, _, len) => *len,
         }
     }

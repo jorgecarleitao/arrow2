@@ -95,7 +95,7 @@ impl<O: Offset> Utf8Array<O> {
         try_check_utf8(&offsets, &values)?;
         if validity
             .as_ref()
-            .map_or(false, |validity| validity.len() != offsets.len())
+            .map_or(false, |validity| validity.len() != offsets.len_proxy())
         {
             return Err(Error::oos(
                 "validity mask length must match the number of values",
@@ -144,7 +144,7 @@ impl<O: Offset> Utf8Array<O> {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len()
+        self.offsets.len_proxy()
     }
 
     /// Returns the value of the element at index `i`, ignoring the array's validity.
@@ -365,7 +365,7 @@ impl<O: Offset> Utf8Array<O> {
 
         if validity
             .as_ref()
-            .map_or(false, |validity| validity.len() != offsets.len())
+            .map_or(false, |validity| validity.len() != offsets.len_proxy())
         {
             return Err(Error::oos(
                 "validity mask length must match the number of values",

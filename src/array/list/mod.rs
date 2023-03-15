@@ -44,7 +44,7 @@ impl<O: Offset> ListArray<O> {
 
         if validity
             .as_ref()
-            .map_or(false, |validity| validity.len() != offsets.len())
+            .map_or(false, |validity| validity.len() != offsets.len_proxy())
         {
             return Err(Error::oos(
                 "validity mask length must match the number of values",
@@ -138,7 +138,7 @@ impl<O: Offset> ListArray<O> {
     /// Returns the length of this array
     #[inline]
     pub fn len(&self) -> usize {
-        self.offsets.len()
+        self.offsets.len_proxy()
     }
 
     /// Returns the element at index `i`
