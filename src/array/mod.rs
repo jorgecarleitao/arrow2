@@ -454,6 +454,45 @@ macro_rules! impl_mut_validity {
     }
 }
 
+// macro implementing `with_validity`, `set_validity` and `apply_validity` for mutable arrays
+macro_rules! impl_mutable_array_mut_validity {
+    () => {
+        /// Returns this array with a new validity.
+        /// # Panic
+        /// Panics iff `validity.len() != self.len()`.
+        #[must_use]
+        #[inline]
+        pub fn with_validity(mut self, validity: Option<MutableBitmap>) -> Self {
+            self.set_validity(validity);
+            self
+        }
+
+        /// Sets the validity of this array.
+        /// # Panics
+        /// This function panics iff `values.len() != self.len()`.
+        #[inline]
+        pub fn set_validity(&mut self, validity: Option<MutableBitmap>) {
+            if matches!(&validity, Some(bitmap) if bitmap.len() != self.len()) {
+                panic!("validity must be equal to the array's length")
+            }
+            self.validity = validity;
+        }
+
+        /// Applies a function `f` to the validity of this array.
+        ///
+        /// This is an API to leverage clone-on-write
+        /// # Panics
+        /// This function panics if the function `f` modifies the length of the [`Bitmap`].
+        #[inline]
+        pub fn apply_validity<F: FnOnce(MutableBitmap) -> MutableBitmap>(&mut self, f: F) {
+            if let Some(validity) = std::mem::take(&mut self.validity) {
+                self.set_validity(Some(f(validity)))
+            }
+        }
+
+    }
+}
+
 // macro implementing `boxed` and `arced`
 macro_rules! impl_into_array {
     () => {
