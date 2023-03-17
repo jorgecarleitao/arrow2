@@ -1,5 +1,6 @@
 use std::convert::TryFrom;
 use std::ops::Neg;
+use std::panic::RefUnwindSafe;
 
 use bytemuck::{Pod, Zeroable};
 
@@ -14,6 +15,7 @@ pub trait NativeType:
     + Send
     + Sync
     + Sized
+    + RefUnwindSafe
     + std::fmt::Debug
     + std::fmt::Display
     + PartialEq

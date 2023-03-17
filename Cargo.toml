@@ -6,7 +6,7 @@ description = "Unofficial implementation of Apache Arrow spec in safe Rust"
 homepage = "https://github.com/jorgecarleitao/arrow2"
 repository = "https://github.com/jorgecarleitao/arrow2"
 authors = ["Jorge C. Leitao <jorgecarleitao@gmail.com>", "Apache Arrow <dev@arrow.apache.org>"]
-keywords = [ "arrow", "analytics" ]
+keywords = ["arrow", "analytics"]
 edition = "2021"
 exclude = ["testing/"]
 
@@ -100,6 +100,9 @@ odbc-api = { version = "0.36", optional = true }
 # Faster hashing
 ahash = "0.8"
 
+# Support conversion to/from arrow-rs
+arrow-buffer = { version = "35.0.0", optional = true }
+
 [target.wasm32-unknown-unknown.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
 
@@ -131,6 +134,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [features]
 default = []
 full = [
+    "arrow",
     "io_odbc",
     "io_csv",
     "io_csv_async",
@@ -154,6 +158,7 @@ full = [
     # parses timezones used in timestamp conversions
     "chrono-tz",
 ]
+arrow = ["arrow-buffer"]
 io_odbc = ["odbc-api"]
 io_csv = ["io_csv_read", "io_csv_write"]
 io_csv_async = ["io_csv_read_async"]
@@ -195,7 +200,7 @@ io_avro_compression = [
 ]
 io_avro_async = ["avro-schema/async"]
 
-io_orc = [ "orc-format" ]
+io_orc = ["orc-format"]
 
 # serde+serde_json: its dependencies + error handling
 # serde_derive: there is some derive around

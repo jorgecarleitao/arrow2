@@ -1,6 +1,7 @@
 //! Contains functionality to load an ArrayData from the C Data Interface
 use std::sync::Arc;
 
+use crate::buffer::BytesAllocator;
 use crate::{
     array::*,
     bitmap::{utils::bytes_for, Bitmap},
@@ -237,7 +238,7 @@ unsafe fn create_buffer<T: NativeType>(
 
     let len = buffer_len(array, data_type, index)?;
     let offset = buffer_offset(array, data_type, index);
-    let bytes = Bytes::from_foreign(ptr, len, owner);
+    let bytes = Bytes::from_foreign(ptr, len, BytesAllocator::InternalArrowArray(owner));
 
     Ok(Buffer::from_bytes(bytes).sliced(offset, len - offset))
 }
@@ -258,7 +259,7 @@ unsafe fn create_bitmap(
     let len: usize = array.length.try_into().expect("length to fit in `usize`");
     let offset: usize = array.offset.try_into().expect("Offset to fit in `usize`");
     let bytes_len = bytes_for(offset + len);
-    let bytes = Bytes::from_foreign(ptr, bytes_len, owner);
+    let bytes = Bytes::from_foreign(ptr, bytes_len, BytesAllocator::InternalArrowArray(owner));
 
     Ok(Bitmap::from_bytes(bytes, offset + len).sliced(offset, len))
 }
