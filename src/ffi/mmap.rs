@@ -141,7 +141,7 @@ pub unsafe fn bitmap(data: &[u8], offset: usize, length: usize) -> Result<Boolea
     if offset >= 8 {
         return Err(Error::InvalidArgumentError("offset should be < 8".into()));
     };
-    if data.len() * 8 - offset > length {
+    if length > data.len() * 8 - offset {
         return Err(Error::InvalidArgumentError("given length is oob".into()));
     }
     let null_count = 0;
