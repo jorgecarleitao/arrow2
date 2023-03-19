@@ -377,10 +377,16 @@ impl<O: Offset> OffsetsBuffer<O> {
         &self.0
     }
 
-    /// Returns the length of this container
+    /// Returns the length an array with these offsets would be.
+    #[inline]
+    pub fn len_proxy(&self) -> usize {
+        self.0.len() - 1
+    }
+
+    /// Returns the number of offsets in this container.
     #[inline]
     pub fn len(&self) -> usize {
-        self.0.len() - 1
+        self.0.len()
     }
 
     /// Returns the byte slice stored in this buffer
@@ -419,7 +425,7 @@ impl<O: Offset> OffsetsBuffer<O> {
     #[inline]
     pub fn start_end(&self, index: usize) -> (usize, usize) {
         // soundness: the invariant of the function
-        assert!(index < self.len());
+        assert!(index < self.len_proxy());
         unsafe { self.start_end_unchecked(index) }
     }
 
