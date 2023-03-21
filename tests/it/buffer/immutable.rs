@@ -78,6 +78,30 @@ fn from_arrow() {
 
 #[test]
 #[cfg(feature = "arrow")]
+fn from_arrow_vec() {
+    // Zero-copy vec conversion in arrow-rs
+    let buffer = arrow_buffer::Buffer::from_vec(vec![1_i32, 2_i32, 3_i32]);
+    let back: Vec<i32> = buffer.into_vec().unwrap();
+
+    // Zero-copy vec conversion in arrow2
+    let buffer = Buffer::<i32>::from(back);
+    let back: Vec<i32> = buffer.into_mut().unwrap_right();
+
+    let buffer = arrow_buffer::Buffer::from_vec(back);
+    let buffer = Buffer::<i32>::from(buffer);
+
+    // But not possible after conversion between buffer representations
+    let _ = buffer.into_mut().unwrap_left();
+
+    let buffer = Buffer::<i32>::from(vec![1_i32]);
+    let buffer = arrow_buffer::Buffer::from(buffer);
+
+    // But not possible after conversion between buffer representations
+    let _ = buffer.into_vec::<i32>().unwrap_err();
+}
+
+#[test]
+#[cfg(feature = "arrow")]
 #[should_panic(expected = "not aligned")]
 fn from_arrow_misaligned() {
     let buffer = arrow_buffer::Buffer::from_vec(vec![1_i32, 2_i32, 3_i32]).slice(1);
