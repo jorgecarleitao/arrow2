@@ -105,5 +105,5 @@ fn from_arrow_vec() {
 #[should_panic(expected = "not aligned")]
 fn from_arrow_misaligned() {
     let buffer = arrow_buffer::Buffer::from_vec(vec![1_i32, 2_i32, 3_i32]).slice(1);
-    let _ = Buffer::<i32>::from(buffer.clone());
+    let _ = Buffer::<i32>::from(buffer);
 }
