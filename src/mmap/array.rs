@@ -110,6 +110,7 @@ fn mmap_binary<O: Offset, T: AsRef<[u8]>>(
             [validity, Some(offsets), Some(values)].into_iter(),
             [].into_iter(),
             None,
+            None,
         )
     })
 }
@@ -144,6 +145,7 @@ fn mmap_fixed_size_binary<T: AsRef<[u8]>>(
             [validity, Some(values)].into_iter(),
             [].into_iter(),
             None,
+            None,
         )
     })
 }
@@ -171,6 +173,7 @@ fn mmap_null<T: AsRef<[u8]>>(
             null_count,
             [].into_iter(),
             [].into_iter(),
+            None,
             None,
         )
     })
@@ -210,6 +213,7 @@ fn mmap_boolean<T: AsRef<[u8]>>(
             [validity, Some(values)].into_iter(),
             [].into_iter(),
             None,
+            None,
         )
     })
 }
@@ -243,6 +247,7 @@ fn mmap_primitive<P: NativeType, T: AsRef<[u8]>>(
             null_count,
             [validity, Some(values)].into_iter(),
             [].into_iter(),
+            None,
             None,
         )
     })
@@ -296,6 +301,7 @@ fn mmap_list<O: Offset, T: AsRef<[u8]>>(
             [validity, Some(offsets)].into_iter(),
             [values].into_iter(),
             None,
+            None,
         )
     })
 }
@@ -346,6 +352,7 @@ fn mmap_fixed_size_list<T: AsRef<[u8]>>(
             null_count,
             [validity].into_iter(),
             [values].into_iter(),
+            None,
             None,
         )
     })
@@ -403,6 +410,7 @@ fn mmap_struct<T: AsRef<[u8]>>(
             [validity].into_iter(),
             values.into_iter(),
             None,
+            None,
         )
     })
 }
@@ -447,6 +455,7 @@ fn mmap_dict<K: DictionaryKey, T: AsRef<[u8]>>(
             [validity, Some(values)].into_iter(),
             [].into_iter(),
             Some(export_array_to_c(dictionary)),
+            None,
         )
     })
 }

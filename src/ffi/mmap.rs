@@ -1,6 +1,9 @@
 //! Functionality to mmap in-memory data regions.
 use std::sync::Arc;
 
+use crate::array::BooleanArray;
+use crate::datatypes::DataType;
+use crate::error::Error;
 use crate::{
     array::{FromFfi, PrimitiveArray},
     types::NativeType,
@@ -28,6 +31,7 @@ pub(crate) unsafe fn create_array<
     buffers: I,
     children: II,
     dictionary: Option<ArrowArray>,
+    offset: Option<usize>,
 ) -> ArrowArray {
     let buffers_ptr = buffers
         .map(|maybe_buffer| match maybe_buffer {
@@ -54,7 +58,7 @@ pub(crate) unsafe fn create_array<
     ArrowArray {
         length: num_rows as i64,
         null_count: null_count as i64,
-        offset: 0, // IPC files are by definition not offset
+        offset: offset.unwrap_or(0) as i64, // Unwrap: IPC files are by definition not offset
         n_buffers,
         n_children,
         buffers: private_data.buffers_ptr.as_mut_ptr(),
@@ -113,9 +117,52 @@ pub unsafe fn slice<T: NativeType>(slice: &[T]) -> PrimitiveArray<T> {
         [validity, Some(ptr)].into_iter(),
         [].into_iter(),
         None,
+        None,
     );
     let array = InternalArrowArray::new(array, T::PRIMITIVE.into());
 
     // safety: we just created a valid array
     unsafe { PrimitiveArray::<T>::try_from_ffi(array) }.unwrap()
+}
+
+/// Creates a (non-null) [`BooleanArray`] from a slice of bits.
+/// This does not have memcopy and is the fastest way to create a [`BooleanArray`].
+///
+/// This can be useful if you want to apply arrow kernels on slices without incurring
+/// a memcopy cost.
+///
+/// The `offset` indicates where the first bit starts in the first byte.
+///
+/// # Safety
+///
+/// Using this function is not unsafe, but the returned BooleanArrays's lifetime is bound to the lifetime
+/// of the slice. The returned [`BooleanArray`] _must not_ outlive the passed slice.
+pub unsafe fn bitmap(data: &[u8], offset: usize, length: usize) -> Result<BooleanArray, Error> {
+    if offset >= 8 {
+        return Err(Error::InvalidArgumentError("offset should be < 8".into()));
+    };
+    if length > data.len() * 8 - offset {
+        return Err(Error::InvalidArgumentError("given length is oob".into()));
+    }
+    let null_count = 0;
+    let validity = None;
+
+    let ptr = data.as_ptr() as *const u8;
+    let data = Arc::new(data);
+
+    // safety: the underlying assumption of this function: the array will not be used
+    // beyond the
+    let array = create_array(
+        data,
+        length,
+        null_count,
+        [validity, Some(ptr)].into_iter(),
+        [].into_iter(),
+        None,
+        Some(offset),
+    );
+    let array = InternalArrowArray::new(array, DataType::Boolean);
+
+    // safety: we just created a valid array
+    Ok(unsafe { BooleanArray::try_from_ffi(array) }.unwrap())
 }
