@@ -160,6 +160,8 @@ impl<O: Offset> MutableBinaryArray<O> {
             validity.shrink_to_fit()
         }
     }
+
+    impl_mutable_array_mut_validity!();
 }
 
 impl<O: Offset> MutableBinaryArray<O> {
