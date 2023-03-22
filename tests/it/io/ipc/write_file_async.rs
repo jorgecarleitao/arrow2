@@ -22,7 +22,12 @@ async fn write_(
     let mut result = AsyncCursor::new(vec![]);
 
     let options = WriteOptions { compression: None };
-    let mut sink = FileSink::new(&mut result, schema, Some(ipc_fields.to_vec()), options);
+    let mut sink = FileSink::new(
+        &mut result,
+        schema.clone(),
+        Some(ipc_fields.to_vec()),
+        options,
+    );
     for batch in batches {
         sink.feed((batch, Some(ipc_fields)).into()).await?;
     }

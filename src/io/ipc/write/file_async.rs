@@ -37,7 +37,7 @@ type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 /// let mut buffer = Cursor::new(vec![]);
 /// let mut sink = FileSink::new(
 ///     &mut buffer,
-///     &schema,
+///     schema,
 ///     None,
 ///     Default::default(),
 /// );
@@ -78,13 +78,13 @@ where
     /// Create a new file writer.
     pub fn new(
         writer: W,
-        schema: &Schema,
+        schema: Schema,
         ipc_fields: Option<Vec<IpcField>>,
         options: WriteOptions,
     ) -> Self {
         let fields = ipc_fields.unwrap_or_else(|| default_ipc_fields(&schema.fields));
         let encoded = EncodedData {
-            ipc_message: schema_to_bytes(schema, &fields),
+            ipc_message: schema_to_bytes(&schema, &fields),
             arrow_data: vec![],
         };
         let task = Some(Self::start(writer, encoded).boxed());
@@ -94,7 +94,7 @@ where
             options,
             fields,
             offset: 0,
-            schema: schema.clone(),
+            schema,
             dictionary_tracker: DictionaryTracker {
                 dictionaries: Default::default(),
                 cannot_replace: true,
