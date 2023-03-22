@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["slice"]};
+window.SIDEBAR_ITEMS = {"fn":["bitmap","slice"]};
