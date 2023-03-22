@@ -635,8 +635,11 @@
 <a href="#635" id="635">635</a>
 <a href="#636" id="636">636</a>
 <a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::convert::TryFrom;
 <span class="kw">use </span>std::ops::Neg;
+<span class="kw">use </span>std::panic::RefUnwindSafe;
 
 <span class="kw">use </span>bytemuck::{Pod, Zeroable};
 
@@ -651,6 +654,7 @@
     + Send
     + Sync
     + Sized
+    + RefUnwindSafe
     + std::fmt::Debug
     + std::fmt::Display
     + PartialEq

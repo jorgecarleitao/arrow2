@@ -547,9 +547,11 @@
 <a href="#547" id="547">547</a>
 <a href="#548" id="548">548</a>
 <a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains functionality to load an ArrayData from the C Data Interface
 </span><span class="kw">use </span>std::sync::Arc;
 
+<span class="kw">use </span><span class="kw">crate</span>::buffer::BytesAllocator;
 <span class="kw">use crate</span>::{
     array::<span class="kw-2">*</span>,
     bitmap::{utils::bytes_for, Bitmap},
@@ -786,7 +788,7 @@
 
     <span class="kw">let </span>len = buffer_len(array, data_type, index)<span class="question-mark">?</span>;
     <span class="kw">let </span>offset = buffer_offset(array, data_type, index);
-    <span class="kw">let </span>bytes = Bytes::from_foreign(ptr, len, owner);
+    <span class="kw">let </span>bytes = Bytes::from_foreign(ptr, len, BytesAllocator::InternalArrowArray(owner));
 
     <span class="prelude-val">Ok</span>(Buffer::from_bytes(bytes).sliced(offset, len - offset))
 }
@@ -807,7 +809,7 @@
     <span class="kw">let </span>len: usize = array.length.try_into().expect(<span class="string">&quot;length to fit in `usize`&quot;</span>);
     <span class="kw">let </span>offset: usize = array.offset.try_into().expect(<span class="string">&quot;Offset to fit in `usize`&quot;</span>);
     <span class="kw">let </span>bytes_len = bytes_for(offset + len);
-    <span class="kw">let </span>bytes = Bytes::from_foreign(ptr, bytes_len, owner);
+    <span class="kw">let </span>bytes = Bytes::from_foreign(ptr, bytes_len, BytesAllocator::InternalArrowArray(owner));
 
     <span class="prelude-val">Ok</span>(Bitmap::from_bytes(bytes, offset + len).sliced(offset, len))
 }
