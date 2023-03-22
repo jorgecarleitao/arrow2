@@ -287,7 +287,7 @@
 /// let mut buffer = Cursor::new(vec![]);
 /// let mut sink = FileSink::new(
 ///     &amp;mut buffer,
-///     &amp;schema,
+///     schema,
 ///     None,
 ///     Default::default(),
 /// );
@@ -328,13 +328,13 @@
     <span class="doccomment">/// Create a new file writer.
     </span><span class="kw">pub fn </span>new(
         writer: W,
-        schema: <span class="kw-2">&amp;</span>Schema,
+        schema: Schema,
         ipc_fields: <span class="prelude-ty">Option</span>&lt;Vec&lt;IpcField&gt;&gt;,
         options: WriteOptions,
     ) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>fields = ipc_fields.unwrap_or_else(|| default_ipc_fields(<span class="kw-2">&amp;</span>schema.fields));
         <span class="kw">let </span>encoded = EncodedData {
-            ipc_message: schema_to_bytes(schema, <span class="kw-2">&amp;</span>fields),
+            ipc_message: schema_to_bytes(<span class="kw-2">&amp;</span>schema, <span class="kw-2">&amp;</span>fields),
             arrow_data: <span class="macro">vec!</span>[],
         };
         <span class="kw">let </span>task = <span class="prelude-val">Some</span>(<span class="self">Self</span>::start(writer, encoded).boxed());
@@ -344,7 +344,7 @@
             options,
             fields,
             offset: <span class="number">0</span>,
-            schema: schema.clone(),
+            schema,
             dictionary_tracker: DictionaryTracker {
                 dictionaries: Default::default(),
                 cannot_replace: <span class="bool-val">true</span>,
