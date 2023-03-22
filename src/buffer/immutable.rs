@@ -276,3 +276,17 @@ impl<T: Copy> IntoIterator for Buffer<T> {
         IntoIter::new(self)
     }
 }
+
+#[cfg(feature = "arrow")]
+impl<T: crate::types::NativeType> From<arrow_buffer::Buffer> for Buffer<T> {
+    fn from(value: arrow_buffer::Buffer) -> Self {
+        Self::from_bytes(crate::buffer::to_bytes(value))
+    }
+}
+
+#[cfg(feature = "arrow")]
+impl<T: crate::types::NativeType> From<Buffer<T>> for arrow_buffer::Buffer {
+    fn from(value: Buffer<T>) -> Self {
+        crate::buffer::to_buffer(value.data)
+    }
+}
