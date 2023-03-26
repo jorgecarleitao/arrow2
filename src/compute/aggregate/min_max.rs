@@ -9,6 +9,7 @@ use crate::{
     array::{Array, BinaryArray, BooleanArray, PrimitiveArray, Utf8Array},
     bitmap::Bitmap,
 };
+use multiversion::multiversion;
 
 /// Trait describing a type describing multiple lanes with an order relationship
 /// consistent with the same order of `T`.
@@ -31,6 +32,7 @@ pub trait SimdOrd<T> {
     fn new_max() -> Self;
 }
 
+#[multiversion(targets = "simd")]
 fn nonnull_min_primitive<T>(values: &[T]) -> T
 where
     T: NativeType + Simd,
@@ -50,6 +52,7 @@ where
     reduced.min_element()
 }
 
+#[multiversion(targets = "simd")]
 fn null_min_primitive_impl<T, I>(values: &[T], mut validity_masks: I) -> T
 where
     T: NativeType + Simd,
@@ -110,6 +113,7 @@ where
     }
 }
 
+#[multiversion(targets = "simd")]
 fn nonnull_max_primitive<T>(values: &[T]) -> T
 where
     T: NativeType + Simd,
@@ -129,6 +133,7 @@ where
     reduced.max_element()
 }
 
+#[multiversion(targets = "simd")]
 fn null_max_primitive_impl<T, I>(values: &[T], mut validity_masks: I) -> T
 where
     T: NativeType + Simd,
