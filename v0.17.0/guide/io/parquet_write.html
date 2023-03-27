@@ -1,0 +1,431 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Write Parquet - arrow2 documentation</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = null;
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="../arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="../low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="../high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="../compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="../metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="../ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="../extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="../io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../io/csv_read.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="../io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="../io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="../io/parquet_write.html" class="active"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="../io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="../io/ipc_mmap.html"><strong aria-hidden="true">9.6.</strong> Memory map Arrow</a></li><li class="chapter-item expanded "><a href="../io/ipc_stream_read.html"><strong aria-hidden="true">9.7.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="../io/ipc_write.html"><strong aria-hidden="true">9.8.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="../io/avro_read.html"><strong aria-hidden="true">9.9.</strong> Read Avro</a></li><li class="chapter-item expanded "><a href="../io/avro_write.html"><strong aria-hidden="true">9.10.</strong> Write Avro</a></li><li class="chapter-item expanded "><a href="../io/json_read.html"><strong aria-hidden="true">9.11.</strong> Read JSON</a></li><li class="chapter-item expanded "><a href="../io/json_write.html"><strong aria-hidden="true">9.12.</strong> Write JSON</a></li><li class="chapter-item expanded "><a href="../io/odbc.html"><strong aria-hidden="true">9.13.</strong> Read and Write ODBC</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">arrow2 documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="write-to-parquet"><a class="header" href="#write-to-parquet">Write to Parquet</a></h1>
+<p>When compiled with feature <code>io_parquet</code>, this crate can be used to write parquet files
+from arrow.
+It makes minimal assumptions on how you to decompose CPU and IO intensive tasks, as well
+as an higher-level API to abstract away some of this work into an easy to use API.</p>
+<p>First, some notation:</p>
+<ul>
+<li><code>page</code>: part of a column (e.g. similar to a slice of an <code>Array</code>)</li>
+<li><code>column chunk</code>: composed of multiple pages (similar to an <code>Array</code>)</li>
+<li><code>row group</code>: a group of columns with the same length (similar to a <code>Chunk</code> in Arrow)</li>
+</ul>
+<h2 id="single-threaded"><a class="header" href="#single-threaded">Single threaded</a></h2>
+<p>Here is an example of how to write a single chunk:</p>
+<pre><pre class="playground"><code class="language-rust">use std::fs::File;
+
+use arrow2::{
+    array::{Array, Int32Array},
+    chunk::Chunk,
+    datatypes::{Field, Schema},
+    error::Result,
+    io::parquet::write::{
+        transverse, CompressionOptions, Encoding, FileWriter, RowGroupIterator, Version,
+        WriteOptions,
+    },
+};
+
+fn write_chunk(path: &amp;str, schema: Schema, chunk: Chunk&lt;Box&lt;dyn Array&gt;&gt;) -&gt; Result&lt;()&gt; {
+    let options = WriteOptions {
+        write_statistics: true,
+        compression: CompressionOptions::Uncompressed,
+        version: Version::V2,
+        data_pagesize_limit: None,
+    };
+
+    let iter = vec![Ok(chunk)];
+
+    let encodings = schema
+        .fields
+        .iter()
+        .map(|f| transverse(&amp;f.data_type, |_| Encoding::Plain))
+        .collect();
+
+    let row_groups = RowGroupIterator::try_new(iter.into_iter(), &amp;schema, options, encodings)?;
+
+    // Create a new empty file
+    let file = File::create(path)?;
+
+    let mut writer = FileWriter::try_new(file, schema, options)?;
+
+    for group in row_groups {
+        writer.write(group?)?;
+    }
+    let _size = writer.end(None)?;
+    Ok(())
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    let array = Int32Array::from(&amp;[
+        Some(0),
+        Some(1),
+        Some(2),
+        Some(3),
+        Some(4),
+        Some(5),
+        Some(6),
+    ]);
+    let field = Field::new(&quot;c1&quot;, array.data_type().clone(), true);
+    let schema = Schema::from(vec![field]);
+    let chunk = Chunk::new(vec![array.boxed()]);
+
+    write_chunk(&quot;test.parquet&quot;, schema, chunk)
+}</code></pre></pre>
+<h2 id="multi-threaded-writing"><a class="header" href="#multi-threaded-writing">Multi-threaded writing</a></h2>
+<p>As user of this crate, you will need to decide how you would like to parallelize,
+and whether order is important. Below you can find an example where we
+use <a href="https://crates.io/crates/rayon"><code>rayon</code></a> to perform the heavy lift of
+encoding and compression.
+This operation is <a href="https://en.wikipedia.org/wiki/Embarrassingly_parallel">embarrassingly parallel</a>
+and results in a speed up equal to minimum between the number of cores
+and number of columns in the record.</p>
+<pre><pre class="playground"><code class="language-rust">//! Example demonstrating how to write to parquet in parallel.
+use std::collections::VecDeque;
+
+use rayon::prelude::*;
+
+use arrow2::{
+    array::*,
+    chunk::Chunk as AChunk,
+    datatypes::*,
+    error::{Error, Result},
+    io::parquet::{read::ParquetError, write::*},
+};
+
+type Chunk = AChunk&lt;Box&lt;dyn Array&gt;&gt;;
+
+struct Bla {
+    columns: VecDeque&lt;CompressedPage&gt;,
+    current: Option&lt;CompressedPage&gt;,
+}
+
+impl Bla {
+    pub fn new(columns: VecDeque&lt;CompressedPage&gt;) -&gt; Self {
+        Self {
+            columns,
+            current: None,
+        }
+    }
+}
+
+impl FallibleStreamingIterator for Bla {
+    type Item = CompressedPage;
+    type Error = Error;
+
+    fn advance(&amp;mut self) -&gt; Result&lt;()&gt; {
+        self.current = self.columns.pop_front();
+        Ok(())
+    }
+
+    fn get(&amp;self) -&gt; Option&lt;&amp;Self::Item&gt; {
+        self.current.as_ref()
+    }
+}
+
+fn parallel_write(path: &amp;str, schema: Schema, chunks: &amp;[Chunk]) -&gt; Result&lt;()&gt; {
+    // declare the options
+    let options = WriteOptions {
+        write_statistics: true,
+        compression: CompressionOptions::Snappy,
+        version: Version::V2,
+        data_pagesize_limit: None,
+    };
+
+    let encoding_map = |data_type: &amp;DataType| {
+        match data_type.to_physical_type() {
+            // remaining is plain
+            _ =&gt; Encoding::Plain,
+        }
+    };
+
+    // declare encodings
+    let encodings = (&amp;schema.fields)
+        .iter()
+        .map(|f| transverse(&amp;f.data_type, encoding_map))
+        .collect::&lt;Vec&lt;_&gt;&gt;();
+
+    // derive the parquet schema (physical types) from arrow's schema.
+    let parquet_schema = to_parquet_schema(&amp;schema)?;
+
+    let row_groups = chunks.iter().map(|chunk| {
+        // write batch to pages; parallelized by rayon
+        let columns = chunk
+            .columns()
+            .par_iter()
+            .zip(parquet_schema.fields().to_vec())
+            .zip(encodings.par_iter())
+            .flat_map(move |((array, type_), encoding)| {
+                let encoded_columns = array_to_columns(array, type_, options, encoding).unwrap();
+                encoded_columns
+                    .into_iter()
+                    .map(|encoded_pages| {
+                        let encoded_pages = DynIter::new(
+                            encoded_pages
+                                .into_iter()
+                                .map(|x| x.map_err(|e| ParquetError::General(e.to_string()))),
+                        );
+                        encoded_pages
+                            .map(|page| {
+                                compress(page?, vec![], options.compression).map_err(|x| x.into())
+                            })
+                            .collect::&lt;Result&lt;VecDeque&lt;_&gt;&gt;&gt;()
+                    })
+                    .collect::&lt;Vec&lt;_&gt;&gt;()
+            })
+            .collect::&lt;Result&lt;Vec&lt;VecDeque&lt;CompressedPage&gt;&gt;&gt;&gt;()?;
+
+        let row_group = DynIter::new(
+            columns
+                .into_iter()
+                .map(|column| Ok(DynStreamingIterator::new(Bla::new(column)))),
+        );
+        Result::Ok(row_group)
+    });
+
+    // Create a new empty file
+    let file = std::io::BufWriter::new(std::fs::File::create(path)?);
+
+    let mut writer = FileWriter::try_new(file, schema, options)?;
+
+    // Write the file.
+    for group in row_groups {
+        writer.write(group?)?;
+    }
+    let _size = writer.end(None)?;
+
+    Ok(())
+}
+
+fn create_chunk(size: usize) -&gt; Result&lt;Chunk&gt; {
+    let c1: Int32Array = (0..size)
+        .map(|x| if x % 9 == 0 { None } else { Some(x as i32) })
+        .collect();
+    let c2: Utf8Array&lt;i64&gt; = (0..size)
+        .map(|x| {
+            if x % 8 == 0 {
+                None
+            } else {
+                Some(x.to_string())
+            }
+        })
+        .collect();
+
+    Chunk::try_new(vec![
+        c1.clone().boxed(),
+        c1.clone().boxed(),
+        c1.boxed(),
+        c2.boxed(),
+    ])
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    let fields = vec![
+        Field::new(&quot;c1&quot;, DataType::Int32, true),
+        Field::new(&quot;c2&quot;, DataType::Int32, true),
+        Field::new(&quot;c3&quot;, DataType::Int32, true),
+        Field::new(&quot;c4&quot;, DataType::LargeUtf8, true),
+    ];
+    let chunk = create_chunk(100_000_000)?;
+
+    let start = std::time::SystemTime::now();
+    parallel_write(&quot;example.parquet&quot;, fields.into(), &amp;[chunk])?;
+    println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
+    Ok(())
+}</code></pre></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../io/parquet_read.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../io/ipc_read.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../io/parquet_read.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../io/ipc_read.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

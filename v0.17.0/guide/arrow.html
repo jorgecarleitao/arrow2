@@ -1,0 +1,290 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>The arrow format - arrow2 documentation</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = null;
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="arrow.html" class="active"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="io/csv_read.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="io/parquet_read.html"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_mmap.html"><strong aria-hidden="true">9.6.</strong> Memory map Arrow</a></li><li class="chapter-item expanded "><a href="io/ipc_stream_read.html"><strong aria-hidden="true">9.7.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="io/ipc_write.html"><strong aria-hidden="true">9.8.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="io/avro_read.html"><strong aria-hidden="true">9.9.</strong> Read Avro</a></li><li class="chapter-item expanded "><a href="io/avro_write.html"><strong aria-hidden="true">9.10.</strong> Write Avro</a></li><li class="chapter-item expanded "><a href="io/json_read.html"><strong aria-hidden="true">9.11.</strong> Read JSON</a></li><li class="chapter-item expanded "><a href="io/json_write.html"><strong aria-hidden="true">9.12.</strong> Write JSON</a></li><li class="chapter-item expanded "><a href="io/odbc.html"><strong aria-hidden="true">9.13.</strong> Read and Write ODBC</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">arrow2 documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>Welcome to the Arrow2 guide for the Rust programming language. This guide was
+created to help you become familiar with the Arrow2 crate and its
+functionalities.</p>
+<h2 id="what-is-apache-arrow"><a class="header" href="#what-is-apache-arrow">What is Apache Arrow?</a></h2>
+<p>According to its <a href="https://arrow.apache.org">website</a> Apache Arrow is defined
+as:</p>
+<blockquote>
+<p>A language-independent columnar memory format for flat and hierarchical data,
+organized for efficient analytic operations on modern hardware like CPUs and
+GPUs. The Arrow memory format also supports zero-copy reads for
+lightning-fast data access without serialization overhead.</p>
+</blockquote>
+<p>After reading the description you have probably come to the conclusion that
+Apache Arrow sounds great and that it will give anyone working with data enough
+tools to improve a data processing workflow.  But that's the catch, on its own
+Apache Arrow is not an application or library that can be installed and used.
+The objective of Apache Arrow is to define a set of specifications that need to
+be followed by an implementation in order to allow:</p>
+<ol>
+<li>fast in-memory data access</li>
+<li>sharing and zero copy of data between processes</li>
+</ol>
+<h3 id="fast-in-memory-data-access"><a class="header" href="#fast-in-memory-data-access">Fast in-memory data access</a></h3>
+<p>Apache Arrow allows fast memory access by defining its <a href="https://arrow.apache.org/overview/">in-memory columnar
+format</a>. This columnar format defines a
+standard and efficient in-memory representation of various datatypes, plain or
+nested
+(<a href="https://github.com/apache/arrow/blob/master/docs/source/format/Columnar.rst">reference</a>).</p>
+<p>In other words, the Apache Arrow project has created a series of rules or
+specifications to define how a datatype (int, float, string, list, etc.) is
+stored in memory. Since the objective of the project is to store large amounts
+of data in memory for further manipulation or querying, it uses a columnar data
+definition. This means that when a dataset (data defined with several columns)
+is stored in memory, it no longer maintains its rows representation but it is
+changed to a columnar representation.</p>
+<p>For example, lets say we have a dataset that is defined with three columns
+named: <em>session_id</em>, <em>timestamp</em> and <em>source_id</em> (image below). Traditionally,
+this file should be represented in memory maintaining its row representation
+(image below, left). This means that the fields representing a row would be kept
+next to each other. This makes memory management harder to achieve because there
+are different datatypes next to each other; in this case a long, a date and a
+string. Each of these datatypes will have different memory requirements (for
+example, 8 bytes, 16 bytes or 32 bytes).</p>
+<p align="center">
+  <img src="images/simd.png">
+</p>
+<p>By changing the in memory representation of the file to a columnar form (image
+above, right), the in-memory arrangement of the data becomes more efficient.
+Similar datatypes are stored next to each other, making the access and columnar
+querying faster to perform.</p>
+<h3 id="sharing-data-between-processes"><a class="header" href="#sharing-data-between-processes">Sharing data between processes</a></h3>
+<p>Imagine a typical workflow for a data engineer. There is a process that is
+producing data that belongs to a service monitoring the performance of a sales
+page.  This data has to be read, processed and stored. Probably the engineer
+would first set a script that is reading the data and storing the result in a
+CSV or Parquet file. Then the engineer would need to create a pipeline to read
+the file and transfer the data to a database. Once the data is stored some
+analysis is needed to be done on the data, maybe Pandas is used to read the data
+and extract information. Or, perhaps Spark is used to create a pipeline that
+reads the database in order to create a stream of data to feed a dashboard. The
+copy and convert process may end up looking like this:</p>
+<p align="center">
+  <img src="images/copy.png">
+</p>
+<p>As it can be seen, the data is copied and converted several times. This happens
+every time a process needs to query the data.</p>
+<p>By using a standard that all languages and processes can understand, the data
+doesn't need to be copied and converted. There can be a single in-memory data
+representation that can be used to feed all the required processes. The data
+sharing can be done regarding the language that is used.</p>
+<p align="center">
+  <img src="images/shared.png">
+</p>
+<p>And thanks to this standardization the data can also be shared with processes
+that don't share the same memory. By creating a data server, packets of data
+with known structure (Chunk) can be sent across computers (or pods) and
+the receiving process doesn't need to spend time coding and decoding the data
+to a known format. The data is ready to be used once its being received.</p>
+<p align="center">
+  <img src="images/recordbatch.png">
+</p>
+<h2 id="the-arrow2-crate"><a class="header" href="#the-arrow2-crate">The Arrow2 crate</a></h2>
+<p>These and other collateral benefits can only be achieved thanks to the work done
+by the people collaborating in the Apache Arrow project. By looking at the
+project <a href="https://github.com/apache/arrow">github page</a>, there are libraries for
+the most common languages used today, and that includes Rust.</p>
+<p>The Rust Arrow2 crate is a collection of structs and implementations that define
+all the elements required to create Arrow arrays that follow the Apache Arrow
+specification. In the next sections the basic blocks for working with the
+crate will be discussed, providing enough examples to give you familiarity
+to construct, share and query Arrow arrays.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="low_level.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="low_level.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

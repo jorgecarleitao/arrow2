@@ -1,0 +1,387 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Read Parquet - arrow2 documentation</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = null;
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Arrow2</a></li><li class="chapter-item expanded "><a href="../arrow.html"><strong aria-hidden="true">2.</strong> The arrow format</a></li><li class="chapter-item expanded "><a href="../low_level.html"><strong aria-hidden="true">3.</strong> Low-level API</a></li><li class="chapter-item expanded "><a href="../high_level.html"><strong aria-hidden="true">4.</strong> High-level API</a></li><li class="chapter-item expanded "><a href="../compute.html"><strong aria-hidden="true">5.</strong> Compute</a></li><li class="chapter-item expanded "><a href="../metadata.html"><strong aria-hidden="true">6.</strong> Metadata</a></li><li class="chapter-item expanded "><a href="../ffi.html"><strong aria-hidden="true">7.</strong> Foreign interfaces</a></li><li class="chapter-item expanded "><a href="../extension.html"><strong aria-hidden="true">8.</strong> Extension</a></li><li class="chapter-item expanded "><a href="../io/index.html"><strong aria-hidden="true">9.</strong> IO</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../io/csv_read.html"><strong aria-hidden="true">9.1.</strong> Read CSV</a></li><li class="chapter-item expanded "><a href="../io/csv_write.html"><strong aria-hidden="true">9.2.</strong> Write CSV</a></li><li class="chapter-item expanded "><a href="../io/parquet_read.html" class="active"><strong aria-hidden="true">9.3.</strong> Read Parquet</a></li><li class="chapter-item expanded "><a href="../io/parquet_write.html"><strong aria-hidden="true">9.4.</strong> Write Parquet</a></li><li class="chapter-item expanded "><a href="../io/ipc_read.html"><strong aria-hidden="true">9.5.</strong> Read Arrow</a></li><li class="chapter-item expanded "><a href="../io/ipc_mmap.html"><strong aria-hidden="true">9.6.</strong> Memory map Arrow</a></li><li class="chapter-item expanded "><a href="../io/ipc_stream_read.html"><strong aria-hidden="true">9.7.</strong> Read Arrow stream</a></li><li class="chapter-item expanded "><a href="../io/ipc_write.html"><strong aria-hidden="true">9.8.</strong> Write Arrow</a></li><li class="chapter-item expanded "><a href="../io/avro_read.html"><strong aria-hidden="true">9.9.</strong> Read Avro</a></li><li class="chapter-item expanded "><a href="../io/avro_write.html"><strong aria-hidden="true">9.10.</strong> Write Avro</a></li><li class="chapter-item expanded "><a href="../io/json_read.html"><strong aria-hidden="true">9.11.</strong> Read JSON</a></li><li class="chapter-item expanded "><a href="../io/json_write.html"><strong aria-hidden="true">9.12.</strong> Write JSON</a></li><li class="chapter-item expanded "><a href="../io/odbc.html"><strong aria-hidden="true">9.13.</strong> Read and Write ODBC</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">arrow2 documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="read-parquet"><a class="header" href="#read-parquet">Read parquet</a></h1>
+<p>When compiled with feature <code>io_parquet</code>, this crate can be used to read parquet files
+to arrow.
+It makes minimal assumptions on how you to decompose CPU and IO intensive tasks.</p>
+<p>First, some notation:</p>
+<ul>
+<li><code>page</code>: part of a column (e.g. similar to a slice of an <code>Array</code>)</li>
+<li><code>column chunk</code>: composed of multiple pages (similar to an <code>Array</code>)</li>
+<li><code>row group</code>: a group of columns with the same length (similar to a <code>Chunk</code>)</li>
+</ul>
+<p>Here is how to read a single column chunk from a single row group:</p>
+<pre><pre class="playground"><code class="language-rust">use std::fs::File;
+use std::time::SystemTime;
+
+use arrow2::error::Error;
+use arrow2::io::parquet::read;
+
+fn main() -&gt; Result&lt;(), Error&gt; {
+    // say we have a file
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+    let file_path = &amp;args[1];
+    let mut reader = File::open(file_path)?;
+
+    // we can read its metadata:
+    let metadata = read::read_metadata(&amp;mut reader)?;
+
+    // and infer a [`Schema`] from the `metadata`.
+    let schema = read::infer_schema(&amp;metadata)?;
+
+    // we can filter the columns we need (here we select all)
+    let schema = schema.filter(|_index, _field| true);
+
+    // we can read the statistics of all parquet's row groups (here for each field)
+    for field in &amp;schema.fields {
+        let statistics = read::statistics::deserialize(field, &amp;metadata.row_groups)?;
+        println!(&quot;{statistics:#?}&quot;);
+    }
+
+    // say we found that we only need to read the first two row groups, &quot;0&quot; and &quot;1&quot;
+    let row_groups = metadata
+        .row_groups
+        .into_iter()
+        .enumerate()
+        .filter(|(index, _)| *index == 0 || *index == 1)
+        .map(|(_, row_group)| row_group)
+        .collect();
+
+    // we can then read the row groups into chunks
+    let chunks = read::FileReader::new(reader, row_groups, schema, Some(1024 * 8 * 8), None, None);
+
+    let start = SystemTime::now();
+    for maybe_chunk in chunks {
+        let chunk = maybe_chunk?;
+        assert!(!chunk.is_empty());
+    }
+    println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
+    Ok(())
+}</code></pre></pre>
+<p>The example above minimizes memory usage at the expense of mixing IO and CPU tasks
+on the same thread, which may hurt performance if one of them is a bottleneck.</p>
+<h3 id="parallelism-decoupling-of-cpu-from-io"><a class="header" href="#parallelism-decoupling-of-cpu-from-io">Parallelism decoupling of CPU from IO</a></h3>
+<p>One important aspect of the pages created by the iterator above is that they can cross
+thread boundaries. Consequently, the thread reading pages from a file (IO-bounded)
+does not have to be the same thread performing CPU-bounded work (decompressing,
+decoding, etc.).</p>
+<p>The example below assumes that CPU starves the consumption of pages,
+and that it is advantageous to have a single thread performing all IO-intensive work,
+by delegating all CPU-intensive tasks to separate threads.</p>
+<pre><pre class="playground"><code class="language-rust">//! Example demonstrating how to read from parquet in parallel using rayon
+use std::fs::File;
+use std::io::BufReader;
+use std::time::SystemTime;
+
+use log::trace;
+use rayon::prelude::*;
+
+use arrow2::{
+    array::Array,
+    chunk::Chunk,
+    error::Result,
+    io::parquet::read::{self, ArrayIter},
+};
+
+mod logger;
+
+/// Advances each iterator in parallel
+/// # Panic
+/// If the iterators are empty
+fn deserialize_parallel(iters: &amp;mut [ArrayIter&lt;'static&gt;]) -&gt; Result&lt;Chunk&lt;Box&lt;dyn Array&gt;&gt;&gt; {
+    // CPU-bounded
+    let arrays = iters
+        .par_iter_mut()
+        .map(|iter| iter.next().transpose())
+        .collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
+
+    Chunk::try_new(arrays.into_iter().map(|x| x.unwrap()).collect())
+}
+
+fn parallel_read(path: &amp;str, row_group: usize) -&gt; Result&lt;()&gt; {
+    // open the file
+    let mut file = BufReader::new(File::open(path)?);
+
+    // read Parquet's metadata and infer Arrow schema
+    let metadata = read::read_metadata(&amp;mut file)?;
+    let schema = read::infer_schema(&amp;metadata)?;
+
+    // select the row group from the metadata
+    let row_group = &amp;metadata.row_groups[row_group];
+
+    let chunk_size = 1024 * 8 * 8;
+
+    // read (IO-bounded) all columns into memory (use a subset of the fields to project)
+    let mut columns =
+        read::read_columns_many(&amp;mut file, row_group, schema.fields, Some(chunk_size))?;
+
+    // deserialize (CPU-bounded) to Arrow in chunks
+    let mut num_rows = row_group.num_rows();
+    while num_rows &gt; 0 {
+        num_rows = num_rows.saturating_sub(chunk_size);
+        trace!(&quot;[parquet/deserialize][start]&quot;);
+        let chunk = deserialize_parallel(&amp;mut columns)?;
+        trace!(&quot;[parquet/deserialize][end][{}]&quot;, chunk.len());
+        assert!(!chunk.is_empty());
+    }
+    Ok(())
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    log::set_logger(&amp;logger::LOGGER)
+        .map(|()| log::set_max_level(log::LevelFilter::Trace))
+        .unwrap();
+
+    use std::env;
+    let args: Vec&lt;String&gt; = env::args().collect();
+    let file_path = &amp;args[1];
+    let row_group = args[2].parse::&lt;usize&gt;().unwrap();
+
+    let start = SystemTime::now();
+    parallel_read(file_path, row_group)?;
+    println!(&quot;took: {} ms&quot;, start.elapsed().unwrap().as_millis());
+
+    Ok(())
+}</code></pre></pre>
+<p>This can of course be reversed; in configurations where IO is bounded (e.g. when a
+network is involved), we can use multiple producers of pages, potentially divided
+in file readers, and a single consumer that performs all CPU-intensive work.</p>
+<h2 id="apache-arrow---apache-parquet"><a class="header" href="#apache-arrow---apache-parquet">Apache Arrow &lt;-&gt; Apache Parquet</a></h2>
+<p>Arrow and Parquet are two different formats that declare different physical and logical types.
+When reading Parquet, we must <em>infer</em> to which types we are reading the data to.
+This inference is based on Parquet's physical, logical and converted types.</p>
+<p>When a logical type is defined, we use it as follows:</p>
+<div class="table-wrapper"><table><thead><tr><th><code>Parquet</code></th><th><code>Parquet logical</code></th><th><code>DataType</code></th></tr></thead><tbody>
+<tr><td>Int32</td><td>Int8</td><td>Int8</td></tr>
+<tr><td>Int32</td><td>Int16</td><td>Int16</td></tr>
+<tr><td>Int32</td><td>Int32</td><td>Int32</td></tr>
+<tr><td>Int32</td><td>UInt8</td><td>UInt8</td></tr>
+<tr><td>Int32</td><td>UInt16</td><td>UInt16</td></tr>
+<tr><td>Int32</td><td>UInt32</td><td>UInt32</td></tr>
+<tr><td>Int32</td><td>Decimal</td><td>Decimal</td></tr>
+<tr><td>Int32</td><td>Date</td><td>Date32</td></tr>
+<tr><td>Int32</td><td>Time(ms)</td><td>Time32(ms)</td></tr>
+<tr><td>Int64</td><td>Int64</td><td>Int64</td></tr>
+<tr><td>Int64</td><td>UInt64</td><td>UInt64</td></tr>
+<tr><td>Int64</td><td>Time(us)</td><td>Time64(us)</td></tr>
+<tr><td>Int64</td><td>Time(ns)</td><td>Time64(ns)</td></tr>
+<tr><td>Int64</td><td>Timestamp(_)</td><td>Timestamp(_)</td></tr>
+<tr><td>Int64</td><td>Decimal</td><td>Decimal</td></tr>
+<tr><td>ByteArray</td><td>Utf8</td><td>Utf8</td></tr>
+<tr><td>ByteArray</td><td>JSON</td><td>Binary</td></tr>
+<tr><td>ByteArray</td><td>BSON</td><td>Binary</td></tr>
+<tr><td>ByteArray</td><td>ENUM</td><td>Binary</td></tr>
+<tr><td>ByteArray</td><td>Decimal</td><td>Decimal</td></tr>
+<tr><td>FixedLenByteArray</td><td>Decimal</td><td>Decimal</td></tr>
+</tbody></table>
+</div>
+<p>When a logical type is not defined but a converted type is defined, we use
+the equivalent conversion as above, mutatis mutandis.</p>
+<p>When neither is defined, we fall back to the physical representation:</p>
+<div class="table-wrapper"><table><thead><tr><th><code>Parquet</code></th><th><code>DataType</code></th></tr></thead><tbody>
+<tr><td>Boolean</td><td>Boolean</td></tr>
+<tr><td>Int32</td><td>Int32</td></tr>
+<tr><td>Int64</td><td>Int64</td></tr>
+<tr><td>Int96</td><td>Timestamp(ns)</td></tr>
+<tr><td>Float</td><td>Float32</td></tr>
+<tr><td>Double</td><td>Float64</td></tr>
+<tr><td>ByteArray</td><td>Binary</td></tr>
+<tr><td>FixedLenByteArray</td><td>FixedSizeBinary</td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../io/csv_write.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../io/parquet_write.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../io/csv_write.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../io/parquet_write.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
