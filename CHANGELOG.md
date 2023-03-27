@@ -1,5 +1,55 @@
 # Changelog
 
+## [v0.17.0](https://github.com/jorgecarleitao/arrow2/tree/v0.17.0) (2023-03-27)
+
+[Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.16.0...v0.17.0)
+
+**Breaking changes:**
+
+- Changed async ipc writer to accept schema by value [\#1439](https://github.com/jorgecarleitao/arrow2/pull/1439) ([ritchie46](https://github.com/ritchie46))
+- Made `len/len_proxy` consistent with `Offsets` [\#1434](https://github.com/jorgecarleitao/arrow2/pull/1434) ([ritchie46](https://github.com/ritchie46))
+- Changed methods to slice arrays [\#1396](https://github.com/jorgecarleitao/arrow2/pull/1396) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**New features:**
+
+- Added buffer interoperability with arrow-rs [\#1437](https://github.com/jorgecarleitao/arrow2/pull/1437) ([tustvold](https://github.com/tustvold))
+- Added MapScalar [\#1428](https://github.com/jorgecarleitao/arrow2/pull/1428) ([b41sh](https://github.com/b41sh))
+- Added support for JSON serialization of dictionary [\#1424](https://github.com/jorgecarleitao/arrow2/pull/1424) ([ritchie46](https://github.com/ritchie46))
+- Added support for MapArray read and write to parquet [\#1419](https://github.com/jorgecarleitao/arrow2/pull/1419) ([b41sh](https://github.com/b41sh))
+
+**Fixed bugs:**
+
+- `parquet_read` panics when working with `date64`s [\#1400](https://github.com/jorgecarleitao/arrow2/issues/1400)
+- Round Trip \[Rust -\> arrow2\_convert -\> Arrow -\> Parquet -\> Arrow -\> Rust\] [\#1376](https://github.com/jorgecarleitao/arrow2/issues/1376)
+- Parquet writes incorrect `List<u32>` [\#1368](https://github.com/jorgecarleitao/arrow2/issues/1368)
+- Slicing nullable list arrays into multiple parquet pages doesn't work [\#1356](https://github.com/jorgecarleitao/arrow2/issues/1356)
+- Reading parquet file with multiple row groups and nested nullable struct types panics  [\#1249](https://github.com/jorgecarleitao/arrow2/issues/1249)
+- Changed encoded float::Inf as null in json [\#1427](https://github.com/jorgecarleitao/arrow2/pull/1427) ([SimonSchneider](https://github.com/SimonSchneider))
+- Fixed statistics writing flag and correct null\_count in dictionaries [\#1414](https://github.com/jorgecarleitao/arrow2/pull/1414) ([ritchie46](https://github.com/ritchie46))
+- Fixed ahash dependency for wasm [\#1407](https://github.com/jorgecarleitao/arrow2/pull/1407) ([hzuo](https://github.com/hzuo))
+- Fixed writing of sliced arrays to parquet [\#1397](https://github.com/jorgecarleitao/arrow2/pull/1397) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Fixed writing nested parquet [\#1390](https://github.com/jorgecarleitao/arrow2/pull/1390) ([jorgecarleitao](https://github.com/jorgecarleitao))
+
+**Enhancements:**
+
+- Added interoperability with arrow-schema [\#1442](https://github.com/jorgecarleitao/arrow2/pull/1442) ([tustvold](https://github.com/tustvold))
+- Updated dependencies [\#1441](https://github.com/jorgecarleitao/arrow2/pull/1441) ([ritchie46](https://github.com/ritchie46))
+- Updated multiversion and support wider registers [\#1440](https://github.com/jorgecarleitao/arrow2/pull/1440) ([ritchie46](https://github.com/ritchie46))
+- Added impl\_mutable\_array\_mut\_validity macro for mutable arrays [\#1435](https://github.com/jorgecarleitao/arrow2/pull/1435) ([Arty-Maly](https://github.com/Arty-Maly))
+- Re-exported the `bloom_filter` module from `parquet2` crate [\#1420](https://github.com/jorgecarleitao/arrow2/pull/1420) ([ozgrakkurt](https://github.com/ozgrakkurt))
+- Updated base64 to 0.21 [\#1408](https://github.com/jorgecarleitao/arrow2/pull/1408) ([WindSoilder](https://github.com/WindSoilder))
+- Added apply\_validity and set\_validity to mutable utf8 array [\#1406](https://github.com/jorgecarleitao/arrow2/pull/1406) ([Arty-Maly](https://github.com/Arty-Maly))
+- Added cast for FixedSizeBinary to \(Large\)Binary [\#1403](https://github.com/jorgecarleitao/arrow2/pull/1403) ([ritchie46](https://github.com/ritchie46))
+- Improved support for date64 written by pyarrow to parquet [\#1402](https://github.com/jorgecarleitao/arrow2/pull/1402) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified code [\#1401](https://github.com/jorgecarleitao/arrow2/pull/1401) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Improved API of getting mutable from Buffer [\#1399](https://github.com/jorgecarleitao/arrow2/pull/1399) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Simplified code via DRY [\#1398](https://github.com/jorgecarleitao/arrow2/pull/1398) ([jorgecarleitao](https://github.com/jorgecarleitao))
+- Added `set_len` method to Buffer [\#1374](https://github.com/jorgecarleitao/arrow2/pull/1374) ([haixuanTao](https://github.com/haixuanTao))
+
+**Documentation updates:**
+
+- Fixed broken guide link [\#1395](https://github.com/jorgecarleitao/arrow2/pull/1395) ([kjschiroo](https://github.com/kjschiroo))
+
 ## [v0.16.0](https://github.com/jorgecarleitao/arrow2/tree/v0.16.0) (2023-02-09)
 
 [Full Changelog](https://github.com/jorgecarleitao/arrow2/compare/v0.15.0...v0.16.0)
