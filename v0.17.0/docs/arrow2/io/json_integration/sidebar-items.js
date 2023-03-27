@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["read","write"],"struct":["ArrowJson","ArrowJsonBatch","ArrowJsonColumn","ArrowJsonDictionaryBatch","ArrowJsonField","ArrowJsonFieldDictionary","ArrowJsonSchema","IntegerType"]};

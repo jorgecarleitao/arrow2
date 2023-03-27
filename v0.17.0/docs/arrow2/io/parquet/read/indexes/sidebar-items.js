@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["FieldPageStatistics"],"fn":["compute_page_row_intervals","has_indexes","read_columns_indexes","read_filtered_pages"],"struct":["ColumnPageStatistics","FilteredPage","Interval"]};

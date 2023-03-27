@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["deserialize_batch","deserialize_dictionary","deserialize_message","deserialize_schemas","serialize_batch","serialize_schema","serialize_schema_to_info","serialize_schema_to_result"],"struct":["WriteOptions"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Either"],"macro":["with_match_primitive_without_interval_type"],"mod":["array","bitmap","buffer","chunk","compute","datatypes","error","ffi","io","mmap","offset","scalar","temporal_conversions","trusted_len","types","util"],"struct":["AHashMap"]};

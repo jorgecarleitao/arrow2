@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["avro","csv","flight","ipc","json","json_integration","ndjson","odbc","orc","parquet","print"]};

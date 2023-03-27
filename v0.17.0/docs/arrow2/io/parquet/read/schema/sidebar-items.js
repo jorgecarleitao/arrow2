@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ParquetType"],"fn":["infer_schema","parquet_to_arrow_schema","read_schema_from_metadata"],"struct":["FileMetaData","KeyValue","SchemaDescriptor"]};

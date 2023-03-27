@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["like_binary","like_binary_scalar","like_utf8","like_utf8_scalar","nlike_binary","nlike_binary_scalar","nlike_utf8","nlike_utf8_scalar"]};

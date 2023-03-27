@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["can_nullif","nullif","nullif_scalar","primitive_nullif","primitive_nullif_scalar"]};

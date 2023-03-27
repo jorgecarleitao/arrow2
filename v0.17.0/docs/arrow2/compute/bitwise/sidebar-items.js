@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["and","and_scalar","not","or","or_scalar","xor","xor_scalar"]};

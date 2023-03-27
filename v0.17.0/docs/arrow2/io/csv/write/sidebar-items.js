@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["new_serializer","serialize","write_chunk","write_header"],"struct":["SerializeOptions"]};

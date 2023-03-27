@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["can_lower","can_upper","lower","upper","utf8_apply"]};

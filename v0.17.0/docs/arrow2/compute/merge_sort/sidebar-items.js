@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["build_comparator","build_comparator_impl","merge_sort","merge_sort_slices","slices","take_arrays"],"struct":["MergeSortSlices"],"type":["MergeSlice"]};

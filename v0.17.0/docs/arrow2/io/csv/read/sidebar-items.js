@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["deserialize_batch","deserialize_column","infer","infer_schema","read_rows"],"struct":["ByteRecord","Reader","ReaderBuilder"]};

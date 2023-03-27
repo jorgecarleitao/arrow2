@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["convert","empty","write"],"struct":["Convert","Empty","Filter","Fuse","Map","MapErr","MapRef","RecordSerializer","Serializer","Skip","SkipWhile","Take","TakeWhile"],"trait":["DoubleEndedFallibleStreamingIterator","FallibleStreamingIterator"]};

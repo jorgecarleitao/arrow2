@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["buffer_from_description","infer_descriptions","serialize"],"struct":["Writer"]};
