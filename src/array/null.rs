@@ -116,3 +116,20 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for NullArray {
         Self::try_new(data_type, array.array().len())
     }
 }
+
+#[cfg(feature = "arrow")]
+mod arrow {
+    use super::*;
+    use arrow_data::ArrayData;
+    impl NullArray {
+        /// Convert this array into [`arrow_data::ArrayData`]
+        pub fn to_data(&self) -> ArrayData {
+            todo!()
+        }
+
+        /// Create this array from [`ArrayData`]
+        pub fn from_data(data: &ArrayData) -> Self {
+            todo!()
+        }
+    }
+}

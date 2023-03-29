@@ -389,6 +389,73 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
     }
 }
 
+#[cfg(feature = "arrow")]
+macro_rules! to_data_dyn {
+    ($array:expr, $ty:ty) => {{
+        let f = |x: &$ty| x.to_data();
+        general_dyn!($array, $ty, f)
+    }};
+}
+
+/// Convert an arrow2 [`Array`] to [`arrow_data::ArrayData`]
+#[cfg(feature = "arrow")]
+pub fn to_data(array: &dyn Array) -> arrow_data::ArrayData {
+    use crate::datatypes::PhysicalType::*;
+    match array.data_type().to_physical_type() {
+        Null => to_data_dyn!(array, NullArray),
+        Boolean => to_data_dyn!(array, BooleanArray),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            to_data_dyn!(array, PrimitiveArray<$T>)
+        }),
+        Binary => to_data_dyn!(array, BinaryArray<i32>),
+        LargeBinary => to_data_dyn!(array, BinaryArray<i64>),
+        FixedSizeBinary => to_data_dyn!(array, FixedSizeBinaryArray),
+        Utf8 => to_data_dyn!(array, Utf8Array::<i32>),
+        LargeUtf8 => to_data_dyn!(array, Utf8Array::<i64>),
+        List => to_data_dyn!(array, ListArray::<i32>),
+        LargeList => to_data_dyn!(array, ListArray::<i64>),
+        FixedSizeList => to_data_dyn!(array, FixedSizeListArray),
+        Struct => to_data_dyn!(array, StructArray),
+        Union => to_data_dyn!(array, UnionArray),
+        Dictionary(key_type) => {
+            match_integer_type!(key_type, |$T| {
+                to_data_dyn!(array, DictionaryArray::<$T>)
+            })
+        }
+        Map => to_data_dyn!(array, MapArray),
+    }
+}
+
+/// Convert an [`arrow_data::ArrayData`] to arrow2 [`Array`]
+#[cfg(feature = "arrow")]
+pub fn from_data(data: &arrow_data::ArrayData) -> Box<dyn Array> {
+    use crate::datatypes::PhysicalType::*;
+    let data_type: DataType = data.data_type().clone().into();
+    match data_type.to_physical_type() {
+        Null => Box::new(NullArray::from_data(data)),
+        Boolean => Box::new(BooleanArray::from_data(data)),
+        Primitive(primitive) => with_match_primitive_type!(primitive, |$T| {
+            Box::new(PrimitiveArray::<$T>::from_data(data))
+        }),
+        Binary => Box::new(BinaryArray::<i32>::from_data(data)),
+        LargeBinary => Box::new(BinaryArray::<i64>::from_data(data)),
+        FixedSizeBinary => Box::new(FixedSizeBinaryArray::from_data(data)),
+        Utf8 => Box::new(Utf8Array::<i32>::from_data(data)),
+        LargeUtf8 => Box::new(Utf8Array::<i64>::from_data(data)),
+        List => Box::new(ListArray::<i32>::from_data(data)),
+        LargeList => Box::new(ListArray::<i64>::from_data(data)),
+        FixedSizeList => Box::new(FixedSizeListArray::from_data(data)),
+        Struct => Box::new(StructArray::from_data(data)),
+        Union => Box::new(UnionArray::from_data(data)),
+        Dictionary(key_type) => {
+            match_integer_type!(key_type, |$T| {
+                Box::new(DictionaryArray::<$T>::from_data(data))
+            })
+        }
+        Map => Box::new(MapArray::from_data(data)),
+    }
+}
+
 macro_rules! clone_dyn {
     ($array:expr, $ty:ty) => {{
         let f = |x: &$ty| Box::new(x.clone());
