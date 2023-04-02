@@ -379,6 +379,14 @@ pub fn rem(lhs: &dyn Array, rhs: &dyn Array) -> Box<dyn Array> {
     arith!(lhs, rhs, rem)
 }
 
+/// Remainder an [`Array`] with a [`Scalar`].
+/// # Panic
+/// This function panics iff
+/// * the opertion is not supported for the logical types (use [`can_rem`] to check)
+pub fn rem_scalar(lhs: &dyn Array, rhs: &dyn Scalar) -> Box<dyn Array> {
+    arith_scalar!(lhs, rhs, rem_scalar)
+}
+
 /// Returns whether two [`DataType`]s "can be remainder" by [`rem`].
 pub fn can_rem(lhs: &DataType, rhs: &DataType) -> bool {
     use DataType::*;
