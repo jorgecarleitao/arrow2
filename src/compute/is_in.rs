@@ -9,8 +9,6 @@ use crate::{
     types::NativeType,
 };
 
-use super::utils::combine_validities;
-
 fn is_in_primitive<T: NativeType>(
     values: &PrimitiveArray<T>,
     list: &PrimitiveArray<T>,
@@ -18,42 +16,26 @@ fn is_in_primitive<T: NativeType>(
     let values = values.iter().map(|value| list.iter().any(|x| x == value));
     let values = Bitmap::from_trusted_len_iter(values);
 
-    Ok(BooleanArray::new(
-        DataType::Boolean,
-        values,
-        values.validity(),
-    ))
+    Ok(BooleanArray::new(DataType::Boolean, values, None))
 }
 
 fn is_in_utf8<O: Offset>(values: &Utf8Array<O>, list: &Utf8Array<O>) -> Result<BooleanArray> {
     let values = values.iter().map(|value| list.iter().any(|x| x == value));
     let values = Bitmap::from_trusted_len_iter(values);
 
-    Ok(BooleanArray::new(
-        DataType::Boolean,
-        values,
-        values.validity(),
-    ))
+    Ok(BooleanArray::new(DataType::Boolean, values, None))
 }
 
 fn is_in_binary<O: Offset>(values: &BinaryArray<O>, list: &BinaryArray<O>) -> Result<BooleanArray> {
     let values = values.iter().map(|value| list.iter().any(|x| x == value));
     let values = Bitmap::from_trusted_len_iter(values);
 
-    Ok(BooleanArray::new(
-        DataType::Boolean,
-        values,
-        values.validity(),
-    ))
+    Ok(BooleanArray::new(DataType::Boolean, values, None))
 }
 
 macro_rules! primitive {
     ($values:expr, $list:expr, $ty:ty) => {{
         let list = $list
-            .as_any()
-            .downcast_ref::<PrimitiveArray<$ty>>()
-            .unwrap();
-        let values = $values
             .as_any()
             .downcast_ref::<PrimitiveArray<$ty>>()
             .unwrap();
@@ -72,12 +54,12 @@ pub fn is_in(values: &dyn Array, list: &dyn Array) -> Result<BooleanArray> {
 
     match (values_data_type, list_data_type) {
         (DataType::Utf8, DataType::Utf8) => {
-            let list = li>t.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
+            let list = list.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             let values = values.as_any().downcast_ref::<Utf8Array<i32>>().unwrap();
             is_in_utf8(values, list)
         }
         (DataType::LargeUtf8, DataType::LargeUtf8) => {
-            let list = li>t.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
+            let list = list.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
             let values = values.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
             is_in_utf8(values, list)
         }

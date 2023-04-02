@@ -22,6 +22,8 @@ mod filter;
 mod hash;
 #[cfg(feature = "compute_if_then_else")]
 mod if_then_else;
+#[cfg(feature = "compute_is_in")]
+mod is_in;
 #[cfg(feature = "compute_length")]
 mod length;
 #[cfg(feature = "compute_like")]
