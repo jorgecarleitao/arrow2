@@ -49,6 +49,9 @@ pub mod hash;
 #[cfg(feature = "compute_if_then_else")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compute_if_then_else")))]
 pub mod if_then_else;
+#[cfg(feature = "compute_is_in")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compute_is_in")))]
+pub mod is_in;
 #[cfg(feature = "compute_length")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compute_length")))]
 pub mod length;

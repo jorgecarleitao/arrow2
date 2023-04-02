@@ -219,6 +219,7 @@ compute_concatenate = []
 compute_contains = []
 compute_filter = []
 compute_hash = ["multiversion"]
+compute_is_in = []
 compute_if_then_else = []
 compute_length = []
 compute_like = ["regex", "regex-syntax"]
@@ -245,6 +246,7 @@ compute = [
     "compute_contains",
     "compute_filter",
     "compute_hash",
+    "compute_is_in",
     "compute_if_then_else",
     "compute_length",
     "compute_like",
