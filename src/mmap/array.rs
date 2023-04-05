@@ -141,7 +141,8 @@ fn mmap_fixed_size_binary<T: AsRef<[u8]>>(
     let data_ref = data.as_ref().as_ref();
 
     let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
-    let values = get_buffer::<u8>(data_ref, block_offset, buffers, num_rows * bytes_per_row)?.as_ptr();
+    let values =
+        get_buffer::<u8>(data_ref, block_offset, buffers, num_rows * bytes_per_row)?.as_ptr();
 
     Ok(unsafe {
         create_array(

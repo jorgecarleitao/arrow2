@@ -38,8 +38,7 @@ fn fixed_size_binary() -> Result<()> {
         .sliced(1, 2);
     round_trip(array)?;
 
-    let array = FixedSizeBinaryArray::new_empty(DataType::FixedSizeBinary(20))
-        .boxed();
+    let array = FixedSizeBinaryArray::new_empty(DataType::FixedSizeBinary(20)).boxed();
     round_trip(array)
 }
 
