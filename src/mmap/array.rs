@@ -120,7 +120,14 @@ fn mmap_fixed_size_binary<T: AsRef<[u8]>>(
     node: &Node,
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
+    data_type: &DataType,
 ) -> Result<ArrowArray, Error> {
+    let bytes_per_row = if let DataType::FixedSizeBinary(bytes_per_row) = data_type {
+        bytes_per_row
+    } else {
+        return Err(Error::from(OutOfSpecKind::InvalidDataType));
+    };
+
     let num_rows: usize = node
         .length()
         .try_into()
@@ -134,8 +141,7 @@ fn mmap_fixed_size_binary<T: AsRef<[u8]>>(
     let data_ref = data.as_ref().as_ref();
 
     let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
-
-    let values = get_buffer::<u8>(data_ref, block_offset, buffers, num_rows + 1)?.as_ptr();
+    let values = get_buffer::<u8>(data_ref, block_offset, buffers, num_rows * bytes_per_row)?.as_ptr();
 
     Ok(unsafe {
         create_array(
@@ -481,7 +487,7 @@ fn get_array<T: AsRef<[u8]>>(
             mmap_primitive::<$T, _>(data, &node, block_offset, buffers)
         }),
         Utf8 | Binary => mmap_binary::<i32, _>(data, &node, block_offset, buffers),
-        FixedSizeBinary => mmap_fixed_size_binary(data, &node, block_offset, buffers),
+        FixedSizeBinary => mmap_fixed_size_binary(data, &node, block_offset, buffers, data_type),
         LargeBinary | LargeUtf8 => mmap_binary::<i64, _>(data, &node, block_offset, buffers),
         List => mmap_list::<i32, _>(
             data,

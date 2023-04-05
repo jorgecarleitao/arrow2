@@ -95,6 +95,8 @@ pub enum OutOfSpecKind {
         /// The requested dictionary id
         requested_id: i64,
     },
+    /// FixedLengthBinaryArray has invalid datatype.
+    InvalidDataType,
 }
 
 impl From<OutOfSpecKind> for Error {

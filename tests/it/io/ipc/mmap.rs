@@ -36,6 +36,10 @@ fn fixed_size_binary() -> Result<()> {
     let array = FixedSizeBinaryArray::from([None, None, Some([1, 2])])
         .boxed()
         .sliced(1, 2);
+    round_trip(array)?;
+
+    let array = FixedSizeBinaryArray::new_empty(DataType::FixedSizeBinary(20))
+        .boxed();
     round_trip(array)
 }
 
