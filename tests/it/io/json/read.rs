@@ -165,7 +165,7 @@ fn read_json_fixed_size_records() -> Result<()> {
 }
 
 #[test]
-fn read_json_parse_timestamp_string_ns() -> Result<()> {
+fn deserialize_timestamp_string_ns() -> Result<()> {
     let data = br#"["2023-04-07T12:23:34.000000001Z"]"#;
 
     let json = json_deserializer::parse(data)?;
@@ -187,7 +187,7 @@ fn read_json_parse_timestamp_string_ns() -> Result<()> {
 }
 
 #[test]
-fn read_json_parse_timestamp_string_us() -> Result<()> {
+fn deserialize_timestamp_string_us() -> Result<()> {
     let data = br#"["2023-04-07T12:23:34.000000001Z"]"#;
 
     let json = json_deserializer::parse(data)?;
@@ -209,7 +209,7 @@ fn read_json_parse_timestamp_string_us() -> Result<()> {
 }
 
 #[test]
-fn read_json_parse_timestamp_string_ms() -> Result<()> {
+fn deserialize_timestamp_string_ms() -> Result<()> {
     let data = br#"["2023-04-07T12:23:34.000000001Z"]"#;
 
     let json = json_deserializer::parse(data)?;
@@ -231,7 +231,7 @@ fn read_json_parse_timestamp_string_ms() -> Result<()> {
 }
 
 #[test]
-fn read_json_parse_timestamp_string_s() -> Result<()> {
+fn deserialize_timestamp_string_s() -> Result<()> {
     let data = br#"["2023-04-07T12:23:34.000000001Z"]"#;
 
     let json = json_deserializer::parse(data)?;
@@ -253,7 +253,7 @@ fn read_json_parse_timestamp_string_s() -> Result<()> {
 }
 
 #[test]
-fn read_json_parse_timestamp_string_tz_s() -> Result<()> {
+fn deserialize_timestamp_string_tz_s() -> Result<()> {
     let data = br#"["2023-04-07T12:23:34.000000001+00:00"]"#;
 
     let json = json_deserializer::parse(data)?;
@@ -277,7 +277,7 @@ fn read_json_parse_timestamp_string_tz_s() -> Result<()> {
 }
 
 #[test]
-fn read_json_parse_timestamp_int_ns() -> Result<()> {
+fn deserialize_timestamp_int_ns() -> Result<()> {
     let data = br#"[1680870214000000001]"#;
 
     let json = json_deserializer::parse(data)?;
