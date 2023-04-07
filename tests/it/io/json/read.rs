@@ -275,3 +275,25 @@ fn read_json_parse_timestamp_string_tz_s() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn read_json_parse_timestamp_int_ns() -> Result<()> {
+    let data = br#"[1680870214000000001]"#;
+
+    let json = json_deserializer::parse(data)?;
+
+    let data_type = DataType::List(Box::new(Field::new(
+        "item",
+        DataType::Timestamp(TimeUnit::Nanosecond, None),
+        false,
+    )));
+
+    let result = read::deserialize(&json, data_type)?;
+
+    let expected = Int64Array::from([Some(1680870214000000001)])
+        .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
+
+    assert_eq!(expected, result.as_ref());
+
+    Ok(())
+}
