@@ -227,7 +227,7 @@ pub fn utf8_to_timestamp_ns_scalar<T: chrono::TimeZone>(
     fmt: &str,
     tz: &T,
 ) -> Option<i64> {
-    utf8_to_timestamp_scalar(value, fmt, tz, TimeUnit::Nanosecond)
+    utf8_to_timestamp_scalar(value, fmt, tz, &TimeUnit::Nanosecond)
 }
 
 /// Parses `value` to `Option<i64>` consistent with the Arrow's definition of timestamp with timezone.
@@ -238,7 +238,7 @@ pub fn utf8_to_timestamp_scalar<T: chrono::TimeZone>(
     value: &str,
     fmt: &str,
     tz: &T,
-    tu: TimeUnit,
+    tu: &TimeUnit,
 ) -> Option<i64> {
     let mut parsed = Parsed::new();
     let fmt = StrftimeItems::new(fmt);
@@ -263,13 +263,13 @@ pub fn utf8_to_timestamp_scalar<T: chrono::TimeZone>(
 /// Parses `value` to `Option<i64>` consistent with the Arrow's definition of timestamp without timezone.
 #[inline]
 pub fn utf8_to_naive_timestamp_ns_scalar(value: &str, fmt: &str) -> Option<i64> {
-    utf8_to_naive_timestamp_scalar(value, fmt, TimeUnit::Nanosecond)
+    utf8_to_naive_timestamp_scalar(value, fmt, &TimeUnit::Nanosecond)
 }
 
 /// Parses `value` to `Option<i64>` consistent with the Arrow's definition of timestamp without timezone.
 /// Returns in scale `tz` of `TimeUnit`.
 #[inline]
-pub fn utf8_to_naive_timestamp_scalar(value: &str, fmt: &str, tu: TimeUnit) -> Option<i64> {
+pub fn utf8_to_naive_timestamp_scalar(value: &str, fmt: &str, tu: &TimeUnit) -> Option<i64> {
     let fmt = StrftimeItems::new(fmt);
     let mut parsed = Parsed::new();
     parse(&mut parsed, value, fmt.clone()).ok();

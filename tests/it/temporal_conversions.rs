@@ -33,16 +33,16 @@ fn naive_scalar() {
     let nanos_expected = 1680870214000000000;
 
     // seconds
-    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, TimeUnit::Second);
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Second);
     assert_eq!(r, Some(nanos_expected / 1_000_000_000));
     // milliseconds
-    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, TimeUnit::Millisecond);
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Millisecond);
     assert_eq!(r, Some(nanos_expected / 1_000_000));
     // microseconds
-    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, TimeUnit::Microsecond);
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Microsecond);
     assert_eq!(r, Some(nanos_expected / 1_000));
     // nanoseconds
-    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, TimeUnit::Nanosecond);
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Nanosecond);
     assert_eq!(r, Some(nanos_expected));
 }
 

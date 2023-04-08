@@ -534,27 +534,13 @@ pub(crate) fn _deserialize<'a, A: Borrow<Value<'a>>>(
         DataType::Timestamp(tu, tz) => {
             let iter = rows.iter().map(|row| match row.borrow() {
                 Value::Number(v) => Some(deserialize_int_single(*v)),
-                Value::String(v) => {
-                    let parsed_nanos = match (tu, tz) {
-                        (_, None) => {
-                            temporal_conversions::utf8_to_naive_timestamp_ns_scalar(v, "%+")
-                        }
-                        (_, Some(ref tz)) => {
-                            let tz = temporal_conversions::parse_offset(tz).unwrap();
-                            temporal_conversions::utf8_to_timestamp_ns_scalar(v, "%+", &tz)
-                        }
-                    };
-
-                    match parsed_nanos {
-                        Some(ns) => Some(match tu {
-                            TimeUnit::Second => ns / 1_000_000_000,
-                            TimeUnit::Millisecond => ns / 1_000_000,
-                            TimeUnit::Microsecond => ns / 1_000,
-                            TimeUnit::Nanosecond => ns,
-                        }),
-                        _ => None,
+                Value::String(v) => match (tu, tz) {
+                    (_, None) => temporal_conversions::utf8_to_naive_timestamp_scalar(v, "%+", &tu),
+                    (_, Some(ref tz)) => {
+                        let tz = temporal_conversions::parse_offset(tz).unwrap();
+                        temporal_conversions::utf8_to_timestamp_scalar(v, "%+", &tz, &tu)
                     }
-                }
+                },
                 _ => None,
             });
             Box::new(Int64Array::from_iter(iter).to(data_type))
