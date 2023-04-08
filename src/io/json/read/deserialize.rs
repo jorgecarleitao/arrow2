@@ -10,7 +10,7 @@ use crate::{
     array::*,
     bitmap::MutableBitmap,
     chunk::Chunk,
-    datatypes::{DataType, Field, IntervalUnit, Schema, TimeUnit},
+    datatypes::{DataType, Field, IntervalUnit, Schema},
     error::Error,
     offset::{Offset, Offsets},
     temporal_conversions,
