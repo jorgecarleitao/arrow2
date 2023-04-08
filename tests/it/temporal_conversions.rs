@@ -26,6 +26,27 @@ fn naive() {
 }
 
 #[test]
+fn naive_scalar() {
+    let fmt = "%Y-%m-%dT%H:%M:%S:z";
+
+    let str = "2023-04-07T12:23:34.000000000Z";
+    let nanos_expected = 1680870214000000000;
+
+    // seconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, TimeUnit::Second);
+    assert_eq!(r, Some(nanos_expected / 1_000_000_000));
+    // milliseconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, TimeUnit::Millisecond);
+    assert_eq!(r, Some(nanos_expected / 1_000_000));
+    // microseconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, TimeUnit::Microsecond);
+    assert_eq!(r, Some(nanos_expected / 1_000));
+    // nanoseconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, TimeUnit::Nanosecond);
+    assert_eq!(r, Some(nanos_expected));
+}
+
+#[test]
 fn naive_no_tz() {
     let expected = "Timestamp(Nanosecond, None)[1996-12-19 16:39:57, 1996-12-19 13:39:57, None]";
     let fmt = "%Y-%m-%dT%H:%M:%S"; // no tz info
