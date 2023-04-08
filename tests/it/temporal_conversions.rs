@@ -68,7 +68,7 @@ fn naive_scalar_no_tz() {
 }
 
 #[test]
-fn scaler_tz_aware() {
+fn scalar_tz_aware() {
     let fmt = "%Y-%m-%dT%H:%M:%S%.f%:z";
 
     let tz = temporal_conversions::parse_offset("-02:00").unwrap();
@@ -89,7 +89,7 @@ fn scaler_tz_aware() {
     assert_eq!(r, Some(nanos_expected));
 }
 #[test]
-fn scaler_tz_aware_no_timezone() {
+fn scalar_tz_aware_no_timezone() {
     let fmt = "%Y-%m-%dT%H:%M:%S%.f";
 
     let tz = temporal_conversions::parse_offset("-02:00").unwrap();
