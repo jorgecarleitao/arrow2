@@ -409,6 +409,34 @@ macro_rules! to_data_dyn {
     }};
 }
 
+#[cfg(feature = "arrow")]
+impl From<Box<dyn Array>> for arrow_array::ArrayRef {
+    fn from(value: Box<dyn Array>) -> Self {
+        value.as_ref().into()
+    }
+}
+
+#[cfg(feature = "arrow")]
+impl From<&dyn Array> for arrow_array::ArrayRef {
+    fn from(value: &dyn Array) -> Self {
+        arrow_array::make_array(to_data(value.as_ref()))
+    }
+}
+
+#[cfg(feature = "arrow")]
+impl From<arrow_array::ArrayRef> for Box<dyn Array> {
+    fn from(value: arrow_array::ArrayRef) -> Self {
+        value.as_ref().into()
+    }
+}
+
+#[cfg(feature = "arrow")]
+impl From<&dyn arrow_array::Array> for Box<dyn Array> {
+    fn from(value: &dyn arrow_array::Array) -> Self {
+        from_data(&value.to_data())
+    }
+}
+
 /// Convert an arrow2 [`Array`] to [`arrow_data::ArrayData`]
 #[cfg(feature = "arrow")]
 pub fn to_data(array: &dyn Array) -> arrow_data::ArrayData {

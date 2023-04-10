@@ -1,4 +1,6 @@
-use crate::array::{from_data, to_data, DictionaryArray, DictionaryKey, PrimitiveArray, Arrow2Arrow};
+use crate::array::{
+    from_data, to_data, Arrow2Arrow, DictionaryArray, DictionaryKey, PrimitiveArray,
+};
 use crate::datatypes::{DataType, PhysicalType};
 use arrow_data::{ArrayData, ArrayDataBuilder};
 
