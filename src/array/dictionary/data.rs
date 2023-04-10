@@ -30,6 +30,8 @@ impl<K: DictionaryKey> Arrow2Arrow for DictionaryArray<K> {
 
         let key_builder = ArrayDataBuilder::new(key.clone())
             .buffers(vec![data.buffers()[0].clone()])
+            .offset(data.offset())
+            .len(data.len())
             .nulls(data.nulls().cloned());
 
         // Safety: Dictionary is valid
