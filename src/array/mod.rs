@@ -419,7 +419,7 @@ impl From<Box<dyn Array>> for arrow_array::ArrayRef {
 #[cfg(feature = "arrow")]
 impl From<&dyn Array> for arrow_array::ArrayRef {
     fn from(value: &dyn Array) -> Self {
-        arrow_array::make_array(to_data(value.as_ref()))
+        arrow_array::make_array(to_data(value))
     }
 }
 

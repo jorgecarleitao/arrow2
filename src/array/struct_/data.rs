@@ -20,7 +20,7 @@ impl Arrow2Arrow for StructArray {
 
         Self {
             data_type,
-            values: data.child_data().iter().map(|d| from_data(d)).collect(),
+            values: data.child_data().iter().map(from_data).collect(),
             validity: data.nulls().map(|n| Bitmap::from_null_buffer(n.clone())),
         }
     }

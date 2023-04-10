@@ -31,7 +31,7 @@ impl Arrow2Arrow for UnionArray {
     fn from_data(data: &ArrayData) -> Self {
         let data_type: DataType = data.data_type().clone().into();
 
-        let fields = data.child_data().iter().map(|d| from_data(d)).collect();
+        let fields = data.child_data().iter().map(from_data).collect();
         let buffers = data.buffers();
         let mut types: Buffer<i8> = buffers[0].clone().into();
         types.slice(data.offset(), data.len());

@@ -20,7 +20,7 @@ impl<O: Offset> Arrow2Arrow for Utf8Array<O> {
 
     fn from_data(data: &ArrayData) -> Self {
         let data_type = data.data_type().clone().into();
-        if data.len() == 0 {
+        if data.is_empty() {
             // Handle empty offsets
             return Self::new_empty(data_type);
         }
