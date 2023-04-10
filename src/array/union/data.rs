@@ -1,18 +1,28 @@
 use crate::array::{from_data, to_data, Arrow2Arrow, UnionArray};
+use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 use arrow_data::{ArrayData, ArrayDataBuilder};
 
 impl Arrow2Arrow for UnionArray {
     fn to_data(&self) -> ArrayData {
         let data_type = arrow_schema::DataType::from(self.data_type.clone());
-        let mut builder = ArrayDataBuilder::new(data_type)
-            .len(self.len())
-            .add_buffer(self.types.clone().into())
-            .child_data(self.fields.iter().map(|x| to_data(x.as_ref())).collect());
+        let len = self.len();
 
-        if let Some(o) = self.offsets.clone() {
-            builder = builder.add_buffer(o.into());
-        }
+        let builder = match self.offsets.clone() {
+            Some(offsets) => ArrayDataBuilder::new(data_type)
+                .len(len)
+                .buffers(vec![self.types.clone().into(), offsets.into()])
+                .child_data(self.fields.iter().map(|x| to_data(x.as_ref())).collect()),
+            None => ArrayDataBuilder::new(data_type)
+                .len(len)
+                .buffers(vec![self.types.clone().into()])
+                .child_data(
+                    self.fields
+                        .iter()
+                        .map(|x| to_data(x.as_ref()).slice(self.offset, len))
+                        .collect(),
+                ),
+        };
 
         // Safety: Array is valid
         unsafe { builder.build_unchecked() }
@@ -23,8 +33,16 @@ impl Arrow2Arrow for UnionArray {
 
         let fields = data.child_data().iter().map(|d| from_data(d)).collect();
         let buffers = data.buffers();
-        let types = buffers[0].clone().into();
-        let offsets = (buffers.len() == 2).then(|| buffers[1].clone().into());
+        let mut types: Buffer<i8> = buffers[0].clone().into();
+        types.slice(data.offset(), data.len());
+        let offsets = match buffers.len() == 2 {
+            true => {
+                let mut offsets: Buffer<i32> = buffers[1].clone().into();
+                offsets.slice(data.offset(), data.len());
+                Some(offsets)
+            }
+            false => None,
+        };
 
         // Map from type id to array index
         let map = match &data_type {

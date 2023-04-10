@@ -1,8 +1,9 @@
 use arrow2::array::*;
 use arrow2::bitmap::Bitmap;
-use arrow2::datatypes::{DataType, Field, IntegerType, TimeUnit};
+use arrow2::datatypes::{DataType, Field, IntegerType, TimeUnit, UnionMode};
 use arrow2::offset::Offsets;
 use arrow_array::ArrayRef;
+use arrow_data::ArrayDataBuilder;
 use proptest::num::i32;
 
 fn test_arrow2_roundtrip(array: &dyn arrow_array::Array) {
@@ -12,7 +13,28 @@ fn test_arrow2_roundtrip(array: &dyn arrow_array::Array) {
     let back = ArrayRef::from(arrow2);
     assert_eq!(back.len(), array.len());
 
-    assert_eq!(array, back.as_ref());
+    match array.data_type() {
+        d @ arrow_schema::DataType::Union(_, _, arrow_schema::UnionMode::Sparse) => {
+            // Temporary workaround https://github.com/apache/arrow-rs/issues/4044
+            let data = array.to_data();
+            let type_ids = data.buffers()[0].slice_with_length(data.offset(), data.len());
+            let child_data = data
+                .child_data()
+                .iter()
+                .map(|x| x.slice(data.offset(), data.len()))
+                .collect();
+
+            let data = ArrayDataBuilder::new(d.clone())
+                .len(data.len())
+                .buffers(vec![type_ids])
+                .child_data(child_data)
+                .build()
+                .unwrap();
+
+            assert_eq!(back.to_data(), data);
+        }
+        _ => assert_eq!(array, back.as_ref()),
+    }
     assert_eq!(array.data_type(), back.data_type());
 }
 
@@ -261,4 +283,68 @@ fn test_map() {
 
     let map = MapArray::new_empty(data_type);
     test_conversion(&map);
+}
+
+#[test]
+fn test_dense_union() {
+    let fields = vec![
+        Field::new("a1", DataType::Int32, true),
+        Field::new("a2", DataType::Int64, true),
+    ];
+
+    let a1 = PrimitiveArray::from_iter([Some(2), None]);
+    let a2 = PrimitiveArray::from_iter([Some(2_i64), None, Some(3)]);
+
+    let types = vec![1, 0, 0, 1, 1];
+    let offsets = vec![0, 0, 1, 1, 2];
+    let union = UnionArray::new(
+        DataType::Union(fields.clone(), Some(vec![0, 1]), UnionMode::Dense),
+        types.into(),
+        vec![Box::new(a1.clone()), Box::new(a2.clone())],
+        Some(offsets.into()),
+    );
+
+    test_conversion(&union);
+
+    let types = vec![1, 4, 4, 1, 1];
+    let offsets = vec![0, 0, 1, 1, 2];
+    let union = UnionArray::new(
+        DataType::Union(fields, Some(vec![4, 1]), UnionMode::Dense),
+        types.into(),
+        vec![Box::new(a1), Box::new(a2)],
+        Some(offsets.into()),
+    );
+
+    test_conversion(&union);
+}
+
+#[test]
+fn test_sparse_union() {
+    let fields = vec![
+        Field::new("a1", DataType::Int32, true),
+        Field::new("a2", DataType::Int64, true),
+    ];
+
+    let a1 = PrimitiveArray::from_iter([None, Some(2), None, None, None]);
+    let a2 = PrimitiveArray::from_iter([Some(2_i64), None, None, None, Some(3)]);
+
+    let types = vec![1, 0, 0, 1, 1];
+    let union = UnionArray::new(
+        DataType::Union(fields.clone(), Some(vec![0, 1]), UnionMode::Sparse),
+        types.into(),
+        vec![Box::new(a1.clone()), Box::new(a2.clone())],
+        None,
+    );
+
+    test_conversion(&union);
+
+    let types = vec![1, 4, 4, 1, 1];
+    let union = UnionArray::new(
+        DataType::Union(fields, Some(vec![4, 1]), UnionMode::Sparse),
+        types.into(),
+        vec![Box::new(a1), Box::new(a2)],
+        None,
+    );
+
+    test_conversion(&union);
 }
