@@ -1,12 +1,37 @@
 use crate::array::{Arrow2Arrow, FixedSizeBinaryArray};
-use arrow_data::ArrayData;
+use crate::bitmap::Bitmap;
+use crate::buffer::Buffer;
+use crate::datatypes::DataType;
+use arrow_data::{ArrayData, ArrayDataBuilder};
 
 impl Arrow2Arrow for FixedSizeBinaryArray {
     fn to_data(&self) -> ArrayData {
-        todo!()
+        let data_type = self.data_type.clone().into();
+        let builder = ArrayDataBuilder::new(data_type)
+            .buffers(vec![self.values.clone().into()])
+            .nulls(self.validity.as_ref().map(|b| b.clone().into()));
+
+        // Safety: Array is valid
+        unsafe { builder.build_unchecked() }
     }
 
     fn from_data(data: &ArrayData) -> Self {
-        todo!()
+        let data_type: DataType = data.data_type().clone().into();
+        let size = match data_type {
+            DataType::FixedSizeBinary(size) => size,
+            _ => unreachable!("must be FixedSizeBinary"),
+        };
+
+        let mut values: Buffer<u8> = data.buffers()[0].clone().into();
+        if data.offset() != 0 {
+            values.slice(data.offset(), data.len());
+        }
+
+        Self {
+            size,
+            data_type,
+            values,
+            validity: data.nulls().map(|n| Bitmap::from_null_buffer(n.clone())),
+        }
     }
 }

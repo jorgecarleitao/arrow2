@@ -1,16 +1,11 @@
 use crate::array::{Arrow2Arrow, BinaryArray};
 use crate::bitmap::Bitmap;
-use crate::datatypes::DataType;
 use crate::offset::{Offset, OffsetsBuffer};
 use arrow_data::{ArrayData, ArrayDataBuilder};
 
 impl<O: Offset> Arrow2Arrow for BinaryArray<O> {
     fn to_data(&self) -> ArrayData {
-        let data_type = match O::IS_LARGE {
-            true => arrow_schema::DataType::LargeBinary,
-            false => arrow_schema::DataType::Binary,
-        };
-
+        let data_type = self.data_type.clone().into();
         let builder = ArrayDataBuilder::new(data_type)
             .len(self.offsets().len_proxy())
             .buffers(vec![
@@ -24,13 +19,9 @@ impl<O: Offset> Arrow2Arrow for BinaryArray<O> {
     }
 
     fn from_data(data: &ArrayData) -> Self {
-        let data_type: DataType = data.data_type().clone().into();
-        match O::IS_LARGE {
-            true => assert_eq!(data_type, DataType::LargeBinary),
-            false => assert_eq!(data_type, DataType::Binary),
-        };
+        let data_type = data.data_type().clone().into();
 
-        if data.len() == 0 {
+        if data.is_empty() {
             // Handle empty offsets
             return Self::new_empty(data_type);
         }
