@@ -25,9 +25,7 @@ impl Arrow2Arrow for MapArray {
         }
 
         let mut offsets = unsafe { OffsetsBuffer::new_unchecked(data.buffers()[0].clone().into()) };
-        if data.offset() != 0 {
-            offsets.slice(data.offset(), data.len() + 1);
-        }
+        offsets.slice(data.offset(), data.len() + 1);
 
         Self {
             data_type: data.data_type().clone().into(),

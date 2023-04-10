@@ -23,9 +23,7 @@ impl Arrow2Arrow for FixedSizeListArray {
         };
 
         let mut values = from_data(&data.child_data()[0]);
-        if data.offset() != 0 {
-            values.slice(data.offset() * size, data.len() * size)
-        }
+        values.slice(data.offset() * size, data.len() * size);
 
         Self {
             size,

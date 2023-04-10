@@ -30,9 +30,7 @@ impl<O: Offset> Arrow2Arrow for BinaryArray<O> {
 
         // Safety: ArrayData is valid
         let mut offsets = unsafe { OffsetsBuffer::new_unchecked(buffers[0].clone().into()) };
-        if data.offset() != 0 {
-            offsets.slice(data.offset(), data.len() + 1);
-        }
+        offsets.slice(data.offset(), data.len() + 1);
 
         Self {
             data_type,

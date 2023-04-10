@@ -24,9 +24,7 @@ impl Arrow2Arrow for FixedSizeBinaryArray {
         };
 
         let mut values: Buffer<u8> = data.buffers()[0].clone().into();
-        if data.offset() != 0 {
-            values.slice(data.offset() * size, data.len() * size);
-        }
+        values.slice(data.offset() * size, data.len() * size);
 
         Self {
             size,

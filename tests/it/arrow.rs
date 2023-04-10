@@ -38,6 +38,12 @@ fn test_conversion(array: &dyn Array) {
 
         let sliced = to_arrow.slice(1, array.len() - 1);
         test_arrow2_roundtrip(sliced.as_ref());
+
+        let sliced = array.sliced(0, array.len() - 1);
+        test_arrow_roundtrip(sliced.as_ref());
+
+        let sliced = to_arrow.slice(0, array.len() - 1);
+        test_arrow2_roundtrip(sliced.as_ref());
     }
 
     if array.len() > 2 {

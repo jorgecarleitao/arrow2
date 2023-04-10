@@ -21,9 +21,7 @@ impl<T: NativeType> Arrow2Arrow for PrimitiveArray<T> {
         let data_type = data.data_type().clone().into();
 
         let mut values: Buffer<T> = data.buffers()[0].clone().into();
-        if data.offset() != 0 {
-            values.slice(data.offset(), data.len())
-        }
+        values.slice(data.offset(), data.len());
 
         Self {
             data_type,
