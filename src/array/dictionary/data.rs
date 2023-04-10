@@ -1,10 +1,9 @@
-use crate::array::{from_data, to_data, DictionaryArray, DictionaryKey, PrimitiveArray};
+use crate::array::{from_data, to_data, DictionaryArray, DictionaryKey, PrimitiveArray, Arrow2Arrow};
 use crate::datatypes::{DataType, PhysicalType};
 use arrow_data::{ArrayData, ArrayDataBuilder};
 
-impl<K: DictionaryKey> DictionaryArray<K> {
-    /// Convert this array into [`ArrayData`]
-    pub fn to_data(&self) -> ArrayData {
+impl<K: DictionaryKey> Arrow2Arrow for DictionaryArray<K> {
+    fn to_data(&self) -> ArrayData {
         let keys = self.keys.to_data();
         let builder = keys
             .into_builder()
@@ -15,8 +14,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
         unsafe { builder.build_unchecked() }
     }
 
-    /// Create this array from [`ArrayData`]
-    pub fn from_data(data: &ArrayData) -> Self {
+    fn from_data(data: &ArrayData) -> Self {
         let key = match data.data_type() {
             arrow_schema::DataType::Dictionary(k, _) => k.as_ref(),
             d => panic!("unsupported dictionary type {d}"),

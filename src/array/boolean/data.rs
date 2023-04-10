@@ -1,12 +1,11 @@
-use crate::array::BooleanArray;
+use crate::array::{Arrow2Arrow, BooleanArray};
 use crate::bitmap::Bitmap;
 use crate::datatypes::DataType;
 use arrow_buffer::{BooleanBuffer, NullBuffer};
 use arrow_data::{ArrayData, ArrayDataBuilder};
 
-impl BooleanArray {
-    /// Convert this array into [`ArrayData`]
-    pub fn to_data(&self) -> ArrayData {
+impl Arrow2Arrow for BooleanArray {
+    fn to_data(&self) -> ArrayData {
         let buffer = NullBuffer::from(self.values.clone());
 
         let builder = ArrayDataBuilder::new(arrow_schema::DataType::Boolean)
@@ -19,8 +18,7 @@ impl BooleanArray {
         unsafe { builder.build_unchecked() }
     }
 
-    /// Create this array from [`ArrayData`]
-    pub fn from_data(data: &ArrayData) -> Self {
+    fn from_data(data: &ArrayData) -> Self {
         assert_eq!(data.data_type(), &arrow_schema::DataType::Boolean);
 
         let buffers = data.buffers();

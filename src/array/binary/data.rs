@@ -1,12 +1,11 @@
-use crate::array::BinaryArray;
+use crate::array::{Arrow2Arrow, BinaryArray};
 use crate::bitmap::Bitmap;
 use crate::datatypes::DataType;
 use crate::offset::{Offset, OffsetsBuffer};
 use arrow_data::{ArrayData, ArrayDataBuilder};
 
-impl<O: Offset> BinaryArray<O> {
-    /// Convert this array into [`ArrayData`]
-    pub fn to_data(&self) -> ArrayData {
+impl<O: Offset> Arrow2Arrow for BinaryArray<O> {
+    fn to_data(&self) -> ArrayData {
         let data_type = match O::IS_LARGE {
             true => arrow_schema::DataType::LargeBinary,
             false => arrow_schema::DataType::Binary,
@@ -24,8 +23,7 @@ impl<O: Offset> BinaryArray<O> {
         unsafe { builder.build_unchecked() }
     }
 
-    /// Create this array from [`ArrayData`]
-    pub fn from_data(data: &ArrayData) -> Self {
+    fn from_data(data: &ArrayData) -> Self {
         let data_type: DataType = data.data_type().clone().into();
         match O::IS_LARGE {
             true => assert_eq!(data_type, DataType::LargeBinary),
