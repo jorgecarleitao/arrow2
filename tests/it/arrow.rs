@@ -125,13 +125,32 @@ fn test_list() {
 
     let validity = [true, true, false, false, true].into_iter().collect();
     let offsets = Offsets::try_from_iter(vec![0, 2, 2, 2, 0]).unwrap();
+    let data_type = DataType::List(Box::new(Field::new("element", DataType::Utf8, true)));
     let list = ListArray::<i32>::new(
-        DataType::List(Box::new(Field::new("element", DataType::Utf8, true))),
+        data_type.clone(),
+        offsets.into(),
+        Box::new(values.clone()),
+        Some(validity),
+    );
+
+    test_conversion(&list);
+
+    let list = ListArray::<i32>::new_empty(data_type);
+    test_conversion(&list);
+
+    let validity = [true, true, false, false, true].into_iter().collect();
+    let offsets = Offsets::try_from_iter(vec![0, 2, 2, 2, 0]).unwrap();
+    let data_type = DataType::LargeList(Box::new(Field::new("element", DataType::Utf8, true)));
+    let list = ListArray::<i64>::new(
+        data_type.clone(),
         offsets.into(),
         Box::new(values),
         Some(validity),
     );
 
+    test_conversion(&list);
+
+    let list = ListArray::<i64>::new_empty(data_type);
     test_conversion(&list);
 }
 
@@ -200,4 +219,40 @@ fn test_fixed_size_list() {
     );
 
     test_conversion(&array);
+}
+
+#[test]
+fn test_map() {
+    let keys = Utf8Array::<i32>::from_iter(
+        ["key1", "key2", "key3", "key1", "key2"]
+            .into_iter()
+            .map(Some),
+    );
+    let values = PrimitiveArray::<i32>::from_iter([Some(1), None, Some(3), Some(1), None]);
+    let fields = StructArray::new(
+        DataType::Struct(vec![
+            Field::new("keys", DataType::Utf8, false), // Cannot be nullable
+            Field::new("values", DataType::Int32, true),
+        ]),
+        vec![Box::new(keys), Box::new(values)],
+        None, // Cannot be nullable
+    );
+
+    let validity = [true, true, false, false].into_iter().collect();
+    let offsets = Offsets::try_from_iter(vec![0, 2, 0, 2]).unwrap();
+    let data_type = DataType::Map(
+        Box::new(Field::new("entries", fields.data_type().clone(), true)),
+        false,
+    );
+    let map = MapArray::new(
+        data_type.clone(),
+        offsets.into(),
+        Box::new(fields),
+        Some(validity),
+    );
+
+    test_conversion(&map);
+
+    let map = MapArray::new_empty(data_type);
+    test_conversion(&map);
 }
