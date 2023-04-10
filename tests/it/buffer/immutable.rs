@@ -112,7 +112,7 @@ fn from_arrow_misaligned() {
 #[cfg(feature = "arrow")]
 fn from_arrow_sliced() {
     let buffer = arrow_buffer::Buffer::from_vec(vec![1_i32, 2_i32, 3_i32]);
-    let b = Buffer::<i32>::from(buffer.clone());
+    let b = Buffer::<i32>::from(buffer);
     let sliced = b.sliced(1, 2);
     let back = arrow_buffer::Buffer::from(sliced);
     assert_eq!(back.typed_data::<i32>(), &[2, 3]);
