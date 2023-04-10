@@ -8,6 +8,7 @@ impl Arrow2Arrow for FixedSizeBinaryArray {
     fn to_data(&self) -> ArrayData {
         let data_type = self.data_type.clone().into();
         let builder = ArrayDataBuilder::new(data_type)
+            .len(self.len())
             .buffers(vec![self.values.clone().into()])
             .nulls(self.validity.as_ref().map(|b| b.clone().into()));
 
@@ -24,7 +25,7 @@ impl Arrow2Arrow for FixedSizeBinaryArray {
 
         let mut values: Buffer<u8> = data.buffers()[0].clone().into();
         if data.offset() != 0 {
-            values.slice(data.offset(), data.len());
+            values.slice(data.offset() * size, data.len() * size);
         }
 
         Self {

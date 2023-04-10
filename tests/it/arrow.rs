@@ -7,7 +7,10 @@ use proptest::num::i32;
 
 fn test_arrow2_roundtrip(array: &dyn arrow_array::Array) {
     let arrow2 = Box::<dyn Array>::from(array);
+    assert_eq!(arrow2.len(), array.len());
+
     let back = ArrayRef::from(arrow2);
+    assert_eq!(back.len(), array.len());
 
     assert_eq!(array, back.as_ref());
     assert_eq!(array.data_type(), back.data_type());
@@ -15,7 +18,10 @@ fn test_arrow2_roundtrip(array: &dyn arrow_array::Array) {
 
 fn test_arrow_roundtrip(array: &dyn Array) {
     let arrow = ArrayRef::from(array);
+    assert_eq!(arrow.len(), array.len());
+
     let back = Box::<dyn Array>::from(arrow);
+    assert_eq!(back.len(), array.len());
 
     assert_eq!(array, back.as_ref());
     assert_eq!(array.data_type(), back.data_type());
@@ -165,4 +171,33 @@ fn test_dictionary() {
     .unwrap();
 
     test_conversion(&dictionary);
+}
+
+#[test]
+fn test_fixed_size_binary() {
+    let data = (0_u8..16).collect::<Vec<_>>();
+    let nulls = [false, false, true, true, true, false, false, true]
+        .into_iter()
+        .collect();
+
+    let array = FixedSizeBinaryArray::new(DataType::FixedSizeBinary(2), data.into(), Some(nulls));
+    test_conversion(&array);
+}
+
+#[test]
+fn test_fixed_size_list() {
+    let values = vec![1_i64, 2, 3, 4, 5, 6, 7, 8];
+    let nulls = [false, false, true, true, true, true, false, false]
+        .into_iter()
+        .collect();
+    let values = PrimitiveArray::new(DataType::Int64, values.into(), Some(nulls));
+
+    let nulls = [true, true, false, true].into_iter().collect();
+    let array = FixedSizeListArray::new(
+        DataType::FixedSizeList(Box::new(Field::new("element", DataType::Int64, true)), 2),
+        Box::new(values),
+        Some(nulls),
+    );
+
+    test_conversion(&array);
 }
