@@ -2,7 +2,7 @@
 
 use std::{pin::Pin, task::Poll};
 
-use futures::{future::BoxFuture, AsyncWrite, FutureExt, Sink};
+use futures::{future::BoxFuture, AsyncWrite, AsyncWriteExt, FutureExt, Sink};
 
 use super::super::IpcField;
 pub use super::common::WriteOptions;
@@ -170,6 +170,7 @@ where
                     this.task = Some(
                         async move {
                             write_continuation(&mut writer, 0).await?;
+                            writer.close().await?;
                             Ok(None)
                         }
                         .boxed(),
