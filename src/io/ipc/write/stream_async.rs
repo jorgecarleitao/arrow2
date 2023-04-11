@@ -170,6 +170,7 @@ where
                     this.task = Some(
                         async move {
                             write_continuation(&mut writer, 0).await?;
+                            writer.flush().await?;
                             writer.close().await?;
                             Ok(None)
                         }
