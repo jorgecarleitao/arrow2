@@ -78,6 +78,13 @@ fn test_conversion(array: &dyn Array) {
 }
 
 #[test]
+fn test_null() {
+    let data_type = DataType::Null;
+    let array = NullArray::new(data_type, 7);
+    test_conversion(&array);
+}
+
+#[test]
 fn test_primitive() {
     let data_type = DataType::Int32;
     let array = PrimitiveArray::new(data_type, vec![1, 2, 3].into(), None);
