@@ -394,10 +394,10 @@ pub fn new_null_array(data_type: DataType, length: usize) -> Box<dyn Array> {
 /// [`ArrayData`]: arrow_data::ArrayData
 #[cfg(feature = "arrow")]
 pub trait Arrow2Arrow: Array {
-    /// Convert this array into [`ArrayData`]
+    /// Convert this [`Array`] into [`ArrayData`]
     fn to_data(&self) -> arrow_data::ArrayData;
 
-    /// Create this array from [`ArrayData`]
+    /// Create this [`Array`] from [`ArrayData`]
     fn from_data(data: &arrow_data::ArrayData) -> Self;
 }
 
