@@ -90,6 +90,15 @@ fn test_primitive() {
 }
 
 #[test]
+fn test_boolean() {
+    let data_type = DataType::Boolean;
+    let values = [false, false, true, true, true].into_iter().collect();
+    let validity = [false, true, true, false, false].into_iter().collect();
+    let array = BooleanArray::new(data_type, values, Some(validity));
+    test_conversion(&array);
+}
+
+#[test]
 fn test_utf8() {
     let array = Utf8Array::<i32>::from_iter([Some("asd\0"), None, Some("45\0848"), Some("")]);
     test_conversion(&array);
