@@ -681,6 +681,17 @@
 <a href="#681" id="681">681</a>
 <a href="#682" id="682">682</a>
 <a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::borrow::Borrow;
 <span class="kw">use </span>std::collections::hash_map::DefaultHasher;
 <span class="kw">use </span>std::hash::Hasher;
@@ -696,6 +707,7 @@
     datatypes::{DataType, Field, IntervalUnit, Schema},
     error::Error,
     offset::{Offset, Offsets},
+    temporal_conversions,
     types::{f16, NativeType},
 };
 
@@ -1210,12 +1222,22 @@
         DataType::Interval(IntervalUnit::DayTime) =&gt; {
             <span class="macro">unimplemented!</span>(<span class="string">&quot;There is no natural representation of DayTime in JSON.&quot;</span>)
         }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(<span class="kw">_</span>)
-        | DataType::Timestamp(<span class="kw">_</span>, <span class="kw">_</span>)
-        | DataType::Duration(<span class="kw">_</span>) =&gt; {
+        DataType::Int64 | DataType::Date64 | DataType::Time64(<span class="kw">_</span>) | DataType::Duration(<span class="kw">_</span>) =&gt; {
             fill_array_from::&lt;<span class="kw">_</span>, <span class="kw">_</span>, PrimitiveArray&lt;i64&gt;&gt;(deserialize_int_into, data_type, rows)
+        }
+        DataType::Timestamp(tu, tz) =&gt; {
+            <span class="kw">let </span>iter = rows.iter().map(|row| <span class="kw">match </span>row.borrow() {
+                Value::Number(v) =&gt; <span class="prelude-val">Some</span>(deserialize_int_single(<span class="kw-2">*</span>v)),
+                Value::String(v) =&gt; <span class="kw">match </span>(tu, tz) {
+                    (<span class="kw">_</span>, <span class="prelude-val">None</span>) =&gt; temporal_conversions::utf8_to_naive_timestamp_scalar(v, <span class="string">&quot;%+&quot;</span>, <span class="kw-2">&amp;</span>tu),
+                    (<span class="kw">_</span>, <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>tz)) =&gt; {
+                        <span class="kw">let </span>tz = temporal_conversions::parse_offset(tz).unwrap();
+                        temporal_conversions::utf8_to_timestamp_scalar(v, <span class="string">&quot;%+&quot;</span>, <span class="kw-2">&amp;</span>tz, <span class="kw-2">&amp;</span>tu)
+                    }
+                },
+                <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+            });
+            Box::new(Int64Array::from_iter(iter).to(data_type))
         }
         DataType::UInt8 =&gt; {
             fill_array_from::&lt;<span class="kw">_</span>, <span class="kw">_</span>, PrimitiveArray&lt;u8&gt;&gt;(deserialize_int_into, data_type, rows)
