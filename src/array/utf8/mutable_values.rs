@@ -158,7 +158,7 @@ impl<O: Offset> MutableUtf8ValuesArray<O> {
 
     /// Returns the capacity in number of items
     pub fn capacity(&self) -> usize {
-        self.offsets.capacity() - 1
+        self.offsets.capacity()
     }
 
     /// Returns the length of this array
