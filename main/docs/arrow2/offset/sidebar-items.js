@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Offsets","OffsetsBuffer"],"trait":["Offset"]};
+window.SIDEBAR_ITEMS = {"struct":["Offsets","OffsetsBuffer"]};
