@@ -536,6 +536,8 @@
 <a href="#536" id="536">536</a>
 <a href="#537" id="537">537</a>
 <a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::{
         utils::{BitmapIter, ZipValidity},
@@ -555,6 +557,8 @@
     Array, GenericBinaryArray,
 };
 
+<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+</span><span class="kw">mod </span>data;
 <span class="kw">mod </span>ffi;
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>fmt;
 <span class="kw">mod </span>from;

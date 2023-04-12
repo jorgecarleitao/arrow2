@@ -290,6 +290,9 @@
 <a href="#290" id="290">290</a>
 <a href="#291" id="291">291</a>
 <a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, ops::Deref, sync::Arc, usize};
 
 <span class="kw">use </span>either::Either;
@@ -579,7 +582,10 @@
 <span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
 </span><span class="kw">impl</span>&lt;T: <span class="kw">crate</span>::types::NativeType&gt; From&lt;Buffer&lt;T&gt;&gt; <span class="kw">for </span>arrow_buffer::Buffer {
     <span class="kw">fn </span>from(value: Buffer&lt;T&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">crate</span>::buffer::to_buffer(value.data)
+        <span class="kw">crate</span>::buffer::to_buffer(value.data).slice_with_length(
+            value.offset * std::mem::size_of::&lt;T&gt;(),
+            value.length * std::mem::size_of::&lt;T&gt;(),
+        )
     }
 }
 </code></pre></div></section></main></body></html>

@@ -219,6 +219,8 @@
 <a href="#219" id="219">219</a>
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
@@ -227,6 +229,8 @@
 
 <span class="kw">use super</span>::{new_empty_array, new_null_array, Array};
 
+<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+</span><span class="kw">mod </span>data;
 <span class="kw">mod </span>ffi;
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>fmt;
 <span class="kw">mod </span>iterator;

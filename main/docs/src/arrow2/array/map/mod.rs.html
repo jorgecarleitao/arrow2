@@ -202,6 +202,8 @@
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
@@ -211,6 +213,8 @@
 
 <span class="kw">use super</span>::{new_empty_array, specification::try_check_offsets_bounds, Array};
 
+<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+</span><span class="kw">mod </span>data;
 <span class="kw">mod </span>ffi;
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>fmt;
 <span class="kw">mod </span>iterator;
