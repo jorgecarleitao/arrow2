@@ -244,7 +244,9 @@ pub fn any(array: &BooleanArray) -> bool {
 
 /// Check if all of the values in the array are `true`
 pub fn all(array: &BooleanArray) -> bool {
-    if array.is_empty() || array.null_count() > 0 {
+    if array.is_empty() {
+        true
+    } else if array.null_count() > 0 {
         false
     } else {
         let vals = array.values();
