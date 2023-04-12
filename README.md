@@ -15,6 +15,28 @@ for a general introduction on how to use this crate, and
 [API docs](https://jorgecarleitao.github.io/arrow2/main/docs/arrow2)
 for a detailed documentation of each of its APIs.
 
+## 2023-04-12: Deprecation Notice
+
+Development has been merged with [Apache Arrow Rust (arrow-rs)], see [#arrow1176] and [#1429].
+
+The arrow2 codebase will continue to be maintained, at least in the short-term, to allow time for codebases to be
+migrated, however, codebases are encouraged to migrate to using [arrow-rs] sooner rather than later.
+
+Recent versions of arrow2 provide [interoperability] with [arrow-rs] to facilitate incremental migration. Feel free to 
+raise any issues that arise from such migration, functionality, performance or otherwise, in the [Apache Arrow Issue Tracker].
+
+[interoperability]: https://github.com/jorgecarleitao/arrow2/pull/1446
+
+[Apache Arrow Rust (arrow-rs)]: https://github.com/apache/arrow-rs
+
+[arrow-rs]: https://github.com/apache/arrow-rs
+
+[#arrow1176]: https://github.com/apache/arrow-rs/issues/1176
+
+[Apache Arrow Issue Tracker]: https://github.com/apache/arrow-rs/issues
+
+[#1429]: https://github.com/jorgecarleitao/arrow2/issues/1429
+
 ## Features
 
 * Most feature-complete implementation of Apache Arrow after the reference implementation (C++)
