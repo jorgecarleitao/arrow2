@@ -116,3 +116,23 @@ impl<A: ffi::ArrowArrayRef> FromFfi<A> for NullArray {
         Self::try_new(data_type, array.array().len())
     }
 }
+
+#[cfg(feature = "arrow")]
+mod arrow {
+    use super::*;
+    use arrow_data::{ArrayData, ArrayDataBuilder};
+    impl NullArray {
+        /// Convert this array into [`arrow_data::ArrayData`]
+        pub fn to_data(&self) -> ArrayData {
+            let builder = ArrayDataBuilder::new(arrow_schema::DataType::Null).len(self.len());
+
+            // Safety: safe by construction
+            unsafe { builder.build_unchecked() }
+        }
+
+        /// Create this array from [`ArrayData`]
+        pub fn from_data(data: &ArrayData) -> Self {
+            Self::new(DataType::Null, data.len())
+        }
+    }
+}

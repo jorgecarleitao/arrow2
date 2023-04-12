@@ -287,6 +287,9 @@ impl<T: crate::types::NativeType> From<arrow_buffer::Buffer> for Buffer<T> {
 #[cfg(feature = "arrow")]
 impl<T: crate::types::NativeType> From<Buffer<T>> for arrow_buffer::Buffer {
     fn from(value: Buffer<T>) -> Self {
-        crate::buffer::to_buffer(value.data)
+        crate::buffer::to_buffer(value.data).slice_with_length(
+            value.offset * std::mem::size_of::<T>(),
+            value.length * std::mem::size_of::<T>(),
+        )
     }
 }
