@@ -26,6 +26,91 @@ fn naive() {
 }
 
 #[test]
+fn naive_scalar() {
+    let fmt = "%Y-%m-%dT%H:%M:%S:z";
+
+    let str = "2023-04-07T12:23:34.000000000Z";
+    let nanos_expected = 1680870214000000000;
+
+    // seconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Second);
+    assert_eq!(r, Some(nanos_expected / 1_000_000_000));
+    // milliseconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Millisecond);
+    assert_eq!(r, Some(nanos_expected / 1_000_000));
+    // microseconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Microsecond);
+    assert_eq!(r, Some(nanos_expected / 1_000));
+    // nanoseconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Nanosecond);
+    assert_eq!(r, Some(nanos_expected));
+}
+
+#[test]
+fn naive_scalar_no_tz() {
+    let fmt = "%Y-%m-%dT%H:%M:%S";
+
+    let str = "2023-04-07T12:23:34.000000000";
+    let nanos_expected = 1680870214000000000;
+
+    // seconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Second);
+    assert_eq!(r, Some(nanos_expected / 1_000_000_000));
+    // milliseconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Millisecond);
+    assert_eq!(r, Some(nanos_expected / 1_000_000));
+    // microseconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Microsecond);
+    assert_eq!(r, Some(nanos_expected / 1_000));
+    // nanoseconds
+    let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Nanosecond);
+    assert_eq!(r, Some(nanos_expected));
+}
+
+#[test]
+fn scalar_tz_aware() {
+    let fmt = "%Y-%m-%dT%H:%M:%S%.f%:z";
+
+    let tz = temporal_conversions::parse_offset("-02:00").unwrap();
+    let str = "2023-04-07T10:23:34.000000000-02:00";
+    let nanos_expected = 1680870214000000000;
+
+    // seconds
+    let r = temporal_conversions::utf8_to_timestamp_scalar(str, fmt, &tz, &TimeUnit::Second);
+    assert_eq!(r, Some(nanos_expected / 1_000_000_000));
+    // milliseconds
+    let r = temporal_conversions::utf8_to_timestamp_scalar(str, fmt, &tz, &TimeUnit::Millisecond);
+    assert_eq!(r, Some(nanos_expected / 1_000_000));
+    // microseconds
+    let r = temporal_conversions::utf8_to_timestamp_scalar(str, fmt, &tz, &TimeUnit::Microsecond);
+    assert_eq!(r, Some(nanos_expected / 1_000));
+    // nanoseconds
+    let r = temporal_conversions::utf8_to_timestamp_scalar(str, fmt, &tz, &TimeUnit::Nanosecond);
+    assert_eq!(r, Some(nanos_expected));
+}
+#[test]
+fn scalar_tz_aware_no_timezone() {
+    let fmt = "%Y-%m-%dT%H:%M:%S%.f";
+
+    let tz = temporal_conversions::parse_offset("-02:00").unwrap();
+    let str = "2023-04-07T10:23:34.000000000-02:00";
+    let _nanos_expected = 1680870214000000000 as i64;
+
+    // seconds
+    let r = temporal_conversions::utf8_to_timestamp_scalar(str, fmt, &tz, &TimeUnit::Second);
+    assert_eq!(r, None);
+    // milliseconds
+    let r = temporal_conversions::utf8_to_timestamp_scalar(str, fmt, &tz, &TimeUnit::Millisecond);
+    assert_eq!(r, None);
+    // microseconds
+    let r = temporal_conversions::utf8_to_timestamp_scalar(str, fmt, &tz, &TimeUnit::Microsecond);
+    assert_eq!(r, None);
+    // nanoseconds
+    let r = temporal_conversions::utf8_to_timestamp_scalar(str, fmt, &tz, &TimeUnit::Nanosecond);
+    assert_eq!(r, None);
+}
+
+#[test]
 fn naive_no_tz() {
     let expected = "Timestamp(Nanosecond, None)[1996-12-19 16:39:57, 1996-12-19 13:39:57, None]";
     let fmt = "%Y-%m-%dT%H:%M:%S"; // no tz info

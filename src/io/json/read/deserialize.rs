@@ -13,6 +13,7 @@ use crate::{
     datatypes::{DataType, Field, IntervalUnit, Schema},
     error::Error,
     offset::{Offset, Offsets},
+    temporal_conversions,
     types::{f16, NativeType},
 };
 
@@ -527,12 +528,22 @@ pub(crate) fn _deserialize<'a, A: Borrow<Value<'a>>>(
         DataType::Interval(IntervalUnit::DayTime) => {
             unimplemented!("There is no natural representation of DayTime in JSON.")
         }
-        DataType::Int64
-        | DataType::Date64
-        | DataType::Time64(_)
-        | DataType::Timestamp(_, _)
-        | DataType::Duration(_) => {
+        DataType::Int64 | DataType::Date64 | DataType::Time64(_) | DataType::Duration(_) => {
             fill_array_from::<_, _, PrimitiveArray<i64>>(deserialize_int_into, data_type, rows)
+        }
+        DataType::Timestamp(tu, tz) => {
+            let iter = rows.iter().map(|row| match row.borrow() {
+                Value::Number(v) => Some(deserialize_int_single(*v)),
+                Value::String(v) => match (tu, tz) {
+                    (_, None) => temporal_conversions::utf8_to_naive_timestamp_scalar(v, "%+", &tu),
+                    (_, Some(ref tz)) => {
+                        let tz = temporal_conversions::parse_offset(tz).unwrap();
+                        temporal_conversions::utf8_to_timestamp_scalar(v, "%+", &tz, &tu)
+                    }
+                },
+                _ => None,
+            });
+            Box::new(Int64Array::from_iter(iter).to(data_type))
         }
         DataType::UInt8 => {
             fill_array_from::<_, _, PrimitiveArray<u8>>(deserialize_int_into, data_type, rows)

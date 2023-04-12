@@ -163,3 +163,137 @@ fn read_json_fixed_size_records() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn deserialize_timestamp_string_ns() -> Result<()> {
+    let data = br#"["2023-04-07T12:23:34.000000001Z"]"#;
+
+    let json = json_deserializer::parse(data)?;
+
+    let data_type = DataType::List(Box::new(Field::new(
+        "item",
+        DataType::Timestamp(TimeUnit::Nanosecond, None),
+        false,
+    )));
+
+    let result = read::deserialize(&json, data_type)?;
+
+    let expected = Int64Array::from([Some(1680870214000000001)])
+        .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
+
+    assert_eq!(expected, result.as_ref());
+
+    Ok(())
+}
+
+#[test]
+fn deserialize_timestamp_string_us() -> Result<()> {
+    let data = br#"["2023-04-07T12:23:34.000000001Z"]"#;
+
+    let json = json_deserializer::parse(data)?;
+
+    let data_type = DataType::List(Box::new(Field::new(
+        "item",
+        DataType::Timestamp(TimeUnit::Microsecond, None),
+        false,
+    )));
+
+    let result = read::deserialize(&json, data_type)?;
+
+    let expected = Int64Array::from([Some(1680870214000000)])
+        .to(DataType::Timestamp(TimeUnit::Microsecond, None));
+
+    assert_eq!(expected, result.as_ref());
+
+    Ok(())
+}
+
+#[test]
+fn deserialize_timestamp_string_ms() -> Result<()> {
+    let data = br#"["2023-04-07T12:23:34.000000001Z"]"#;
+
+    let json = json_deserializer::parse(data)?;
+
+    let data_type = DataType::List(Box::new(Field::new(
+        "item",
+        DataType::Timestamp(TimeUnit::Millisecond, None),
+        false,
+    )));
+
+    let result = read::deserialize(&json, data_type)?;
+
+    let expected = Int64Array::from([Some(1680870214000)])
+        .to(DataType::Timestamp(TimeUnit::Millisecond, None));
+
+    assert_eq!(expected, result.as_ref());
+
+    Ok(())
+}
+
+#[test]
+fn deserialize_timestamp_string_s() -> Result<()> {
+    let data = br#"["2023-04-07T12:23:34.000000001Z"]"#;
+
+    let json = json_deserializer::parse(data)?;
+
+    let data_type = DataType::List(Box::new(Field::new(
+        "item",
+        DataType::Timestamp(TimeUnit::Second, None),
+        false,
+    )));
+
+    let result = read::deserialize(&json, data_type)?;
+
+    let expected =
+        Int64Array::from([Some(1680870214)]).to(DataType::Timestamp(TimeUnit::Second, None));
+
+    assert_eq!(expected, result.as_ref());
+
+    Ok(())
+}
+
+#[test]
+fn deserialize_timestamp_string_tz_s() -> Result<()> {
+    let data = br#"["2023-04-07T12:23:34.000000001+00:00"]"#;
+
+    let json = json_deserializer::parse(data)?;
+
+    let data_type = DataType::List(Box::new(Field::new(
+        "item",
+        DataType::Timestamp(TimeUnit::Second, Some("+01:00".to_string())),
+        false,
+    )));
+
+    let result = read::deserialize(&json, data_type)?;
+
+    let expected = Int64Array::from([Some(1680870214)]).to(DataType::Timestamp(
+        TimeUnit::Second,
+        Some("+01:00".to_string()),
+    ));
+
+    assert_eq!(expected, result.as_ref());
+
+    Ok(())
+}
+
+#[test]
+fn deserialize_timestamp_int_ns() -> Result<()> {
+    let data = br#"[1680870214000000001]"#;
+
+    let json = json_deserializer::parse(data)?;
+
+    let data_type = DataType::List(Box::new(Field::new(
+        "item",
+        DataType::Timestamp(TimeUnit::Nanosecond, None),
+        false,
+    )));
+
+    let result = read::deserialize(&json, data_type)?;
+
+    let expected = Int64Array::from([Some(1680870214000000001)])
+        .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
+
+    assert_eq!(expected, result.as_ref());
+
+    Ok(())
+}
