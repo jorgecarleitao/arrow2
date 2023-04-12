@@ -15,15 +15,14 @@ for a general introduction on how to use this crate, and
 [API docs](https://jorgecarleitao.github.io/arrow2/main/docs/arrow2)
 for a detailed documentation of each of its APIs.
 
-## 2023-04-12: Deprecation Notice
+# 2023-04-12: Deprecation Notice
 
-Development has been merged with [Apache Arrow Rust (arrow-rs)], see [#arrow1176] and [#1429].
+This crate is feature complete and is no longer actively maintained. See [Apache Arrow Rust (arrow-rs)] for an actively maintained implementation of Apache Arrow. More details can be found on [#arrow1176] and [#1429]. If you are interested in helping to maintain this crate, please raise an issue or discussion in this repo. 
 
-The arrow2 codebase will continue to be maintained, at least in the short-term, to allow time for codebases to be
-migrated, however, codebases are encouraged to migrate to using [arrow-rs] sooner rather than later.
+This crate will likely have minimal maintenance and several more minor releases to help users transition
+but there is no specific plan for the future. 
 
-Recent versions of arrow2 provide [interoperability] with [arrow-rs] to facilitate incremental migration. Feel free to 
-raise any issues that arise from such migration, functionality, performance or otherwise, in the [Apache Arrow Issue Tracker].
+Recent versions of arrow2 provide [interoperability] with [arrow-rs] to facilitate incremental migration. Please feel free to raise issues or contribute pull requests that arise from migration, in the [Apache Arrow Issue Tracker].
 
 [interoperability]: https://github.com/jorgecarleitao/arrow2/pull/1446
 
