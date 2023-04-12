@@ -442,9 +442,11 @@ impl<O: Offset> OffsetsBuffer<O> {
 
     /// Slices this [`OffsetsBuffer`].
     /// # Panics
-    /// Panics iff `offset + length` is larger than `len`.
+    /// Panics if `offset + length` is larger than `len`
+    /// or `length == 0`.
     #[inline]
     pub fn slice(&mut self, offset: usize, length: usize) {
+        assert!(length > 0);
         self.0.slice(offset, length);
     }
 
