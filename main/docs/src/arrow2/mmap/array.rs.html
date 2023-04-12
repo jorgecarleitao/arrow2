@@ -562,6 +562,13 @@
 <a href="#562" id="562">562</a>
 <a href="#563" id="563">563</a>
 <a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::sync::Arc;
 
@@ -684,7 +691,14 @@
     node: <span class="kw-2">&amp;</span>Node,
     block_offset: usize,
     buffers: <span class="kw-2">&amp;mut </span>VecDeque&lt;IpcBuffer&gt;,
+    data_type: <span class="kw-2">&amp;</span>DataType,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;ArrowArray, Error&gt; {
+    <span class="kw">let </span>bytes_per_row = <span class="kw">if let </span>DataType::FixedSizeBinary(bytes_per_row) = data_type {
+        bytes_per_row
+    } <span class="kw">else </span>{
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::from(OutOfSpecKind::InvalidDataType));
+    };
+
     <span class="kw">let </span>num_rows: usize = node
         .length()
         .try_into()
@@ -698,8 +712,8 @@
     <span class="kw">let </span>data_ref = data.as_ref().as_ref();
 
     <span class="kw">let </span>validity = get_validity(data_ref, block_offset, buffers, null_count)<span class="question-mark">?</span>.map(|x| x.as_ptr());
-
-    <span class="kw">let </span>values = get_buffer::&lt;u8&gt;(data_ref, block_offset, buffers, num_rows + <span class="number">1</span>)<span class="question-mark">?</span>.as_ptr();
+    <span class="kw">let </span>values =
+        get_buffer::&lt;u8&gt;(data_ref, block_offset, buffers, num_rows * bytes_per_row)<span class="question-mark">?</span>.as_ptr();
 
     <span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{
         create_array(
@@ -1045,7 +1059,7 @@
             mmap_primitive::&lt;<span class="macro-nonterminal">$T</span>, <span class="kw">_</span>&gt;(data, <span class="kw-2">&amp;</span>node, block_offset, buffers)
         }),
         Utf8 | Binary =&gt; mmap_binary::&lt;i32, <span class="kw">_</span>&gt;(data, <span class="kw-2">&amp;</span>node, block_offset, buffers),
-        FixedSizeBinary =&gt; mmap_fixed_size_binary(data, <span class="kw-2">&amp;</span>node, block_offset, buffers),
+        FixedSizeBinary =&gt; mmap_fixed_size_binary(data, <span class="kw-2">&amp;</span>node, block_offset, buffers, data_type),
         LargeBinary | LargeUtf8 =&gt; mmap_binary::&lt;i64, <span class="kw">_</span>&gt;(data, <span class="kw-2">&amp;</span>node, block_offset, buffers),
         List =&gt; mmap_list::&lt;i32, <span class="kw">_</span>&gt;(
             data,
