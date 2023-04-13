@@ -98,7 +98,11 @@ fn struct_() -> Result<()> {
     let array = PrimitiveArray::<i32>::from([None, None, None, Some(3), Some(4)]).boxed();
 
     let array = StructArray::new(
-        DataType::Struct(vec![Field::new("f1", array.data_type().clone(), true)]),
+        DataType::Struct(Arc::new(vec![Field::new(
+            "f1",
+            array.data_type().clone(),
+            true,
+        )])),
         vec![array],
         Some([true, true, false, true, false].into()),
     )

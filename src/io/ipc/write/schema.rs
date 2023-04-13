@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow_format::ipc::planus::Builder;
 
 use crate::datatypes::{
@@ -71,14 +73,14 @@ fn write_metadata(metadata: &Metadata, kv_vec: &mut Vec<arrow_format::ipc::KeyVa
 
 fn write_extension(
     name: &str,
-    metadata: &Option<String>,
+    metadata: &Option<Arc<String>>,
     kv_vec: &mut Vec<arrow_format::ipc::KeyValue>,
 ) {
     // metadata
     if let Some(metadata) = metadata {
         let entry = arrow_format::ipc::KeyValue {
             key: Some("ARROW:extension:metadata".to_string()),
-            value: Some(metadata.clone()),
+            value: Some(metadata.to_string()),
         };
         kv_vec.push(entry);
     }
@@ -247,7 +249,7 @@ fn serialize_type(data_type: &DataType) -> arrow_format::ipc::Type {
                 UnionMode::Dense => ipc::UnionMode::Dense,
                 UnionMode::Sparse => ipc::UnionMode::Sparse,
             },
-            type_ids: type_ids.clone(),
+            type_ids: type_ids.as_ref().map(|type_ids| type_ids.to_vec()),
         })),
         Map(_, keys_sorted) => ipc::Type::Map(Box::new(ipc::Map {
             keys_sorted: *keys_sorted,

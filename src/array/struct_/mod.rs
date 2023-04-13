@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
@@ -28,7 +30,7 @@ pub use mutable::*;
 ///     Field::new("c", DataType::Int32, false),
 /// ];
 ///
-/// let array = StructArray::new(DataType::Struct(fields), vec![boolean, int], None);
+/// let array = StructArray::new(DataType::Struct(std::sync::Arc::new(fields)), vec![boolean, int], None);
 /// ```
 #[derive(Clone)]
 pub struct StructArray {
@@ -69,7 +71,7 @@ impl StructArray {
             .try_for_each(|(index, (data_type, child))| {
                 if data_type != child {
                     Err(Error::oos(format!(
-                        "The children DataTypes of a StructArray must equal the children data types. 
+                        "The children DataTypes of a StructArray must equal the children data types.
                          However, the field {index} has data type {data_type:?} but the value has data type {child:?}"
                     )))
                 } else {
@@ -153,7 +155,7 @@ impl StructArray {
 impl StructArray {
     /// Deconstructs the [`StructArray`] into its individual components.
     #[must_use]
-    pub fn into_data(self) -> (Vec<Field>, Vec<Box<dyn Array>>, Option<Bitmap>) {
+    pub fn into_data(self) -> (Arc<Vec<Field>>, Vec<Box<dyn Array>>, Option<Bitmap>) {
         let Self {
             data_type,
             values,

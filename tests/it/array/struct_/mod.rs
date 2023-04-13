@@ -16,7 +16,7 @@ fn debug() {
     ];
 
     let array = StructArray::new(
-        DataType::Struct(fields),
+        DataType::Struct(std::sync::Arc::new(fields)),
         vec![boolean.clone(), int.clone()],
         Some(Bitmap::from([true, true, false, true])),
     );

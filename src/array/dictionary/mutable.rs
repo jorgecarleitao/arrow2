@@ -55,7 +55,7 @@ impl<K: DictionaryKey, M: MutableArray> From<M> for MutableDictionaryArray<K, M>
         Self {
             data_type: DataType::Dictionary(
                 K::KEY_TYPE,
-                Box::new(values.data_type().clone()),
+                std::sync::Arc::new(values.data_type().clone()),
                 false,
             ),
             keys: MutablePrimitiveArray::<K>::new(),
@@ -72,7 +72,7 @@ impl<K: DictionaryKey, M: MutableArray + Default> MutableDictionaryArray<K, M> {
         Self {
             data_type: DataType::Dictionary(
                 K::KEY_TYPE,
-                Box::new(values.data_type().clone()),
+                std::sync::Arc::new(values.data_type().clone()),
                 false,
             ),
             keys: MutablePrimitiveArray::<K>::new(),

@@ -258,6 +258,8 @@ pub fn array_to_columns<A: AsRef<dyn Array> + Send + Sync>(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use parquet2::schema::types::{GroupLogicalType, PrimitiveConvertedType, PrimitiveLogicalType};
     use parquet2::schema::Repetition;
 
@@ -280,7 +282,7 @@ mod tests {
         ];
 
         let array = StructArray::new(
-            DataType::Struct(fields),
+            DataType::Struct(std::sync::Arc::new(fields)),
             vec![boolean.clone(), int.clone()],
             Some(Bitmap::from([true, true, false, true])),
         );
@@ -344,7 +346,7 @@ mod tests {
         ];
 
         let array = StructArray::new(
-            DataType::Struct(fields),
+            DataType::Struct(std::sync::Arc::new(fields)),
             vec![boolean.clone(), int.clone()],
             Some(Bitmap::from([true, true, false, true])),
         );
@@ -355,7 +357,7 @@ mod tests {
         ];
 
         let array = StructArray::new(
-            DataType::Struct(fields),
+            DataType::Struct(std::sync::Arc::new(fields)),
             vec![Box::new(array.clone()), Box::new(array)],
             None,
         );
@@ -447,13 +449,17 @@ mod tests {
         ];
 
         let array = StructArray::new(
-            DataType::Struct(fields),
+            DataType::Struct(std::sync::Arc::new(fields)),
             vec![boolean.clone(), int.clone()],
             Some(Bitmap::from([true, true, false, true])),
         );
 
         let array = ListArray::new(
-            DataType::List(std::sync::Arc::new(Field::new("l", array.data_type().clone(), true))),
+            DataType::List(std::sync::Arc::new(Field::new(
+                "l",
+                array.data_type().clone(),
+                true,
+            ))),
             vec![0i32, 2, 4].try_into().unwrap(),
             Box::new(array),
             None,
@@ -540,10 +546,10 @@ mod tests {
 
     #[test]
     fn test_map() {
-        let kv_type = DataType::Struct(vec![
+        let kv_type = DataType::Struct(Arc::new(vec![
             Field::new("k", DataType::Utf8, false),
             Field::new("v", DataType::Int32, false),
-        ]);
+        ]));
         let kv_field = Field::new("kv", kv_type.clone(), false);
         let map_type = DataType::Map(std::sync::Arc::new(kv_field), false);
 

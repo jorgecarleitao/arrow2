@@ -13,7 +13,7 @@ fn test_simple_iter() {
     ];
 
     let array = StructArray::new(
-        DataType::Struct(fields),
+        DataType::Struct(std::sync::Arc::new(fields)),
         vec![boolean.clone(), int.clone()],
         None,
     );

@@ -1,4 +1,4 @@
-use std::hint::unreachable_unchecked;
+use std::{hint::unreachable_unchecked, sync::Arc};
 
 use crate::{
     bitmap::{
@@ -290,7 +290,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     }
 
     pub(crate) fn default_data_type(values_datatype: DataType) -> DataType {
-        DataType::Dictionary(K::KEY_TYPE, Box::new(values_datatype), false)
+        DataType::Dictionary(K::KEY_TYPE, Arc::new(values_datatype), false)
     }
 
     /// Slices this [`DictionaryArray`].

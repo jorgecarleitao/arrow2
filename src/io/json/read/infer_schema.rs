@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::sync::Arc;
 
 use indexmap::map::IndexMap as HashMap;
 use indexmap::set::IndexSet as HashSet;
@@ -82,7 +83,7 @@ fn infer_object(inner: &HashMap<String, Value>) -> Result<DataType> {
             Ok(Field::new(key, dt, true))
         })
         .collect::<Result<Vec<_>>>()?;
-    Ok(DataType::Struct(fields))
+    Ok(DataType::Struct(std::sync::Arc::new(fields)))
 }
 
 fn infer_array(values: &[Value]) -> Result<DataType> {
@@ -141,7 +142,7 @@ pub(crate) fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType
         // all are structs => union of all fields (that may have equal names)
         let fields = datatypes.iter().fold(vec![], |mut acc, dt| {
             if let Struct(new_fields) = dt.borrow() {
-                acc.extend(new_fields);
+                acc.extend(new_fields.as_slice());
             };
             acc
         });
@@ -170,7 +171,7 @@ pub(crate) fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType
                 Field::new(name, coerce_data_type(&dts), true)
             })
             .collect();
-        return Struct(fields);
+        return Struct(Arc::new(fields));
     } else if datatypes.len() > 2 {
         return Utf8;
     }
@@ -214,11 +215,17 @@ mod test {
             List(std::sync::Arc::new(Field::new(ITEM_NAME, Float64, true))),
         );
         assert_eq!(
-            coerce_data_type(&[Float64, List(std::sync::Arc::new(Field::new(ITEM_NAME, Int64, true)))]),
+            coerce_data_type(&[
+                Float64,
+                List(std::sync::Arc::new(Field::new(ITEM_NAME, Int64, true)))
+            ]),
             List(std::sync::Arc::new(Field::new(ITEM_NAME, Float64, true))),
         );
         assert_eq!(
-            coerce_data_type(&[Int64, List(std::sync::Arc::new(Field::new(ITEM_NAME, Int64, true)))]),
+            coerce_data_type(&[
+                Int64,
+                List(std::sync::Arc::new(Field::new(ITEM_NAME, Int64, true)))
+            ]),
             List(std::sync::Arc::new(Field::new(ITEM_NAME, Int64, true))),
         );
         // boolean and number are incompatible, return utf8

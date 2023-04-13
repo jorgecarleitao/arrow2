@@ -34,7 +34,11 @@ fn new_struct(
         .zip(arrays.iter())
         .map(|(n, a)| Field::new(n, a.data_type().clone(), true))
         .collect();
-    StructArray::new(DataType::Struct(fields), arrays, validity)
+    StructArray::new(
+        DataType::Struct(std::sync::Arc::new(fields)),
+        arrays,
+        validity,
+    )
 }
 
 pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayStats> {
@@ -108,7 +112,11 @@ pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
                 None,
             );
             StructArray::new(
-                DataType::Struct(vec![Field::new("f1", a.data_type().clone(), true)]),
+                DataType::Struct(Arc::new(vec![Field::new(
+                    "f1",
+                    a.data_type().clone(),
+                    true,
+                )])),
                 vec![a.boxed()],
                 None,
             )
@@ -586,7 +594,10 @@ pub fn pyarrow_nullable(column: &str) -> Box<dyn Array> {
             PrimitiveArray::<i64>::from(i64_values).to(DataType::Timestamp(TimeUnit::Second, None)),
         ),
         "timestamp_s_utc" => Box::new(PrimitiveArray::<i64>::from(i64_values).to(
-            DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("UTC".to_string()))),
+            DataType::Timestamp(
+                TimeUnit::Second,
+                Some(std::sync::Arc::new("UTC".to_string())),
+            ),
         )),
         _ => unreachable!(),
     }
@@ -1072,7 +1083,7 @@ pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
             .zip(arrays.iter())
             .map(|(n, a)| Field::new(n, a.data_type().clone(), true))
             .collect();
-        StructArray::new(DataType::Struct(fields), arrays, None)
+        StructArray::new(DataType::Struct(std::sync::Arc::new(fields)), arrays, None)
     };
 
     let names = vec!["f1".to_string()];
@@ -1178,18 +1189,28 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
         Field::new("f2", DataType::Boolean, true),
     ];
     match column {
-        "struct" => StructArray::new(DataType::Struct(fields), vec![string, boolean], None).boxed(),
+        "struct" => StructArray::new(
+            DataType::Struct(std::sync::Arc::new(fields)),
+            vec![string, boolean],
+            None,
+        )
+        .boxed(),
         "struct_nullable" => {
             let values = vec![string, boolean];
-            StructArray::new(DataType::Struct(fields), values, Some(mask.into())).boxed()
+            StructArray::new(
+                DataType::Struct(std::sync::Arc::new(fields)),
+                values,
+                Some(mask.into()),
+            )
+            .boxed()
         }
         "struct_struct" => {
             let struct_ = pyarrow_struct("struct");
             Box::new(StructArray::new(
-                DataType::Struct(vec![
-                    Field::new("f1", DataType::Struct(fields), true),
+                DataType::Struct(Arc::new(vec![
+                    Field::new("f1", DataType::Struct(std::sync::Arc::new(fields)), true),
                     Field::new("f2", DataType::Boolean, true),
-                ]),
+                ])),
                 vec![struct_, boolean],
                 None,
             ))
@@ -1197,10 +1218,10 @@ pub fn pyarrow_struct(column: &str) -> Box<dyn Array> {
         "struct_struct_nullable" => {
             let struct_ = pyarrow_struct("struct");
             Box::new(StructArray::new(
-                DataType::Struct(vec![
-                    Field::new("f1", DataType::Struct(fields), true),
+                DataType::Struct(Arc::new(vec![
+                    Field::new("f1", DataType::Struct(std::sync::Arc::new(fields)), true),
                     Field::new("f2", DataType::Boolean, true),
-                ]),
+                ])),
                 vec![struct_, boolean],
                 Some(mask.into()),
             ))
@@ -1381,10 +1402,10 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
         "map" => {
             let s1 = [Some("a1"), Some("a2")];
             let s2 = [Some("b1"), Some("b2")];
-            let dt = DataType::Struct(vec![
+            let dt = DataType::Struct(Arc::new(vec![
                 Field::new("key", DataType::Utf8, false),
                 Field::new("value", DataType::Utf8, true),
-            ]);
+            ]));
             MapArray::try_new(
                 DataType::Map(
                     std::sync::Arc::new(Field::new("entries", dt.clone(), false)),
@@ -1409,10 +1430,10 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
         "map_nullable" => {
             let s1 = [Some("a1"), Some("a2")];
             let s2 = [Some("b1"), None];
-            let dt = DataType::Struct(vec![
+            let dt = DataType::Struct(Arc::new(vec![
                 Field::new("key", DataType::Utf8, false),
                 Field::new("value", DataType::Utf8, true),
-            ]);
+            ]));
             MapArray::try_new(
                 DataType::Map(
                     std::sync::Arc::new(Field::new("entries", dt.clone(), false)),
@@ -1440,11 +1461,13 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
 
 pub fn pyarrow_map_statistics(column: &str) -> Statistics {
     let new_map = |arrays: Vec<Box<dyn Array>>, fields: Vec<Field>| {
-        let fields = fields
-            .into_iter()
-            .zip(arrays.iter())
-            .map(|(f, a)| Field::new(f.name, a.data_type().clone(), f.is_nullable))
-            .collect::<Vec<_>>();
+        let fields = Arc::new(
+            fields
+                .into_iter()
+                .zip(arrays.iter())
+                .map(|(f, a)| Field::new(f.name, a.data_type().clone(), f.is_nullable))
+                .collect::<Vec<_>>(),
+        );
         MapArray::new(
             DataType::Map(
                 Arc::new(Field::new(

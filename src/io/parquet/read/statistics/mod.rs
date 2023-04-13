@@ -204,12 +204,12 @@ fn make_mutable(data_type: &DataType, capacity: usize) -> Result<Box<dyn Mutable
 
 fn create_dt(data_type: &DataType) -> DataType {
     if let DataType::Struct(fields) = data_type.to_logical_type() {
-        DataType::Struct(
+        DataType::Struct(Arc::new(
             fields
                 .iter()
                 .map(|f| Field::new(&f.name, create_dt(&f.data_type), f.is_nullable))
                 .collect(),
-        )
+        ))
     } else if let DataType::Map(f, ordered) = data_type.to_logical_type() {
         DataType::Map(
             Arc::new(Field::new(&f.name, create_dt(&f.data_type), f.is_nullable)),

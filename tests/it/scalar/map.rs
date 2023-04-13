@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::{
     array::{BooleanArray, StructArray, Utf8Array},
     datatypes::{DataType, Field},
@@ -7,10 +9,10 @@ use arrow2::{
 #[allow(clippy::eq_op)]
 #[test]
 fn equal() {
-    let kv_dt = DataType::Struct(vec![
+    let kv_dt = DataType::Struct(Arc::new(vec![
         Field::new("key", DataType::Utf8, false),
         Field::new("value", DataType::Boolean, true),
-    ]);
+    ]));
     let kv_array1 = StructArray::try_new(
         kv_dt.clone(),
         vec![
@@ -30,7 +32,10 @@ fn equal() {
     )
     .unwrap();
 
-    let dt = DataType::Map(std::sync::Arc::new(Field::new("entries", kv_dt, true)), false);
+    let dt = DataType::Map(
+        std::sync::Arc::new(Field::new("entries", kv_dt, true)),
+        false,
+    );
     let a = MapScalar::new(dt.clone(), Some(Box::new(kv_array1)));
     let b = MapScalar::new(dt.clone(), None);
     assert_eq!(a, a);
@@ -43,10 +48,10 @@ fn equal() {
 
 #[test]
 fn basics() {
-    let kv_dt = DataType::Struct(vec![
+    let kv_dt = DataType::Struct(Arc::new(vec![
         Field::new("key", DataType::Utf8, false),
         Field::new("value", DataType::Boolean, true),
-    ]);
+    ]));
     let kv_array = StructArray::try_new(
         kv_dt.clone(),
         vec![
@@ -57,7 +62,10 @@ fn basics() {
     )
     .unwrap();
 
-    let dt = DataType::Map(std::sync::Arc::new(Field::new("entries", kv_dt, true)), false);
+    let dt = DataType::Map(
+        std::sync::Arc::new(Field::new("entries", kv_dt, true)),
+        false,
+    );
     let a = MapScalar::new(dt.clone(), Some(Box::new(kv_array.clone())));
 
     assert_eq!(kv_array, a.values().as_ref());

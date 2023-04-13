@@ -142,11 +142,11 @@ fn make_struct() -> StructArray {
 
     let nulls = [true, true, false].into_iter().collect();
     StructArray::new(
-        DataType::Struct(vec![
+        DataType::Struct(Arc::new(vec![
             Field::new("a1", a1.data_type().clone(), true),
             Field::new("a2", a2.data_type().clone(), true),
             Field::new("a3", a3.data_type().clone(), true),
-        ]),
+        ])),
         vec![Box::new(a1), Box::new(a2), Box::new(a3)],
         Some(nulls),
     )
@@ -235,7 +235,7 @@ fn test_dictionary() {
     let dictionary = DictionaryArray::try_new(
         DataType::Dictionary(
             IntegerType::Int16,
-            Box::new(values.data_type().clone()),
+            std::sync::Arc::new(values.data_type().clone()),
             false,
         ),
         keys,
@@ -287,10 +287,10 @@ fn test_map() {
     );
     let values = PrimitiveArray::<i32>::from_iter([Some(1), None, Some(3), Some(1), None]);
     let fields = StructArray::new(
-        DataType::Struct(vec![
+        DataType::Struct(Arc::new(vec![
             Field::new("keys", DataType::Utf8, false), // Cannot be nullable
             Field::new("values", DataType::Int32, true),
-        ]),
+        ])),
         vec![Box::new(keys), Box::new(values)],
         None, // Cannot be nullable
     );
@@ -316,10 +316,10 @@ fn test_map() {
 
 #[test]
 fn test_dense_union() {
-    let fields = vec![
+    let fields = Arc::new(vec![
         Field::new("a1", DataType::Int32, true),
         Field::new("a2", DataType::Int64, true),
-    ];
+    ]);
 
     let a1 = PrimitiveArray::from_iter([Some(2), None]);
     let a2 = PrimitiveArray::from_iter([Some(2_i64), None, Some(3)]);
@@ -327,7 +327,7 @@ fn test_dense_union() {
     let types = vec![1, 0, 0, 1, 1];
     let offsets = vec![0, 0, 1, 1, 2];
     let union = UnionArray::new(
-        DataType::Union(fields.clone(), Some(vec![0, 1]), UnionMode::Dense),
+        DataType::Union(fields.clone(), Some(Arc::new(vec![0, 1])), UnionMode::Dense),
         types.into(),
         vec![Box::new(a1.clone()), Box::new(a2.clone())],
         Some(offsets.into()),
@@ -338,7 +338,7 @@ fn test_dense_union() {
     let types = vec![1, 4, 4, 1, 1];
     let offsets = vec![0, 0, 1, 1, 2];
     let union = UnionArray::new(
-        DataType::Union(fields, Some(vec![4, 1]), UnionMode::Dense),
+        DataType::Union(fields, Some(Arc::new(vec![4, 1])), UnionMode::Dense),
         types.into(),
         vec![Box::new(a1), Box::new(a2)],
         Some(offsets.into()),
@@ -349,17 +349,21 @@ fn test_dense_union() {
 
 #[test]
 fn test_sparse_union() {
-    let fields = vec![
+    let fields = Arc::new(vec![
         Field::new("a1", DataType::Int32, true),
         Field::new("a2", DataType::Int64, true),
-    ];
+    ]);
 
     let a1 = PrimitiveArray::from_iter([None, Some(2), None, None, None]);
     let a2 = PrimitiveArray::from_iter([Some(2_i64), None, None, None, Some(3)]);
 
     let types = vec![1, 0, 0, 1, 1];
     let union = UnionArray::new(
-        DataType::Union(fields.clone(), Some(vec![0, 1]), UnionMode::Sparse),
+        DataType::Union(
+            fields.clone(),
+            Some(Arc::new(vec![0, 1])),
+            UnionMode::Sparse,
+        ),
         types.into(),
         vec![Box::new(a1.clone()), Box::new(a2.clone())],
         None,
@@ -369,7 +373,7 @@ fn test_sparse_union() {
 
     let types = vec![1, 4, 4, 1, 1];
     let union = UnionArray::new(
-        DataType::Union(fields, Some(vec![4, 1]), UnionMode::Sparse),
+        DataType::Union(fields, Some(Arc::new(vec![4, 1])), UnionMode::Sparse),
         types.into(),
         vec![Box::new(a1), Box::new(a2)],
         None,

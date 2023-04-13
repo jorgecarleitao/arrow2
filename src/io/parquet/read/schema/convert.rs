@@ -238,7 +238,7 @@ fn to_struct(fields: &[ParquetType]) -> Option<DataType> {
     if fields.is_empty() {
         None
     } else {
-        Some(DataType::Struct(fields))
+        Some(DataType::Struct(std::sync::Arc::new(fields)))
     }
 }
 
@@ -623,10 +623,10 @@ mod tests {
         //   };
         // }
         {
-            let arrow_struct = DataType::Struct(vec![
+            let arrow_struct = DataType::Struct(Arc::new(vec![
                 Field::new("str", DataType::Utf8, false),
                 Field::new("num", DataType::Int32, false),
-            ]);
+            ]));
             arrow_fields.push(Field::new(
                 "my_list",
                 DataType::List(std::sync::Arc::new(Field::new(
@@ -646,7 +646,8 @@ mod tests {
         // }
         // Special case: group is named array
         {
-            let arrow_struct = DataType::Struct(vec![Field::new("str", DataType::Utf8, false)]);
+            let arrow_struct =
+                DataType::Struct(Arc::new(vec![Field::new("str", DataType::Utf8, false)]));
             arrow_fields.push(Field::new(
                 "my_list",
                 DataType::List(std::sync::Arc::new(Field::new("array", arrow_struct, true))),
@@ -662,7 +663,8 @@ mod tests {
         // }
         // Special case: group named ends in _tuple
         {
-            let arrow_struct = DataType::Struct(vec![Field::new("str", DataType::Utf8, false)]);
+            let arrow_struct =
+                DataType::Struct(Arc::new(vec![Field::new("str", DataType::Utf8, false)]));
             arrow_fields.push(Field::new(
                 "my_list",
                 DataType::List(std::sync::Arc::new(Field::new(
@@ -784,10 +786,10 @@ mod tests {
     fn test_nested_schema() -> Result<()> {
         let mut arrow_fields = Vec::new();
         {
-            let group1_fields = vec![
+            let group1_fields = Arc::new(vec![
                 Field::new("leaf1", DataType::Boolean, false),
                 Field::new("leaf2", DataType::Int32, false),
-            ];
+            ]);
             let group1_struct = Field::new("group1", DataType::Struct(group1_fields), false);
             arrow_fields.push(group1_struct);
 
@@ -822,7 +824,7 @@ mod tests {
                 "innerGroup",
                 DataType::List(std::sync::Arc::new(Field::new(
                     "innerGroup",
-                    DataType::Struct(vec![Field::new("leaf3", DataType::Int32, true)]),
+                    DataType::Struct(Arc::new(vec![Field::new("leaf3", DataType::Int32, true)])),
                     true,
                 ))),
                 true,
@@ -832,10 +834,10 @@ mod tests {
                 "outerGroup",
                 DataType::List(std::sync::Arc::new(Field::new(
                     "outerGroup",
-                    DataType::Struct(vec![
+                    DataType::Struct(Arc::new(vec![
                         Field::new("leaf2", DataType::Int32, true),
                         inner_group_list,
-                    ]),
+                    ])),
                     true,
                 ))),
                 true,
@@ -1016,7 +1018,7 @@ mod tests {
             ),
             Field::new(
                 "struct",
-                DataType::Struct(vec![
+                DataType::Struct(Arc::new(vec![
                     Field::new("bools", DataType::Boolean, false),
                     Field::new("uint32", DataType::UInt32, false),
                     Field::new(
@@ -1028,7 +1030,7 @@ mod tests {
                         ))),
                         false,
                     ),
-                ]),
+                ])),
                 false,
             ),
             Field::new("dictionary_strings", DataType::Utf8, false),

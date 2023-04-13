@@ -1,12 +1,17 @@
 mod mutable;
 
+use std::sync::Arc;
+
 use arrow2::{array::*, datatypes::DataType};
 
 #[test]
 fn try_new_ok() {
     let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
-    let data_type =
-        DataType::Dictionary(i32::KEY_TYPE, Box::new(values.data_type().clone()), false);
+    let data_type = DataType::Dictionary(
+        i32::KEY_TYPE,
+        std::sync::Arc::new(values.data_type().clone()),
+        false,
+    );
     let array = DictionaryArray::try_new(
         data_type,
         PrimitiveArray::from_vec(vec![1, 0]),
@@ -27,8 +32,11 @@ fn try_new_ok() {
 #[test]
 fn try_new_incorrect_key() {
     let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
-    let data_type =
-        DataType::Dictionary(i16::KEY_TYPE, Box::new(values.data_type().clone()), false);
+    let data_type = DataType::Dictionary(
+        i16::KEY_TYPE,
+        std::sync::Arc::new(values.data_type().clone()),
+        false,
+    );
 
     let r = DictionaryArray::try_new(
         data_type,
@@ -47,8 +55,11 @@ fn try_new_nulls() {
     let value: &[&str] = &[];
     let values = Utf8Array::<i32>::from_slice(value);
 
-    let data_type =
-        DataType::Dictionary(u32::KEY_TYPE, Box::new(values.data_type().clone()), false);
+    let data_type = DataType::Dictionary(
+        u32::KEY_TYPE,
+        std::sync::Arc::new(values.data_type().clone()),
+        false,
+    );
     let r = DictionaryArray::try_new(data_type, keys, values.boxed()).is_ok();
 
     assert!(r);
@@ -72,7 +83,7 @@ fn try_new_incorrect_dt() {
 #[test]
 fn try_new_incorrect_values_dt() {
     let values = Utf8Array::<i32>::from_slice(["a", "aa"]);
-    let data_type = DataType::Dictionary(i32::KEY_TYPE, Box::new(DataType::LargeUtf8), false);
+    let data_type = DataType::Dictionary(i32::KEY_TYPE, Arc::new(DataType::LargeUtf8), false);
 
     let r = DictionaryArray::try_new(
         data_type,
@@ -106,7 +117,7 @@ fn try_new_out_of_bounds_neg() {
 
 #[test]
 fn new_null() {
-    let dt = DataType::Dictionary(i16::KEY_TYPE, Box::new(DataType::Int32), false);
+    let dt = DataType::Dictionary(i16::KEY_TYPE, Arc::new(DataType::Int32), false);
     let array = DictionaryArray::<i16>::new_null(dt, 2);
 
     assert_eq!(format!("{array:?}"), "DictionaryArray[None, None]");
@@ -114,7 +125,7 @@ fn new_null() {
 
 #[test]
 fn new_empty() {
-    let dt = DataType::Dictionary(i16::KEY_TYPE, Box::new(DataType::Int32), false);
+    let dt = DataType::Dictionary(i16::KEY_TYPE, Arc::new(DataType::Int32), false);
     let array = DictionaryArray::<i16>::new_empty(dt);
 
     assert_eq!(format!("{array:?}"), "DictionaryArray[]");

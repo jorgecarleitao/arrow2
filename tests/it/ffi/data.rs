@@ -291,7 +291,7 @@ fn list_list() -> Result<()> {
 
 #[test]
 fn struct_() -> Result<()> {
-    let data_type = DataType::Struct(vec![Field::new("a", DataType::Int32, true)]);
+    let data_type = DataType::Struct(Arc::new(vec![Field::new("a", DataType::Int32, true)]));
     let values = vec![Int32Array::from([Some(1), None, Some(3)]).boxed()];
     let validity = Bitmap::from([true, false, true]);
 
@@ -323,7 +323,7 @@ fn schema() -> Result<()> {
 
     let field = Field::new(
         "a",
-        DataType::Dictionary(u32::KEY_TYPE, Box::new(DataType::Utf8), false),
+        DataType::Dictionary(u32::KEY_TYPE, Arc::new(DataType::Utf8), false),
         true,
     );
     test_round_trip_schema(field)?;
@@ -341,8 +341,8 @@ fn extension() -> Result<()> {
         "a",
         DataType::Extension(
             "a".to_string(),
-            Box::new(DataType::Int32),
-            Some("bla".to_string()),
+            Arc::new(DataType::Int32),
+            Some("bla".to_string()).map(Arc::new),
         ),
         true,
     );
@@ -355,11 +355,11 @@ fn extension_children() -> Result<()> {
         "a",
         DataType::Extension(
             "b".to_string(),
-            Box::new(DataType::Struct(vec![Field::new(
+            Arc::new(DataType::Struct(Arc::new(vec![Field::new(
                 "c",
                 DataType::Int32,
                 true,
-            )])),
+            )]))),
             None,
         ),
         true,

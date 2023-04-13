@@ -133,7 +133,10 @@ fn deserialize_union(union_: UnionRef, field: FieldRef) -> Result<(DataType, Ipc
         fields: ipc_fields,
         dictionary_id: None,
     };
-    Ok((DataType::Union(fields, ids, mode), ipc_field))
+    Ok((
+        DataType::Union(Arc::new(fields), ids.map(Arc::new), mode),
+        ipc_field,
+    ))
 }
 
 fn deserialize_map(map: MapRef, field: FieldRef) -> Result<(DataType, IpcField)> {
@@ -172,7 +175,7 @@ fn deserialize_struct(field: FieldRef) -> Result<(DataType, IpcField)> {
         fields: ipc_fields,
         dictionary_id: None,
     };
-    Ok((DataType::Struct(fields), ipc_field))
+    Ok((DataType::Struct(std::sync::Arc::new(fields)), ipc_field))
 }
 
 fn deserialize_list(field: FieldRef) -> Result<(DataType, IpcField)> {
@@ -252,7 +255,7 @@ fn get_data_type(
             let (inner, mut ipc_field) = get_data_type(field, extension, false)?;
             ipc_field.dictionary_id = Some(dictionary.id()?);
             return Ok((
-                DataType::Dictionary(index_type, Box::new(inner), dictionary.is_ordered()?),
+                DataType::Dictionary(index_type, Arc::new(inner), dictionary.is_ordered()?),
                 ipc_field,
             ));
         }
@@ -262,7 +265,7 @@ fn get_data_type(
         let (name, metadata) = extension;
         let (data_type, fields) = get_data_type(field, None, false)?;
         return Ok((
-            DataType::Extension(name, Box::new(data_type), metadata),
+            DataType::Extension(name, Arc::new(data_type), metadata.map(Arc::new)),
             fields,
         ));
     }

@@ -25,7 +25,7 @@ fn sparse_debug() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Sparse);
     let types = vec![0, 0, 1].into();
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
@@ -45,7 +45,7 @@ fn dense_debug() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Dense);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Dense);
     let types = vec![0, 0, 1].into();
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
@@ -66,7 +66,7 @@ fn slice() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Sparse);
     let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
@@ -94,7 +94,7 @@ fn iter_sparse() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Sparse);
     let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
@@ -127,7 +127,7 @@ fn iter_dense() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Dense);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Dense);
     let types = Buffer::from(vec![0, 0, 1]);
     let offsets = Buffer::<i32>::from(vec![0, 1, 0]);
     let fields = vec![
@@ -161,7 +161,7 @@ fn iter_sparse_slice() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Sparse);
     let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
         Int32Array::from(&[Some(1), Some(3), Some(2)]).boxed(),
@@ -187,7 +187,7 @@ fn iter_dense_slice() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Dense);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Dense);
     let types = Buffer::from(vec![0, 0, 1]);
     let offsets = Buffer::<i32>::from(vec![0, 1, 0]);
     let fields = vec![
@@ -214,7 +214,7 @@ fn scalar() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Dense);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Dense);
     let types = Buffer::from(vec![0, 0, 1]);
     let offsets = Buffer::<i32>::from(vec![0, 1, 0]);
     let fields = vec![
@@ -271,7 +271,7 @@ fn dense_without_offsets_is_error() {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Dense);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Dense);
     let types = vec![0, 0, 1].into();
     let fields = vec![
         Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
@@ -287,7 +287,7 @@ fn fields_must_match() {
         Field::new("a", DataType::Int64, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Sparse);
     let types = vec![0, 0, 1].into();
     let fields = vec![
         Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
@@ -303,7 +303,7 @@ fn sparse_with_offsets_is_error() {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Sparse);
     let fields = vec![
         Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
         Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
@@ -321,7 +321,7 @@ fn offsets_must_be_in_bounds() {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Sparse);
     let fields = vec![
         Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
         Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
@@ -340,7 +340,7 @@ fn sparse_with_wrong_offsets1_is_error() {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Sparse);
     let fields = vec![
         Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
         Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),
@@ -359,7 +359,7 @@ fn types_must_be_in_bounds() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Sparse);
     let fields = vec![
         Int32Array::from([Some(1), Some(3), Some(2)]).boxed(),
         Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]).boxed(),

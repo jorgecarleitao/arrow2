@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::{
     array::{
         growable::{Growable, GrowableList},
@@ -23,7 +25,7 @@ fn extension() {
     let array = create_list_array(data);
 
     let data_type =
-        DataType::Extension("ext".to_owned(), Box::new(array.data_type().clone()), None);
+        DataType::Extension("ext".to_owned(), Arc::new(array.data_type().clone()), None);
     let array_ext = ListArray::new(
         data_type,
         array.offsets().clone(),

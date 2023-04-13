@@ -89,7 +89,7 @@ where
     } else {
         let data_type = DataType::Dictionary(
             K2::KEY_TYPE,
-            Box::new(values.data_type().clone()),
+            std::sync::Arc::new(values.data_type().clone()),
             is_ordered,
         );
         // Safety: this is safe because given a type `T` that fits in a `usize`, casting it to type `P` either overflows or also fits in a `usize`
@@ -116,7 +116,7 @@ where
     } else {
         let data_type = DataType::Dictionary(
             K2::KEY_TYPE,
-            Box::new(values.data_type().clone()),
+            std::sync::Arc::new(values.data_type().clone()),
             is_ordered,
         );
         // some of the values may not fit in `usize` and thus this needs to be checked

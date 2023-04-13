@@ -1,4 +1,5 @@
 use std::io::Cursor;
+use std::sync::Arc;
 
 use arrow2::array::*;
 use arrow2::datatypes::{DataType, Field};
@@ -89,13 +90,13 @@ fn case_nested_struct() -> (String, Box<dyn Array>) {
     {"a": {"a": 2.0, "b": 2}}
     "#;
 
-    let inner = DataType::Struct(vec![
+    let inner = DataType::Struct(Arc::new(vec![
         Field::new("a", DataType::Float64, true),
         Field::new("b", DataType::Int64, true),
         Field::new("c", DataType::Boolean, true),
-    ]);
+    ]));
 
-    let data_type = DataType::Struct(vec![Field::new("a", inner.clone(), true)]);
+    let data_type = DataType::Struct(Arc::new(vec![Field::new("a", inner.clone(), true)]));
 
     let values = vec![
         Float64Array::from([Some(2.0), None, Some(2.0), Some(2.0)]).boxed(),
@@ -168,20 +169,28 @@ fn infer_schema_mixed_list() -> Result<()> {
     {"a":3, "b":4, "c": true, "d":[1, false, "array", 2.4]}
     "#;
 
-    let expected = DataType::Struct(vec![
+    let expected = DataType::Struct(Arc::new(vec![
         Field::new("a", DataType::Int64, true),
         Field::new(
             "b",
-            DataType::List(std::sync::Arc::new(Field::new("item", DataType::Float64, true))),
+            DataType::List(std::sync::Arc::new(Field::new(
+                "item",
+                DataType::Float64,
+                true,
+            ))),
             true,
         ),
         Field::new(
             "c",
-            DataType::List(std::sync::Arc::new(Field::new("item", DataType::Boolean, true))),
+            DataType::List(std::sync::Arc::new(Field::new(
+                "item",
+                DataType::Boolean,
+                true,
+            ))),
             true,
         ),
         Field::new("d", DataType::Utf8, true),
-    ]);
+    ]));
 
     let result = infer(ndjson)?;
 
@@ -240,10 +249,10 @@ fn line_break_in_values() -> Result<()> {
 fn invalid_read_record() -> Result<()> {
     let fields = vec![Field::new(
         "a",
-        DataType::Struct(vec![Field::new("a", DataType::Utf8, true)]),
+        DataType::Struct(Arc::new(vec![Field::new("a", DataType::Utf8, true)])),
         true,
     )];
-    let data_type = DataType::Struct(fields);
+    let data_type = DataType::Struct(std::sync::Arc::new(fields));
     let arrays = read_and_deserialize("city,lat,lng", &data_type, 1000);
 
     assert_eq!(
@@ -262,7 +271,7 @@ fn skip_empty_lines() -> Result<()> {
 
     {\"a\": 3}";
 
-    let data_type = DataType::Struct(vec![Field::new("a", DataType::Int64, true)]);
+    let data_type = DataType::Struct(Arc::new(vec![Field::new("a", DataType::Int64, true)]));
     let arrays = read_and_deserialize(ndjson, &data_type, 1000)?;
 
     assert_eq!(1, arrays.len());

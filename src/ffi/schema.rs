@@ -87,7 +87,7 @@ impl ArrowSchema {
             if let Some(extension_metadata) = extension_metadata {
                 metadata.insert(
                     "ARROW:extension:metadata".to_string(),
-                    extension_metadata.clone(),
+                    extension_metadata.to_string(),
                 );
             }
 
@@ -193,14 +193,18 @@ pub(crate) unsafe fn to_field(schema: &ArrowSchema) -> Result<Field> {
         let indices = to_integer_type(schema.format())?;
         let values = to_field(dictionary)?;
         let is_ordered = schema.flags & 1 == 1;
-        DataType::Dictionary(indices, Box::new(values.data_type().clone()), is_ordered)
+        DataType::Dictionary(
+            indices,
+            std::sync::Arc::new(values.data_type().clone()),
+            is_ordered,
+        )
     } else {
         to_data_type(schema)?
     };
     let (metadata, extension) = unsafe { metadata_from_bytes(schema.metadata) };
 
     let data_type = if let Some((name, extension_metadata)) = extension {
-        DataType::Extension(name, Box::new(data_type), extension_metadata)
+        DataType::Extension(name, Arc::new(data_type), extension_metadata.map(Arc::new))
     } else {
         data_type
     };
@@ -276,7 +280,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
             let children = (0..schema.n_children as usize)
                 .map(|x| to_field(schema.child(x)))
                 .collect::<Result<Vec<_>>>()?;
-            DataType::Struct(children)
+            DataType::Struct(Arc::new(children))
         }
         other => {
             match other.splitn(2, ':').collect::<Vec<_>>()[..] {
@@ -378,7 +382,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                     let fields = (0..schema.n_children as usize)
                         .map(|x| to_field(schema.child(x)))
                         .collect::<Result<Vec<_>>>()?;
-                    DataType::Union(fields, Some(type_ids), mode)
+                    DataType::Union(Arc::new(fields), Some(Arc::new(type_ids)), mode)
                 }
                 _ => {
                     return Err(Error::OutOfSpec(format!(
@@ -576,40 +580,40 @@ mod tests {
             DataType::List(Arc::new(Field::new("example", DataType::Boolean, false))),
             DataType::FixedSizeList(Arc::new(Field::new("example", DataType::Boolean, false)), 2),
             DataType::LargeList(Arc::new(Field::new("example", DataType::Boolean, false))),
-            DataType::Struct(vec![
+            DataType::Struct(Arc::new(vec![
                 Field::new("a", DataType::Int64, true),
                 Field::new(
                     "b",
                     DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
                     true,
                 ),
-            ]),
+            ])),
             DataType::Map(
                 std::sync::Arc::new(Field::new("a", DataType::Int64, true)),
                 true,
             ),
             DataType::Union(
-                vec![
+                Arc::new(vec![
                     Field::new("a", DataType::Int64, true),
                     Field::new(
                         "b",
                         DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
                         true,
                     ),
-                ],
-                Some(vec![1, 2]),
+                ]),
+                Some(Arc::new(vec![1, 2])),
                 UnionMode::Dense,
             ),
             DataType::Union(
-                vec![
+                Arc::new(vec![
                     Field::new("a", DataType::Int64, true),
                     Field::new(
                         "b",
                         DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
                         true,
                     ),
-                ],
-                Some(vec![0, 1]),
+                ]),
+                Some(Arc::new(vec![0, 1])),
                 UnionMode::Sparse,
             ),
         ];

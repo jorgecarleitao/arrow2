@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::array::{Array, StructArray};
 use crate::datatypes::{DataType, Field};
 use crate::error::Error;
@@ -7,12 +9,12 @@ use super::nested_utils::{NestedArrayIter, NestedState};
 /// An iterator adapter over [`NestedArrayIter`] assumed to be encoded as Struct arrays
 pub struct StructIterator<'a> {
     iters: Vec<NestedArrayIter<'a>>,
-    fields: Vec<Field>,
+    fields: Arc<Vec<Field>>,
 }
 
 impl<'a> StructIterator<'a> {
     /// Creates a new [`StructIterator`] with `iters` and `fields`.
-    pub fn new(iters: Vec<NestedArrayIter<'a>>, fields: Vec<Field>) -> Self {
+    pub fn new(iters: Vec<NestedArrayIter<'a>>, fields: Arc<Vec<Field>>) -> Self {
         assert_eq!(iters.len(), fields.len());
         Self { iters, fields }
     }

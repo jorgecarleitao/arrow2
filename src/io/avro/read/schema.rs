@@ -105,7 +105,7 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
                     .iter()
                     .map(|s| schema_to_field(s, None, Metadata::default()))
                     .collect::<Result<Vec<Field>>>()?;
-                DataType::Union(fields, None, UnionMode::Dense)
+                DataType::Union(Arc::new(fields), None, UnionMode::Dense)
             }
         }
         AvroSchema::Record(Record { fields, .. }) => {
@@ -119,12 +119,12 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
                     schema_to_field(&field.schema, Some(&field.name), props)
                 })
                 .collect::<Result<_>>()?;
-            DataType::Struct(fields)
+            DataType::Struct(std::sync::Arc::new(fields))
         }
         AvroSchema::Enum { .. } => {
             return Ok(Field::new(
                 name.unwrap_or_default(),
-                DataType::Dictionary(IntegerType::Int32, Box::new(DataType::Utf8), false),
+                DataType::Dictionary(IntegerType::Int32, Arc::new(DataType::Utf8), false),
                 false,
             ))
         }

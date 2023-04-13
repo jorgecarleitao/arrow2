@@ -259,7 +259,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
                 ));
             }
         }
-        "struct" => DataType::Struct(children),
+        "struct" => DataType::Struct(Arc::new(children)),
         "union" => {
             let mode = if let Some(Value::String(mode)) = item.get("mode") {
                 UnionMode::sparse(mode == "SPARSE")
@@ -267,11 +267,13 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
                 return Err(Error::OutOfSpec("union requires mode".to_string()));
             };
             let ids = if let Some(Value::Array(ids)) = item.get("typeIds") {
-                Some(ids.iter().map(|x| x.as_i64().unwrap() as i32).collect())
+                Some(Arc::new(
+                    ids.iter().map(|x| x.as_i64().unwrap() as i32).collect(),
+                ))
             } else {
                 return Err(Error::OutOfSpec("union requires ids".to_string()));
             };
-            DataType::Union(children, ids, mode)
+            DataType::Union(Arc::new(children), ids, mode)
         }
         "map" => {
             let sorted_keys = if let Some(Value::Bool(sorted_keys)) = item.get("keysSorted") {
@@ -370,7 +372,7 @@ fn deserialize_field(value: &Value) -> Result<Field> {
     let data_type = to_data_type(type_, children)?;
 
     let data_type = if let Some((name, metadata)) = extension {
-        DataType::Extension(name, Box::new(data_type), metadata)
+        DataType::Extension(name, Arc::new(data_type), metadata.map(Arc::new))
     } else {
         data_type
     };
@@ -392,7 +394,7 @@ fn deserialize_field(value: &Value) -> Result<Field> {
                 ));
             }
         };
-        DataType::Dictionary(index_type, Box::new(data_type), is_ordered)
+        DataType::Dictionary(index_type, Arc::new(data_type), is_ordered)
     } else {
         data_type
     };

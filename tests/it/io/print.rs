@@ -327,7 +327,7 @@ fn write_struct() -> Result<()> {
 
     let validity = Some(Bitmap::from(&[true, false, true]));
 
-    let array = StructArray::new(DataType::Struct(fields), values, validity);
+    let array = StructArray::new(DataType::Struct(std::sync::Arc::new(fields)), values, validity);
 
     let columns = Chunk::new(vec![&array as &dyn Array]);
 
@@ -356,7 +356,7 @@ fn write_union() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Sparse);
     let types = Buffer::from(vec![0, 0, 1]);
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
