@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/datatypes/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-63a85fc7cf22dee2.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0-nightly (9df3a39fb 2023-04-11)" data-search-js="search-bc5a112813b5d712.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-0bcba95ff279c1db.css" data-theme-light-css="light-db279b6232be9c13.css" data-theme-dark-css="dark-cf923f49f397b216.css" data-theme-ayu-css="ayu-be46fdc453a55015.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-1159a395118aa44e.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../arrow2/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/datatypes/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0-nightly (4087deacc 2023-04-12)" data-search-js="search-bc5a112813b5d712.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-7bfb4c59cc6bc502.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-905937fbbdc8e9ea.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-f61008743c98d196.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../arrow2/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -510,6 +510,9 @@
 <a href="#510" id="510">510</a>
 <a href="#511" id="511">511</a>
 <a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
 </pre></div><pre class="rust"><code><span class="attr">#![forbid(unsafe_code)]
 </span><span class="doccomment">//! Contains all metadata, such as [`PhysicalType`], [`DataType`], [`Field`] and [`Schema`].
 
@@ -675,6 +678,9 @@
 <span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
 </span><span class="kw">impl </span>From&lt;DataType&gt; <span class="kw">for </span>arrow_schema::DataType {
     <span class="kw">fn </span>from(value: DataType) -&gt; <span class="self">Self </span>{
+        <span class="kw">use </span>arrow_schema::Field <span class="kw">as </span>ArrowField;
+        <span class="kw">use </span>arrow_schema::UnionFields;
+
         <span class="kw">match </span>value {
             DataType::Null =&gt; <span class="self">Self</span>::Null,
             DataType::Boolean =&gt; <span class="self">Self</span>::Boolean,
@@ -689,7 +695,7 @@
             DataType::Float16 =&gt; <span class="self">Self</span>::Float16,
             DataType::Float32 =&gt; <span class="self">Self</span>::Float32,
             DataType::Float64 =&gt; <span class="self">Self</span>::Float64,
-            DataType::Timestamp(unit, tz) =&gt; <span class="self">Self</span>::Timestamp(unit.into(), tz),
+            DataType::Timestamp(unit, tz) =&gt; <span class="self">Self</span>::Timestamp(unit.into(), tz.map(Into::into)),
             DataType::Date32 =&gt; <span class="self">Self</span>::Date32,
             DataType::Date64 =&gt; <span class="self">Self</span>::Date64,
             DataType::Time32(unit) =&gt; <span class="self">Self</span>::Time32(unit.into()),
@@ -701,23 +707,23 @@
             DataType::LargeBinary =&gt; <span class="self">Self</span>::LargeBinary,
             DataType::Utf8 =&gt; <span class="self">Self</span>::Utf8,
             DataType::LargeUtf8 =&gt; <span class="self">Self</span>::LargeUtf8,
-            DataType::List(f) =&gt; <span class="self">Self</span>::List(Box::new((<span class="kw-2">*</span>f).into())),
+            DataType::List(f) =&gt; <span class="self">Self</span>::List(Arc::new((<span class="kw-2">*</span>f).into())),
             DataType::FixedSizeList(f, size) =&gt; {
-                <span class="self">Self</span>::FixedSizeList(Box::new((<span class="kw-2">*</span>f).into()), size <span class="kw">as _</span>)
+                <span class="self">Self</span>::FixedSizeList(Arc::new((<span class="kw-2">*</span>f).into()), size <span class="kw">as _</span>)
             }
-            DataType::LargeList(f) =&gt; <span class="self">Self</span>::LargeList(Box::new((<span class="kw-2">*</span>f).into())),
-            DataType::Struct(f) =&gt; <span class="self">Self</span>::Struct(f.into_iter().map(Into::into).collect()),
+            DataType::LargeList(f) =&gt; <span class="self">Self</span>::LargeList(Arc::new((<span class="kw-2">*</span>f).into())),
+            DataType::Struct(f) =&gt; <span class="self">Self</span>::Struct(f.into_iter().map(ArrowField::from).collect()),
             DataType::Union(fields, <span class="prelude-val">Some</span>(ids), mode) =&gt; {
-                <span class="kw">let </span>ids = ids.into_iter().map(|x| x <span class="kw">as _</span>).collect();
-                <span class="kw">let </span>fields = fields.into_iter().map(Into::into).collect();
-                <span class="self">Self</span>::Union(fields, ids, mode.into())
+                <span class="kw">let </span>ids = ids.into_iter().map(|x| x <span class="kw">as _</span>);
+                <span class="kw">let </span>fields = fields.into_iter().map(ArrowField::from);
+                <span class="self">Self</span>::Union(UnionFields::new(ids, fields), mode.into())
             }
             DataType::Union(fields, <span class="prelude-val">None</span>, mode) =&gt; {
-                <span class="kw">let </span>ids = (<span class="number">0</span>..fields.len() <span class="kw">as </span>i8).collect();
-                <span class="kw">let </span>fields = fields.into_iter().map(Into::into).collect();
-                <span class="self">Self</span>::Union(fields, ids, mode.into())
+                <span class="kw">let </span>ids = <span class="number">0</span>..fields.len() <span class="kw">as </span>i8;
+                <span class="kw">let </span>fields = fields.into_iter().map(ArrowField::from);
+                <span class="self">Self</span>::Union(UnionFields::new(ids, fields), mode.into())
             }
-            DataType::Map(f, ordered) =&gt; <span class="self">Self</span>::Map(Box::new((<span class="kw-2">*</span>f).into()), ordered),
+            DataType::Map(f, ordered) =&gt; <span class="self">Self</span>::Map(Arc::new((<span class="kw-2">*</span>f).into()), ordered),
             DataType::Dictionary(key, value, <span class="kw">_</span>) =&gt; <span class="self">Self</span>::Dictionary(
                 Box::new(DataType::from(key).into()),
                 Box::new((<span class="kw-2">*</span>value).into()),
@@ -747,7 +753,9 @@
             DataType::Float16 =&gt; <span class="self">Self</span>::Float16,
             DataType::Float32 =&gt; <span class="self">Self</span>::Float32,
             DataType::Float64 =&gt; <span class="self">Self</span>::Float64,
-            DataType::Timestamp(unit, tz) =&gt; <span class="self">Self</span>::Timestamp(unit.into(), tz),
+            DataType::Timestamp(unit, tz) =&gt; {
+                <span class="self">Self</span>::Timestamp(unit.into(), tz.map(|x| x.to_string()))
+            }
             DataType::Date32 =&gt; <span class="self">Self</span>::Date32,
             DataType::Date64 =&gt; <span class="self">Self</span>::Date64,
             DataType::Time32(unit) =&gt; <span class="self">Self</span>::Time32(unit.into()),
@@ -759,18 +767,16 @@
             DataType::LargeBinary =&gt; <span class="self">Self</span>::LargeBinary,
             DataType::Utf8 =&gt; <span class="self">Self</span>::Utf8,
             DataType::LargeUtf8 =&gt; <span class="self">Self</span>::LargeUtf8,
-            DataType::List(f) =&gt; <span class="self">Self</span>::List(Box::new((<span class="kw-2">*</span>f).into())),
-            DataType::FixedSizeList(f, size) =&gt; {
-                <span class="self">Self</span>::FixedSizeList(Box::new((<span class="kw-2">*</span>f).into()), size <span class="kw">as _</span>)
-            }
-            DataType::LargeList(f) =&gt; <span class="self">Self</span>::LargeList(Box::new((<span class="kw-2">*</span>f).into())),
+            DataType::List(f) =&gt; <span class="self">Self</span>::List(Box::new(f.into())),
+            DataType::FixedSizeList(f, size) =&gt; <span class="self">Self</span>::FixedSizeList(Box::new(f.into()), size <span class="kw">as _</span>),
+            DataType::LargeList(f) =&gt; <span class="self">Self</span>::LargeList(Box::new(f.into())),
             DataType::Struct(f) =&gt; <span class="self">Self</span>::Struct(f.into_iter().map(Into::into).collect()),
-            DataType::Union(fields, ids, mode) =&gt; {
-                <span class="kw">let </span>ids = ids.into_iter().map(|x| x <span class="kw">as _</span>).collect();
-                <span class="kw">let </span>fields = fields.into_iter().map(Into::into).collect();
+            DataType::Union(fields, mode) =&gt; {
+                <span class="kw">let </span>ids = fields.iter().map(|(x, <span class="kw">_</span>)| x <span class="kw">as _</span>).collect();
+                <span class="kw">let </span>fields = fields.iter().map(|(<span class="kw">_</span>, f)| f.into()).collect();
                 <span class="self">Self</span>::Union(fields, <span class="prelude-val">Some</span>(ids), mode.into())
             }
-            DataType::Map(f, ordered) =&gt; <span class="self">Self</span>::Map(Box::new((<span class="kw-2">*</span>f).into()), ordered),
+            DataType::Map(f, ordered) =&gt; <span class="self">Self</span>::Map(Box::new(f.into()), ordered),
             DataType::Dictionary(key, value) =&gt; {
                 <span class="kw">let </span>key = <span class="kw">match </span><span class="kw-2">*</span>key {
                     DataType::Int8 =&gt; IntegerType::Int8,
