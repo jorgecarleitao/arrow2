@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::array::*;
 use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::{DataType, Field, IntegerType, TimeUnit, UnionMode};
@@ -169,7 +171,11 @@ fn test_list() {
 
     let validity = [true, true, false, false, true].into_iter().collect();
     let offsets = Offsets::try_from_iter(vec![0, 2, 2, 2, 0]).unwrap();
-    let data_type = DataType::List(Box::new(Field::new("element", DataType::Utf8, true)));
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
+        "element",
+        DataType::Utf8,
+        true,
+    )));
     let list = ListArray::<i32>::new(
         data_type.clone(),
         offsets.into(),
@@ -184,7 +190,11 @@ fn test_list() {
 
     let validity = [true, true, false, false, true].into_iter().collect();
     let offsets = Offsets::try_from_iter(vec![0, 2, 2, 2, 0]).unwrap();
-    let data_type = DataType::LargeList(Box::new(Field::new("element", DataType::Utf8, true)));
+    let data_type = DataType::LargeList(std::sync::Arc::new(Field::new(
+        "element",
+        DataType::Utf8,
+        true,
+    )));
     let list = ListArray::<i64>::new(
         data_type.clone(),
         offsets.into(),
@@ -204,7 +214,7 @@ fn test_list_struct() {
     let validity = [true, true, false, true].into_iter().collect();
     let offsets = Offsets::try_from_iter(vec![0, 1, 0, 2]).unwrap();
     let list = ListArray::<i32>::new(
-        DataType::List(Box::new(Field::new(
+        DataType::List(std::sync::Arc::new(Field::new(
             "element",
             values.data_type().clone(),
             true,
@@ -257,7 +267,10 @@ fn test_fixed_size_list() {
 
     let nulls = [true, true, false, true].into_iter().collect();
     let array = FixedSizeListArray::new(
-        DataType::FixedSizeList(Box::new(Field::new("element", DataType::Int64, true)), 2),
+        DataType::FixedSizeList(
+            std::sync::Arc::new(Field::new("element", DataType::Int64, true)),
+            2,
+        ),
         Box::new(values),
         Some(nulls),
     );
@@ -285,7 +298,7 @@ fn test_map() {
     let validity = [true, true, false, false].into_iter().collect();
     let offsets = Offsets::try_from_iter(vec![0, 2, 0, 2]).unwrap();
     let data_type = DataType::Map(
-        Box::new(Field::new("entries", fields.data_type().clone(), true)),
+        Arc::new(Field::new("entries", fields.data_type().clone(), true)),
         false,
     );
     let map = MapArray::new(

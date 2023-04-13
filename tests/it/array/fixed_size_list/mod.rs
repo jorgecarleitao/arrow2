@@ -1,5 +1,7 @@
 mod mutable;
 
+use std::sync::Arc;
+
 use arrow2::{
     array::*,
     bitmap::Bitmap,
@@ -11,7 +13,7 @@ fn data() -> FixedSizeListArray {
 
     FixedSizeListArray::try_new(
         DataType::FixedSizeList(
-            Box::new(Field::new("a", values.data_type().clone(), true)),
+            Arc::new(Field::new("a", values.data_type().clone(), true)),
             2,
         ),
         values.boxed(),
@@ -53,7 +55,7 @@ fn debug() {
 #[test]
 fn empty() {
     let array = FixedSizeListArray::new_empty(DataType::FixedSizeList(
-        Box::new(Field::new("a", DataType::Int32, true)),
+        Arc::new(Field::new("a", DataType::Int32, true)),
         2,
     ));
     assert_eq!(array.values().len(), 0);
@@ -63,7 +65,10 @@ fn empty() {
 #[test]
 fn null() {
     let array = FixedSizeListArray::new_null(
-        DataType::FixedSizeList(Box::new(Field::new("a", DataType::Int32, true)), 2),
+        DataType::FixedSizeList(
+            std::sync::Arc::new(Field::new("a", DataType::Int32, true)),
+            2,
+        ),
         2,
     );
     assert_eq!(array.values().len(), 4);
@@ -74,7 +79,10 @@ fn null() {
 fn wrong_size() {
     let values = Int32Array::from_slice([10, 20, 0]);
     assert!(FixedSizeListArray::try_new(
-        DataType::FixedSizeList(Box::new(Field::new("a", DataType::Int32, true)), 2),
+        DataType::FixedSizeList(
+            std::sync::Arc::new(Field::new("a", DataType::Int32, true)),
+            2
+        ),
         values.boxed(),
         None
     )
@@ -85,7 +93,10 @@ fn wrong_size() {
 fn wrong_len() {
     let values = Int32Array::from_slice([10, 20, 0]);
     assert!(FixedSizeListArray::try_new(
-        DataType::FixedSizeList(Box::new(Field::new("a", DataType::Int32, true)), 2),
+        DataType::FixedSizeList(
+            std::sync::Arc::new(Field::new("a", DataType::Int32, true)),
+            2
+        ),
         values.boxed(),
         Some([true, false, false].into()), // it should be 2
     )

@@ -741,7 +741,7 @@ fn transverse_recursive<T, F: Fn(&DataType) -> T + Clone>(
 ///
 /// let dt = DataType::Struct(vec![
 ///     Field::new("a", DataType::Int64, true),
-///     Field::new("b", DataType::List(Box::new(Field::new("item", DataType::Int32, true))), true),
+///     Field::new("b", DataType::List(std::sync::Arc::new(Field::new("item", DataType::Int32, true))), true),
 /// ]);
 ///
 /// let encodings = transverse(&dt, |dt| Encoding::Plain);

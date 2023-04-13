@@ -210,7 +210,7 @@ fn list_sliced() -> Result<()> {
     let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
 
     let array = ListArray::<i32>::try_new(
-        DataType::List(Box::new(Field::new("a", DataType::Int32, true))),
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::Int32, true))),
         vec![0, 1, 1, 2].try_into().unwrap(),
         Box::new(PrimitiveArray::<i32>::from_slice([1, 2])),
         Some(bitmap),
@@ -256,7 +256,7 @@ fn fixed_size_list_sliced() -> Result<()> {
     let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
 
     let array = FixedSizeListArray::try_new(
-        DataType::FixedSizeList(Box::new(Field::new("a", DataType::Int32, true)), 2),
+        DataType::FixedSizeList(std::sync::Arc::new(Field::new("a", DataType::Int32, true)), 2),
         Box::new(PrimitiveArray::<i32>::from_vec(vec![1, 2, 3, 4, 5, 6])),
         Some(bitmap),
     )?;
@@ -312,7 +312,7 @@ fn dict() -> Result<()> {
 fn schema() -> Result<()> {
     let field = Field::new(
         "a",
-        DataType::List(Box::new(Field::new("a", DataType::UInt32, true))),
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::UInt32, true))),
         true,
     );
     test_round_trip_schema(field)?;

@@ -30,7 +30,7 @@ fn equal() {
     )
     .unwrap();
 
-    let dt = DataType::Map(Box::new(Field::new("entries", kv_dt, true)), false);
+    let dt = DataType::Map(std::sync::Arc::new(Field::new("entries", kv_dt, true)), false);
     let a = MapScalar::new(dt.clone(), Some(Box::new(kv_array1)));
     let b = MapScalar::new(dt.clone(), None);
     assert_eq!(a, a);
@@ -57,7 +57,7 @@ fn basics() {
     )
     .unwrap();
 
-    let dt = DataType::Map(Box::new(Field::new("entries", kv_dt, true)), false);
+    let dt = DataType::Map(std::sync::Arc::new(Field::new("entries", kv_dt, true)), false);
     let a = MapScalar::new(dt.clone(), Some(Box::new(kv_array.clone())));
 
     assert_eq!(kv_array, a.values().as_ref());

@@ -145,7 +145,7 @@ fn deserialize_map(map: MapRef, field: FieldRef) -> Result<(DataType, IpcField)>
         .ok_or_else(|| Error::oos("IPC: Map must contain one child"))??;
     let (field, ipc_field) = deserialize_field(inner)?;
 
-    let data_type = DataType::Map(Box::new(field), is_sorted);
+    let data_type = DataType::Map(std::sync::Arc::new(field), is_sorted);
     Ok((
         data_type,
         IpcField {
@@ -183,7 +183,7 @@ fn deserialize_list(field: FieldRef) -> Result<(DataType, IpcField)> {
     let (field, ipc_field) = deserialize_field(inner)?;
 
     Ok((
-        DataType::List(Box::new(field)),
+        DataType::List(std::sync::Arc::new(field)),
         IpcField {
             fields: vec![ipc_field],
             dictionary_id: None,
@@ -201,7 +201,7 @@ fn deserialize_large_list(field: FieldRef) -> Result<(DataType, IpcField)> {
     let (field, ipc_field) = deserialize_field(inner)?;
 
     Ok((
-        DataType::LargeList(Box::new(field)),
+        DataType::LargeList(std::sync::Arc::new(field)),
         IpcField {
             fields: vec![ipc_field],
             dictionary_id: None,
@@ -227,7 +227,7 @@ fn deserialize_fixed_size_list(
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
     Ok((
-        DataType::FixedSizeList(Box::new(field), size),
+        DataType::FixedSizeList(std::sync::Arc::new(field), size),
         IpcField {
             fields: vec![ipc_field],
             dictionary_id: None,

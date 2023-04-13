@@ -212,17 +212,17 @@ fn create_dt(data_type: &DataType) -> DataType {
         )
     } else if let DataType::Map(f, ordered) = data_type.to_logical_type() {
         DataType::Map(
-            Box::new(Field::new(&f.name, create_dt(&f.data_type), f.is_nullable)),
+            Arc::new(Field::new(&f.name, create_dt(&f.data_type), f.is_nullable)),
             *ordered,
         )
     } else if let DataType::List(f) = data_type.to_logical_type() {
-        DataType::List(Box::new(Field::new(
+        DataType::List(std::sync::Arc::new(Field::new(
             &f.name,
             create_dt(&f.data_type),
             f.is_nullable,
         )))
     } else if let DataType::LargeList(f) = data_type.to_logical_type() {
-        DataType::LargeList(Box::new(Field::new(
+        DataType::LargeList(std::sync::Arc::new(Field::new(
             &f.name,
             create_dt(&f.data_type),
             f.is_nullable,

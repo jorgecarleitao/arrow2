@@ -125,7 +125,7 @@ fn i32_to_list_i32() {
     let array = Int32Array::from_slice([5, 6, 7, 8, 9]);
     let b = cast(
         &array,
-        &DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+        &DataType::List(std::sync::Arc::new(Field::new("item", DataType::Int32, true))),
         CastOptions::default(),
     )
     .unwrap();
@@ -149,7 +149,7 @@ fn i32_to_list_i32_nullable() {
     let array = Int32Array::from(input);
     let b = cast(
         &array,
-        &DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+        &DataType::List(std::sync::Arc::new(Field::new("item", DataType::Int32, true))),
         CastOptions::default(),
     )
     .unwrap();
@@ -173,7 +173,7 @@ fn i32_to_list_f64_nullable_sliced() {
     let array = array.sliced(2, 4);
     let b = cast(
         &array,
-        &DataType::List(Box::new(Field::new("item", DataType::Float64, true))),
+        &DataType::List(std::sync::Arc::new(Field::new("item", DataType::Float64, true))),
         CastOptions::default(),
     )
     .unwrap();
@@ -502,8 +502,8 @@ fn consistency() {
         Duration(TimeUnit::Millisecond),
         Duration(TimeUnit::Microsecond),
         Duration(TimeUnit::Nanosecond),
-        List(Box::new(Field::new("a", Utf8, true))),
-        LargeList(Box::new(Field::new("a", Utf8, true))),
+        List(std::sync::Arc::new(Field::new("a", Utf8, true))),
+        LargeList(std::sync::Arc::new(Field::new("a", Utf8, true))),
     ];
     for d1 in &datatypes {
         for d2 in &datatypes {

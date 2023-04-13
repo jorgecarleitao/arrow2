@@ -50,12 +50,12 @@ fn case_list() -> (String, Box<dyn Array>) {
         Field::new("a", DataType::Int64, true),
         Field::new(
             "b",
-            DataType::List(Box::new(Field::new("item", DataType::Float64, true))),
+            DataType::List(std::sync::Arc::new(Field::new("item", DataType::Float64, true))),
             true,
         ),
         Field::new(
             "c",
-            DataType::List(Box::new(Field::new("item", DataType::Boolean, true))),
+            DataType::List(std::sync::Arc::new(Field::new("item", DataType::Boolean, true))),
             true,
         ),
         Field::new("d", DataType::Utf8, true),
@@ -100,7 +100,7 @@ fn case_dict() -> (String, Box<dyn Array>) {
     "#
     .to_string();
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Dictionary(u64::KEY_TYPE, Box::new(DataType::Utf8), false),
         true,
@@ -235,7 +235,7 @@ fn case_nested_list() -> (String, Box<dyn Array>) {
         DataType::Struct(vec![b_field.clone(), c_field.clone()]),
         true,
     );
-    let a_list_data_type = DataType::List(Box::new(a_struct_field));
+    let a_list_data_type = DataType::List(std::sync::Arc::new(a_struct_field));
     let a_field = Field::new("a", a_list_data_type.clone(), true);
 
     let data = r#"

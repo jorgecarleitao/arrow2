@@ -9,7 +9,7 @@ fn basics() {
         Field::new("a", DataType::Utf8, true),
         Field::new("b", DataType::Utf8, true),
     ]);
-    let data_type = DataType::Map(Box::new(Field::new("a", dt.clone(), true)), false);
+    let data_type = DataType::Map(std::sync::Arc::new(Field::new("a", dt.clone(), true)), false);
 
     let field = StructArray::new(
         dt.clone(),

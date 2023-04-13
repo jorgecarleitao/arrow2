@@ -73,7 +73,7 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
         Field::new("g", DataType::Utf8, true),
         Field::new(
             "h",
-            DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+            DataType::List(std::sync::Arc::new(Field::new("item", DataType::Int32, true))),
             false,
         ),
         Field::new(
@@ -331,7 +331,7 @@ fn schema_list() -> (AvroSchema, Schema) {
 
     let schema = Schema::from(vec![Field::new(
         "h",
-        DataType::List(Box::new(Field::new("item", DataType::Int32, false))),
+        DataType::List(std::sync::Arc::new(Field::new("item", DataType::Int32, false))),
         false,
     )]);
 
@@ -343,7 +343,7 @@ pub(super) fn data_list() -> Chunk<Box<dyn Array>> {
 
     let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new_from(
         Default::default(),
-        DataType::List(Box::new(Field::new("item", DataType::Int32, false))),
+        DataType::List(std::sync::Arc::new(Field::new("item", DataType::Int32, false))),
         0,
     );
     array.try_extend(data).unwrap();

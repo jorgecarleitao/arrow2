@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, convert::TryInto, ffi::CStr, ffi::CString, ptr};
+use std::{collections::BTreeMap, convert::TryInto, ffi::CStr, ffi::CString, ptr, sync::Arc};
 
 use crate::{
     datatypes::{
@@ -260,17 +260,17 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
         "tiD" => DataType::Interval(IntervalUnit::DayTime),
         "+l" => {
             let child = schema.child(0);
-            DataType::List(Box::new(to_field(child)?))
+            DataType::List(Arc::new(to_field(child)?))
         }
         "+L" => {
             let child = schema.child(0);
-            DataType::LargeList(Box::new(to_field(child)?))
+            DataType::LargeList(Arc::new(to_field(child)?))
         }
         "+m" => {
             let child = schema.child(0);
 
             let is_sorted = (schema.flags & 4) != 0;
-            DataType::Map(Box::new(to_field(child)?), is_sorted)
+            DataType::Map(std::sync::Arc::new(to_field(child)?), is_sorted)
         }
         "+s" => {
             let children = (0..schema.n_children as usize)
@@ -305,7 +305,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                         .parse::<usize>()
                         .map_err(|_| Error::OutOfSpec("size is not a valid integer".to_string()))?;
                     let child = to_field(schema.child(0))?;
-                    DataType::FixedSizeList(Box::new(child), size)
+                    DataType::FixedSizeList(Arc::new(child), size)
                 }
                 ["d", raw] => {
                     // Decimal
@@ -565,24 +565,24 @@ mod tests {
             DataType::Binary,
             DataType::LargeBinary,
             DataType::FixedSizeBinary(2),
-            DataType::List(Box::new(Field::new("example", DataType::Boolean, false))),
-            DataType::FixedSizeList(Box::new(Field::new("example", DataType::Boolean, false)), 2),
-            DataType::LargeList(Box::new(Field::new("example", DataType::Boolean, false))),
+            DataType::List(Arc::new(Field::new("example", DataType::Boolean, false))),
+            DataType::FixedSizeList(Arc::new(Field::new("example", DataType::Boolean, false)), 2),
+            DataType::LargeList(Arc::new(Field::new("example", DataType::Boolean, false))),
             DataType::Struct(vec![
                 Field::new("a", DataType::Int64, true),
                 Field::new(
                     "b",
-                    DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+                    DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
                     true,
                 ),
             ]),
-            DataType::Map(Box::new(Field::new("a", DataType::Int64, true)), true),
+            DataType::Map(std::sync::Arc::new(Field::new("a", DataType::Int64, true)), true),
             DataType::Union(
                 vec![
                     Field::new("a", DataType::Int64, true),
                     Field::new(
                         "b",
-                        DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+                        DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
                         true,
                     ),
                 ],
@@ -594,7 +594,7 @@ mod tests {
                     Field::new("a", DataType::Int64, true),
                     Field::new(
                         "b",
-                        DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+                        DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
                         true,
                     ),
                 ],

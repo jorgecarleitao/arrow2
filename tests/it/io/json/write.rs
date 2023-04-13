@@ -326,7 +326,7 @@ fn list_of_struct() -> Result<()> {
         Field::new("c11", DataType::Int32, false),
         Field::new("c12", DataType::Struct(inner.clone()), false),
     ];
-    let c1_datatype = DataType::List(Box::new(Field::new(
+    let c1_datatype = DataType::List(std::sync::Arc::new(Field::new(
         "s",
         DataType::Struct(fields.clone()),
         false,

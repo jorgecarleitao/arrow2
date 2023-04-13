@@ -24,7 +24,7 @@ fn nulls() {
         DataType::Float64,
         DataType::Utf8,
         DataType::Binary,
-        DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::Binary, true))),
     ];
     let a = datatypes
         .into_iter()
@@ -57,8 +57,8 @@ fn empty() {
         DataType::Float64,
         DataType::Utf8,
         DataType::Binary,
-        DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
-        DataType::List(Box::new(Field::new(
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::Binary, true))),
+        DataType::List(std::sync::Arc::new(Field::new(
             "a",
             DataType::Extension("ext".to_owned(), Box::new(DataType::Int32), None),
             true,
@@ -86,7 +86,7 @@ fn empty_extension() {
         DataType::Float64,
         DataType::Utf8,
         DataType::Binary,
-        DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::Binary, true))),
         DataType::Union(
             vec![Field::new("a", DataType::Binary, true)],
             None,
@@ -116,7 +116,7 @@ fn test_clone() {
         DataType::Float64,
         DataType::Utf8,
         DataType::Binary,
-        DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::Binary, true))),
     ];
     let a = datatypes
         .into_iter()

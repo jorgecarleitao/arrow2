@@ -172,12 +172,12 @@ fn infer_schema_mixed_list() -> Result<()> {
         Field::new("a", DataType::Int64, true),
         Field::new(
             "b",
-            DataType::List(Box::new(Field::new("item", DataType::Float64, true))),
+            DataType::List(std::sync::Arc::new(Field::new("item", DataType::Float64, true))),
             true,
         ),
         Field::new(
             "c",
-            DataType::List(Box::new(Field::new("item", DataType::Boolean, true))),
+            DataType::List(std::sync::Arc::new(Field::new("item", DataType::Boolean, true))),
             true,
         ),
         Field::new("d", DataType::Utf8, true),

@@ -199,7 +199,7 @@ fn to_primitive_type(primitive_type: &PrimitiveType) -> DataType {
     let base_type = to_primitive_type_inner(primitive_type);
 
     if primitive_type.field_info.repetition == Repetition::Repeated {
-        DataType::List(Box::new(Field::new(
+        DataType::List(std::sync::Arc::new(Field::new(
             &primitive_type.field_info.name,
             base_type,
             is_nullable(&primitive_type.field_info),
@@ -242,7 +242,7 @@ fn to_struct(fields: &[ParquetType]) -> Option<DataType> {
 /// Returns [`None`] if all its fields are empty
 fn to_map(fields: &[ParquetType]) -> Option<DataType> {
     let inner = to_field(&fields[0])?;
-    Some(DataType::Map(Box::new(inner), false))
+    Some(DataType::Map(std::sync::Arc::new(inner), false))
 }
 
 /// Entry point for converting parquet group type.
@@ -257,7 +257,7 @@ fn to_group_type(
 ) -> Option<DataType> {
     debug_assert!(!fields.is_empty());
     if field_info.repetition == Repetition::Repeated {
-        Some(DataType::List(Box::new(Field::new(
+        Some(DataType::List(std::sync::Arc::new(Field::new(
             &field_info.name,
             to_struct(fields)?,
             is_nullable(field_info),
@@ -330,7 +330,7 @@ fn to_list(fields: &[ParquetType], parent_name: &str) -> Option<DataType> {
         ),
     };
 
-    Some(DataType::List(Box::new(Field::new(
+    Some(DataType::List(std::sync::Arc::new(Field::new(
         list_item_name,
         item_type,
         item_is_optional,
@@ -521,7 +521,7 @@ mod tests {
         {
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("element", DataType::Utf8, true))),
+                DataType::List(std::sync::Arc::new(Field::new("element", DataType::Utf8, true))),
                 false,
             ));
         }
@@ -535,7 +535,7 @@ mod tests {
         {
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("element", DataType::Utf8, false))),
+                DataType::List(std::sync::Arc::new(Field::new("element", DataType::Utf8, false))),
                 true,
             ));
         }
@@ -554,10 +554,10 @@ mod tests {
         // }
         {
             let arrow_inner_list =
-                DataType::List(Box::new(Field::new("element", DataType::Int32, false)));
+                DataType::List(std::sync::Arc::new(Field::new("element", DataType::Int32, false)));
             arrow_fields.push(Field::new(
                 "array_of_arrays",
-                DataType::List(Box::new(Field::new("element", arrow_inner_list, false))),
+                DataType::List(std::sync::Arc::new(Field::new("element", arrow_inner_list, false))),
                 true,
             ));
         }
@@ -571,7 +571,7 @@ mod tests {
         {
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("element", DataType::Utf8, true))),
+                DataType::List(std::sync::Arc::new(Field::new("element", DataType::Utf8, true))),
                 true,
             ));
         }
@@ -583,7 +583,7 @@ mod tests {
         {
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("element", DataType::Int32, true))),
+                DataType::List(std::sync::Arc::new(Field::new("element", DataType::Int32, true))),
                 true,
             ));
         }
@@ -602,7 +602,7 @@ mod tests {
             ]);
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("element", arrow_struct, true))),
+                DataType::List(std::sync::Arc::new(Field::new("element", arrow_struct, true))),
                 true,
             ));
         }
@@ -618,7 +618,7 @@ mod tests {
             let arrow_struct = DataType::Struct(vec![Field::new("str", DataType::Utf8, false)]);
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("array", arrow_struct, true))),
+                DataType::List(std::sync::Arc::new(Field::new("array", arrow_struct, true))),
                 true,
             ));
         }
@@ -634,7 +634,7 @@ mod tests {
             let arrow_struct = DataType::Struct(vec![Field::new("str", DataType::Utf8, false)]);
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("my_list_tuple", arrow_struct, true))),
+                DataType::List(std::sync::Arc::new(Field::new("my_list_tuple", arrow_struct, true))),
                 true,
             ));
         }
@@ -644,7 +644,7 @@ mod tests {
         {
             arrow_fields.push(Field::new(
                 "name",
-                DataType::List(Box::new(Field::new("name", DataType::Int32, true))),
+                DataType::List(std::sync::Arc::new(Field::new("name", DataType::Int32, true))),
                 true,
             ));
         }
@@ -689,7 +689,7 @@ mod tests {
         {
             arrow_fields.push(Field::new(
                 "my_list1",
-                DataType::List(Box::new(Field::new("element", DataType::Utf8, true))),
+                DataType::List(std::sync::Arc::new(Field::new("element", DataType::Utf8, true))),
                 false,
             ));
         }
@@ -703,7 +703,7 @@ mod tests {
         {
             arrow_fields.push(Field::new(
                 "my_list2",
-                DataType::List(Box::new(Field::new("element", DataType::Utf8, false))),
+                DataType::List(std::sync::Arc::new(Field::new("element", DataType::Utf8, false))),
                 true,
             ));
         }
@@ -717,7 +717,7 @@ mod tests {
         {
             arrow_fields.push(Field::new(
                 "my_list3",
-                DataType::List(Box::new(Field::new("element", DataType::Utf8, false))),
+                DataType::List(std::sync::Arc::new(Field::new("element", DataType::Utf8, false))),
                 false,
             ));
         }
@@ -769,7 +769,7 @@ mod tests {
 
             let inner_group_list = Field::new(
                 "innerGroup",
-                DataType::List(Box::new(Field::new(
+                DataType::List(std::sync::Arc::new(Field::new(
                     "innerGroup",
                     DataType::Struct(vec![Field::new("leaf3", DataType::Int32, true)]),
                     true,
@@ -779,7 +779,7 @@ mod tests {
 
             let outer_group_list = Field::new(
                 "outerGroup",
-                DataType::List(Box::new(Field::new(
+                DataType::List(std::sync::Arc::new(Field::new(
                     "outerGroup",
                     DataType::Struct(vec![
                         Field::new("leaf2", DataType::Int32, true),
@@ -848,7 +848,7 @@ mod tests {
             Field::new("string", DataType::Utf8, true),
             Field::new(
                 "bools",
-                DataType::List(Box::new(Field::new("bools", DataType::Boolean, true))),
+                DataType::List(std::sync::Arc::new(Field::new("bools", DataType::Boolean, true))),
                 true,
             ),
             Field::new("date", DataType::Date32, true),
@@ -930,12 +930,12 @@ mod tests {
             Field::new("string", DataType::Utf8, true),
             Field::new(
                 "bools",
-                DataType::List(Box::new(Field::new("element", DataType::Boolean, true))),
+                DataType::List(std::sync::Arc::new(Field::new("element", DataType::Boolean, true))),
                 true,
             ),
             Field::new(
                 "bools_non_null",
-                DataType::List(Box::new(Field::new("element", DataType::Boolean, false))),
+                DataType::List(std::sync::Arc::new(Field::new("element", DataType::Boolean, false))),
                 false,
             ),
             Field::new("date", DataType::Date32, true),
@@ -958,7 +958,7 @@ mod tests {
                     Field::new("uint32", DataType::UInt32, false),
                     Field::new(
                         "int32",
-                        DataType::List(Box::new(Field::new("element", DataType::Int32, true))),
+                        DataType::List(std::sync::Arc::new(Field::new("element", DataType::Int32, true))),
                         false,
                     ),
                 ]),

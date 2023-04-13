@@ -1,5 +1,6 @@
 use ethnum::AsI256;
 use std::io::{Cursor, Read, Seek};
+use std::sync::Arc;
 
 use arrow2::types::i256;
 use arrow2::{
@@ -97,7 +98,11 @@ pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
             //      {"f1": ["a", "b", None, "c"]}
             // ]
             let a = ListArray::<i32>::new(
-                DataType::List(Box::new(Field::new("item", DataType::Utf8, true))),
+                DataType::List(std::sync::Arc::new(Field::new(
+                    "item",
+                    DataType::Utf8,
+                    true,
+                ))),
                 vec![0, 4].try_into().unwrap(),
                 Utf8Array::<i32>::from([Some("a"), Some("b"), None, Some("c")]).boxed(),
                 None,
@@ -112,7 +117,7 @@ pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
         "list_struct_list_nullable" => {
             let values = pyarrow_nested_edge("struct_list_nullable");
             ListArray::<i32>::new(
-                DataType::List(Box::new(Field::new(
+                DataType::List(std::sync::Arc::new(Field::new(
                     "item",
                     values.data_type().clone(),
                     true,
@@ -306,7 +311,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             .boxed();
 
             let array = ListArray::<i32>::new(
-                DataType::List(Box::new(Field::new(
+                DataType::List(std::sync::Arc::new(Field::new(
                     "item",
                     array.data_type().clone(),
                     true,
@@ -346,12 +351,20 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
     match column {
         "list_int64_required_required" => {
             // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
-            let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, false)));
+            let data_type = DataType::List(std::sync::Arc::new(Field::new(
+                "item",
+                DataType::Int64,
+                false,
+            )));
             ListArray::<i32>::new(data_type, offsets, values, None).boxed()
         }
         "list_int64_optional_required" => {
             // [[0, 1], [], [2, 0, 3], [4, 5, 6], [], [7, 8, 9], [], [10]]
-            let data_type = DataType::List(Box::new(Field::new("item", DataType::Int64, true)));
+            let data_type = DataType::List(std::sync::Arc::new(Field::new(
+                "item",
+                DataType::Int64,
+                true,
+            )));
             ListArray::<i32>::new(data_type, offsets, values, None).boxed()
         }
         "list_nested_i64" => {
@@ -429,7 +442,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             ]));
             // [0, 2, 2, 5, 8, 8, 11, 11, 12]
             // [[a1, a2], None, [a3, a4, a5], [a6, a7, a8], [], [a9, a10, a11], None, [a12]]
-            let data_type = DataType::List(Box::new(field));
+            let data_type = DataType::List(std::sync::Arc::new(field));
             ListArray::<i32>::new(data_type, offsets, values, validity).boxed()
         }
     }
@@ -829,7 +842,7 @@ pub fn pyarrow_required_statistics(column: &str) -> Statistics {
 pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
     let new_list = |array: Box<dyn Array>, nullable: bool| {
         ListArray::<i32>::new(
-            DataType::List(Box::new(Field::new(
+            DataType::List(std::sync::Arc::new(Field::new(
                 "item",
                 array.data_type().clone(),
                 nullable,
@@ -1042,7 +1055,7 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
 pub fn pyarrow_nested_edge_statistics(column: &str) -> Statistics {
     let new_list = |array: Box<dyn Array>| {
         ListArray::<i32>::new(
-            DataType::List(Box::new(Field::new(
+            DataType::List(std::sync::Arc::new(Field::new(
                 "item",
                 array.data_type().clone(),
                 true,
@@ -1373,7 +1386,10 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
                 Field::new("value", DataType::Utf8, true),
             ]);
             MapArray::try_new(
-                DataType::Map(Box::new(Field::new("entries", dt.clone(), false)), false),
+                DataType::Map(
+                    std::sync::Arc::new(Field::new("entries", dt.clone(), false)),
+                    false,
+                ),
                 vec![0, 2].try_into().unwrap(),
                 StructArray::try_new(
                     dt,
@@ -1398,7 +1414,10 @@ pub fn pyarrow_map(column: &str) -> Box<dyn Array> {
                 Field::new("value", DataType::Utf8, true),
             ]);
             MapArray::try_new(
-                DataType::Map(Box::new(Field::new("entries", dt.clone(), false)), false),
+                DataType::Map(
+                    std::sync::Arc::new(Field::new("entries", dt.clone(), false)),
+                    false,
+                ),
                 vec![0, 2].try_into().unwrap(),
                 StructArray::try_new(
                     dt,
@@ -1428,7 +1447,7 @@ pub fn pyarrow_map_statistics(column: &str) -> Statistics {
             .collect::<Vec<_>>();
         MapArray::new(
             DataType::Map(
-                Box::new(Field::new(
+                Arc::new(Field::new(
                     "entries",
                     DataType::Struct(fields.clone()),
                     false,
@@ -1931,7 +1950,7 @@ fn nested_dict_data(data_type: DataType) -> Result<(Schema, Chunk<Box<dyn Array>
     let indices = PrimitiveArray::from_values((0..3u64).map(|x| x % 2));
     let values = DictionaryArray::try_from_keys(indices, values).unwrap();
     let values = ListArray::try_new(
-        DataType::List(Box::new(Field::new(
+        DataType::List(std::sync::Arc::new(Field::new(
             "item",
             values.data_type().clone(),
             false,

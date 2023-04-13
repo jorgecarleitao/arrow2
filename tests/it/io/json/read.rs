@@ -170,7 +170,7 @@ fn deserialize_timestamp_string_ns() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Timestamp(TimeUnit::Nanosecond, None),
         false,
@@ -192,7 +192,7 @@ fn deserialize_timestamp_string_us() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Timestamp(TimeUnit::Microsecond, None),
         false,
@@ -214,7 +214,7 @@ fn deserialize_timestamp_string_ms() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Timestamp(TimeUnit::Millisecond, None),
         false,
@@ -236,7 +236,7 @@ fn deserialize_timestamp_string_s() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Timestamp(TimeUnit::Second, None),
         false,
@@ -258,7 +258,7 @@ fn deserialize_timestamp_string_tz_s() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Timestamp(TimeUnit::Second, Some("+01:00".to_string())),
         false,
@@ -282,7 +282,7 @@ fn deserialize_timestamp_int_ns() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Timestamp(TimeUnit::Nanosecond, None),
         false,

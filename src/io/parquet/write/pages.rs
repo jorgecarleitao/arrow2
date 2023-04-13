@@ -453,7 +453,7 @@ mod tests {
         );
 
         let array = ListArray::new(
-            DataType::List(Box::new(Field::new("l", array.data_type().clone(), true))),
+            DataType::List(std::sync::Arc::new(Field::new("l", array.data_type().clone(), true))),
             vec![0i32, 2, 4].try_into().unwrap(),
             Box::new(array),
             None,
@@ -545,7 +545,7 @@ mod tests {
             Field::new("v", DataType::Int32, false),
         ]);
         let kv_field = Field::new("kv", kv_type.clone(), false);
-        let map_type = DataType::Map(Box::new(kv_field), false);
+        let map_type = DataType::Map(std::sync::Arc::new(kv_field), false);
 
         let key_array = Utf8Array::<i32>::from_slice(["k1", "k2", "k3", "k4", "k5", "k6"]).boxed();
         let val_array = Int32Array::from_slice([42, 28, 19, 31, 21, 17]).boxed();

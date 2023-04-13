@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serde_derive::Deserialize;
 use serde_json::Value;
 
@@ -243,12 +245,12 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             }
         },
         "int" => to_int(item).map(|x| x.into())?,
-        "list" => DataType::List(Box::new(children.pop().unwrap())),
-        "largelist" => DataType::LargeList(Box::new(children.pop().unwrap())),
+        "list" => DataType::List(std::sync::Arc::new(children.pop().unwrap())),
+        "largelist" => DataType::LargeList(std::sync::Arc::new(children.pop().unwrap())),
         "fixedsizelist" => {
             if let Some(Value::Number(size)) = item.get("listSize") {
                 DataType::FixedSizeList(
-                    Box::new(children.pop().unwrap()),
+                    Arc::new(children.pop().unwrap()),
                     size.as_i64().unwrap() as usize,
                 )
             } else {
@@ -277,7 +279,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
             } else {
                 return Err(Error::OutOfSpec("sorted keys not defined".to_string()));
             };
-            DataType::Map(Box::new(children.pop().unwrap()), sorted_keys)
+            DataType::Map(std::sync::Arc::new(children.pop().unwrap()), sorted_keys)
         }
         other => {
             return Err(Error::NotYetImplemented(format!(

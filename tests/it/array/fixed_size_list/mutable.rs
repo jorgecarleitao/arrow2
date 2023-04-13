@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::array::*;
 use arrow2::datatypes::{DataType, Field};
 
@@ -46,7 +48,7 @@ fn new_with_field() {
     assert_eq!(
         list.data_type(),
         &DataType::FixedSizeList(
-            Box::new(Field::new("custom_items", DataType::Int32, false)),
+            Arc::new(Field::new("custom_items", DataType::Int32, false)),
             3
         )
     );

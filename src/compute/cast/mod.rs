@@ -389,7 +389,7 @@ fn cast_list_to_fixed_size_list(
         None => {
             let new_values = cast(list.values().as_ref(), inner.data_type(), options)?;
             Ok(FixedSizeListArray::new(
-                DataType::FixedSizeList(Box::new(inner.clone()), size),
+                DataType::FixedSizeList(std::sync::Arc::new(inner.clone()), size),
                 new_values,
                 list.validity().cloned(),
             ))

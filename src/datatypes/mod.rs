@@ -20,6 +20,47 @@ pub type Metadata = BTreeMap<String, String>;
 /// typedef fpr [Option<(String, Option<String>)>] descr
 pub(crate) type Extension = Option<(String, Option<String>)>;
 
+/// An extension trait to polyfill [`Arc::unwrap_or_clone`] from the nightly stdlib.
+pub trait ArcExt<T> {
+    /// If we have the only reference to `T` then unwrap it. Otherwise, clone `T` and return the
+    /// clone.
+    ///
+    /// Assuming `arc_t` is of type `Arc<T>`, this function is functionally equivalent to
+    /// `(*arc_t).clone()`, but will avoid cloning the inner value where possible.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::{ptr, sync::Arc};
+    /// # use arrow2::datatype::ArcExt;
+    /// let inner = String::from("test");
+    /// let ptr = inner.as_ptr();
+    ///
+    /// let arc = Arc::new(inner);
+    /// let inner = Arc::unwrap_or_clone(arc);
+    /// // The inner value was not cloned
+    /// assert!(ptr::eq(ptr, inner.as_ptr()));
+    ///
+    /// let arc = Arc::new(inner);
+    /// let arc2 = arc.clone();
+    /// let inner = Arc::unwrap_or_clone(arc);
+    /// // Because there were 2 references, we had to clone the inner value.
+    /// assert!(!ptr::eq(ptr, inner.as_ptr()));
+    /// // `arc2` is the last reference, so when we unwrap it we get back
+    /// // the original `String`.
+    /// let inner = Arc::unwrap_or_clone(arc2);
+    /// assert!(ptr::eq(ptr, inner.as_ptr()));
+    /// ```
+    fn unwrap_or_clone_polyfill(this: Self) -> T;
+}
+
+impl<T: Clone> ArcExt<T> for Arc<T> {
+    #[inline]
+    fn unwrap_or_clone_polyfill(this: Self) -> T {
+        Arc::try_unwrap(this).unwrap_or_else(|arc| (*arc).clone())
+    }
+}
+
 /// The set of supported logical types in this crate.
 ///
 /// Each variant uniquely identifies a logical type, which define specific semantics to the data
@@ -100,11 +141,11 @@ pub enum DataType {
     /// A variable-length UTF-8 encoded string whose offsets are represented as [`i64`].
     LargeUtf8,
     /// A list of some logical data type whose offsets are represented as [`i32`].
-    List(Box<Field>),
+    List(Arc<Field>),
     /// A list of some logical data type with a fixed number of elements.
-    FixedSizeList(Box<Field>, usize),
+    FixedSizeList(Arc<Field>, usize),
     /// A list of some logical data type whose offsets are represented as [`i64`].
-    LargeList(Box<Field>),
+    LargeList(Arc<Field>),
     /// A nested [`DataType`] with a given number of [`Field`]s.
     Struct(Vec<Field>),
     /// A nested datatype that can represent slots of differing types.
@@ -135,7 +176,7 @@ pub enum DataType {
     /// The metadata is structured so that Arrow systems without special handling
     /// for Map can make Map an alias for List. The "layout" attribute for the Map
     /// field must have the same contents as a List.
-    Map(Box<Field>, bool),
+    Map(Arc<Field>, bool),
     /// A dictionary encoded array (`key_type`, `value_type`), where
     /// each array element is an index of `key_type` into an
     /// associated dictionary of `value_type`.
@@ -189,11 +230,13 @@ impl From<DataType> for arrow_schema::DataType {
             DataType::LargeBinary => Self::LargeBinary,
             DataType::Utf8 => Self::Utf8,
             DataType::LargeUtf8 => Self::LargeUtf8,
-            DataType::List(f) => Self::List(Box::new((*f).into())),
+            DataType::List(f) => Self::List(Box::new(Arc::unwrap_or_clone_polyfill(f).into())),
             DataType::FixedSizeList(f, size) => {
-                Self::FixedSizeList(Box::new((*f).into()), size as _)
+                Self::FixedSizeList(Box::new(Arc::unwrap_or_clone_polyfill(f).into()), size as _)
             }
-            DataType::LargeList(f) => Self::LargeList(Box::new((*f).into())),
+            DataType::LargeList(f) => {
+                Self::LargeList(Box::new(Arc::unwrap_or_clone_polyfill(f).into()))
+            }
             DataType::Struct(f) => Self::Struct(f.into_iter().map(Into::into).collect()),
             DataType::Union(fields, Some(ids), mode) => {
                 let ids = ids.into_iter().map(|x| x as _).collect();
@@ -205,7 +248,9 @@ impl From<DataType> for arrow_schema::DataType {
                 let fields = fields.into_iter().map(Into::into).collect();
                 Self::Union(fields, ids, mode.into())
             }
-            DataType::Map(f, ordered) => Self::Map(Box::new((*f).into()), ordered),
+            DataType::Map(f, ordered) => {
+                Self::Map(Box::new(Arc::unwrap_or_clone_polyfill(f).into()), ordered)
+            }
             DataType::Dictionary(key, value, _) => Self::Dictionary(
                 Box::new(DataType::from(key).into()),
                 Box::new((*value).into()),
@@ -247,18 +292,18 @@ impl From<arrow_schema::DataType> for DataType {
             DataType::LargeBinary => Self::LargeBinary,
             DataType::Utf8 => Self::Utf8,
             DataType::LargeUtf8 => Self::LargeUtf8,
-            DataType::List(f) => Self::List(Box::new((*f).into())),
+            DataType::List(f) => Self::List(Arc::new((*f).into())),
             DataType::FixedSizeList(f, size) => {
-                Self::FixedSizeList(Box::new((*f).into()), size as _)
+                Self::FixedSizeList(Arc::new((*f).into()), size as _)
             }
-            DataType::LargeList(f) => Self::LargeList(Box::new((*f).into())),
+            DataType::LargeList(f) => Self::LargeList(Arc::new((*f).into())),
             DataType::Struct(f) => Self::Struct(f.into_iter().map(Into::into).collect()),
             DataType::Union(fields, ids, mode) => {
                 let ids = ids.into_iter().map(|x| x as _).collect();
                 let fields = fields.into_iter().map(Into::into).collect();
                 Self::Union(fields, Some(ids), mode.into())
             }
-            DataType::Map(f, ordered) => Self::Map(Box::new((*f).into()), ordered),
+            DataType::Map(f, ordered) => Self::Map(std::sync::Arc::new((*f).into()), ordered),
             DataType::Dictionary(key, value) => {
                 let key = match *key {
                     DataType::Int8 => IntegerType::Int8,

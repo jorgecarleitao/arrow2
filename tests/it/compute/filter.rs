@@ -180,7 +180,7 @@ fn list_array() {
     let value_offsets = Buffer::from_slice_ref(&[0i64, 3, 6, 8, 8]);
 
     let list_data_type =
-        DataType::LargeList(Box::new(Field::new("item", DataType::Int32, false)));
+        DataType::LargeList(std::sync::Arc::new(Field::new("item", DataType::Int32, false)));
     let list_data = ArrayData::builder(list_data_type)
         .len(4)
         .add_buffer(value_offsets)
@@ -202,7 +202,7 @@ fn list_array() {
     let value_offsets = Buffer::from_slice_ref(&[0i64, 3, 3]);
 
     let list_data_type =
-        DataType::LargeList(Box::new(Field::new("item", DataType::Int32, false)));
+        DataType::LargeList(std::sync::Arc::new(Field::new("item", DataType::Int32, false)));
     let expected = ArrayData::builder(list_data_type)
         .len(2)
         .add_buffer(value_offsets)

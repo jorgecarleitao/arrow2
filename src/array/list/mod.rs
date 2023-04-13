@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     bitmap::Bitmap,
     datatypes::{DataType, Field},
@@ -188,7 +190,7 @@ impl<O: Offset> ListArray<O> {
 impl<O: Offset> ListArray<O> {
     /// Returns a default [`DataType`]: inner field is named "item" and is nullable
     pub fn default_datatype(data_type: DataType) -> DataType {
-        let field = Box::new(Field::new("item", data_type, true));
+        let field = Arc::new(Field::new("item", data_type, true));
         if O::IS_LARGE {
             DataType::LargeList(field)
         } else {

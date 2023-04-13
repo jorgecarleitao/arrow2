@@ -77,7 +77,7 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
             None => DataType::Binary,
         },
         AvroSchema::String(_) => DataType::Utf8,
-        AvroSchema::Array(item_schema) => DataType::List(Box::new(schema_to_field(
+        AvroSchema::Array(item_schema) => DataType::List(std::sync::Arc::new(schema_to_field(
             item_schema,
             Some("item"), // default name for list items
             Metadata::default(),

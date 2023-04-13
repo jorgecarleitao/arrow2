@@ -7,7 +7,7 @@ use arrow2::{
 #[allow(clippy::eq_op)]
 #[test]
 fn equal() {
-    let dt = DataType::List(Box::new(Field::new("a", DataType::Boolean, true)));
+    let dt = DataType::List(std::sync::Arc::new(Field::new("a", DataType::Boolean, true)));
     let a = ListScalar::<i32>::new(
         dt.clone(),
         Some(BooleanArray::from_slice([true, false]).boxed()),
@@ -23,7 +23,7 @@ fn equal() {
 
 #[test]
 fn basics() {
-    let dt = DataType::List(Box::new(Field::new("a", DataType::Boolean, true)));
+    let dt = DataType::List(std::sync::Arc::new(Field::new("a", DataType::Boolean, true)));
     let a = ListScalar::<i32>::new(
         dt.clone(),
         Some(BooleanArray::from_slice([true, false]).boxed()),

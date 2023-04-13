@@ -38,7 +38,7 @@ pub fn infer_records_schema(json: &Value) -> Result<Schema> {
 
                 Ok(Field {
                     name: name.clone(),
-                    data_type: DataType::List(Box::new(Field {
+                    data_type: DataType::List(std::sync::Arc::new(Field {
                         name: format!("{name}-records"),
                         data_type,
                         is_nullable: true,
@@ -105,7 +105,7 @@ fn infer_array(values: &[Value]) -> Result<DataType> {
     Ok(if dt == DataType::Null {
         dt
     } else {
-        DataType::List(Box::new(Field::new(ITEM_NAME, dt, true)))
+        DataType::List(std::sync::Arc::new(Field::new(ITEM_NAME, dt, true)))
     })
 }
 
@@ -180,15 +180,15 @@ pub(crate) fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType
         (lhs, rhs) if lhs == rhs => lhs.clone(),
         (List(lhs), List(rhs)) => {
             let inner = coerce_data_type(&[lhs.data_type(), rhs.data_type()]);
-            List(Box::new(Field::new(ITEM_NAME, inner, true)))
+            List(std::sync::Arc::new(Field::new(ITEM_NAME, inner, true)))
         }
         (scalar, List(list)) => {
             let inner = coerce_data_type(&[scalar, list.data_type()]);
-            List(Box::new(Field::new(ITEM_NAME, inner, true)))
+            List(std::sync::Arc::new(Field::new(ITEM_NAME, inner, true)))
         }
         (List(list), scalar) => {
             let inner = coerce_data_type(&[scalar, list.data_type()]);
-            List(Box::new(Field::new(ITEM_NAME, inner, true)))
+            List(std::sync::Arc::new(Field::new(ITEM_NAME, inner, true)))
         }
         (Float64, Int64) => Float64,
         (Int64, Float64) => Float64,
@@ -209,25 +209,25 @@ mod test {
         assert_eq!(
             coerce_data_type(&[
                 Float64,
-                List(Box::new(Field::new(ITEM_NAME, Float64, true)))
+                List(std::sync::Arc::new(Field::new(ITEM_NAME, Float64, true)))
             ]),
-            List(Box::new(Field::new(ITEM_NAME, Float64, true))),
+            List(std::sync::Arc::new(Field::new(ITEM_NAME, Float64, true))),
         );
         assert_eq!(
-            coerce_data_type(&[Float64, List(Box::new(Field::new(ITEM_NAME, Int64, true)))]),
-            List(Box::new(Field::new(ITEM_NAME, Float64, true))),
+            coerce_data_type(&[Float64, List(std::sync::Arc::new(Field::new(ITEM_NAME, Int64, true)))]),
+            List(std::sync::Arc::new(Field::new(ITEM_NAME, Float64, true))),
         );
         assert_eq!(
-            coerce_data_type(&[Int64, List(Box::new(Field::new(ITEM_NAME, Int64, true)))]),
-            List(Box::new(Field::new(ITEM_NAME, Int64, true))),
+            coerce_data_type(&[Int64, List(std::sync::Arc::new(Field::new(ITEM_NAME, Int64, true)))]),
+            List(std::sync::Arc::new(Field::new(ITEM_NAME, Int64, true))),
         );
         // boolean and number are incompatible, return utf8
         assert_eq!(
             coerce_data_type(&[
                 Boolean,
-                List(Box::new(Field::new(ITEM_NAME, Float64, true)))
+                List(std::sync::Arc::new(Field::new(ITEM_NAME, Float64, true)))
             ]),
-            List(Box::new(Field::new(ITEM_NAME, Utf8, true))),
+            List(std::sync::Arc::new(Field::new(ITEM_NAME, Utf8, true))),
         );
     }
 
