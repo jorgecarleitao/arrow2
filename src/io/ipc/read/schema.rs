@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow_format::ipc::{
     planus::ReadAsRoot, FieldRef, FixedSizeListRef, MapRef, TimeRef, TimestampRef, UnionRef,
 };
@@ -104,7 +106,7 @@ fn deserialize_time(time: TimeRef) -> Result<(DataType, IpcField)> {
 }
 
 fn deserialize_timestamp(timestamp: TimestampRef) -> Result<(DataType, IpcField)> {
-    let timezone = timestamp.timezone()?.map(|tz| tz.to_string());
+    let timezone = timestamp.timezone()?.map(|tz| Arc::new(tz.to_string()));
     let time_unit = deserialize_timeunit(timestamp.unit()?)?;
     Ok((
         DataType::Timestamp(time_unit, timezone),

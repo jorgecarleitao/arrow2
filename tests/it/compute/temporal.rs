@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::array::*;
 use arrow2::compute::temporal::*;
 use arrow2::datatypes::*;
@@ -198,7 +200,7 @@ fn test_data_tz() -> Vec<TestData> {
                 // Mon May 24 2021 17:25:30 GMT+0000
                 Int64Array::from(&[Some(1621877130000000), None]).to(DataType::Timestamp(
                     TimeUnit::Microsecond,
-                    Some("GMT".to_string()),
+                    Some(std::sync::Arc::new("GMT".to_string())),
                 )),
             ),
             year: Some(Int32Array::from(&[Some(2021), None])),
@@ -213,7 +215,10 @@ fn test_data_tz() -> Vec<TestData> {
         },
         TestData {
             input: Box::new(Int64Array::from(&[Some(1621877130000000), None]).to(
-                DataType::Timestamp(TimeUnit::Microsecond, Some("+01:00".to_string())),
+                DataType::Timestamp(
+                    TimeUnit::Microsecond,
+                    Some(std::sync::Arc::new("+01:00".to_string())),
+                ),
             )),
             year: Some(Int32Array::from(&[Some(2021), None])),
             month: Some(UInt32Array::from(&[Some(5), None])),
@@ -227,7 +232,10 @@ fn test_data_tz() -> Vec<TestData> {
         },
         TestData {
             input: Box::new(Int64Array::from(&[Some(1621877130000000), None]).to(
-                DataType::Timestamp(TimeUnit::Microsecond, Some("Europe/Lisbon".to_string())),
+                DataType::Timestamp(
+                    TimeUnit::Microsecond,
+                    Some(std::sync::Arc::new("Europe/Lisbon".to_string())),
+                ),
             )),
             year: Some(Int32Array::from(&[Some(2021), None])),
             month: Some(UInt32Array::from(&[Some(5), None])),
@@ -244,7 +252,7 @@ fn test_data_tz() -> Vec<TestData> {
                 // Sun Mar 29 2020 00:00:00 GMT+0000 (Western European Standard Time)
                 Int64Array::from(&[Some(1585440000), None]).to(DataType::Timestamp(
                     TimeUnit::Second,
-                    Some("Europe/Lisbon".to_string()),
+                    Some(std::sync::Arc::new("Europe/Lisbon".to_string())),
                 )),
             ),
             year: Some(Int32Array::from(&[Some(2020), None])),
@@ -262,7 +270,7 @@ fn test_data_tz() -> Vec<TestData> {
                 // Sun Mar 29 2020 02:00:00 GMT+0100 (Western European Summer Time)
                 Int64Array::from(&[Some(1585443600), None]).to(DataType::Timestamp(
                     TimeUnit::Second,
-                    Some("Europe/Lisbon".to_string()),
+                    Some(std::sync::Arc::new("Europe/Lisbon".to_string())),
                 )),
             ),
             year: Some(Int32Array::from(&[Some(2020), None])),
@@ -346,7 +354,7 @@ fn consistency_check<O: arrow2::types::NativeType>(
         Timestamp(TimeUnit::Millisecond, None),
         Timestamp(TimeUnit::Microsecond, None),
         Timestamp(TimeUnit::Nanosecond, None),
-        Timestamp(TimeUnit::Nanosecond, Some("+00:00".to_string())),
+        Timestamp(TimeUnit::Nanosecond, Some(Arc::new("+00:00".to_string()))),
         Time64(TimeUnit::Microsecond),
         Time64(TimeUnit::Nanosecond),
         Date32,

@@ -81,7 +81,7 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
 /// ])
 /// .to(DataType::Timestamp(
 ///     TimeUnit::Second,
-///     Some("America/New_York".to_string()),
+///     Some(std::sync::Arc::new("America/New_york".to_string())),
 /// ));
 ///
 /// let duration = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)])
@@ -96,7 +96,7 @@ fn create_scale(lhs: &DataType, rhs: &DataType) -> Result<f64> {
 /// ])
 /// .to(DataType::Timestamp(
 ///     TimeUnit::Second,
-///     Some("America/New_York".to_string()),
+///     Some(std::sync::Arc::new("America/New_york".to_string())),
 /// ));
 ///
 /// assert_eq!(result, expected);
@@ -161,7 +161,7 @@ where
 /// ])
 /// .to(DataType::Timestamp(
 ///     TimeUnit::Second,
-///     Some("America/New_York".to_string()),
+///     Some(std::sync::Arc::new("America/New_york".to_string())),
 /// ));
 ///
 /// let duration = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)])
@@ -176,7 +176,7 @@ where
 /// ])
 /// .to(DataType::Timestamp(
 ///     TimeUnit::Second,
-///     Some("America/New_York".to_string()),
+///     Some(std::sync::Arc::new("America/New_york".to_string())),
 /// ));
 ///
 /// assert_eq!(result, expected);

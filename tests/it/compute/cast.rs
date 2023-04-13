@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::array::*;
 use arrow2::compute::cast::{can_cast_types, cast, CastOptions};
 use arrow2::datatypes::*;
@@ -125,7 +127,11 @@ fn i32_to_list_i32() {
     let array = Int32Array::from_slice([5, 6, 7, 8, 9]);
     let b = cast(
         &array,
-        &DataType::List(std::sync::Arc::new(Field::new("item", DataType::Int32, true))),
+        &DataType::List(std::sync::Arc::new(Field::new(
+            "item",
+            DataType::Int32,
+            true,
+        ))),
         CastOptions::default(),
     )
     .unwrap();
@@ -149,7 +155,11 @@ fn i32_to_list_i32_nullable() {
     let array = Int32Array::from(input);
     let b = cast(
         &array,
-        &DataType::List(std::sync::Arc::new(Field::new("item", DataType::Int32, true))),
+        &DataType::List(std::sync::Arc::new(Field::new(
+            "item",
+            DataType::Int32,
+            true,
+        ))),
         CastOptions::default(),
     )
     .unwrap();
@@ -173,7 +183,11 @@ fn i32_to_list_f64_nullable_sliced() {
     let array = array.sliced(2, 4);
     let b = cast(
         &array,
-        &DataType::List(std::sync::Arc::new(Field::new("item", DataType::Float64, true))),
+        &DataType::List(std::sync::Arc::new(Field::new(
+            "item",
+            DataType::Float64,
+            true,
+        ))),
         CastOptions::default(),
     )
     .unwrap();
@@ -483,7 +497,10 @@ fn consistency() {
         Float64,
         Timestamp(TimeUnit::Second, None),
         Timestamp(TimeUnit::Millisecond, None),
-        Timestamp(TimeUnit::Millisecond, Some("+01:00".to_string())),
+        Timestamp(
+            TimeUnit::Millisecond,
+            Some(std::sync::Arc::new("+01:00".to_string())),
+        ),
         Timestamp(TimeUnit::Microsecond, None),
         Timestamp(TimeUnit::Nanosecond, None),
         Time64(TimeUnit::Microsecond),
@@ -622,7 +639,10 @@ fn int32_to_date32() {
 fn timestamp_to_date32() {
     test_primitive_to_primitive(
         &[864000000005i64, 1545696000001],
-        DataType::Timestamp(TimeUnit::Millisecond, Some(String::from("UTC"))),
+        DataType::Timestamp(
+            TimeUnit::Millisecond,
+            Some(std::sync::Arc::new("UTC".to_string())),
+        ),
         &[10000i32, 17890],
         DataType::Date32,
     );
@@ -632,7 +652,10 @@ fn timestamp_to_date32() {
 fn timestamp_to_date64() {
     test_primitive_to_primitive(
         &[864000000005i64, 1545696000001],
-        DataType::Timestamp(TimeUnit::Millisecond, Some(String::from("UTC"))),
+        DataType::Timestamp(
+            TimeUnit::Millisecond,
+            Some(std::sync::Arc::new("UTC".to_string())),
+        ),
         &[864000000005i64, 1545696000001i64],
         DataType::Date64,
     );
@@ -642,7 +665,10 @@ fn timestamp_to_date64() {
 fn timestamp_to_i64() {
     test_primitive_to_primitive(
         &[864000000005i64, 1545696000001],
-        DataType::Timestamp(TimeUnit::Millisecond, Some(String::from("UTC"))),
+        DataType::Timestamp(
+            TimeUnit::Millisecond,
+            Some(std::sync::Arc::new("UTC".to_string())),
+        ),
         &[864000000005i64, 1545696000001i64],
         DataType::Int64,
     );
@@ -759,7 +785,7 @@ fn list_to_from_fixed_size_list() {
 
 #[test]
 fn timestamp_with_tz_to_utf8() {
-    let tz = "-02:00".to_string();
+    let tz = Arc::new("-02:00".to_string());
     let expected =
         Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
     let array = Int64Array::from_slice([851020797000000000, 851024397000000000])
@@ -771,7 +797,7 @@ fn timestamp_with_tz_to_utf8() {
 
 #[test]
 fn utf8_to_timestamp_with_tz() {
-    let tz = "-02:00".to_string();
+    let tz = Arc::new("-02:00".to_string());
     let array =
         Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
     // the timezone is used to map the time to UTC.

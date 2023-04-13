@@ -92,7 +92,7 @@ fn test_primitive() {
     let array = PrimitiveArray::new(data_type, vec![1, 2, 3].into(), None);
     test_conversion(&array);
 
-    let data_type = DataType::Timestamp(TimeUnit::Second, Some("UTC".into()));
+    let data_type = DataType::Timestamp(TimeUnit::Second, Some(Arc::new("UTC".into())));
     let nulls = Bitmap::from_iter([true, true, false]);
     let array = PrimitiveArray::new(data_type, vec![1_i64, 24, 0].into(), Some(nulls));
     test_conversion(&array);
@@ -136,7 +136,7 @@ fn make_struct() -> StructArray {
     let a1 = BinaryArray::<i32>::from_iter([Some("s".as_bytes()), Some(b"sd\xFFfk\x23"), None]);
     let a2 = BinaryArray::<i64>::from_iter([Some("45848".as_bytes()), Some(b"\x03\xFF"), None]);
 
-    let data_type = DataType::Timestamp(TimeUnit::Millisecond, Some("UTC".into()));
+    let data_type = DataType::Timestamp(TimeUnit::Millisecond, Some(Arc::new("UTC".into())));
     let nulls = Bitmap::from_iter([true, true, false]);
     let a3 = PrimitiveArray::new(data_type, vec![1_i64, 24, 0].into(), Some(nulls));
 

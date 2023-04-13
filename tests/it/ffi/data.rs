@@ -3,6 +3,7 @@ use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::{DataType, Field, TimeUnit};
 use arrow2::{error::Result, ffi};
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 fn _test_round_trip(array: Box<dyn Array>, expected: Box<dyn Array>) -> Result<()> {
     let field = Field::new("a", array.data_type().clone(), true);
@@ -93,7 +94,7 @@ fn decimal_nullable() -> Result<()> {
 fn timestamp_tz() -> Result<()> {
     let data = Int64Array::from(&vec![Some(2), None, None]).to(DataType::Timestamp(
         TimeUnit::Second,
-        Some("UTC".to_string()),
+        Some(Arc::new("UTC".to_string())),
     ));
     test_round_trip(data)
 }
@@ -256,7 +257,10 @@ fn fixed_size_list_sliced() -> Result<()> {
     let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
 
     let array = FixedSizeListArray::try_new(
-        DataType::FixedSizeList(std::sync::Arc::new(Field::new("a", DataType::Int32, true)), 2),
+        DataType::FixedSizeList(
+            std::sync::Arc::new(Field::new("a", DataType::Int32, true)),
+            2,
+        ),
         Box::new(PrimitiveArray::<i32>::from_vec(vec![1, 2, 3, 4, 5, 6])),
         Some(bitmap),
     )?;

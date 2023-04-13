@@ -426,7 +426,7 @@ fn deserialize_timestamp() -> Result<()> {
     let input = vec!["1996-12-19T16:34:57-02:00", "1996-12-19T16:34:58-02:00"];
     let input = input.join("\n");
 
-    let data_type = DataType::Timestamp(TimeUnit::Millisecond, Some("-01:00".to_string()));
+    let data_type = DataType::Timestamp(TimeUnit::Millisecond, Some(std::sync::Arc::new("-01:00".to_string())));
 
     let expected = Int64Array::from([Some(851020497000), Some(851020498000)]).to(data_type.clone());
 
@@ -455,6 +455,6 @@ proptest! {
     #[test]
     #[cfg_attr(miri, ignore)] // miri and proptest do not work well :(
     fn dates(v in "1996-12-19T16:3[0-9]:57-02:00") {
-        assert_eq!(infer(v.as_bytes()), DataType::Timestamp(TimeUnit::Millisecond, Some("-02:00".to_string())));
+        assert_eq!(infer(v.as_bytes()), DataType::Timestamp(TimeUnit::Millisecond, Some(std::sync::Arc::new("-02:00".to_string()))));
     }
 }

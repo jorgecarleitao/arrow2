@@ -586,7 +586,7 @@ pub fn pyarrow_nullable(column: &str) -> Box<dyn Array> {
             PrimitiveArray::<i64>::from(i64_values).to(DataType::Timestamp(TimeUnit::Second, None)),
         ),
         "timestamp_s_utc" => Box::new(PrimitiveArray::<i64>::from(i64_values).to(
-            DataType::Timestamp(TimeUnit::Second, Some("UTC".to_string())),
+            DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("UTC".to_string()))),
         )),
         _ => unreachable!(),
     }
@@ -739,11 +739,11 @@ pub fn pyarrow_nullable_statistics(column: &str) -> Statistics {
             null_count: UInt64Array::from([Some(3)]).boxed(),
             min_value: Box::new(Int64Array::from_slice([-256]).to(DataType::Timestamp(
                 TimeUnit::Second,
-                Some("UTC".to_string()),
+                Some(std::sync::Arc::new("UTC".to_string())),
             ))),
             max_value: Box::new(Int64Array::from_slice([9]).to(DataType::Timestamp(
                 TimeUnit::Second,
-                Some("UTC".to_string()),
+                Some(std::sync::Arc::new("UTC".to_string())),
             ))),
         },
         _ => unreachable!(),
@@ -1622,7 +1622,7 @@ fn generic_data() -> Result<(Schema, Chunk<Box<dyn Array>>)> {
     let values = PrimitiveArray::from_slice([1i64, 3])
         .to(DataType::Timestamp(
             TimeUnit::Millisecond,
-            Some("UTC".to_string()),
+            Some(std::sync::Arc::new("UTC".to_string())),
         ))
         .boxed();
     let array7 = DictionaryArray::try_from_keys(indices.clone(), values).unwrap();

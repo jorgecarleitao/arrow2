@@ -260,7 +260,7 @@ fn deserialize_timestamp_string_tz_s() -> Result<()> {
 
     let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
-        DataType::Timestamp(TimeUnit::Second, Some("+01:00".to_string())),
+        DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("+01:00".to_string()))),
         false,
     )));
 
@@ -268,7 +268,7 @@ fn deserialize_timestamp_string_tz_s() -> Result<()> {
 
     let expected = Int64Array::from([Some(1680870214)]).to(DataType::Timestamp(
         TimeUnit::Second,
-        Some("+01:00".to_string()),
+        Some(std::sync::Arc::new("+01:00".to_string())),
     ));
 
     assert_eq!(expected, result.as_ref());

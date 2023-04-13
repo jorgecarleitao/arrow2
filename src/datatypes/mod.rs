@@ -111,7 +111,7 @@ pub enum DataType {
     /// * An absolute time zone offset of the form +XX:XX or -XX:XX, such as +07:30
     /// When the timezone is not specified, the timestamp is considered to have no timezone
     /// and is represented _as is_
-    Timestamp(TimeUnit, Option<String>),
+    Timestamp(TimeUnit, Option<Arc<String>>),
     /// An [`i32`] representing the elapsed time since UNIX epoch (1970-01-01)
     /// in days.
     Date32,
@@ -218,7 +218,9 @@ impl From<DataType> for arrow_schema::DataType {
             DataType::Float16 => Self::Float16,
             DataType::Float32 => Self::Float32,
             DataType::Float64 => Self::Float64,
-            DataType::Timestamp(unit, tz) => Self::Timestamp(unit.into(), tz),
+            DataType::Timestamp(unit, tz) => {
+                Self::Timestamp(unit.into(), tz.map(Arc::unwrap_or_clone_polyfill))
+            }
             DataType::Date32 => Self::Date32,
             DataType::Date64 => Self::Date64,
             DataType::Time32(unit) => Self::Time32(unit.into()),
@@ -280,7 +282,7 @@ impl From<arrow_schema::DataType> for DataType {
             DataType::Float16 => Self::Float16,
             DataType::Float32 => Self::Float32,
             DataType::Float64 => Self::Float64,
-            DataType::Timestamp(unit, tz) => Self::Timestamp(unit.into(), tz),
+            DataType::Timestamp(unit, tz) => Self::Timestamp(unit.into(), tz.map(Arc::new)),
             DataType::Date32 => Self::Date32,
             DataType::Date64 => Self::Date64,
             DataType::Time32(unit) => Self::Time32(unit.into()),

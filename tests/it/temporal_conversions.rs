@@ -2,6 +2,7 @@ use arrow2::array::*;
 use arrow2::datatypes::TimeUnit;
 use arrow2::temporal_conversions;
 use arrow2::types::months_days_ns;
+use std::sync::Arc;
 
 #[test]
 fn naive() {
@@ -125,7 +126,7 @@ fn naive_no_tz() {
 
 #[test]
 fn tz_aware() {
-    let tz = "-02:00".to_string();
+    let tz = Arc::new("-02:00".to_string());
     let expected =
         "Timestamp(Nanosecond, Some(\"-02:00\"))[1996-12-19 16:39:57 -02:00, 1996-12-19 17:39:57 -02:00, None]";
     let fmt = "%Y-%m-%dT%H:%M:%S%.f%:z";
@@ -140,7 +141,7 @@ fn tz_aware() {
 
 #[test]
 fn tz_aware_no_timezone() {
-    let tz = "-02:00".to_string();
+    let tz = Arc::new("-02:00".to_string());
     let expected = "Timestamp(Nanosecond, Some(\"-02:00\"))[None, None, None]";
     let fmt = "%Y-%m-%dT%H:%M:%S%.f";
     let array = Utf8Array::<i32>::from_slice([

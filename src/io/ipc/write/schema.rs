@@ -228,7 +228,7 @@ fn serialize_type(data_type: &DataType) -> arrow_format::ipc::Type {
         })),
         Timestamp(unit, tz) => ipc::Type::Timestamp(Box::new(ipc::Timestamp {
             unit: serialize_time_unit(unit),
-            timezone: tz.as_ref().cloned(),
+            timezone: tz.as_ref().map(|tz| tz.as_str().to_owned()),
         })),
         Interval(unit) => ipc::Type::Interval(Box::new(ipc::Interval {
             unit: match unit {

@@ -287,10 +287,18 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                 ["tsn", ""] => DataType::Timestamp(TimeUnit::Nanosecond, None),
 
                 // Timestamps with timezone
-                ["tss", tz] => DataType::Timestamp(TimeUnit::Second, Some(tz.to_string())),
-                ["tsm", tz] => DataType::Timestamp(TimeUnit::Millisecond, Some(tz.to_string())),
-                ["tsu", tz] => DataType::Timestamp(TimeUnit::Microsecond, Some(tz.to_string())),
-                ["tsn", tz] => DataType::Timestamp(TimeUnit::Nanosecond, Some(tz.to_string())),
+                ["tss", tz] => {
+                    DataType::Timestamp(TimeUnit::Second, Some(Arc::new(tz.to_string())))
+                }
+                ["tsm", tz] => {
+                    DataType::Timestamp(TimeUnit::Millisecond, Some(Arc::new(tz.to_string())))
+                }
+                ["tsu", tz] => {
+                    DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::new(tz.to_string())))
+                }
+                ["tsn", tz] => {
+                    DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::new(tz.to_string())))
+                }
 
                 ["w", size_raw] => {
                     // Example: "w:42" fixed-width binary [42 bytes]
@@ -433,7 +441,7 @@ fn to_format(data_type: &DataType) -> String {
             format!(
                 "ts{}:{}",
                 unit,
-                tz.as_ref().map(|x| x.as_ref()).unwrap_or("")
+                tz.as_ref().map(|x| x.as_str()).unwrap_or("")
             )
         }
         DataType::Decimal(precision, scale) => format!("d:{precision},{scale}"),
@@ -576,7 +584,10 @@ mod tests {
                     true,
                 ),
             ]),
-            DataType::Map(std::sync::Arc::new(Field::new("a", DataType::Int64, true)), true),
+            DataType::Map(
+                std::sync::Arc::new(Field::new("a", DataType::Int64, true)),
+                true,
+            ),
             DataType::Union(
                 vec![
                     Field::new("a", DataType::Int64, true),
@@ -609,7 +620,10 @@ mod tests {
             TimeUnit::Nanosecond,
         ] {
             dts.push(DataType::Timestamp(time_unit, None));
-            dts.push(DataType::Timestamp(time_unit, Some("00:00".to_string())));
+            dts.push(DataType::Timestamp(
+                time_unit,
+                Some(Arc::new("00:00".to_string())),
+            ));
             dts.push(DataType::Duration(time_unit));
         }
         for interval_type in [

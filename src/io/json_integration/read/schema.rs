@@ -211,7 +211,7 @@ fn to_data_type(item: &Value, mut children: Vec<Field>) -> Result<DataType> {
                 Some(Value::String(tz)) => Ok(Some(tz.clone())),
                 _ => Err(Error::OutOfSpec("timezone must be a string".to_string())),
             }?;
-            DataType::Timestamp(unit, tz)
+            DataType::Timestamp(unit, tz.map(Arc::new))
         }
         "date" => match item.get("unit") {
             Some(p) if p == "DAY" => DataType::Date32,

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use avro_schema::schema::{Enum, Fixed, Record, Schema as AvroSchema};
 
 use crate::datatypes::*;
@@ -52,10 +54,10 @@ fn schema_to_field(schema: &AvroSchema, name: Option<&str>, props: Metadata) -> 
             Some(logical) => match logical {
                 avro_schema::schema::LongLogical::Time => DataType::Time64(TimeUnit::Microsecond),
                 avro_schema::schema::LongLogical::TimestampMillis => {
-                    DataType::Timestamp(TimeUnit::Millisecond, Some("00:00".to_string()))
+                    DataType::Timestamp(TimeUnit::Millisecond, Some(Arc::new("00:00".to_string())))
                 }
                 avro_schema::schema::LongLogical::TimestampMicros => {
-                    DataType::Timestamp(TimeUnit::Microsecond, Some("00:00".to_string()))
+                    DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::new("00:00".to_string())))
                 }
                 avro_schema::schema::LongLogical::LocalTimestampMillis => {
                     DataType::Timestamp(TimeUnit::Millisecond, None)

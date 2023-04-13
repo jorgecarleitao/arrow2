@@ -161,7 +161,7 @@ fn write_timestamp_second_with_tz() {
     ];
     check_datetime!(
         i64,
-        DataType::Timestamp(TimeUnit::Second, Some("UTC".to_string())),
+        DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("UTC".to_string()))),
         11111111,
         expected
     );
