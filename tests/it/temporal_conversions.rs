@@ -94,7 +94,6 @@ fn scalar_tz_aware_no_timezone() {
 
     let tz = temporal_conversions::parse_offset("-02:00").unwrap();
     let str = "2023-04-07T10:23:34.000000000-02:00";
-    let _nanos_expected = 1680870214000000000 as i64;
 
     // seconds
     let r = temporal_conversions::utf8_to_timestamp_scalar(str, fmt, &tz, &TimeUnit::Second);

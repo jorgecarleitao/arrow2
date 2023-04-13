@@ -535,10 +535,10 @@ pub(crate) fn _deserialize<'a, A: Borrow<Value<'a>>>(
             let iter = rows.iter().map(|row| match row.borrow() {
                 Value::Number(v) => Some(deserialize_int_single(*v)),
                 Value::String(v) => match (tu, tz) {
-                    (_, None) => temporal_conversions::utf8_to_naive_timestamp_scalar(v, "%+", &tu),
+                    (_, None) => temporal_conversions::utf8_to_naive_timestamp_scalar(v, "%+", tu),
                     (_, Some(ref tz)) => {
                         let tz = temporal_conversions::parse_offset(tz).unwrap();
-                        temporal_conversions::utf8_to_timestamp_scalar(v, "%+", &tz, &tu)
+                        temporal_conversions::utf8_to_timestamp_scalar(v, "%+", &tz, tu)
                     }
                 },
                 _ => None,

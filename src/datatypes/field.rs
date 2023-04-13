@@ -64,6 +64,13 @@ impl From<Field> for arrow_schema::Field {
 #[cfg(feature = "arrow")]
 impl From<arrow_schema::Field> for Field {
     fn from(value: arrow_schema::Field) -> Self {
+        (&value).into()
+    }
+}
+
+#[cfg(feature = "arrow")]
+impl From<&arrow_schema::Field> for Field {
+    fn from(value: &arrow_schema::Field) -> Self {
         let data_type = value.data_type().clone().into();
         let metadata = value
             .metadata()
@@ -71,5 +78,19 @@ impl From<arrow_schema::Field> for Field {
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
         Self::new(value.name(), data_type, value.is_nullable()).with_metadata(metadata)
+    }
+}
+
+#[cfg(feature = "arrow")]
+impl From<arrow_schema::FieldRef> for Field {
+    fn from(value: arrow_schema::FieldRef) -> Self {
+        value.as_ref().into()
+    }
+}
+
+#[cfg(feature = "arrow")]
+impl From<&arrow_schema::FieldRef> for Field {
+    fn from(value: &arrow_schema::FieldRef) -> Self {
+        value.as_ref().into()
     }
 }
