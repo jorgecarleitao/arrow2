@@ -3,6 +3,8 @@ use arrow2::datatypes::TimeUnit;
 use arrow2::temporal_conversions;
 use arrow2::types::months_days_ns;
 
+use chrono::NaiveDateTime;
+
 #[test]
 fn naive() {
     let expected = "Timestamp(Nanosecond, None)[1996-12-19 16:39:57, 1996-12-19 13:39:57, None]";
@@ -27,10 +29,10 @@ fn naive() {
 
 #[test]
 fn naive_scalar() {
-    let fmt = "%Y-%m-%dT%H:%M:%S:z";
+    let fmt = "%Y-%m-%dT%H:%M:%S.%9f%z";
+    let str = "2023-04-07T12:23:34.123456789Z";
 
-    let str = "2023-04-07T12:23:34.000000000Z";
-    let nanos_expected = 1680870214000000000;
+    let nanos_expected = 1680870214123456789;
 
     // seconds
     let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Second);
@@ -48,10 +50,10 @@ fn naive_scalar() {
 
 #[test]
 fn naive_scalar_no_tz() {
-    let fmt = "%Y-%m-%dT%H:%M:%S";
+    let fmt = "%Y-%m-%dT%H:%M:%S.%9f";
 
-    let str = "2023-04-07T12:23:34.000000000";
-    let nanos_expected = 1680870214000000000;
+    let str = "2023-04-07T12:23:34.123456789";
+    let nanos_expected = 1680870214123456789;
 
     // seconds
     let r = temporal_conversions::utf8_to_naive_timestamp_scalar(str, fmt, &TimeUnit::Second);
@@ -120,6 +122,51 @@ fn naive_no_tz() {
     ]);
     let r = temporal_conversions::utf8_to_naive_timestamp_ns(&array, fmt);
     assert_eq!(format!("{r:?}"), expected);
+}
+
+#[test]
+fn timestamp_to_datetime() {
+    let fmt = "%Y-%m-%dT%H:%M:%S.%9f";
+
+    // positive milliseconds
+    let ts = 1680870214123456789;
+    let r = temporal_conversions::timestamp_ms_to_datetime(ts / 1_000_000);
+    assert_eq!(
+        r,
+        NaiveDateTime::parse_from_str("2023-04-07T12:23:34.123000000", fmt).unwrap()
+    );
+    // positive microseconds
+    let r = temporal_conversions::timestamp_us_to_datetime(ts / 1_000);
+    assert_eq!(
+        r,
+        NaiveDateTime::parse_from_str("2023-04-07T12:23:34.123456000", fmt).unwrap()
+    );
+    // positive nanoseconds
+    let r = temporal_conversions::timestamp_ns_to_datetime(ts);
+    assert_eq!(
+        r,
+        NaiveDateTime::parse_from_str("2023-04-07T12:23:34.123456789", fmt).unwrap()
+    );
+
+    // negative milliseconds
+    let ts = -15548276987654321;
+    let r = temporal_conversions::timestamp_ms_to_datetime(ts / 1_000_000);
+    assert_eq!(
+        r,
+        NaiveDateTime::parse_from_str("1969-07-05T01:02:03.987000000", fmt).unwrap()
+    );
+    // negative microseconds
+    let r = temporal_conversions::timestamp_us_to_datetime(ts / 1_000);
+    assert_eq!(
+        r,
+        NaiveDateTime::parse_from_str("1969-07-05T01:02:03.987654000", fmt).unwrap()
+    );
+    // negative nanoseconds
+    let r = temporal_conversions::timestamp_ns_to_datetime(ts);
+    assert_eq!(
+        r,
+        NaiveDateTime::parse_from_str("1969-07-05T01:02:03.987654321", fmt).unwrap()
+    );
 }
 
 #[test]
