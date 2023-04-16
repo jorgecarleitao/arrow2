@@ -112,36 +112,60 @@ pub fn timestamp_s_to_datetime(seconds: i64) -> NaiveDateTime {
 /// converts a `i64` representing a `timestamp(ms)` to [`NaiveDateTime`]
 #[inline]
 pub fn timestamp_ms_to_datetime(v: i64) -> NaiveDateTime {
-    NaiveDateTime::from_timestamp_opt(
-        // extract seconds from milliseconds
-        v / MILLISECONDS,
-        // discard extracted seconds and convert milliseconds to nanoseconds
-        (v % MILLISECONDS * MICROSECONDS) as u32,
-    )
+    if v >= 0 {
+        NaiveDateTime::from_timestamp_opt(
+            // extract seconds from milliseconds
+            v / MILLISECONDS,
+            // discard extracted seconds and convert milliseconds to nanoseconds
+            (v % MILLISECONDS * MICROSECONDS) as u32,
+        )
+    } else {
+        // negative values
+        NaiveDateTime::from_timestamp_opt(
+            (v / MILLISECONDS) - 1,
+            (v % MILLISECONDS * MICROSECONDS).unsigned_abs() as u32,
+        )
+    }
     .expect("invalid or out-of-range datetime")
 }
 
 /// converts a `i64` representing a `timestamp(us)` to [`NaiveDateTime`]
 #[inline]
 pub fn timestamp_us_to_datetime(v: i64) -> NaiveDateTime {
-    NaiveDateTime::from_timestamp_opt(
-        // extract seconds from microseconds
-        v / MICROSECONDS,
-        // discard extracted seconds and convert microseconds to nanoseconds
-        (v % MICROSECONDS * MILLISECONDS) as u32,
-    )
+    if v >= 0 {
+        NaiveDateTime::from_timestamp_opt(
+            // extract seconds from microseconds
+            v / MICROSECONDS,
+            // discard extracted seconds and convert microseconds to nanoseconds
+            (v % MICROSECONDS * MILLISECONDS) as u32,
+        )
+    } else {
+        // negative values
+        NaiveDateTime::from_timestamp_opt(
+            (v / MICROSECONDS) - 1,
+            (v % MICROSECONDS * MILLISECONDS).unsigned_abs() as u32,
+        )
+    }
     .expect("invalid or out-of-range datetime")
 }
 
 /// converts a `i64` representing a `timestamp(ns)` to [`NaiveDateTime`]
 #[inline]
 pub fn timestamp_ns_to_datetime(v: i64) -> NaiveDateTime {
-    NaiveDateTime::from_timestamp_opt(
-        // extract seconds from nanoseconds
-        v / NANOSECONDS,
-        // discard extracted seconds
-        (v % NANOSECONDS) as u32,
-    )
+    if v >= 0 {
+        NaiveDateTime::from_timestamp_opt(
+            // extract seconds from nanoseconds
+            v / NANOSECONDS,
+            // discard extracted seconds
+            (v % NANOSECONDS) as u32,
+        )
+    } else {
+        // negative values
+        NaiveDateTime::from_timestamp_opt(
+            (v / NANOSECONDS) - 1,
+            (v % NANOSECONDS).unsigned_abs() as u32,
+        )
+    }
     .expect("invalid or out-of-range datetime")
 }
 
