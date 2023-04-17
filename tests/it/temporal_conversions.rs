@@ -127,46 +127,68 @@ fn naive_no_tz() {
 #[test]
 fn timestamp_to_datetime() {
     let fmt = "%Y-%m-%dT%H:%M:%S.%9f";
+    let ts = 1680870214123456789;
 
     // positive milliseconds
-    let ts = 1680870214123456789;
-    let r = temporal_conversions::timestamp_ms_to_datetime(ts / 1_000_000);
     assert_eq!(
-        r,
+        temporal_conversions::timestamp_ms_to_datetime(ts / 1_000_000),
         NaiveDateTime::parse_from_str("2023-04-07T12:23:34.123000000", fmt).unwrap()
     );
     // positive microseconds
-    let r = temporal_conversions::timestamp_us_to_datetime(ts / 1_000);
     assert_eq!(
-        r,
+        temporal_conversions::timestamp_us_to_datetime(ts / 1_000),
         NaiveDateTime::parse_from_str("2023-04-07T12:23:34.123456000", fmt).unwrap()
     );
     // positive nanoseconds
-    let r = temporal_conversions::timestamp_ns_to_datetime(ts);
     assert_eq!(
-        r,
+        temporal_conversions::timestamp_ns_to_datetime(ts),
         NaiveDateTime::parse_from_str("2023-04-07T12:23:34.123456789", fmt).unwrap()
     );
 
-    // negative milliseconds
     let ts = -15548276987654321;
-    let r = temporal_conversions::timestamp_ms_to_datetime(ts / 1_000_000);
+
+    // negative milliseconds
     assert_eq!(
-        r,
+        temporal_conversions::timestamp_ms_to_datetime(ts / 1_000_000),
         NaiveDateTime::parse_from_str("1969-07-05T01:02:03.987000000", fmt).unwrap()
     );
     // negative microseconds
-    let r = temporal_conversions::timestamp_us_to_datetime(ts / 1_000);
     assert_eq!(
-        r,
+        temporal_conversions::timestamp_us_to_datetime(ts / 1_000),
         NaiveDateTime::parse_from_str("1969-07-05T01:02:03.987654000", fmt).unwrap()
     );
     // negative nanoseconds
-    let r = temporal_conversions::timestamp_ns_to_datetime(ts);
     assert_eq!(
-        r,
+        temporal_conversions::timestamp_ns_to_datetime(ts),
         NaiveDateTime::parse_from_str("1969-07-05T01:02:03.987654321", fmt).unwrap()
     );
+
+    let fmt = "%Y-%m-%dT%H:%M:%S";
+    let ts = -2209075200000000000;
+    let expected = NaiveDateTime::parse_from_str("1899-12-31T00:00:00", fmt).unwrap();
+
+    assert_eq!(
+        temporal_conversions::timestamp_ms_to_datetime(ts / 1_000_000),
+        expected
+    );
+    assert_eq!(
+        temporal_conversions::timestamp_us_to_datetime(ts / 1_000),
+        expected
+    );
+    assert_eq!(temporal_conversions::timestamp_ns_to_datetime(ts), expected);
+}
+
+#[test]
+fn timestamp_to_negative_datetime() {
+    let fmt = "%Y-%m-%d %H:%M:%S";
+    let ts = -63135596800000000;
+    let expected = NaiveDateTime::parse_from_str("-0031-04-24 22:13:20", fmt).unwrap();
+
+    assert_eq!(
+        temporal_conversions::timestamp_ms_to_datetime(ts / 1_000),
+        expected
+    );
+    assert_eq!(temporal_conversions::timestamp_us_to_datetime(ts), expected);
 }
 
 #[test]

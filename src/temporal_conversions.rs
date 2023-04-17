@@ -120,9 +120,11 @@ pub fn timestamp_ms_to_datetime(v: i64) -> NaiveDateTime {
             (v % MILLISECONDS * MICROSECONDS) as u32,
         )
     } else {
-        // negative values
+        // note: negative values require 'div_floor' rounding behaviour, which isn't
+        // yet stabilised (see - https://github.com/rust-lang/rust/issues/88581).
+        let secs_rem = (v / MILLISECONDS, v % MILLISECONDS);
         NaiveDateTime::from_timestamp_opt(
-            (v / MILLISECONDS) - 1,
+            secs_rem.0 - (secs_rem.1 != 0) as i64,
             (v % MILLISECONDS * MICROSECONDS).unsigned_abs() as u32,
         )
     }
@@ -140,9 +142,11 @@ pub fn timestamp_us_to_datetime(v: i64) -> NaiveDateTime {
             (v % MICROSECONDS * MILLISECONDS) as u32,
         )
     } else {
-        // negative values
+        // note: negative values require 'div_floor' rounding behaviour, which isn't
+        // yet stabilised (see - https://github.com/rust-lang/rust/issues/88581).
+        let secs_rem = (v / MICROSECONDS, v % MICROSECONDS);
         NaiveDateTime::from_timestamp_opt(
-            (v / MICROSECONDS) - 1,
+            secs_rem.0 - (secs_rem.1 != 0) as i64,
             (v % MICROSECONDS * MILLISECONDS).unsigned_abs() as u32,
         )
     }
@@ -160,9 +164,11 @@ pub fn timestamp_ns_to_datetime(v: i64) -> NaiveDateTime {
             (v % NANOSECONDS) as u32,
         )
     } else {
-        // negative values
+        // note: negative values require 'div_floor' rounding behaviour, which isn't
+        // yet stabilised (see - https://github.com/rust-lang/rust/issues/88581).
+        let secs_rem = (v / NANOSECONDS, v % NANOSECONDS);
         NaiveDateTime::from_timestamp_opt(
-            (v / NANOSECONDS) - 1,
+            secs_rem.0 - (secs_rem.1 != 0) as i64,
             (v % NANOSECONDS).unsigned_abs() as u32,
         )
     }
