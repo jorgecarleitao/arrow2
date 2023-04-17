@@ -16,7 +16,7 @@ fn test_arrow2_roundtrip(array: &dyn arrow_array::Array) {
     assert_eq!(back.len(), array.len());
 
     match array.data_type() {
-        d @ arrow_schema::DataType::Union(_, _, arrow_schema::UnionMode::Sparse) => {
+        d @ arrow_schema::DataType::Union(_, arrow_schema::UnionMode::Sparse) => {
             // Temporary workaround https://github.com/apache/arrow-rs/issues/4044
             let data = array.to_data();
             let type_ids = data.buffers()[0].slice_with_length(data.offset(), data.len());

@@ -204,6 +204,9 @@ pub enum DataType {
 #[cfg(feature = "arrow")]
 impl From<DataType> for arrow_schema::DataType {
     fn from(value: DataType) -> Self {
+        use arrow_schema::Field as ArrowField;
+        use arrow_schema::UnionFields;
+
         match value {
             DataType::Null => Self::Null,
             DataType::Boolean => Self::Boolean,
@@ -218,9 +221,10 @@ impl From<DataType> for arrow_schema::DataType {
             DataType::Float16 => Self::Float16,
             DataType::Float32 => Self::Float32,
             DataType::Float64 => Self::Float64,
-            DataType::Timestamp(unit, tz) => {
-                Self::Timestamp(unit.into(), tz.map(Arc::unwrap_or_clone_polyfill))
-            }
+            DataType::Timestamp(unit, tz) => Self::Timestamp(
+                unit.into(),
+                tz.map(Arc::unwrap_or_clone_polyfill).map(Into::into),
+            ),
             DataType::Date32 => Self::Date32,
             DataType::Date64 => Self::Date64,
             DataType::Time32(unit) => Self::Time32(unit.into()),
@@ -232,40 +236,37 @@ impl From<DataType> for arrow_schema::DataType {
             DataType::LargeBinary => Self::LargeBinary,
             DataType::Utf8 => Self::Utf8,
             DataType::LargeUtf8 => Self::LargeUtf8,
-            DataType::List(f) => Self::List(Box::new(Arc::unwrap_or_clone_polyfill(f).into())),
+            DataType::List(f) => Self::List(Arc::new(Arc::unwrap_or_clone_polyfill(f).into())),
             DataType::FixedSizeList(f, size) => {
-                Self::FixedSizeList(Box::new(Arc::unwrap_or_clone_polyfill(f).into()), size as _)
+                Self::FixedSizeList(Arc::new(Arc::unwrap_or_clone_polyfill(f).into()), size as _)
             }
             DataType::LargeList(f) => {
-                Self::LargeList(Box::new(Arc::unwrap_or_clone_polyfill(f).into()))
+                Self::LargeList(Arc::new(Arc::unwrap_or_clone_polyfill(f).into()))
             }
             DataType::Struct(f) => Self::Struct(
                 Arc::unwrap_or_clone_polyfill(f)
                     .into_iter()
-                    .map(Into::into)
+                    .map(ArrowField::from)
                     .collect(),
             ),
             DataType::Union(fields, Some(ids), mode) => {
                 let ids = Arc::unwrap_or_clone_polyfill(ids)
                     .into_iter()
-                    .map(|x| x as _)
-                    .collect();
+                    .map(|x| x as _);
                 let fields = Arc::unwrap_or_clone_polyfill(fields)
                     .into_iter()
-                    .map(Into::into)
-                    .collect();
-                Self::Union(fields, ids, mode.into())
+                    .map(ArrowField::from);
+                Self::Union(UnionFields::new(ids, fields), mode.into())
             }
             DataType::Union(fields, None, mode) => {
-                let ids = (0..fields.len() as i8).collect();
+                let ids = 0..fields.len() as i8;
                 let fields = Arc::unwrap_or_clone_polyfill(fields)
                     .into_iter()
-                    .map(Into::into)
-                    .collect();
-                Self::Union(fields, ids, mode.into())
+                    .map(ArrowField::from);
+                Self::Union(UnionFields::new(ids, fields), mode.into())
             }
             DataType::Map(f, ordered) => {
-                Self::Map(Box::new(Arc::unwrap_or_clone_polyfill(f).into()), ordered)
+                Self::Map(Arc::new(Arc::unwrap_or_clone_polyfill(f).into()), ordered)
             }
             DataType::Dictionary(key, value, _) => Self::Dictionary(
                 Box::new(DataType::from(key).into()),
@@ -296,7 +297,9 @@ impl From<arrow_schema::DataType> for DataType {
             DataType::Float16 => Self::Float16,
             DataType::Float32 => Self::Float32,
             DataType::Float64 => Self::Float64,
-            DataType::Timestamp(unit, tz) => Self::Timestamp(unit.into(), tz.map(Arc::new)),
+            DataType::Timestamp(unit, tz) => {
+                Self::Timestamp(unit.into(), tz.map(|tz| Arc::new(tz.to_string())))
+            }
             DataType::Date32 => Self::Date32,
             DataType::Date64 => Self::Date64,
             DataType::Time32(unit) => Self::Time32(unit.into()),
@@ -308,18 +311,16 @@ impl From<arrow_schema::DataType> for DataType {
             DataType::LargeBinary => Self::LargeBinary,
             DataType::Utf8 => Self::Utf8,
             DataType::LargeUtf8 => Self::LargeUtf8,
-            DataType::List(f) => Self::List(Arc::new((*f).into())),
-            DataType::FixedSizeList(f, size) => {
-                Self::FixedSizeList(Arc::new((*f).into()), size as _)
-            }
-            DataType::LargeList(f) => Self::LargeList(Arc::new((*f).into())),
+            DataType::List(f) => Self::List(Arc::new(f.into())),
+            DataType::FixedSizeList(f, size) => Self::FixedSizeList(Arc::new(f.into()), size as _),
+            DataType::LargeList(f) => Self::LargeList(Arc::new(f.into())),
             DataType::Struct(f) => Self::Struct(Arc::new(f.into_iter().map(Into::into).collect())),
-            DataType::Union(fields, ids, mode) => {
-                let ids = Arc::new(ids.into_iter().map(|x| x as _).collect());
-                let fields = Arc::new(fields.into_iter().map(Into::into).collect());
+            DataType::Union(fields, mode) => {
+                let ids = Arc::new(fields.iter().map(|(x, _)| x as _).collect());
+                let fields = Arc::new(fields.iter().map(|(_, f)| f.into()).collect());
                 Self::Union(fields, Some(ids), mode.into())
             }
-            DataType::Map(f, ordered) => Self::Map(std::sync::Arc::new((*f).into()), ordered),
+            DataType::Map(f, ordered) => Self::Map(std::sync::Arc::new(f.into()), ordered),
             DataType::Dictionary(key, value) => {
                 let key = match *key {
                     DataType::Int8 => IntegerType::Int8,
