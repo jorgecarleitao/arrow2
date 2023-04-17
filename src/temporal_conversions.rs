@@ -123,7 +123,7 @@ pub fn timestamp_ms_to_datetime(v: i64) -> NaiveDateTime {
         let secs_rem = (v / MILLISECONDS, v % MILLISECONDS);
         if secs_rem.1 == 0 {
             // whole/integer seconds; no adjustment required
-            NaiveDateTime::from_timestamp_opt(secs_rem.0, (v % MILLISECONDS * MICROSECONDS) as u32)
+            NaiveDateTime::from_timestamp_opt(secs_rem.0, 0)
         } else {
             // negative values with fractional seconds require 'div_floor' rounding behaviour.
             // (which isn't yet stabilised: https://github.com/rust-lang/rust/issues/88581)
@@ -150,7 +150,7 @@ pub fn timestamp_us_to_datetime(v: i64) -> NaiveDateTime {
         let secs_rem = (v / MICROSECONDS, v % MICROSECONDS);
         if secs_rem.1 == 0 {
             // whole/integer seconds; no adjustment required
-            NaiveDateTime::from_timestamp_opt(secs_rem.0, (v % MICROSECONDS * MILLISECONDS) as u32)
+            NaiveDateTime::from_timestamp_opt(secs_rem.0, 0)
         } else {
             // negative values with fractional seconds require 'div_floor' rounding behaviour.
             // (which isn't yet stabilised: https://github.com/rust-lang/rust/issues/88581)
@@ -177,7 +177,7 @@ pub fn timestamp_ns_to_datetime(v: i64) -> NaiveDateTime {
         let secs_rem = (v / NANOSECONDS, v % NANOSECONDS);
         if secs_rem.1 == 0 {
             // whole/integer seconds; no adjustment required
-            NaiveDateTime::from_timestamp_opt(secs_rem.0, (v % NANOSECONDS) as u32)
+            NaiveDateTime::from_timestamp_opt(secs_rem.0, 0)
         } else {
             // negative values with fractional seconds require 'div_floor' rounding behaviour.
             // (which isn't yet stabilised: https://github.com/rust-lang/rust/issues/88581)
