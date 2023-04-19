@@ -195,7 +195,9 @@ fn make_mutable(data_type: &DataType, capacity: usize) -> Result<Box<dyn Mutable
             data_type.clone(),
             capacity,
         )?),
-        PhysicalType::Null => Box::new(NullArray::new(DataType::Null, 0)) as Box<dyn MutableArray>,
+        PhysicalType::Null => {
+            Box::new(MutableNullArray::new(DataType::Null, 0)) as Box<dyn MutableArray>
+        }
         other => {
             return Err(Error::NotYetImplemented(format!(
                 "Deserializing parquet stats from {other:?} is still not implemented"

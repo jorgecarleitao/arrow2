@@ -728,7 +728,7 @@ pub use fixed_size_binary::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
 pub use fixed_size_list::{FixedSizeListArray, MutableFixedSizeListArray};
 pub use list::{ListArray, ListValuesIter, MutableListArray};
 pub use map::MapArray;
-pub use null::NullArray;
+pub use null::{MutableNullArray, NullArray};
 pub use primitive::*;
 pub use struct_::{MutableStructArray, StructArray};
 pub use union::UnionArray;

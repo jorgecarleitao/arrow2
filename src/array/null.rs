@@ -91,13 +91,37 @@ impl Array for NullArray {
     }
 }
 
-impl MutableArray for NullArray {
+#[derive(Debug)]
+/// A distinct type to disambiguate
+/// clashing methods
+pub struct MutableNullArray {
+    inner: NullArray,
+}
+
+impl MutableNullArray {
+    /// Returns a new [`MutableNullArray`].
+    /// # Panics
+    /// This function errors iff:
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to [`crate::datatypes::PhysicalType::Null`].
+    pub fn new(data_type: DataType, length: usize) -> Self {
+        let inner = NullArray::try_new(data_type, length).unwrap();
+        Self { inner }
+    }
+}
+
+impl From<MutableNullArray> for NullArray {
+    fn from(value: MutableNullArray) -> Self {
+        value.inner
+    }
+}
+
+impl MutableArray for MutableNullArray {
     fn data_type(&self) -> &DataType {
         &DataType::Null
     }
 
     fn len(&self) -> usize {
-        self.length
+        self.inner.length
     }
 
     fn validity(&self) -> Option<&MutableBitmap> {
@@ -105,7 +129,7 @@ impl MutableArray for NullArray {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
-        self.clone().boxed()
+        self.inner.clone().boxed()
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -117,7 +141,7 @@ impl MutableArray for NullArray {
     }
 
     fn push_null(&mut self) {
-        self.length += 1;
+        self.inner.length += 1;
     }
 
     fn reserve(&mut self, _additional: usize) {
