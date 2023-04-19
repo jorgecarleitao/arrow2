@@ -26,6 +26,7 @@ mod dictionary;
 mod fixlen;
 mod list;
 mod map;
+mod null;
 mod primitive;
 mod struct_;
 mod utf8;
@@ -194,6 +195,7 @@ fn make_mutable(data_type: &DataType, capacity: usize) -> Result<Box<dyn Mutable
             data_type.clone(),
             capacity,
         )?),
+        PhysicalType::Null => Box::new(NullArray::new(DataType::Null, 0)) as Box<dyn MutableArray>,
         other => {
             return Err(Error::NotYetImplemented(format!(
                 "Deserializing parquet stats from {other:?} is still not implemented"
@@ -538,6 +540,7 @@ fn push(
         Utf8 => utf8::push::<i32>(from, min, max),
         LargeUtf8 => utf8::push::<i64>(from, min, max),
         FixedSizeBinary(_) => fixlen::push(from, min, max),
+        Null => null::push(min, max),
         other => todo!("{:?}", other),
     }
 }
