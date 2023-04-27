@@ -1,5 +1,8 @@
 use crate::{bitmap::Bitmap, datatypes::DataType};
+use std::any::Any;
 
+use crate::array::MutableArray;
+use crate::bitmap::MutableBitmap;
 use crate::{
     array::{Array, FromFfi, ToFfi},
     datatypes::PhysicalType,
@@ -85,6 +88,68 @@ impl Array for NullArray {
 
     fn with_validity(&self, _: Option<Bitmap>) -> Box<dyn Array> {
         panic!("cannot set validity of a null array")
+    }
+}
+
+#[derive(Debug)]
+/// A distinct type to disambiguate
+/// clashing methods
+pub struct MutableNullArray {
+    inner: NullArray,
+}
+
+impl MutableNullArray {
+    /// Returns a new [`MutableNullArray`].
+    /// # Panics
+    /// This function errors iff:
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to [`crate::datatypes::PhysicalType::Null`].
+    pub fn new(data_type: DataType, length: usize) -> Self {
+        let inner = NullArray::try_new(data_type, length).unwrap();
+        Self { inner }
+    }
+}
+
+impl From<MutableNullArray> for NullArray {
+    fn from(value: MutableNullArray) -> Self {
+        value.inner
+    }
+}
+
+impl MutableArray for MutableNullArray {
+    fn data_type(&self) -> &DataType {
+        &DataType::Null
+    }
+
+    fn len(&self) -> usize {
+        self.inner.length
+    }
+
+    fn validity(&self) -> Option<&MutableBitmap> {
+        None
+    }
+
+    fn as_box(&mut self) -> Box<dyn Array> {
+        self.inner.clone().boxed()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn push_null(&mut self) {
+        self.inner.length += 1;
+    }
+
+    fn reserve(&mut self, _additional: usize) {
+        // no-op
+    }
+
+    fn shrink_to_fit(&mut self) {
+        // no-op
     }
 }
 

@@ -52,6 +52,18 @@ where
     use crate::datatypes::PrimitiveType::*;
 
     Ok(match field.data_type().to_physical_type() {
+        Null => {
+            // physical type is i32
+            init.push(InitNested::Primitive(field.is_nullable));
+            types.pop();
+            primitive(null::NestedIter::new(
+                columns.pop().unwrap(),
+                init,
+                field.data_type().clone(),
+                num_rows,
+                chunk_size,
+            ))
+        }
         Boolean => {
             init.push(InitNested::Primitive(field.is_nullable));
             types.pop();
