@@ -9,7 +9,7 @@ use crate::error::Error;
 use super::super::json::write::new_serializer;
 
 fn serialize(array: &dyn Array, buffer: &mut Vec<u8>) {
-    let mut serializer = new_serializer(array);
+    let mut serializer = new_serializer(array, 0, usize::MAX);
     (0..array.len()).for_each(|_| {
         buffer.extend_from_slice(serializer.next().unwrap());
         buffer.push(b'\n');
