@@ -6,6 +6,16 @@
 [![](https://img.shields.io/crates/dv/arrow2.svg)](https://crates.io/crates/arrow2)
 [![](https://docs.rs/arrow2/badge.svg)](https://docs.rs/arrow2/)
 
+## Maintenance Status
+
+NOTE: as of May 2023, this crate has very limited maintenance capacity
+due to a lack of active maintainers. Thus it is unclear how quickly
+PRs will be reviewed, bugs fixed, or releases to crates.io
+made. Please see [arrow-rs](https://crates.io/crates/arrow) for a
+crate with more maintenance bandwidth and
+[#1429](https://github.com/jorgecarleitao/arrow2/issues/1429) for more
+details or to discuss the future this crate.
+
 A Rust crate to work with [Apache Arrow](https://arrow.apache.org/).
 The most feature-complete implementation of the Arrow format after the C++
 implementation.
@@ -50,7 +60,7 @@ for a detailed documentation of each of its APIs.
 * Extensive set of cargo feature flags to reduce compilation time and binary size
 * Fully-decoupled IO between CPU-bounded and IO-bounded tasks, allowing
   this crate to both be used in `async` contexts without blocking and leverage parallelism
-* Fastest known implementation of Avro and Parquet (e.g. faster than the official 
+* Fastest known implementation of Avro and Parquet (e.g. faster than the official
   C++ implementations)
 
 ## Safety and Security
