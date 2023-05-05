@@ -9,7 +9,7 @@
 ## Maintenance Status
 
 NOTE: as of May 2023, this crate is maintained by the
-[pol.rs](https://github.com/pola-rs/polars/) team.
+[pola.rs](https://github.com/pola-rs/polars/) team.
 Given limited maintenance
 capacity, it may take significant time for PRs to be reviewed, bugs
 fixed, or releases made to crates.io.
