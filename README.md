@@ -8,10 +8,10 @@
 
 ## Maintenance Status
 
-NOTE: as of May 2023, this crate has very limited maintenance capacity
-due to a lack of active maintainers. Thus it is unclear how quickly
-PRs will be reviewed, bugs fixed, or releases to crates.io
-made. Please see [arrow-rs](https://crates.io/crates/arrow) for a
+NOTE: as of May 2023, this crate has very limited maintenance
+capacity.  It may take significant time for PRs to be reviewed, bugs
+fixed, or releases made to crates.io.
+Please see [arrow-rs](https://crates.io/crates/arrow) for a
 crate with more maintenance bandwidth and
 [#1429](https://github.com/jorgecarleitao/arrow2/issues/1429) for more
 details or to discuss the future this crate.
