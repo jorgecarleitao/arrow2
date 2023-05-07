@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/json/write/serialize.rs`."><title>serialize.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0-nightly (f49560538 2023-04-28)" data-search-js="search-618e954b235f6acc.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-6f6ffb5395b17c6e.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/json/write/serialize.rs`."><title>serialize.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0-nightly (a77c55248 2023-05-06)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-6f6ffb5395b17c6e.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -337,6 +337,80 @@
 <a href="#337" id="337">337</a>
 <a href="#338" id="338">338</a>
 <a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>chrono::{NaiveDate, NaiveDateTime};
 <span class="kw">use </span>lexical_core::ToLexical;
 <span class="kw">use </span>std::io::Write;
@@ -355,95 +429,114 @@
 
 <span class="kw">use </span><span class="kw">super</span>::utf8;
 
+<span class="kw">fn </span>materialize_serializer&lt;<span class="lifetime">&#39;a</span>, I, F, T&gt;(
+    f: F,
+    iterator: I,
+    offset: usize,
+    take: usize,
+) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt;
+<span class="kw">where
+    </span>T: <span class="lifetime">&#39;a</span>,
+    I: Iterator&lt;Item = T&gt; + Send + Sync + <span class="lifetime">&#39;a</span>,
+    F: FnMut(T, <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) + Send + Sync + <span class="lifetime">&#39;a</span>,
+{
+    <span class="kw">if </span>offset &gt; <span class="number">0 </span>|| take &lt; usize::MAX {
+        Box::new(BufStreamingIterator::new(
+            iterator.skip(offset).take(take),
+            f,
+            <span class="macro">vec!</span>[],
+        ))
+    } <span class="kw">else </span>{
+        Box::new(BufStreamingIterator::new(iterator, f, <span class="macro">vec!</span>[]))
+    }
+}
+
 <span class="kw">fn </span>boolean_serializer&lt;<span class="lifetime">&#39;a</span>&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BooleanArray,
+    offset: usize,
+    take: usize,
 ) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt; {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        |x, buf| <span class="kw">match </span>x {
-            <span class="prelude-val">Some</span>(<span class="bool-val">true</span>) =&gt; buf.extend_from_slice(<span class="string">b&quot;true&quot;</span>),
-            <span class="prelude-val">Some</span>(<span class="bool-val">false</span>) =&gt; buf.extend_from_slice(<span class="string">b&quot;false&quot;</span>),
-            <span class="prelude-val">None </span>=&gt; buf.extend_from_slice(<span class="string">b&quot;null&quot;</span>),
-        },
-        <span class="macro">vec!</span>[],
-    ))
+    <span class="kw">let </span>f = |x: <span class="prelude-ty">Option</span>&lt;bool&gt;, buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;| <span class="kw">match </span>x {
+        <span class="prelude-val">Some</span>(<span class="bool-val">true</span>) =&gt; buf.extend_from_slice(<span class="string">b&quot;true&quot;</span>),
+        <span class="prelude-val">Some</span>(<span class="bool-val">false</span>) =&gt; buf.extend_from_slice(<span class="string">b&quot;false&quot;</span>),
+        <span class="prelude-val">None </span>=&gt; buf.extend_from_slice(<span class="string">b&quot;null&quot;</span>),
+    };
+    materialize_serializer(f, array.iter(), offset, take)
 }
 
 <span class="kw">fn </span>primitive_serializer&lt;<span class="lifetime">&#39;a</span>, T: NativeType + ToLexical&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PrimitiveArray&lt;T&gt;,
+    offset: usize,
+    take: usize,
 ) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt; {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        |x, buf| {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
-                lexical_to_bytes_mut(<span class="kw-2">*</span>x, buf)
-            } <span class="kw">else </span>{
-                buf.extend(<span class="string">b&quot;null&quot;</span>)
-            }
-        },
-        <span class="macro">vec!</span>[],
-    ))
+    <span class="kw">let </span>f = |x: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt;, buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
+            lexical_to_bytes_mut(<span class="kw-2">*</span>x, buf)
+        } <span class="kw">else </span>{
+            buf.extend(<span class="string">b&quot;null&quot;</span>)
+        }
+    };
+    materialize_serializer(f, array.iter(), offset, take)
 }
 
 <span class="kw">fn </span>float_serializer&lt;<span class="lifetime">&#39;a</span>, T&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PrimitiveArray&lt;T&gt;,
+    offset: usize,
+    take: usize,
 ) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt;
 <span class="kw">where
     </span>T: num_traits::Float + NativeType + ToLexical,
 {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        |x, buf| {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
-                <span class="kw">if </span>T::is_nan(<span class="kw-2">*</span>x) || T::is_infinite(<span class="kw-2">*</span>x) {
-                    buf.extend(<span class="string">b&quot;null&quot;</span>)
-                } <span class="kw">else </span>{
-                    lexical_to_bytes_mut(<span class="kw-2">*</span>x, buf)
-                }
-            } <span class="kw">else </span>{
+    <span class="kw">let </span>f = |x: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt;, buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
+            <span class="kw">if </span>T::is_nan(<span class="kw-2">*</span>x) || T::is_infinite(<span class="kw-2">*</span>x) {
                 buf.extend(<span class="string">b&quot;null&quot;</span>)
+            } <span class="kw">else </span>{
+                lexical_to_bytes_mut(<span class="kw-2">*</span>x, buf)
             }
-        },
-        <span class="macro">vec!</span>[],
-    ))
+        } <span class="kw">else </span>{
+            buf.extend(<span class="string">b&quot;null&quot;</span>)
+        }
+    };
+
+    materialize_serializer(f, array.iter(), offset, take)
 }
 
 <span class="kw">fn </span>dictionary_utf8_serializer&lt;<span class="lifetime">&#39;a</span>, K: DictionaryKey, O: Offset&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>DictionaryArray&lt;K&gt;,
+    offset: usize,
+    take: usize,
 ) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt; {
-    <span class="kw">let </span>iter = array.iter_typed::&lt;Utf8Array&lt;O&gt;&gt;().unwrap();
-
-    Box::new(BufStreamingIterator::new(
-        iter,
-        |x, buf| {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
-                utf8::write_str(buf, x).unwrap();
-            } <span class="kw">else </span>{
-                buf.extend_from_slice(<span class="string">b&quot;null&quot;</span>)
-            }
-        },
-        <span class="macro">vec!</span>[],
-    ))
+    <span class="kw">let </span>iter = array.iter_typed::&lt;Utf8Array&lt;O&gt;&gt;().unwrap().skip(offset);
+    <span class="kw">let </span>f = |x: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;, buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
+            utf8::write_str(buf, x).unwrap();
+        } <span class="kw">else </span>{
+            buf.extend_from_slice(<span class="string">b&quot;null&quot;</span>)
+        }
+    };
+    materialize_serializer(f, iter, offset, take)
 }
 
 <span class="kw">fn </span>utf8_serializer&lt;<span class="lifetime">&#39;a</span>, O: Offset&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Utf8Array&lt;O&gt;,
+    offset: usize,
+    take: usize,
 ) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt; {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        |x, buf| {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
-                utf8::write_str(buf, x).unwrap();
-            } <span class="kw">else </span>{
-                buf.extend_from_slice(<span class="string">b&quot;null&quot;</span>)
-            }
-        },
-        <span class="macro">vec!</span>[],
-    ))
+    <span class="kw">let </span>f = |x: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;, buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
+            utf8::write_str(buf, x).unwrap();
+        } <span class="kw">else </span>{
+            buf.extend_from_slice(<span class="string">b&quot;null&quot;</span>)
+        }
+    };
+    materialize_serializer(f, array.iter(), offset, take)
 }
 
 <span class="kw">fn </span>struct_serializer&lt;<span class="lifetime">&#39;a</span>&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>StructArray,
+    offset: usize,
+    take: usize,
 ) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt; {
     <span class="comment">// {&quot;a&quot;: [1, 2, 3], &quot;b&quot;: [a, b, c], &quot;c&quot;: {&quot;a&quot;: [1, 2, 3]}}
     // [
@@ -456,7 +549,7 @@
         .values()
         .iter()
         .map(|x| x.as_ref())
-        .map(new_serializer)
+        .map(|arr| new_serializer(arr, offset, take))
         .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
     <span class="kw">let </span>names = array.fields().iter().map(|f| f.name.as_str());
 
@@ -488,6 +581,8 @@
 
 <span class="kw">fn </span>list_serializer&lt;<span class="lifetime">&#39;a</span>, O: Offset&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ListArray&lt;O&gt;,
+    offset: usize,
+    take: usize,
 ) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt; {
     <span class="comment">// [[1, 2], [3]]
     // [
@@ -495,35 +590,40 @@
     //  [3]
     // ]
     //
-    </span><span class="kw">let </span><span class="kw-2">mut </span>serializer = new_serializer(array.values().as_ref());
+    </span><span class="kw">let </span>offsets = array.offsets().as_slice();
+    <span class="kw">let </span>start = offsets[<span class="number">0</span>].to_usize();
+    <span class="kw">let </span>end = offsets.last().unwrap().to_usize();
+    <span class="kw">let </span><span class="kw-2">mut </span>serializer = new_serializer(array.values().as_ref(), start, end - start);
 
-    Box::new(BufStreamingIterator::new(
-        ZipValidity::new_with_validity(array.offsets().buffer().windows(<span class="number">2</span>), array.validity()),
-        <span class="kw">move </span>|offset, buf| {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(offset) = offset {
-                <span class="kw">let </span>length = (offset[<span class="number">1</span>] - offset[<span class="number">0</span>]).to_usize();
-                buf.push(<span class="string">b&#39;[&#39;</span>);
-                <span class="kw">let </span><span class="kw-2">mut </span>is_first_row = <span class="bool-val">true</span>;
-                <span class="kw">for _ in </span><span class="number">0</span>..length {
-                    <span class="kw">if </span>!is_first_row {
-                        buf.push(<span class="string">b&#39;,&#39;</span>);
-                    }
-                    is_first_row = <span class="bool-val">false</span>;
-                    buf.extend(serializer.next().unwrap());
+    <span class="kw">let </span>f = <span class="kw">move </span>|offset: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[O]&gt;, buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(offset) = offset {
+            <span class="kw">let </span>length = (offset[<span class="number">1</span>] - offset[<span class="number">0</span>]).to_usize();
+            buf.push(<span class="string">b&#39;[&#39;</span>);
+            <span class="kw">let </span><span class="kw-2">mut </span>is_first_row = <span class="bool-val">true</span>;
+            <span class="kw">for _ in </span><span class="number">0</span>..length {
+                <span class="kw">if </span>!is_first_row {
+                    buf.push(<span class="string">b&#39;,&#39;</span>);
                 }
-                buf.push(<span class="string">b&#39;]&#39;</span>);
-            } <span class="kw">else </span>{
-                buf.extend(<span class="string">b&quot;null&quot;</span>);
+                is_first_row = <span class="bool-val">false</span>;
+                buf.extend(serializer.next().unwrap());
             }
-        },
-        <span class="macro">vec!</span>[],
-    ))
+            buf.push(<span class="string">b&#39;]&#39;</span>);
+        } <span class="kw">else </span>{
+            buf.extend(<span class="string">b&quot;null&quot;</span>);
+        }
+    };
+
+    <span class="kw">let </span>iter =
+        ZipValidity::new_with_validity(array.offsets().buffer().windows(<span class="number">2</span>), array.validity());
+    materialize_serializer(f, iter, offset, take)
 }
 
 <span class="kw">fn </span>fixed_size_list_serializer&lt;<span class="lifetime">&#39;a</span>&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>FixedSizeListArray,
+    offset: usize,
+    take: usize,
 ) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>serializer = new_serializer(array.values().as_ref());
+    <span class="kw">let </span><span class="kw-2">mut </span>serializer = new_serializer(array.values().as_ref(), offset, take);
 
     Box::new(BufStreamingIterator::new(
         ZipValidity::new(<span class="number">0</span>..array.len(), array.validity().map(|x| x.iter())),
@@ -551,83 +651,126 @@
 <span class="kw">fn </span>date_serializer&lt;<span class="lifetime">&#39;a</span>, T, F&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PrimitiveArray&lt;T&gt;,
     convert: F,
+    offset: usize,
+    take: usize,
 ) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt;
 <span class="kw">where
     </span>T: NativeType,
     F: Fn(T) -&gt; NaiveDate + <span class="lifetime">&#39;static </span>+ Send + Sync,
 {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        <span class="kw">move </span>|x, buf| {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
-                <span class="kw">let </span>nd = convert(<span class="kw-2">*</span>x);
-                <span class="macro">write!</span>(buf, <span class="string">&quot;\&quot;{nd}\&quot;&quot;</span>).unwrap();
-            } <span class="kw">else </span>{
-                buf.extend_from_slice(<span class="string">b&quot;null&quot;</span>)
-            }
-        },
-        <span class="macro">vec!</span>[],
-    ))
+    <span class="kw">let </span>f = <span class="kw">move </span>|x: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt;, buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
+            <span class="kw">let </span>nd = convert(<span class="kw-2">*</span>x);
+            <span class="macro">write!</span>(buf, <span class="string">&quot;\&quot;{nd}\&quot;&quot;</span>).unwrap();
+        } <span class="kw">else </span>{
+            buf.extend_from_slice(<span class="string">b&quot;null&quot;</span>)
+        }
+    };
+
+    materialize_serializer(f, array.iter(), offset, take)
 }
 
 <span class="kw">fn </span>timestamp_serializer&lt;<span class="lifetime">&#39;a</span>, F&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PrimitiveArray&lt;i64&gt;,
     convert: F,
+    offset: usize,
+    take: usize,
 ) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt;
 <span class="kw">where
     </span>F: Fn(i64) -&gt; NaiveDateTime + <span class="lifetime">&#39;static </span>+ Send + Sync,
 {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        <span class="kw">move </span>|x, buf| {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
-                <span class="kw">let </span>ndt = convert(<span class="kw-2">*</span>x);
-                <span class="macro">write!</span>(buf, <span class="string">&quot;\&quot;{ndt}\&quot;&quot;</span>).unwrap();
-            } <span class="kw">else </span>{
-                buf.extend_from_slice(<span class="string">b&quot;null&quot;</span>)
-            }
-        },
-        <span class="macro">vec!</span>[],
-    ))
+    <span class="kw">let </span>f = <span class="kw">move </span>|x: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>i64&gt;, buf: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
+            <span class="kw">let </span>ndt = convert(<span class="kw-2">*</span>x);
+            <span class="macro">write!</span>(buf, <span class="string">&quot;\&quot;{ndt}\&quot;&quot;</span>).unwrap();
+        } <span class="kw">else </span>{
+            buf.extend_from_slice(<span class="string">b&quot;null&quot;</span>)
+        }
+    };
+    materialize_serializer(f, array.iter(), offset, take)
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new_serializer&lt;<span class="lifetime">&#39;a</span>&gt;(
     array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Array,
+    offset: usize,
+    take: usize,
 ) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a </span>+ Send + Sync&gt; {
     <span class="kw">match </span>array.data_type().to_logical_type() {
-        DataType::Boolean =&gt; boolean_serializer(array.as_any().downcast_ref().unwrap()),
-        DataType::Int8 =&gt; primitive_serializer::&lt;i8&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::Int16 =&gt; primitive_serializer::&lt;i16&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::Int32 =&gt; primitive_serializer::&lt;i32&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::Int64 =&gt; primitive_serializer::&lt;i64&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::UInt8 =&gt; primitive_serializer::&lt;u8&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::UInt16 =&gt; primitive_serializer::&lt;u16&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::UInt32 =&gt; primitive_serializer::&lt;u32&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::UInt64 =&gt; primitive_serializer::&lt;u64&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::Float32 =&gt; float_serializer::&lt;f32&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::Float64 =&gt; float_serializer::&lt;f64&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::Utf8 =&gt; utf8_serializer::&lt;i32&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::LargeUtf8 =&gt; utf8_serializer::&lt;i64&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::Struct(<span class="kw">_</span>) =&gt; struct_serializer(array.as_any().downcast_ref().unwrap()),
-        DataType::FixedSizeList(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
-            fixed_size_list_serializer(array.as_any().downcast_ref().unwrap())
+        DataType::Boolean =&gt; {
+            boolean_serializer(array.as_any().downcast_ref().unwrap(), offset, take)
         }
-        DataType::List(<span class="kw">_</span>) =&gt; list_serializer::&lt;i32&gt;(array.as_any().downcast_ref().unwrap()),
-        DataType::LargeList(<span class="kw">_</span>) =&gt; list_serializer::&lt;i64&gt;(array.as_any().downcast_ref().unwrap()),
+        DataType::Int8 =&gt; {
+            primitive_serializer::&lt;i8&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Int16 =&gt; {
+            primitive_serializer::&lt;i16&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Int32 =&gt; {
+            primitive_serializer::&lt;i32&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Int64 =&gt; {
+            primitive_serializer::&lt;i64&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::UInt8 =&gt; {
+            primitive_serializer::&lt;u8&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::UInt16 =&gt; {
+            primitive_serializer::&lt;u16&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::UInt32 =&gt; {
+            primitive_serializer::&lt;u32&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::UInt64 =&gt; {
+            primitive_serializer::&lt;u64&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Float32 =&gt; {
+            float_serializer::&lt;f32&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Float64 =&gt; {
+            float_serializer::&lt;f64&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Utf8 =&gt; {
+            utf8_serializer::&lt;i32&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::LargeUtf8 =&gt; {
+            utf8_serializer::&lt;i64&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Struct(<span class="kw">_</span>) =&gt; {
+            struct_serializer(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::FixedSizeList(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+            fixed_size_list_serializer(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::List(<span class="kw">_</span>) =&gt; {
+            list_serializer::&lt;i32&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::LargeList(<span class="kw">_</span>) =&gt; {
+            list_serializer::&lt;i64&gt;(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
         other @ DataType::Dictionary(k, v, <span class="kw">_</span>) =&gt; <span class="kw">match </span>(k, <span class="kw-2">&amp;**</span>v) {
             (IntegerType::UInt32, DataType::LargeUtf8) =&gt; {
                 <span class="kw">let </span>array = array
                     .as_any()
                     .downcast_ref::&lt;DictionaryArray&lt;u32&gt;&gt;()
                     .unwrap();
-                dictionary_utf8_serializer::&lt;u32, i64&gt;(array)
+                dictionary_utf8_serializer::&lt;u32, i64&gt;(array, offset, take)
             }
             <span class="kw">_ </span>=&gt; {
                 <span class="macro">todo!</span>(<span class="string">&quot;Writing {:?} to JSON&quot;</span>, other)
             }
         },
-        DataType::Date32 =&gt; date_serializer(array.as_any().downcast_ref().unwrap(), date32_to_date),
-        DataType::Date64 =&gt; date_serializer(array.as_any().downcast_ref().unwrap(), date64_to_date),
+        DataType::Date32 =&gt; date_serializer(
+            array.as_any().downcast_ref().unwrap(),
+            date32_to_date,
+            offset,
+            take,
+        ),
+        DataType::Date64 =&gt; date_serializer(
+            array.as_any().downcast_ref().unwrap(),
+            date64_to_date,
+            offset,
+            take,
+        ),
         DataType::Timestamp(tu, tz) =&gt; {
             <span class="kw">if </span>tz.is_some() {
                 <span class="macro">todo!</span>(<span class="string">&quot;still have to implement timezone&quot;</span>)
@@ -638,7 +781,12 @@
                     TimeUnit::Millisecond =&gt; timestamp_ms_to_datetime,
                     TimeUnit::Second =&gt; timestamp_s_to_datetime,
                 };
-                timestamp_serializer(array.as_any().downcast_ref().unwrap(), convert)
+                timestamp_serializer(
+                    array.as_any().downcast_ref().unwrap(),
+                    convert,
+                    offset,
+                    take,
+                )
             }
         }
         other =&gt; <span class="macro">todo!</span>(<span class="string">&quot;Writing {:?} to JSON&quot;</span>, other),
@@ -667,7 +815,7 @@
 /// # Implementation
 /// This operation is CPU-bounded
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>serialize(array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array, buffer: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) {
-    <span class="kw">let </span><span class="kw-2">mut </span>serializer = new_serializer(array);
+    <span class="kw">let </span><span class="kw-2">mut </span>serializer = new_serializer(array, <span class="number">0</span>, usize::MAX);
 
     (<span class="number">0</span>..array.len()).for_each(|i| {
         <span class="kw">if </span>i != <span class="number">0 </span>{
