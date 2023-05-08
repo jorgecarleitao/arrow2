@@ -10,9 +10,9 @@ use super::super::nested_utils::*;
 use super::super::utils;
 use super::super::Pages;
 
-impl<'a> utils::PageState<'a> for () {
+impl<'a> utils::PageState<'a> for usize {
     fn len(&self) -> usize {
-        0
+        *self
     }
 }
 
@@ -26,16 +26,19 @@ impl DecodedState for usize {
 }
 
 impl<'a> NestedDecoder<'a> for NullDecoder {
-    type State = ();
-    type Dictionary = ();
+    type State = usize;
+    type Dictionary = usize;
     type DecodedState = usize;
 
     fn build_state(
         &self,
         _page: &'a DataPage,
-        _dict: Option<&'a Self::Dictionary>,
+        dict: Option<&'a Self::Dictionary>,
     ) -> Result<Self::State> {
-        Ok(())
+        if let Some(n) = dict {
+            return Ok(*n);
+        }
+        Ok(1)
     }
 
     /// Initializes a new state
@@ -43,8 +46,8 @@ impl<'a> NestedDecoder<'a> for NullDecoder {
         0
     }
 
-    fn push_valid(&self, _state: &mut Self::State, decoded: &mut Self::DecodedState) -> Result<()> {
-        *decoded += 1;
+    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState) -> Result<()> {
+        *decoded += *state;
         Ok(())
     }
 
@@ -53,8 +56,8 @@ impl<'a> NestedDecoder<'a> for NullDecoder {
         *length += 1;
     }
 
-    fn deserialize_dict(&self, _page: &DictPage) -> Self::Dictionary {
-        unreachable!()
+    fn deserialize_dict(&self, page: &DictPage) -> Self::Dictionary {
+        page.num_values
     }
 }
 
