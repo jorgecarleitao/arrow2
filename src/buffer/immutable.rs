@@ -96,6 +96,13 @@ impl<T> Buffer<T> {
         self.len() == 0
     }
 
+    /// Returns whether underlying data is sliced.
+    /// If sliced the [`Buffer`] is backed by
+    /// more data than the length of `Self`.
+    pub fn is_sliced(&self) -> bool {
+        self.data.len() != self.length
+    }
+
     /// Returns the byte slice stored in this buffer
     #[inline]
     pub fn as_slice(&self) -> &[T] {
