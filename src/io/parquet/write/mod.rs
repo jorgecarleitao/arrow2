@@ -136,6 +136,10 @@ pub fn can_encode(data_type: &DataType, encoding: Encoding) -> bool {
                 DataType::Binary | DataType::LargeBinary | DataType::Utf8 | DataType::LargeUtf8,
             )
             | (Encoding::RleDictionary, DataType::Dictionary(_, _, _))
+            | (
+                Encoding::Rle,
+                DataType::Boolean | DataType::UInt8 | DataType::UInt16 | DataType::UInt32
+            )
             | (Encoding::PlainDictionary, DataType::Dictionary(_, _, _))
             | (
                 Encoding::DeltaBinaryPacked,
