@@ -1,6 +1,6 @@
+use ahash::RandomState;
 use std::borrow::Borrow;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::Hasher;
+use std::hash::{BuildHasher, Hasher};
 
 use hash_hasher::HashedMap;
 use indexmap::map::IndexMap as HashMap;
@@ -21,11 +21,11 @@ use crate::{
 /// This is used to create a dictionary, where the hashing depends on the DataType of the child object.
 type Extract<'a> = Box<dyn Fn(&'a Value<'a>) -> Option<(u64, &'a Value<'a>)>>;
 
-fn build_extract(data_type: &DataType) -> Extract {
+fn build_extract(data_type: &DataType, build_hasher: &RandomState) -> Extract {
     match data_type {
         DataType::Utf8 | DataType::LargeUtf8 => Box::new(|value| match &value {
             Value::String(v) => {
-                let mut hasher = DefaultHasher::new();
+                let mut hasher = build_hasher.build_hasher();
                 hasher.write(v.as_bytes());
                 Some((hasher.finish(), value))
             }
@@ -34,7 +34,7 @@ fn build_extract(data_type: &DataType) -> Extract {
                 Number::Integer(_, _) => todo!(),
             },
             Value::Bool(v) => {
-                let mut hasher = DefaultHasher::new();
+                let mut hasher = build_hasher.build_hasher();
                 hasher.write(&[*v as u8]);
                 Some((hasher.finish(), value))
             }
@@ -48,7 +48,7 @@ fn build_extract(data_type: &DataType) -> Extract {
                     _ => None,
                 };
                 integer.map(|integer| {
-                    let mut hasher = DefaultHasher::new();
+                    let mut hasher = build_hasher.build_hasher();
                     hasher.write(&integer.to_le_bytes());
                     (hasher.finish(), value)
                 })
@@ -405,8 +405,9 @@ fn deserialize_dictionary<'a, K: DictionaryKey, A: Borrow<Value<'a>>>(
     let child = DictionaryArray::<K>::try_get_child(&data_type).unwrap();
 
     let mut map = HashedMap::<u64, K>::default();
+    let build_hasher = RandomState::default();
 
-    let extractor = build_extract(child);
+    let extractor = build_extract(child, &build_hasher);
 
     let mut inner = vec![];
     let keys = rows
