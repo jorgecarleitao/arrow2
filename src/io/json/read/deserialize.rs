@@ -21,7 +21,7 @@ use crate::{
 /// This is used to create a dictionary, where the hashing depends on the DataType of the child object.
 type Extract<'a> = Box<dyn Fn(&'a Value<'a>) -> Option<(u64, &'a Value<'a>)>>;
 
-fn build_extract(data_type: &DataType, build_hasher: &RandomState) -> Extract {
+fn build_extract<'a>(data_type: &'a DataType, build_hasher: &'a RandomState) -> Extract<'a> {
     match data_type {
         DataType::Utf8 | DataType::LargeUtf8 => Box::new(|value| match &value {
             Value::String(v) => {
