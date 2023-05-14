@@ -1,5 +1,5 @@
 use parquet2::{
-    encoding::{hybrid_rle::bitpacked_encode, Encoding},
+    encoding::{hybrid_rle::bitpacked_encode, hybrid_rle::encode_bool, Encoding},
     page::DataPage,
     schema::types::PrimitiveType,
     statistics::{serialize_statistics, BooleanStatistics, ParquetStatistics, Statistics},
@@ -8,21 +8,17 @@ use parquet2::{
 use super::super::utils;
 use super::super::WriteOptions;
 use crate::array::*;
-use crate::{error::Result, io::parquet::read::schema::is_nullable};
+use crate::{error::Error, io::parquet::read::schema::is_nullable};
 
-fn encode(iterator: impl Iterator<Item = bool>, buffer: &mut Vec<u8>) -> Result<()> {
-    // encode values using bitpacking
-    let len = buffer.len();
-    let mut buffer = std::io::Cursor::new(buffer);
-    buffer.set_position(len as u64);
-    Ok(bitpacked_encode(&mut buffer, iterator)?)
-}
 
 pub(super) fn encode_plain(
     array: &BooleanArray,
     is_optional: bool,
     buffer: &mut Vec<u8>,
-) -> Result<()> {
+) -> Result<(), Error> {
+    let len = buffer.len();
+    let mut buffer = std::io::Cursor::new(buffer);
+    buffer.set_position(len as u64);
     if is_optional {
         let iter = array.iter().flatten().take(
             array
@@ -31,18 +27,103 @@ pub(super) fn encode_plain(
                 .map(|x| x.len() - x.unset_bits())
                 .unwrap_or_else(|| array.len()),
         );
-        encode(iter, buffer)
+        Ok(bitpacked_encode(&mut buffer, iter)?)
     } else {
         let iter = array.values().iter();
-        encode(iter, buffer)
+        Ok(bitpacked_encode(&mut buffer, iter)?)
     }
+    // let len = buffer.len();
+    // let mut buffer = std::io::Cursor::new(buffer);
+    // buffer.set_position(len as u64);
+    // if is_optional {
+    //     let iter = array.iter().flatten().take(
+    //         array
+    //             .validity()
+    //             .as_ref()
+    //             .map(|x| x.len() - x.unset_bits())
+    //             .unwrap_or_else(|| array.len()),
+    //     );
+    //     encode(iter, buffer)
+    // } else {
+    //     let iter = array.values().iter();
+    //     encode(iter, buffer)
+    // }
 }
 
-pub fn array_to_page(
+pub fn encode_rle(
+    array: &BooleanArray,
+    is_optional: bool,
+    buffer: &mut Vec<u8>,
+) -> Result<(), Error> {
+    let len = buffer.len();
+    let mut buffer = std::io::Cursor::new(buffer);
+    buffer.set_position(len as u64);
+    if is_optional {
+        let iter = array.iter().flatten().take(
+            array
+                .validity()
+                .as_ref()
+                .map(|x| x.len() - x.unset_bits())
+                .unwrap_or_else(|| array.len()),
+        );
+        Ok(encode_bool(&mut buffer, iter)?)
+    } else {
+        let iter = array.values().iter();
+        Ok(encode_bool(&mut buffer, iter)?)
+    }
+    // if is_optional {
+    //     let iter = array.iter().flatten().take(
+    //         array
+    //             .validity()
+    //             .as_ref()
+    //             .map(|x| x.len() - x.unset_bits())
+    //             .unwrap_or_else(|| array.len()),
+    //     );
+    //     encode(iter, buffer)
+    // } else {
+    //     let iter = array.values().iter();
+    //     encode(iter, buffer)
+    // }
+}
+
+// pub fn pre_encode(
+//     array: &BooleanArray,
+//     is_optional: bool,
+// ) -> Result<impl Iterator<Item = bool>, Error> {
+//     let iter = if is_optional {
+//         array.iter().flatten().take(
+//             array
+//                 .validity()
+//                 .as_ref()
+//                 .map(|x| x.len() - x.unset_bits())
+//                 .unwrap_or_else(|| array.len()),
+//         )
+//     } else {
+//         array.values().iter()
+//     };
+//     Ok(iter)
+// }
+
+pub fn array_to_page_boolean(
     array: &BooleanArray,
     options: WriteOptions,
     type_: PrimitiveType,
-) -> Result<DataPage> {
+    encoding: Encoding,
+) -> Result<DataPage, Error> {
+    match encoding {
+        Encoding::Plain => array_to_page(array, options, type_, encoding, encode_plain),
+        Encoding::Rle => array_to_page(array, options, type_, encoding, encode_rle),
+        other => Err(Error::nyi(format!("Encoding boolean as {other:?}"))),
+    }
+}
+
+pub fn array_to_page<F: Fn(&BooleanArray, bool, &mut Vec<u8>) -> Result<(), Error>>(
+    array: &BooleanArray,
+    options: WriteOptions,
+    type_: PrimitiveType,
+    encoding: Encoding,
+    encode: F,
+) -> Result<DataPage, Error> {
     let is_optional = is_nullable(&type_.field_info);
 
     let validity = array.validity();
@@ -58,7 +139,7 @@ pub fn array_to_page(
 
     let definition_levels_byte_length = buffer.len();
 
-    encode_plain(array, is_optional, &mut buffer)?;
+    encode(array, is_optional, &mut buffer)?;
 
     let statistics = if options.write_statistics {
         Some(build_statistics(array))
@@ -76,7 +157,7 @@ pub fn array_to_page(
         statistics,
         type_,
         options,
-        Encoding::Plain,
+        encoding,
     )
 }
 

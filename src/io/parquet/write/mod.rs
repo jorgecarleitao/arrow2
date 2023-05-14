@@ -313,9 +313,12 @@ pub fn array_to_page_simple(
     }
 
     match data_type.to_logical_type() {
-        DataType::Boolean => {
-            boolean::array_to_page(array.as_any().downcast_ref().unwrap(), options, type_)
-        }
+        DataType::Boolean => boolean::array_to_page_boolean(
+            array.as_any().downcast_ref().unwrap(),
+            options,
+            type_,
+            encoding,
+        ),
         // casts below MUST match the casts done at the metadata (field -> parquet type).
         DataType::UInt8 => primitive::array_to_page_integer::<u8, i32>(
             array.as_any().downcast_ref().unwrap(),
