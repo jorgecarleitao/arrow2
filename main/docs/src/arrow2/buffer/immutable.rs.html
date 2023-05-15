@@ -293,6 +293,13 @@
 <a href="#293" id="293">293</a>
 <a href="#294" id="294">294</a>
 <a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, ops::Deref, sync::Arc, usize};
 
 <span class="kw">use </span>either::Either;
@@ -390,6 +397,13 @@
     </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.len() == <span class="number">0
     </span>}
+
+    <span class="doccomment">/// Returns whether underlying data is sliced.
+    /// If sliced the [`Buffer`] is backed by
+    /// more data than the length of `Self`.
+    </span><span class="kw">pub fn </span>is_sliced(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.data.len() != <span class="self">self</span>.length
+    }
 
     <span class="doccomment">/// Returns the byte slice stored in this buffer
     </span><span class="attr">#[inline]
