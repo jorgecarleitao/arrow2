@@ -174,8 +174,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// - the new offsets are not in monotonic increasing order.
     /// - any new offset is not in bounds of the backing array.
     /// - the passed iterator has no upper bound.
-    #[allow(dead_code)]
-    pub(crate) fn try_extend_from_lengths<II>(&mut self, iterator: II) -> Result<()>
+    pub fn try_extend_from_lengths<II>(&mut self, iterator: II) -> Result<()>
     where
         II: TrustedLen<Item = Option<usize>> + Clone,
     {
