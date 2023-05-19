@@ -24,10 +24,10 @@ pub mod orc;
 )]
 pub mod csv;
 
-#[cfg(feature = "io_json")]
+#[cfg(any(feature = "io_json_read"), feature = "io_json_write")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_json")))]
 pub mod json;
-#[cfg(feature = "io_json")]
+#[cfg(any(feature = "io_json_read"), feature = "io_json_write")]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_json")))]
 pub mod ndjson;
 
