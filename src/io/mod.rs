@@ -24,10 +24,10 @@ pub mod orc;
 )]
 pub mod csv;
 
-#[cfg(any(feature = "io_json_read"), feature = "io_json_write")]
+#[cfg(any(feature = "io_json_read", feature = "io_json_write"))]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_json")))]
 pub mod json;
-#[cfg(any(feature = "io_json_read"), feature = "io_json_write")]
+#[cfg(any(feature = "io_json_read", feature = "io_json_write"))]
 #[cfg_attr(docsrs, doc(cfg(feature = "io_json")))]
 pub mod ndjson;
 
@@ -55,5 +55,10 @@ pub mod avro;
 #[cfg_attr(docsrs, doc(cfg(feature = "io_print")))]
 pub mod print;
 
-#[cfg(any(feature = "io_csv_write", feature = "io_avro", feature = "io_json"))]
+#[cfg(any(
+    feature = "io_csv_write",
+    feature = "io_avro",
+    feature = "io_json_write",
+    feature = "io_json_read"
+))]
 mod iterator;
