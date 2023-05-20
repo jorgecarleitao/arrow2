@@ -33,6 +33,9 @@
 <a href="#33" id="33">33</a>
 <a href="#34" id="34">34</a>
 <a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{array::Array, bitmap::MutableBitmap, offset::Offset};
 
 <span class="comment">// function used to extend nulls from arrays. This function&#39;s lifetime is bound to the array
@@ -42,9 +45,12 @@
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>build_extend_null_bits(array: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Array, use_validity: bool) -&gt; ExtendNullBits {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(bitmap) = array.validity() {
         Box::new(<span class="kw">move </span>|validity, start, len| {
-            <span class="macro">assert!</span>(start + len &lt;= bitmap.len());
+            <span class="macro">debug_assert!</span>(start + len &lt;= bitmap.len());
             <span class="kw">let </span>(slice, offset, <span class="kw">_</span>) = bitmap.as_slice();
-            validity.extend_from_slice(slice, start + offset, len);
+            <span class="comment">// safety: invariant offset + length &lt;= slice.len()
+            </span><span class="kw">unsafe </span>{
+                validity.extend_from_slice_unchecked(slice, start + offset, len);
+            }
         })
     } <span class="kw">else if </span>use_validity {
         Box::new(|validity, <span class="kw">_</span>, len| {

@@ -563,6 +563,10 @@
 <a href="#563" id="563">563</a>
 <a href="#564" id="564">564</a>
 <a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::iter::FromIterator;
 <span class="kw">use </span>std::sync::Arc;
 
@@ -1124,7 +1128,11 @@
         extend_validity(<span class="self">self</span>.len(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.validity, <span class="kw-2">&amp;</span>other.validity);
 
         <span class="kw">let </span>slice = other.values.as_slice();
-        <span class="self">self</span>.values.extend_from_slice(slice, <span class="number">0</span>, other.values.len());
+        <span class="comment">// safety: invariant offset + length &lt;= slice.len()
+        </span><span class="kw">unsafe </span>{
+            <span class="self">self</span>.values
+                .extend_from_slice_unchecked(slice, <span class="number">0</span>, other.values.len());
+        }
         <span class="prelude-val">Ok</span>(())
     }
 }

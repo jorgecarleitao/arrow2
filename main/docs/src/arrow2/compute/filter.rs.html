@@ -321,6 +321,11 @@
 <a href="#321" id="321">321</a>
 <a href="#322" id="322">322</a>
 <a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Contains operators to filter arrays such as [`filter`].
 </span><span class="kw">use </span><span class="kw">crate</span>::array::growable::{make_growable, Growable};
 <span class="kw">use </span><span class="kw">crate</span>::bitmap::utils::{BitChunkIterExact, BitChunksExact};
@@ -431,7 +436,12 @@
                     std::ptr::copy(chunk.as_ptr(), dst, size);
                     dst = dst.add(size);
 
-                    new_validity.extend_from_slice(validity_chunk.to_ne_bytes().as_ref(), <span class="number">0</span>, size);
+                    <span class="comment">// safety: invariant offset + length &lt;= slice.len()
+                    </span>new_validity.extend_from_slice_unchecked(
+                        validity_chunk.to_ne_bytes().as_ref(),
+                        <span class="number">0</span>,
+                        size,
+                    );
                 }
                 <span class="kw">return</span>;
             }
