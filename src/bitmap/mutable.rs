@@ -673,9 +673,15 @@ impl MutableBitmap {
     /// # Implementation
     /// When both [`MutableBitmap`]'s length and `offset` are both multiples of 8,
     /// this function performs a memcopy. Else, it first aligns bit by bit and then performs a memcopy.
+    /// # Safety
+    /// Caller must ensure `offset + length <= slice.len() * 8`
     #[inline]
-    pub fn extend_from_slice(&mut self, slice: &[u8], offset: usize, length: usize) {
-        assert!(offset + length <= slice.len() * 8);
+    pub unsafe fn extend_from_slice_unchecked(
+        &mut self,
+        slice: &[u8],
+        offset: usize,
+        length: usize,
+    ) {
         if length == 0 {
             return;
         };
@@ -691,11 +697,26 @@ impl MutableBitmap {
         debug_assert_eq!(self.length.saturating_add(7) / 8, self.buffer.len());
     }
 
+    /// Extends the [`MutableBitmap`] from a slice of bytes with optional offset.
+    /// This is the fastest way to extend a [`MutableBitmap`].
+    /// # Implementation
+    /// When both [`MutableBitmap`]'s length and `offset` are both multiples of 8,
+    /// this function performs a memcopy. Else, it first aligns bit by bit and then performs a memcopy.
+    #[inline]
+    pub fn extend_from_slice(&mut self, slice: &[u8], offset: usize, length: usize) {
+        assert!(offset + length <= slice.len() * 8);
+        // safety: invariant is asserted
+        unsafe { self.extend_from_slice_unchecked(slice, offset, length) }
+    }
+
     /// Extends the [`MutableBitmap`] from a [`Bitmap`].
     #[inline]
     pub fn extend_from_bitmap(&mut self, bitmap: &Bitmap) {
         let (slice, offset, length) = bitmap.as_slice();
-        self.extend_from_slice(slice, offset, length);
+        // safety: bitmap.as_slice adheres to the invariant
+        unsafe {
+            self.extend_from_slice_unchecked(slice, offset, length);
+        }
     }
 
     /// Returns the slice of bytes of this [`MutableBitmap`].
