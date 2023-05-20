@@ -7,9 +7,12 @@ pub(super) type ExtendNullBits<'a> = Box<dyn Fn(&mut MutableBitmap, usize, usize
 pub(super) fn build_extend_null_bits(array: &dyn Array, use_validity: bool) -> ExtendNullBits {
     if let Some(bitmap) = array.validity() {
         Box::new(move |validity, start, len| {
-            assert!(start + len <= bitmap.len());
+            debug_assert!(start + len <= bitmap.len());
             let (slice, offset, _) = bitmap.as_slice();
-            validity.extend_from_slice(slice, start + offset, len);
+            // safety: invariant offset + length <= slice.len()
+            unsafe {
+                validity.extend_from_slice_unchecked(slice, start + offset, len);
+            }
         })
     } else if use_validity {
         Box::new(|validity, _, len| {
