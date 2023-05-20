@@ -754,6 +754,9 @@ pub trait TryPush<A> {
 /// A trait describing the ability of a struct to receive new items.
 pub trait PushUnchecked<A> {
     /// Push a new element that holds the invariants of the struct.
+    /// # Safety
+    /// The items must uphold the invariants of the struct
+    /// Read the specific implementation of the trait to understand what these are.
     unsafe fn push_unchecked(&mut self, item: A);
 }
 

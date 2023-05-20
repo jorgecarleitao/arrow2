@@ -236,6 +236,9 @@ where
     M: MutableArray + Extend<Option<T>>,
     I: IntoIterator<Item = Option<T>>,
 {
+    /// # Safety
+    /// The caller must ensure that the `I` iterates exactly over `size`
+    /// items, where `size` is the fixed size width.
     #[inline]
     unsafe fn push_unchecked(&mut self, item: Option<I>) {
         if let Some(items) = item {
