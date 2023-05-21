@@ -86,7 +86,13 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (FixedSizeList(list_from, _), List(list_to)) => {
             can_cast_types(&list_from.data_type, &list_to.data_type)
         }
+        (FixedSizeList(list_from, _), LargeList(list_to)) => {
+            can_cast_types(&list_from.data_type, &list_to.data_type)
+        }
         (List(list_from), FixedSizeList(list_to, _)) => {
+            can_cast_types(&list_from.data_type, &list_to.data_type)
+        }
+        (LargeList(list_from), FixedSizeList(list_to, _)) => {
             can_cast_types(&list_from.data_type, &list_to.data_type)
         }
         (List(list_from), List(list_to)) => {
@@ -345,24 +351,24 @@ fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i
     )
 }
 
-fn cast_fixed_size_list_to_list(
+fn cast_fixed_size_list_to_list<O: Offset>(
     fixed: &FixedSizeListArray,
     to_type: &DataType,
     options: CastOptions,
-) -> Result<ListArray<i32>> {
+) -> Result<ListArray<O>> {
     let new_values = cast(
         fixed.values().as_ref(),
-        ListArray::<i32>::get_child_type(to_type),
+        ListArray::<O>::get_child_type(to_type),
         options,
     )?;
 
     let offsets = (0..=fixed.len())
-        .map(|ix| (ix * fixed.size()) as i32)
+        .map(|ix| O::from_as_usize(ix * fixed.size()))
         .collect::<Vec<_>>();
     // Safety: offsets _are_ monotonically increasing
     let offsets = unsafe { Offsets::new_unchecked(offsets) };
 
-    Ok(ListArray::<i32>::new(
+    Ok(ListArray::<O>::new(
         to_type.clone(),
         offsets.into(),
         new_values,
@@ -370,14 +376,14 @@ fn cast_fixed_size_list_to_list(
     ))
 }
 
-fn cast_list_to_fixed_size_list(
-    list: &ListArray<i32>,
+fn cast_list_to_fixed_size_list<O: Offset>(
+    list: &ListArray<O>,
     inner: &Field,
     size: usize,
     options: CastOptions,
 ) -> Result<FixedSizeListArray> {
     let offsets = list.offsets().buffer().iter();
-    let expected = (0..list.len()).map(|ix| (ix * size) as i32);
+    let expected = (0..list.len()).map(|ix| O::from_as_usize(ix * size));
 
     match offsets
         .zip(expected)
@@ -438,17 +444,32 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (_, Struct(_)) => Err(Error::NotYetImplemented(
             "Cannot cast to struct from other types".to_string(),
         )),
-        (List(_), FixedSizeList(inner, size)) => cast_list_to_fixed_size_list(
+        (List(_), FixedSizeList(inner, size)) => cast_list_to_fixed_size_list::<i32>(
             array.as_any().downcast_ref().unwrap(),
             inner.as_ref(),
             *size,
             options,
         )
         .map(|x| x.boxed()),
-        (FixedSizeList(_, _), List(_)) => {
-            cast_fixed_size_list_to_list(array.as_any().downcast_ref().unwrap(), to_type, options)
-                .map(|x| x.boxed())
-        }
+        (LargeList(_), FixedSizeList(inner, size)) => cast_list_to_fixed_size_list::<i64>(
+            array.as_any().downcast_ref().unwrap(),
+            inner.as_ref(),
+            *size,
+            options,
+        )
+        .map(|x| x.boxed()),
+        (FixedSizeList(_, _), List(_)) => cast_fixed_size_list_to_list::<i32>(
+            array.as_any().downcast_ref().unwrap(),
+            to_type,
+            options,
+        )
+        .map(|x| x.boxed()),
+        (FixedSizeList(_, _), LargeList(_)) => cast_fixed_size_list_to_list::<i64>(
+            array.as_any().downcast_ref().unwrap(),
+            to_type,
+            options,
+        )
+        .map(|x| x.boxed()),
         (List(_), List(_)) => {
             cast_list::<i32>(array.as_any().downcast_ref().unwrap(), to_type, options)
                 .map(|x| x.boxed())
