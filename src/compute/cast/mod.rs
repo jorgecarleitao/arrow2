@@ -389,7 +389,7 @@ fn cast_list_to_fixed_size_list<O: Offset>(
         .zip(expected)
         .find(|(actual, expected)| *actual != expected)
     {
-        Some(_) => Err(Error::NotYetImplemented(
+        Some(_) => Err(Error::InvalidArgumentError(
             "incompatible offsets in source list".to_string(),
         )),
         None => {
