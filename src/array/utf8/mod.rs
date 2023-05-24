@@ -240,6 +240,17 @@ impl<O: Offset> Utf8Array<O> {
     impl_mut_validity!();
     impl_into_array!();
 
+    #[must_use]
+    pub fn into_inner(self) -> (DataType, OffsetsBuffer<O>, Buffer<u8>, Option<Bitmap>) {
+        let Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        } = self;
+        (data_type, offsets, values, validity)
+    }
+
     /// Try to convert this `Utf8Array` to a `MutableUtf8Array`
     #[must_use]
     pub fn into_mut(self) -> Either<Self, MutableUtf8Array<O>> {

@@ -231,6 +231,16 @@ impl BooleanArray {
         self.values = values.into();
     }
 
+    #[must_use]
+    pub fn into_inner(self) -> (DataType, Bitmap, Option<Bitmap>) {
+        let Self {
+            data_type,
+            values,
+            validity,
+        } = self;
+        (data_type, values, validity)
+    }
+
     /// Try to convert this [`BooleanArray`] to a [`MutableBooleanArray`]
     pub fn into_mut(self) -> Either<Self, MutableBooleanArray> {
         use Either::*;
