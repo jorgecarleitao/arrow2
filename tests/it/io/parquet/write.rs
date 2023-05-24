@@ -258,6 +258,7 @@ fn bool_required_v2_uncompressed() -> Result<()> {
     )
 }
 
+#[test]
 fn bool_optional_v2_rle() -> Result<()> {
     round_trip(
         "bool",
