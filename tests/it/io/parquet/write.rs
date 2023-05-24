@@ -258,6 +258,27 @@ fn bool_required_v2_uncompressed() -> Result<()> {
     )
 }
 
+fn bool_optional_v2_rle() -> Result<()> {
+    round_trip(
+        "bool",
+        "nullable",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Rle],
+    )
+}
+
+#[test]
+fn bool_required_v2_rle() -> Result<()> {
+    round_trip(
+        "bool",
+        "required",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Rle],
+    )
+}
+
 #[cfg(feature = "io_parquet_compression")]
 #[test]
 fn bool_required_v2_compressed() -> Result<()> {

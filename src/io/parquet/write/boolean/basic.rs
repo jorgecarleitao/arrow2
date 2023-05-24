@@ -10,7 +10,6 @@ use super::super::WriteOptions;
 use crate::array::*;
 use crate::{error::Error, io::parquet::read::schema::is_nullable};
 
-
 pub(super) fn encode_plain(
     array: &BooleanArray,
     is_optional: bool,
@@ -32,22 +31,6 @@ pub(super) fn encode_plain(
         let iter = array.values().iter();
         Ok(bitpacked_encode(&mut buffer, iter)?)
     }
-    // let len = buffer.len();
-    // let mut buffer = std::io::Cursor::new(buffer);
-    // buffer.set_position(len as u64);
-    // if is_optional {
-    //     let iter = array.iter().flatten().take(
-    //         array
-    //             .validity()
-    //             .as_ref()
-    //             .map(|x| x.len() - x.unset_bits())
-    //             .unwrap_or_else(|| array.len()),
-    //     );
-    //     encode(iter, buffer)
-    // } else {
-    //     let iter = array.values().iter();
-    //     encode(iter, buffer)
-    // }
 }
 
 pub fn encode_rle(
@@ -71,38 +54,7 @@ pub fn encode_rle(
         let iter = array.values().iter();
         Ok(encode_bool(&mut buffer, iter)?)
     }
-    // if is_optional {
-    //     let iter = array.iter().flatten().take(
-    //         array
-    //             .validity()
-    //             .as_ref()
-    //             .map(|x| x.len() - x.unset_bits())
-    //             .unwrap_or_else(|| array.len()),
-    //     );
-    //     encode(iter, buffer)
-    // } else {
-    //     let iter = array.values().iter();
-    //     encode(iter, buffer)
-    // }
 }
-
-// pub fn pre_encode(
-//     array: &BooleanArray,
-//     is_optional: bool,
-// ) -> Result<impl Iterator<Item = bool>, Error> {
-//     let iter = if is_optional {
-//         array.iter().flatten().take(
-//             array
-//                 .validity()
-//                 .as_ref()
-//                 .map(|x| x.len() - x.unset_bits())
-//                 .unwrap_or_else(|| array.len()),
-//         )
-//     } else {
-//         array.values().iter()
-//     };
-//     Ok(iter)
-// }
 
 pub fn array_to_page_boolean(
     array: &BooleanArray,
