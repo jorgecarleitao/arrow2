@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/compute/cast/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0-nightly (77f4f828a 2023-05-20)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-6f6ffb5395b17c6e.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../arrow2/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/compute/cast/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0-nightly (5ea3f0ae0 2023-05-23)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../arrow2/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -958,6 +958,27 @@
 <a href="#958" id="958">958</a>
 <a href="#959" id="959">959</a>
 <a href="#960" id="960">960</a>
+<a href="#961" id="961">961</a>
+<a href="#962" id="962">962</a>
+<a href="#963" id="963">963</a>
+<a href="#964" id="964">964</a>
+<a href="#965" id="965">965</a>
+<a href="#966" id="966">966</a>
+<a href="#967" id="967">967</a>
+<a href="#968" id="968">968</a>
+<a href="#969" id="969">969</a>
+<a href="#970" id="970">970</a>
+<a href="#971" id="971">971</a>
+<a href="#972" id="972">972</a>
+<a href="#973" id="973">973</a>
+<a href="#974" id="974">974</a>
+<a href="#975" id="975">975</a>
+<a href="#976" id="976">976</a>
+<a href="#977" id="977">977</a>
+<a href="#978" id="978">978</a>
+<a href="#979" id="979">979</a>
+<a href="#980" id="980">980</a>
+<a href="#981" id="981">981</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Defines different casting operators such as [`cast`] or [`primitive_to_binary`].
 
 </span><span class="kw">mod </span>binary_to;
@@ -1046,7 +1067,13 @@
         (FixedSizeList(list_from, <span class="kw">_</span>), List(list_to)) =&gt; {
             can_cast_types(<span class="kw-2">&amp;</span>list_from.data_type, <span class="kw-2">&amp;</span>list_to.data_type)
         }
+        (FixedSizeList(list_from, <span class="kw">_</span>), LargeList(list_to)) =&gt; {
+            can_cast_types(<span class="kw-2">&amp;</span>list_from.data_type, <span class="kw-2">&amp;</span>list_to.data_type)
+        }
         (List(list_from), FixedSizeList(list_to, <span class="kw">_</span>)) =&gt; {
+            can_cast_types(<span class="kw-2">&amp;</span>list_from.data_type, <span class="kw-2">&amp;</span>list_to.data_type)
+        }
+        (LargeList(list_from), FixedSizeList(list_to, <span class="kw">_</span>)) =&gt; {
             can_cast_types(<span class="kw-2">&amp;</span>list_from.data_type, <span class="kw-2">&amp;</span>list_to.data_type)
         }
         (List(list_from), List(list_to)) =&gt; {
@@ -1305,24 +1332,24 @@
     )
 }
 
-<span class="kw">fn </span>cast_fixed_size_list_to_list(
+<span class="kw">fn </span>cast_fixed_size_list_to_list&lt;O: Offset&gt;(
     fixed: <span class="kw-2">&amp;</span>FixedSizeListArray,
     to_type: <span class="kw-2">&amp;</span>DataType,
     options: CastOptions,
-) -&gt; <span class="prelude-ty">Result</span>&lt;ListArray&lt;i32&gt;&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;ListArray&lt;O&gt;&gt; {
     <span class="kw">let </span>new_values = cast(
         fixed.values().as_ref(),
-        ListArray::&lt;i32&gt;::get_child_type(to_type),
+        ListArray::&lt;O&gt;::get_child_type(to_type),
         options,
     )<span class="question-mark">?</span>;
 
     <span class="kw">let </span>offsets = (<span class="number">0</span>..=fixed.len())
-        .map(|ix| (ix * fixed.size()) <span class="kw">as </span>i32)
+        .map(|ix| O::from_as_usize(ix * fixed.size()))
         .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
     <span class="comment">// Safety: offsets _are_ monotonically increasing
     </span><span class="kw">let </span>offsets = <span class="kw">unsafe </span>{ Offsets::new_unchecked(offsets) };
 
-    <span class="prelude-val">Ok</span>(ListArray::&lt;i32&gt;::new(
+    <span class="prelude-val">Ok</span>(ListArray::&lt;O&gt;::new(
         to_type.clone(),
         offsets.into(),
         new_values,
@@ -1330,20 +1357,20 @@
     ))
 }
 
-<span class="kw">fn </span>cast_list_to_fixed_size_list(
-    list: <span class="kw-2">&amp;</span>ListArray&lt;i32&gt;,
+<span class="kw">fn </span>cast_list_to_fixed_size_list&lt;O: Offset&gt;(
+    list: <span class="kw-2">&amp;</span>ListArray&lt;O&gt;,
     inner: <span class="kw-2">&amp;</span>Field,
     size: usize,
     options: CastOptions,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;FixedSizeListArray&gt; {
     <span class="kw">let </span>offsets = list.offsets().buffer().iter();
-    <span class="kw">let </span>expected = (<span class="number">0</span>..list.len()).map(|ix| (ix * size) <span class="kw">as </span>i32);
+    <span class="kw">let </span>expected = (<span class="number">0</span>..list.len()).map(|ix| O::from_as_usize(ix * size));
 
     <span class="kw">match </span>offsets
         .zip(expected)
         .find(|(actual, expected)| <span class="kw-2">*</span>actual != expected)
     {
-        <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(
+        <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(Error::InvalidArgumentError(
             <span class="string">&quot;incompatible offsets in source list&quot;</span>.to_string(),
         )),
         <span class="prelude-val">None </span>=&gt; {
@@ -1398,17 +1425,32 @@
         (<span class="kw">_</span>, Struct(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(
             <span class="string">&quot;Cannot cast to struct from other types&quot;</span>.to_string(),
         )),
-        (List(<span class="kw">_</span>), FixedSizeList(inner, size)) =&gt; cast_list_to_fixed_size_list(
+        (List(<span class="kw">_</span>), FixedSizeList(inner, size)) =&gt; cast_list_to_fixed_size_list::&lt;i32&gt;(
             array.as_any().downcast_ref().unwrap(),
             inner.as_ref(),
             <span class="kw-2">*</span>size,
             options,
         )
         .map(|x| x.boxed()),
-        (FixedSizeList(<span class="kw">_</span>, <span class="kw">_</span>), List(<span class="kw">_</span>)) =&gt; {
-            cast_fixed_size_list_to_list(array.as_any().downcast_ref().unwrap(), to_type, options)
-                .map(|x| x.boxed())
-        }
+        (LargeList(<span class="kw">_</span>), FixedSizeList(inner, size)) =&gt; cast_list_to_fixed_size_list::&lt;i64&gt;(
+            array.as_any().downcast_ref().unwrap(),
+            inner.as_ref(),
+            <span class="kw-2">*</span>size,
+            options,
+        )
+        .map(|x| x.boxed()),
+        (FixedSizeList(<span class="kw">_</span>, <span class="kw">_</span>), List(<span class="kw">_</span>)) =&gt; cast_fixed_size_list_to_list::&lt;i32&gt;(
+            array.as_any().downcast_ref().unwrap(),
+            to_type,
+            options,
+        )
+        .map(|x| x.boxed()),
+        (FixedSizeList(<span class="kw">_</span>, <span class="kw">_</span>), LargeList(<span class="kw">_</span>)) =&gt; cast_fixed_size_list_to_list::&lt;i64&gt;(
+            array.as_any().downcast_ref().unwrap(),
+            to_type,
+            options,
+        )
+        .map(|x| x.boxed()),
         (List(<span class="kw">_</span>), List(<span class="kw">_</span>)) =&gt; {
             cast_list::&lt;i32&gt;(array.as_any().downcast_ref().unwrap(), to_type, options)
                 .map(|x| x.boxed())
