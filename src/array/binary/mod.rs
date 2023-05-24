@@ -221,6 +221,7 @@ impl<O: Offset> BinaryArray<O> {
     impl_mut_validity!();
     impl_into_array!();
 
+    /// Returns its internal representation
     #[must_use]
     pub fn into_inner(self) -> (DataType, OffsetsBuffer<O>, Buffer<u8>, Option<Bitmap>) {
         let Self {
