@@ -221,6 +221,18 @@ impl<O: Offset> BinaryArray<O> {
     impl_mut_validity!();
     impl_into_array!();
 
+    /// Returns its internal representation
+    #[must_use]
+    pub fn into_inner(self) -> (DataType, OffsetsBuffer<O>, Buffer<u8>, Option<Bitmap>) {
+        let Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        } = self;
+        (data_type, offsets, values, validity)
+    }
+
     /// Try to convert this `BinaryArray` to a `MutableBinaryArray`
     #[must_use]
     pub fn into_mut(self) -> Either<Self, MutableBinaryArray<O>> {
