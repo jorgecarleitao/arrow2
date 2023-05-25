@@ -538,6 +538,18 @@
 <a href="#538" id="538">538</a>
 <a href="#539" id="539">539</a>
 <a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     bitmap::{
         utils::{BitmapIter, ZipValidity},
@@ -779,6 +791,18 @@
     <span class="macro">impl_sliced!</span>();
     <span class="macro">impl_mut_validity!</span>();
     <span class="macro">impl_into_array!</span>();
+
+    <span class="doccomment">/// Returns its internal representation
+    </span><span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>into_inner(<span class="self">self</span>) -&gt; (DataType, OffsetsBuffer&lt;O&gt;, Buffer&lt;u8&gt;, <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) {
+        <span class="kw">let </span><span class="self">Self </span>{
+            data_type,
+            offsets,
+            values,
+            validity,
+        } = <span class="self">self</span>;
+        (data_type, offsets, values, validity)
+    }
 
     <span class="doccomment">/// Try to convert this `Utf8Array` to a `MutableUtf8Array`
     </span><span class="attr">#[must_use]
