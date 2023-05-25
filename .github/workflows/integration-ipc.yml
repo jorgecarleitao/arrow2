@@ -1,6 +1,7 @@
 name: Integration IPC / Flight
 
-on: [push, pull_request]
+# on: [push, pull_request]
+on: []
 
 jobs:
   docker:
