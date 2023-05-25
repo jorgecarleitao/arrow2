@@ -158,6 +158,7 @@
 <a href="#158" id="158">158</a>
 <a href="#159" id="159">159</a>
 <a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::ops::Add;
 
 <span class="kw">use </span>multiversion::multiversion;
@@ -181,7 +182,8 @@
 }
 
 <span class="attr">#[multiversion(targets = <span class="string">&quot;simd&quot;</span>)]
-</span><span class="kw">fn </span>nonnull_sum&lt;T&gt;(values: <span class="kw-2">&amp;</span>[T]) -&gt; T
+</span><span class="doccomment">/// Compute the sum of a slice
+</span><span class="kw">pub fn </span>sum_slice&lt;T&gt;(values: <span class="kw-2">&amp;</span>[T]) -&gt; T
 <span class="kw">where
     </span>T: NativeType + Simd + Add&lt;Output = T&gt; + std::iter::Sum&lt;T&gt;,
     T::Simd: Sum&lt;T&gt; + Add&lt;Output = T::Simd&gt;,
@@ -257,7 +259,7 @@
     }
 
     <span class="kw">match </span>array.validity() {
-        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Some</span>(nonnull_sum(array.values())),
+        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Some</span>(sum_slice(array.values())),
         <span class="prelude-val">Some</span>(bitmap) =&gt; <span class="prelude-val">Some</span>(null_sum(array.values(), bitmap)),
     }
 }
