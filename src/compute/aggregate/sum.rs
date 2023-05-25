@@ -21,7 +21,7 @@ pub trait Sum<T> {
 }
 
 #[multiversion(targets = "simd")]
-fn nonnull_sum<T>(values: &[T]) -> T
+pub fn nonnull_sum_slice<T>(values: &[T]) -> T
 where
     T: NativeType + Simd + Add<Output = T> + std::iter::Sum<T>,
     T::Simd: Sum<T> + Add<Output = T::Simd>,
@@ -97,7 +97,7 @@ where
     }
 
     match array.validity() {
-        None => Some(nonnull_sum(array.values())),
+        None => Some(nonnull_sum_slice(array.values())),
         Some(bitmap) => Some(null_sum(array.values(), bitmap)),
     }
 }
