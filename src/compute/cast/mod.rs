@@ -137,7 +137,14 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Binary, to_type) => {
             is_numeric(to_type) || matches!(to_type, LargeBinary | Utf8 | LargeUtf8)
         }
-        (LargeBinary, to_type) => is_numeric(to_type) || matches!(to_type, Binary | LargeUtf8),
+        (LargeBinary, to_type) => {
+            is_numeric(to_type)
+                || match to_type {
+                    Binary | LargeUtf8 => true,
+                    LargeList(field) => matches!(field.data_type, UInt8),
+                    _ => false,
+                }
+        }
         (FixedSizeBinary(_), to_type) => matches!(to_type, Binary | LargeBinary),
         (Timestamp(_, _), Utf8) => true,
         (Timestamp(_, _), LargeUtf8) => true,
@@ -684,29 +691,35 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             ))),
         },
 
-        (LargeBinary, _) => match to_type {
-            UInt8 => binary_to_primitive_dyn::<i64, u8>(array, to_type, options),
-            UInt16 => binary_to_primitive_dyn::<i64, u16>(array, to_type, options),
-            UInt32 => binary_to_primitive_dyn::<i64, u32>(array, to_type, options),
-            UInt64 => binary_to_primitive_dyn::<i64, u64>(array, to_type, options),
-            Int8 => binary_to_primitive_dyn::<i64, i8>(array, to_type, options),
-            Int16 => binary_to_primitive_dyn::<i64, i16>(array, to_type, options),
-            Int32 => binary_to_primitive_dyn::<i64, i32>(array, to_type, options),
-            Int64 => binary_to_primitive_dyn::<i64, i64>(array, to_type, options),
-            Float32 => binary_to_primitive_dyn::<i64, f32>(array, to_type, options),
-            Float64 => binary_to_primitive_dyn::<i64, f64>(array, to_type, options),
-            Binary => {
-                binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
-                    .map(|x| x.boxed())
+        (LargeBinary, _) => {
+            match to_type {
+                UInt8 => binary_to_primitive_dyn::<i64, u8>(array, to_type, options),
+                UInt16 => binary_to_primitive_dyn::<i64, u16>(array, to_type, options),
+                UInt32 => binary_to_primitive_dyn::<i64, u32>(array, to_type, options),
+                UInt64 => binary_to_primitive_dyn::<i64, u64>(array, to_type, options),
+                Int8 => binary_to_primitive_dyn::<i64, i8>(array, to_type, options),
+                Int16 => binary_to_primitive_dyn::<i64, i16>(array, to_type, options),
+                Int32 => binary_to_primitive_dyn::<i64, i32>(array, to_type, options),
+                Int64 => binary_to_primitive_dyn::<i64, i64>(array, to_type, options),
+                Float32 => binary_to_primitive_dyn::<i64, f32>(array, to_type, options),
+                Float64 => binary_to_primitive_dyn::<i64, f64>(array, to_type, options),
+                Binary => {
+                    binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .map(|x| x.boxed())
+                }
+                LargeUtf8 => {
+                    binary_to_utf8::<i64>(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .map(|x| x.boxed())
+                }
+                LargeList(inner) if matches!(inner.data_type, DataType::UInt8) => Ok(
+                    binary_to_list::<i64>(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .boxed(),
+                ),
+                _ => Err(Error::NotYetImplemented(format!(
+                    "Casting from {from_type:?} to {to_type:?} not supported",
+                ))),
             }
-            LargeUtf8 => {
-                binary_to_utf8::<i64>(array.as_any().downcast_ref().unwrap(), to_type.clone())
-                    .map(|x| x.boxed())
-            }
-            _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {from_type:?} to {to_type:?} not supported",
-            ))),
-        },
+        }
         (FixedSizeBinary(_), _) => match to_type {
             Binary => Ok(fixed_size_binary_binary::<i32>(
                 array.as_any().downcast_ref().unwrap(),
