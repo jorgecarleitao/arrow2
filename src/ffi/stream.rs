@@ -132,7 +132,7 @@ unsafe extern "C" fn get_next(iter: *mut ArrowArrayStream, array: *mut ArrowArra
     if iter.is_null() {
         return 2001;
     }
-    let mut private = &mut *((*iter).private_data as *mut PrivateData);
+    let private = &mut *((*iter).private_data as *mut PrivateData);
 
     match private.iter.next() {
         Some(Ok(item)) => {

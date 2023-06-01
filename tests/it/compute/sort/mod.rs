@@ -41,11 +41,7 @@ fn string_arrays(data: &[Option<&str>], options: SortOptions, expected_data: &[O
     assert_eq!(expected, output.as_ref())
 }
 
-fn string_dict_arrays<K: DictionaryKey>(
-    data: &[Option<&str>],
-    options: SortOptions,
-    expected_data: &[Option<&str>],
-) {
+fn string_dict_arrays(data: &[Option<&str>], options: SortOptions, expected_data: &[Option<&str>]) {
     let mut input = MutableDictionaryArray::<i32, MutableUtf8Array<i32>>::new();
     input.try_extend(data.iter().copied()).unwrap();
     let input = input.into_arc();
@@ -351,7 +347,7 @@ fn strings() {
 
 #[test]
 fn string_dicts() {
-    string_dict_arrays::<i8>(
+    string_dict_arrays(
         &[
             None,
             Some("bad"),
@@ -374,7 +370,7 @@ fn string_dicts() {
         ],
     );
 
-    string_dict_arrays::<i16>(
+    string_dict_arrays(
         &[
             None,
             Some("bad"),
@@ -397,7 +393,7 @@ fn string_dicts() {
         ],
     );
 
-    string_dict_arrays::<i32>(
+    string_dict_arrays(
         &[
             None,
             Some("bad"),
@@ -420,7 +416,7 @@ fn string_dicts() {
         ],
     );
 
-    string_dict_arrays::<i16>(
+    string_dict_arrays(
         &[
             None,
             Some("bad"),

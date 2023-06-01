@@ -6,10 +6,7 @@ use crate::compute::take;
 use crate::datatypes::*;
 use crate::error::{Error, Result};
 use crate::offset::Offset;
-use crate::{
-    array::*,
-    types::{Index, NativeType},
-};
+use crate::{array::*, types::Index};
 
 mod binary;
 mod boolean;
@@ -156,14 +153,14 @@ pub fn sort_to_indices<I: Index>(
         DataType::List(field) => {
             let (v, n) = partition_validity(values);
             match &field.data_type {
-                DataType::Int8 => Ok(sort_list::<I, i32, i8>(values, v, n, options, limit)),
-                DataType::Int16 => Ok(sort_list::<I, i32, i16>(values, v, n, options, limit)),
-                DataType::Int32 => Ok(sort_list::<I, i32, i32>(values, v, n, options, limit)),
-                DataType::Int64 => Ok(sort_list::<I, i32, i64>(values, v, n, options, limit)),
-                DataType::UInt8 => Ok(sort_list::<I, i32, u8>(values, v, n, options, limit)),
-                DataType::UInt16 => Ok(sort_list::<I, i32, u16>(values, v, n, options, limit)),
-                DataType::UInt32 => Ok(sort_list::<I, i32, u32>(values, v, n, options, limit)),
-                DataType::UInt64 => Ok(sort_list::<I, i32, u64>(values, v, n, options, limit)),
+                DataType::Int8 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::Int16 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::Int32 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::Int64 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::UInt8 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::UInt16 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::UInt32 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::UInt64 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
                 t => Err(Error::NotYetImplemented(format!(
                     "Sort not supported for list type {t:?}"
                 ))),
@@ -172,14 +169,14 @@ pub fn sort_to_indices<I: Index>(
         DataType::LargeList(field) => {
             let (v, n) = partition_validity(values);
             match field.data_type() {
-                DataType::Int8 => Ok(sort_list::<I, i64, i8>(values, v, n, options, limit)),
-                DataType::Int16 => Ok(sort_list::<I, i64, i16>(values, v, n, options, limit)),
-                DataType::Int32 => Ok(sort_list::<I, i64, i32>(values, v, n, options, limit)),
-                DataType::Int64 => Ok(sort_list::<I, i64, i64>(values, v, n, options, limit)),
-                DataType::UInt8 => Ok(sort_list::<I, i64, u8>(values, v, n, options, limit)),
-                DataType::UInt16 => Ok(sort_list::<I, i64, u16>(values, v, n, options, limit)),
-                DataType::UInt32 => Ok(sort_list::<I, i64, u32>(values, v, n, options, limit)),
-                DataType::UInt64 => Ok(sort_list::<I, i64, u64>(values, v, n, options, limit)),
+                DataType::Int8 => Ok(sort_list::<I, i64>(values, v, n, options, limit)),
+                DataType::Int16 => Ok(sort_list::<I, i64>(values, v, n, options, limit)),
+                DataType::Int32 => Ok(sort_list::<I, i64>(values, v, n, options, limit)),
+                DataType::Int64 => Ok(sort_list::<I, i64>(values, v, n, options, limit)),
+                DataType::UInt8 => Ok(sort_list::<I, i64>(values, v, n, options, limit)),
+                DataType::UInt16 => Ok(sort_list::<I, i64>(values, v, n, options, limit)),
+                DataType::UInt32 => Ok(sort_list::<I, i64>(values, v, n, options, limit)),
+                DataType::UInt64 => Ok(sort_list::<I, i64>(values, v, n, options, limit)),
                 t => Err(Error::NotYetImplemented(format!(
                     "Sort not supported for list type {t:?}"
                 ))),
@@ -188,14 +185,14 @@ pub fn sort_to_indices<I: Index>(
         DataType::FixedSizeList(field, _) => {
             let (v, n) = partition_validity(values);
             match field.data_type() {
-                DataType::Int8 => Ok(sort_list::<I, i32, i8>(values, v, n, options, limit)),
-                DataType::Int16 => Ok(sort_list::<I, i32, i16>(values, v, n, options, limit)),
-                DataType::Int32 => Ok(sort_list::<I, i32, i32>(values, v, n, options, limit)),
-                DataType::Int64 => Ok(sort_list::<I, i32, i64>(values, v, n, options, limit)),
-                DataType::UInt8 => Ok(sort_list::<I, i32, u8>(values, v, n, options, limit)),
-                DataType::UInt16 => Ok(sort_list::<I, i32, u16>(values, v, n, options, limit)),
-                DataType::UInt32 => Ok(sort_list::<I, i32, u32>(values, v, n, options, limit)),
-                DataType::UInt64 => Ok(sort_list::<I, i32, u64>(values, v, n, options, limit)),
+                DataType::Int8 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::Int16 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::Int32 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::Int64 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::UInt8 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::UInt16 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::UInt32 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
+                DataType::UInt64 => Ok(sort_list::<I, i32>(values, v, n, options, limit)),
                 t => Err(Error::NotYetImplemented(format!(
                     "Sort not supported for list type {t:?}"
                 ))),
@@ -305,7 +302,7 @@ impl Default for SortOptions {
     }
 }
 
-fn sort_list<I, O, T>(
+fn sort_list<I, O>(
     values: &dyn Array,
     value_indices: Vec<I>,
     null_indices: Vec<I>,
@@ -315,7 +312,6 @@ fn sort_list<I, O, T>(
 where
     I: Index,
     O: Offset,
-    T: NativeType + std::cmp::PartialOrd,
 {
     let mut valids: Vec<(I, Box<dyn Array>)> = values
         .as_any()
