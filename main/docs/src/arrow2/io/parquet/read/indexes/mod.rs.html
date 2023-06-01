@@ -383,6 +383,7 @@
 <a href="#383" id="383">383</a>
 <a href="#384" id="384">384</a>
 <a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! API to perform page-level filtering (also known as indexes)
 </span><span class="kw">use </span>parquet2::error::Error <span class="kw">as </span>ParquetError;
 <span class="kw">use </span>parquet2::indexes::{
@@ -532,7 +533,8 @@
                 .unwrap();
             <span class="prelude-val">Ok</span>(primitive::deserialize_i32(<span class="kw-2">&amp;</span>index.indexes, data_type).into())
         }
-        PhysicalType::Primitive(PrimitiveType::Int64) =&gt; {
+        PhysicalType::Primitive(PrimitiveType::UInt64)
+        | PhysicalType::Primitive(PrimitiveType::Int64) =&gt; {
             <span class="kw">let </span>index = indexes.pop_front().unwrap();
             <span class="kw">match </span>index.physical_type() {
                 ParquetPhysicalType::Int64 =&gt; {
