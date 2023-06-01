@@ -452,11 +452,7 @@ fn extend_offsets2<'a, D: NestedDecoder<'a>>(
 
                 let is_valid = nest.is_nullable() && def > cum_sum[depth];
                 nest.push(length, is_valid);
-                if nest.is_required() && !is_valid {
-                    is_required = true;
-                } else {
-                    is_required = false
-                };
+                is_required = nest.is_required() && !is_valid;
 
                 if depth == max_depth - 1 {
                     // the leaf / primitive
