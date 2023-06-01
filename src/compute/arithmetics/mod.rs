@@ -13,6 +13,7 @@
 //!   adjusts the precision and scale to make the resulting value fit.
 #[forbid(unsafe_code)]
 pub mod basic;
+#[cfg(feature = "compute_arithmetics_decimal")]
 pub mod decimal;
 pub mod time;
 
