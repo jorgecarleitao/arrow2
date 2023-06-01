@@ -137,7 +137,14 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Binary, to_type) => {
             is_numeric(to_type) || matches!(to_type, LargeBinary | Utf8 | LargeUtf8)
         }
-        (LargeBinary, to_type) => is_numeric(to_type) || matches!(to_type, Binary | LargeUtf8),
+        (LargeBinary, to_type) => {
+            is_numeric(to_type)
+                || match to_type {
+                    Binary | LargeUtf8 => true,
+                    LargeList(field) => matches!(field.data_type, UInt8),
+                    _ => false,
+                }
+        }
         (FixedSizeBinary(_), to_type) => matches!(to_type, Binary | LargeBinary),
         (Timestamp(_, _), Utf8) => true,
         (Timestamp(_, _), LargeUtf8) => true,
