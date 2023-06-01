@@ -684,29 +684,35 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             ))),
         },
 
-        (LargeBinary, _) => match to_type {
-            UInt8 => binary_to_primitive_dyn::<i64, u8>(array, to_type, options),
-            UInt16 => binary_to_primitive_dyn::<i64, u16>(array, to_type, options),
-            UInt32 => binary_to_primitive_dyn::<i64, u32>(array, to_type, options),
-            UInt64 => binary_to_primitive_dyn::<i64, u64>(array, to_type, options),
-            Int8 => binary_to_primitive_dyn::<i64, i8>(array, to_type, options),
-            Int16 => binary_to_primitive_dyn::<i64, i16>(array, to_type, options),
-            Int32 => binary_to_primitive_dyn::<i64, i32>(array, to_type, options),
-            Int64 => binary_to_primitive_dyn::<i64, i64>(array, to_type, options),
-            Float32 => binary_to_primitive_dyn::<i64, f32>(array, to_type, options),
-            Float64 => binary_to_primitive_dyn::<i64, f64>(array, to_type, options),
-            Binary => {
-                binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
-                    .map(|x| x.boxed())
+        (LargeBinary, _) => {
+            match to_type {
+                UInt8 => binary_to_primitive_dyn::<i64, u8>(array, to_type, options),
+                UInt16 => binary_to_primitive_dyn::<i64, u16>(array, to_type, options),
+                UInt32 => binary_to_primitive_dyn::<i64, u32>(array, to_type, options),
+                UInt64 => binary_to_primitive_dyn::<i64, u64>(array, to_type, options),
+                Int8 => binary_to_primitive_dyn::<i64, i8>(array, to_type, options),
+                Int16 => binary_to_primitive_dyn::<i64, i16>(array, to_type, options),
+                Int32 => binary_to_primitive_dyn::<i64, i32>(array, to_type, options),
+                Int64 => binary_to_primitive_dyn::<i64, i64>(array, to_type, options),
+                Float32 => binary_to_primitive_dyn::<i64, f32>(array, to_type, options),
+                Float64 => binary_to_primitive_dyn::<i64, f64>(array, to_type, options),
+                Binary => {
+                    binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .map(|x| x.boxed())
+                }
+                LargeUtf8 => {
+                    binary_to_utf8::<i64>(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .map(|x| x.boxed())
+                }
+                LargeList(inner) if matches!(inner.data_type, DataType::UInt8) => Ok(
+                    binary_to_list::<i64>(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .boxed(),
+                ),
+                _ => Err(Error::NotYetImplemented(format!(
+                    "Casting from {from_type:?} to {to_type:?} not supported",
+                ))),
             }
-            LargeUtf8 => {
-                binary_to_utf8::<i64>(array.as_any().downcast_ref().unwrap(), to_type.clone())
-                    .map(|x| x.boxed())
-            }
-            _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {from_type:?} to {to_type:?} not supported",
-            ))),
-        },
+        }
         (FixedSizeBinary(_), _) => match to_type {
             Binary => Ok(fixed_size_binary_binary::<i32>(
                 array.as_any().downcast_ref().unwrap(),
