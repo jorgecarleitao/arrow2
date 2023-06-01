@@ -979,6 +979,19 @@
 <a href="#979" id="979">979</a>
 <a href="#980" id="980">980</a>
 <a href="#981" id="981">981</a>
+<a href="#982" id="982">982</a>
+<a href="#983" id="983">983</a>
+<a href="#984" id="984">984</a>
+<a href="#985" id="985">985</a>
+<a href="#986" id="986">986</a>
+<a href="#987" id="987">987</a>
+<a href="#988" id="988">988</a>
+<a href="#989" id="989">989</a>
+<a href="#990" id="990">990</a>
+<a href="#991" id="991">991</a>
+<a href="#992" id="992">992</a>
+<a href="#993" id="993">993</a>
+<a href="#994" id="994">994</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Defines different casting operators such as [`cast`] or [`primitive_to_binary`].
 
 </span><span class="kw">mod </span>binary_to;
@@ -1118,7 +1131,14 @@
         (Binary, to_type) =&gt; {
             is_numeric(to_type) || <span class="macro">matches!</span>(to_type, LargeBinary | Utf8 | LargeUtf8)
         }
-        (LargeBinary, to_type) =&gt; is_numeric(to_type) || <span class="macro">matches!</span>(to_type, Binary | LargeUtf8),
+        (LargeBinary, to_type) =&gt; {
+            is_numeric(to_type)
+                || <span class="kw">match </span>to_type {
+                    Binary | LargeUtf8 =&gt; <span class="bool-val">true</span>,
+                    LargeList(field) =&gt; <span class="macro">matches!</span>(field.data_type, UInt8),
+                    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+                }
+        }
         (FixedSizeBinary(<span class="kw">_</span>), to_type) =&gt; <span class="macro">matches!</span>(to_type, Binary | LargeBinary),
         (Timestamp(<span class="kw">_</span>, <span class="kw">_</span>), Utf8) =&gt; <span class="bool-val">true</span>,
         (Timestamp(<span class="kw">_</span>, <span class="kw">_</span>), LargeUtf8) =&gt; <span class="bool-val">true</span>,
@@ -1665,29 +1685,35 @@
             ))),
         },
 
-        (LargeBinary, <span class="kw">_</span>) =&gt; <span class="kw">match </span>to_type {
-            UInt8 =&gt; binary_to_primitive_dyn::&lt;i64, u8&gt;(array, to_type, options),
-            UInt16 =&gt; binary_to_primitive_dyn::&lt;i64, u16&gt;(array, to_type, options),
-            UInt32 =&gt; binary_to_primitive_dyn::&lt;i64, u32&gt;(array, to_type, options),
-            UInt64 =&gt; binary_to_primitive_dyn::&lt;i64, u64&gt;(array, to_type, options),
-            Int8 =&gt; binary_to_primitive_dyn::&lt;i64, i8&gt;(array, to_type, options),
-            Int16 =&gt; binary_to_primitive_dyn::&lt;i64, i16&gt;(array, to_type, options),
-            Int32 =&gt; binary_to_primitive_dyn::&lt;i64, i32&gt;(array, to_type, options),
-            Int64 =&gt; binary_to_primitive_dyn::&lt;i64, i64&gt;(array, to_type, options),
-            Float32 =&gt; binary_to_primitive_dyn::&lt;i64, f32&gt;(array, to_type, options),
-            Float64 =&gt; binary_to_primitive_dyn::&lt;i64, f64&gt;(array, to_type, options),
-            Binary =&gt; {
-                binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
-                    .map(|x| x.boxed())
+        (LargeBinary, <span class="kw">_</span>) =&gt; {
+            <span class="kw">match </span>to_type {
+                UInt8 =&gt; binary_to_primitive_dyn::&lt;i64, u8&gt;(array, to_type, options),
+                UInt16 =&gt; binary_to_primitive_dyn::&lt;i64, u16&gt;(array, to_type, options),
+                UInt32 =&gt; binary_to_primitive_dyn::&lt;i64, u32&gt;(array, to_type, options),
+                UInt64 =&gt; binary_to_primitive_dyn::&lt;i64, u64&gt;(array, to_type, options),
+                Int8 =&gt; binary_to_primitive_dyn::&lt;i64, i8&gt;(array, to_type, options),
+                Int16 =&gt; binary_to_primitive_dyn::&lt;i64, i16&gt;(array, to_type, options),
+                Int32 =&gt; binary_to_primitive_dyn::&lt;i64, i32&gt;(array, to_type, options),
+                Int64 =&gt; binary_to_primitive_dyn::&lt;i64, i64&gt;(array, to_type, options),
+                Float32 =&gt; binary_to_primitive_dyn::&lt;i64, f32&gt;(array, to_type, options),
+                Float64 =&gt; binary_to_primitive_dyn::&lt;i64, f64&gt;(array, to_type, options),
+                Binary =&gt; {
+                    binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .map(|x| x.boxed())
+                }
+                LargeUtf8 =&gt; {
+                    binary_to_utf8::&lt;i64&gt;(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .map(|x| x.boxed())
+                }
+                LargeList(inner) <span class="kw">if </span><span class="macro">matches!</span>(inner.data_type, DataType::UInt8) =&gt; <span class="prelude-val">Ok</span>(
+                    binary_to_list::&lt;i64&gt;(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .boxed(),
+                ),
+                <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
+                    <span class="string">&quot;Casting from {from_type:?} to {to_type:?} not supported&quot;</span>,
+                ))),
             }
-            LargeUtf8 =&gt; {
-                binary_to_utf8::&lt;i64&gt;(array.as_any().downcast_ref().unwrap(), to_type.clone())
-                    .map(|x| x.boxed())
-            }
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
-                <span class="string">&quot;Casting from {from_type:?} to {to_type:?} not supported&quot;</span>,
-            ))),
-        },
+        }
         (FixedSizeBinary(<span class="kw">_</span>), <span class="kw">_</span>) =&gt; <span class="kw">match </span>to_type {
             Binary =&gt; <span class="prelude-val">Ok</span>(fixed_size_binary_binary::&lt;i32&gt;(
                 array.as_any().downcast_ref().unwrap(),

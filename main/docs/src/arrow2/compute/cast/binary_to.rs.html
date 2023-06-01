@@ -144,6 +144,18 @@
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::error::Result;
 <span class="kw">use </span><span class="kw">crate</span>::offset::{Offset, Offsets};
 <span class="kw">use crate</span>::{array::<span class="kw-2">*</span>, datatypes::DataType, types::NativeType};
@@ -287,6 +299,18 @@
         to_data_type,
         offsets.into(),
         values,
+        from.validity().cloned(),
+    )
+}
+
+<span class="doccomment">/// Conversion of binary
+</span><span class="kw">pub fn </span>binary_to_list&lt;O: Offset&gt;(from: <span class="kw-2">&amp;</span>BinaryArray&lt;O&gt;, to_data_type: DataType) -&gt; ListArray&lt;O&gt; {
+    <span class="kw">let </span>values = from.values().clone();
+    <span class="kw">let </span>values = PrimitiveArray::new(DataType::UInt8, values, <span class="prelude-val">None</span>);
+    ListArray::&lt;O&gt;::new(
+        to_data_type,
+        from.offsets().clone(),
+        values.boxed(),
         from.validity().cloned(),
     )
 }
