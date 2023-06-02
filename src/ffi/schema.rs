@@ -154,15 +154,18 @@ impl ArrowSchema {
     }
 
     /// returns the name of this schema.
+    ///
+    /// Since this field is optional, `""` is returned if it is not set (as per the spec).
     pub(crate) fn name(&self) -> &str {
-        assert!(!self.name.is_null());
+        if self.name.is_null() {
+            return ""
+        }
         // safe because the lifetime of `self.name` equals `self`
         unsafe { CStr::from_ptr(self.name) }.to_str().unwrap()
     }
 
     pub(crate) fn child(&self, index: usize) -> &'static Self {
         assert!(index < self.n_children as usize);
-        assert!(!self.name.is_null());
         unsafe { self.children.add(index).as_ref().unwrap().as_ref().unwrap() }
     }
 
