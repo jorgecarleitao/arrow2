@@ -1,6 +1,6 @@
 use arrow2::array::*;
 use arrow2::datatypes::Field;
-use arrow2::{error::Result, ffi};
+use arrow2::{error::Error, error::Result, ffi};
 
 fn _test_round_trip(arrays: Vec<Box<dyn Array>>) -> Result<()> {
     let field = Field::new("a", arrays[0].data_type().clone(), true);
@@ -29,4 +29,15 @@ fn round_trip() -> Result<()> {
     let array: Box<dyn Array> = Box::new(array);
 
     _test_round_trip(vec![array.clone(), array.clone(), array])
+}
+
+#[test]
+fn stream_reader_try_new_invalid_argument_error_on_released_stream() {
+    let released_stream = Box::new(ffi::ArrowArrayStream::empty());
+    let reader = unsafe { ffi::ArrowArrayStreamReader::try_new(released_stream) };
+    // poor man's assert_matches:
+    match reader {
+        Err(Error::OutOfSpec(_)) => {}
+        _ => panic!("ArrowArrayStreamReader::try_new did not return an InvalidArgumentError"),
+    }
 }
