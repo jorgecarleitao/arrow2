@@ -158,7 +158,7 @@ impl ArrowSchema {
     /// Since this field is optional, `""` is returned if it is not set (as per the spec).
     pub(crate) fn name(&self) -> &str {
         if self.name.is_null() {
-            return ""
+            return "";
         }
         // safe because the lifetime of `self.name` equals `self`
         unsafe { CStr::from_ptr(self.name) }.to_str().unwrap()
