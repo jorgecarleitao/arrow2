@@ -53,7 +53,8 @@ pub struct ArrowArrayStreamReader {
 impl ArrowArrayStreamReader {
     /// Returns a new [`ArrowArrayStreamReader`]
     /// # Error
-    /// Errors iff the [`ArrowArrayStream`] is out of specification
+    /// Errors iff the [`ArrowArrayStream`] is out of specification,
+    /// or was already released prior to calling this function.
     /// # Safety
     /// This method is intrinsically `unsafe` since it assumes that the `ArrowArrayStream`
     /// contains a valid Arrow C stream interface.
@@ -61,6 +62,12 @@ impl ArrowArrayStreamReader {
     /// * The `ArrowArrayStream` fulfills the invariants of the C stream interface
     /// * The schema `get_schema` produces fulfills the C data interface
     pub unsafe fn try_new(mut iter: Box<ArrowArrayStream>) -> Result<Self, Error> {
+        if iter.release.is_none() {
+            return Err(Error::InvalidArgumentError(
+                "The C stream was already released".to_string(),
+            ));
+        };
+
         if iter.get_next.is_none() {
             return Err(Error::OutOfSpec(
                 "The C stream MUST contain a non-null get_next".to_string(),
