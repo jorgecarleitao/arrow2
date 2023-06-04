@@ -1,5 +1,5 @@
-use std::ops::DerefMut;
 use std::ffi::{CStr, CString};
+use std::ops::DerefMut;
 
 use crate::{array::Array, datatypes::Field, error::Error};
 
