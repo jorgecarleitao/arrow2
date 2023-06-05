@@ -1,4 +1,5 @@
 use std::ffi::{CStr, CString};
+use std::ops::DerefMut;
 
 use crate::{array::Array, datatypes::Field, error::Error};
 
@@ -45,12 +46,12 @@ unsafe fn handle_error(iter: &mut ArrowArrayStream) -> Error {
 }
 
 /// Implements an iterator of [`Array`] consumed from the [C stream interface](https://arrow.apache.org/docs/format/CStreamInterface.html).
-pub struct ArrowArrayStreamReader {
-    iter: Box<ArrowArrayStream>,
+pub struct ArrowArrayStreamReader<Iter: DerefMut<Target = ArrowArrayStream>> {
+    iter: Iter,
     field: Field,
 }
 
-impl ArrowArrayStreamReader {
+impl<Iter: DerefMut<Target = ArrowArrayStream>> ArrowArrayStreamReader<Iter> {
     /// Returns a new [`ArrowArrayStreamReader`]
     /// # Error
     /// Errors iff the [`ArrowArrayStream`] is out of specification
@@ -60,7 +61,7 @@ impl ArrowArrayStreamReader {
     /// In particular:
     /// * The `ArrowArrayStream` fulfills the invariants of the C stream interface
     /// * The schema `get_schema` produces fulfills the C data interface
-    pub unsafe fn try_new(mut iter: Box<ArrowArrayStream>) -> Result<Self, Error> {
+    pub unsafe fn try_new(mut iter: Iter) -> Result<Self, Error> {
         if iter.get_next.is_none() {
             return Err(Error::OutOfSpec(
                 "The C stream MUST contain a non-null get_next".to_string(),
