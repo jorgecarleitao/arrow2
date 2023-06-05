@@ -213,7 +213,9 @@
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::ffi::{CStr, CString};
+<span class="kw">use </span>std::ops::DerefMut;
 
 <span class="kw">use crate</span>::{array::Array, datatypes::Field, error::Error};
 
@@ -260,12 +262,12 @@
 }
 
 <span class="doccomment">/// Implements an iterator of [`Array`] consumed from the [C stream interface](https://arrow.apache.org/docs/format/CStreamInterface.html).
-</span><span class="kw">pub struct </span>ArrowArrayStreamReader {
-    iter: Box&lt;ArrowArrayStream&gt;,
+</span><span class="kw">pub struct </span>ArrowArrayStreamReader&lt;Iter: DerefMut&lt;Target = ArrowArrayStream&gt;&gt; {
+    iter: Iter,
     field: Field,
 }
 
-<span class="kw">impl </span>ArrowArrayStreamReader {
+<span class="kw">impl</span>&lt;Iter: DerefMut&lt;Target = ArrowArrayStream&gt;&gt; ArrowArrayStreamReader&lt;Iter&gt; {
     <span class="doccomment">/// Returns a new [`ArrowArrayStreamReader`]
     /// # Error
     /// Errors iff the [`ArrowArrayStream`] is out of specification
@@ -275,7 +277,7 @@
     /// In particular:
     /// * The `ArrowArrayStream` fulfills the invariants of the C stream interface
     /// * The schema `get_schema` produces fulfills the C data interface
-    </span><span class="kw">pub unsafe fn </span>try_new(<span class="kw-2">mut </span>iter: Box&lt;ArrowArrayStream&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    </span><span class="kw">pub unsafe fn </span>try_new(<span class="kw-2">mut </span>iter: Iter) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="kw">if </span>iter.get_next.is_none() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
                 <span class="string">&quot;The C stream MUST contain a non-null get_next&quot;</span>.to_string(),
