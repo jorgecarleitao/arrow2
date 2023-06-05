@@ -37,7 +37,7 @@ fn stream_reader_try_new_invalid_argument_error_on_released_stream() {
     let reader = unsafe { ffi::ArrowArrayStreamReader::try_new(released_stream) };
     // poor man's assert_matches:
     match reader {
-        Err(Error::OutOfSpec(_)) => {}
+        Err(Error::InvalidArgumentError(_)) => {}
         _ => panic!("ArrowArrayStreamReader::try_new did not return an InvalidArgumentError"),
     }
 }
