@@ -142,6 +142,22 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         Self::new_from(values, data_type, capacity)
     }
 
+    /// Creates a new [`MutableListArray`] from a [`MutableArray`], [`Offsets`] and
+    /// [`MutableBitmap`].
+    pub fn new_from_mutable(
+        values: M,
+        offsets: Offsets<O>,
+        validity: Option<MutableBitmap>,
+    ) -> Self {
+        let data_type = values.data_type().clone();
+        Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        }
+    }
+
     #[inline]
     /// Needs to be called when a valid value was extended to this array.
     /// This is a relatively low level function, prefer `try_push` when you can.
