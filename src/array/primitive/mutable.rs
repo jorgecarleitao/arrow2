@@ -132,6 +132,7 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     }
 
     /// Adds a new value to the array.
+    #[inline]
     pub fn push(&mut self, value: Option<T>) {
         match value {
             Some(value) => {
