@@ -549,9 +549,18 @@
 <a href="#549" id="549">549</a>
 <a href="#550" id="550">550</a>
 <a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Contains functionality to load an ArrayData from the C Data Interface
 </span><span class="kw">use </span>std::sync::Arc;
 
+<span class="kw">use </span><span class="kw">crate</span>::bitmap::utils::count_zeros;
 <span class="kw">use </span><span class="kw">crate</span>::buffer::BytesAllocator;
 <span class="kw">use crate</span>::{
     array::<span class="kw-2">*</span>,
@@ -804,15 +813,22 @@
     data_type: <span class="kw-2">&amp;</span>DataType,
     owner: InternalArrowArray,
     index: usize,
+    <span class="comment">// if this is the validity bitmap
+    // we can use the null count directly
+    </span>is_validity: bool,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Bitmap&gt; {
     <span class="kw">let </span>ptr = get_buffer_ptr(array, data_type, index)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>len: usize = array.length.try_into().expect(<span class="string">&quot;length to fit in `usize`&quot;</span>);
-    <span class="kw">let </span>offset: usize = array.offset.try_into().expect(<span class="string">&quot;Offset to fit in `usize`&quot;</span>);
-    <span class="kw">let </span>null_count: usize = array.null_count();
+    <span class="kw">let </span>offset: usize = array.offset.try_into().expect(<span class="string">&quot;offset to fit in `usize`&quot;</span>);
     <span class="kw">let </span>bytes_len = bytes_for(offset + len);
     <span class="kw">let </span>bytes = Bytes::from_foreign(ptr, bytes_len, BytesAllocator::InternalArrowArray(owner));
 
+    <span class="kw">let </span>null_count: usize = <span class="kw">if </span>is_validity {
+        array.null_count()
+    } <span class="kw">else </span>{
+        count_zeros(bytes.as_ref(), offset, len)
+    };
     Bitmap::from_inner(Arc::new(bytes), offset, len, null_count)
 }
 
@@ -971,7 +987,7 @@
         <span class="kw">if </span><span class="self">self</span>.array().null_count() == <span class="number">0 </span>{
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
         } <span class="kw">else </span>{
-            create_bitmap(<span class="self">self</span>.array(), <span class="self">self</span>.data_type(), <span class="self">self</span>.owner(), <span class="number">0</span>).map(<span class="prelude-val">Some</span>)
+            create_bitmap(<span class="self">self</span>.array(), <span class="self">self</span>.data_type(), <span class="self">self</span>.owner(), <span class="number">0</span>, <span class="bool-val">true</span>).map(<span class="prelude-val">Some</span>)
         }
     }
 
@@ -987,7 +1003,7 @@
     /// * the buffer at position `index` is valid for the declared length
     /// * the buffers&#39; pointer is not mutable for the lifetime of `owner`
     </span><span class="kw">unsafe fn </span>bitmap(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; <span class="prelude-ty">Result</span>&lt;Bitmap&gt; {
-        create_bitmap(<span class="self">self</span>.array(), <span class="self">self</span>.data_type(), <span class="self">self</span>.owner(), index)
+        create_bitmap(<span class="self">self</span>.array(), <span class="self">self</span>.data_type(), <span class="self">self</span>.owner(), index, <span class="bool-val">false</span>)
     }
 
     <span class="doccomment">/// # Safety
