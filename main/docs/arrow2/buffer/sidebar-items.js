@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Buffer"]};
+window.SIDEBAR_ITEMS = {"struct":["Buffer","Bytes"]};
