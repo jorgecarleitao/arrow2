@@ -1,5 +1,4 @@
 //! Contains functionality to load an ArrayData from the C Data Interface
-use std::ptr::null;
 use std::sync::Arc;
 
 use crate::bitmap::utils::count_zeros;
