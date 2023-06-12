@@ -332,6 +332,9 @@ impl Bitmap {
 
     /// Creates a `[Bitmap]` from its internal representation.
     /// This is the inverted from `[Bitmap::into_inner]`
+    ///
+    /// # Safety
+    /// The invariants of this struct must be upheld
     pub unsafe fn from_inner(
         bytes: Arc<Bytes<u8>>,
         offset: usize,
