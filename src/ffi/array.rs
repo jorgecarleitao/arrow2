@@ -258,10 +258,11 @@ unsafe fn create_bitmap(
 
     let len: usize = array.length.try_into().expect("length to fit in `usize`");
     let offset: usize = array.offset.try_into().expect("Offset to fit in `usize`");
+    let null_count: usize = array.null_count();
     let bytes_len = bytes_for(offset + len);
     let bytes = Bytes::from_foreign(ptr, bytes_len, BytesAllocator::InternalArrowArray(owner));
 
-    Ok(Bitmap::from_bytes(bytes, offset + len).sliced(offset, len))
+    Bitmap::from_inner(Arc::new(bytes), offset, len, null_count)
 }
 
 fn buffer_offset(array: &ArrowArray, data_type: &DataType, i: usize) -> usize {
