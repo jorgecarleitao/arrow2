@@ -289,6 +289,34 @@ impl<T: NativeType> PrimitiveArray<T> {
         (data_type, values, validity)
     }
 
+    /// Creates a `[PrimitiveArray]` from its internal representation.
+    /// This is the inverted from `[PrimitiveArray::into_inner]`
+    pub fn from_inner(
+        data_type: DataType,
+        values: Buffer<T>,
+        validity: Option<Bitmap>,
+    ) -> Result<Self, Error> {
+        check(&data_type, &values, validity.as_ref().map(|v| v.len()))?;
+        Ok(unsafe { Self::from_inner_unchecked(data_type, values, validity) })
+    }
+
+    /// Creates a `[PrimitiveArray]` from its internal representation.
+    /// This is the inverted from `[PrimitiveArray::into_inner]`
+    ///
+    /// # Safety
+    /// Callers must ensure all invariants of this struct are upheld.
+    pub unsafe fn from_inner_unchecked(
+        data_type: DataType,
+        values: Buffer<T>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        Self {
+            data_type,
+            values,
+            validity,
+        }
+    }
+
     /// Try to convert this [`PrimitiveArray`] to a [`MutablePrimitiveArray`] via copy-on-write semantics.
     ///
     /// A [`PrimitiveArray`] is backed by a [`Buffer`] and [`Bitmap`] which are essentially `Arc<Vec<_>>`.

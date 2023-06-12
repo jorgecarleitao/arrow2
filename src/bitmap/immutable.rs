@@ -65,6 +65,17 @@ impl Default for Bitmap {
     }
 }
 
+pub(super) fn check(bytes: &[u8], offset: usize, length: usize) -> Result<(), Error> {
+    if offset + length > bytes.len().saturating_mul(8) {
+        return Err(Error::InvalidArgumentError(format!(
+            "The offset + length of the bitmap ({}) must be `<=` to the number of bytes times 8 ({})",
+            offset + length,
+            bytes.len().saturating_mul(8)
+        )));
+    }
+    Ok(())
+}
+
 impl Bitmap {
     /// Initializes an empty [`Bitmap`].
     #[inline]
@@ -77,13 +88,7 @@ impl Bitmap {
     /// This function errors iff `length > bytes.len() * 8`
     #[inline]
     pub fn try_new(bytes: Vec<u8>, length: usize) -> Result<Self, Error> {
-        if length > bytes.len().saturating_mul(8) {
-            return Err(Error::InvalidArgumentError(format!(
-                "The length of the bitmap ({}) must be `<=` to the number of bytes times 8 ({})",
-                length,
-                bytes.len().saturating_mul(8)
-            )));
-        }
+        check(&bytes, 0, length)?;
         let unset_bits = count_zeros(&bytes, 0, length);
         Ok(Self {
             length,
@@ -115,21 +120,6 @@ impl Bitmap {
     /// This iterator is useful to operate over multiple bits via e.g. bitwise.
     pub fn chunks<T: BitChunk>(&self) -> BitChunks<T> {
         BitChunks::new(&self.bytes, self.offset, self.length)
-    }
-
-    /// Creates a new [`Bitmap`] from [`Bytes`] and a length.
-    /// # Panic
-    /// Panics iff `length <= bytes.len() * 8`
-    #[inline]
-    pub(crate) fn from_bytes(bytes: Bytes<u8>, length: usize) -> Self {
-        assert!(length <= bytes.len() * 8);
-        let unset_bits = count_zeros(&bytes, 0, length);
-        Self {
-            length,
-            offset: 0,
-            bytes: Arc::new(bytes),
-            unset_bits,
-        }
     }
 
     /// Returns the byte slice of this [`Bitmap`].
@@ -325,6 +315,57 @@ impl Bitmap {
             Some(unsafe { self.get_bit_unchecked(i) })
         } else {
             None
+        }
+    }
+
+    /// Returns its internal representation
+    #[must_use]
+    pub fn into_inner(self) -> (Arc<Bytes<u8>>, usize, usize, usize) {
+        let Self {
+            bytes,
+            offset,
+            length,
+            unset_bits,
+        } = self;
+        (bytes, offset, length, unset_bits)
+    }
+
+    /// Creates a `[Bitmap]` from its internal representation.
+    /// This is the inverted from `[Bitmap::into_inner]`
+    ///
+    /// # Safety
+    /// The invariants of this struct must be upheld
+    pub unsafe fn from_inner(
+        bytes: Arc<Bytes<u8>>,
+        offset: usize,
+        length: usize,
+        unset_bits: usize,
+    ) -> Result<Self, Error> {
+        check(&bytes, offset, length)?;
+        Ok(Self {
+            bytes,
+            offset,
+            length,
+            unset_bits,
+        })
+    }
+
+    /// Creates a `[Bitmap]` from its internal representation.
+    /// This is the inverted from `[Bitmap::into_inner]`
+    ///
+    /// # Safety
+    /// Callers must ensure all invariants of this struct are upheld.
+    pub unsafe fn from_inner_unchecked(
+        bytes: Arc<Bytes<u8>>,
+        offset: usize,
+        length: usize,
+        unset_bits: usize,
+    ) -> Self {
+        Self {
+            bytes,
+            offset,
+            length,
+            unset_bits,
         }
     }
 }
