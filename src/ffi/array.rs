@@ -1,6 +1,8 @@
 //! Contains functionality to load an ArrayData from the C Data Interface
+use std::ptr::null;
 use std::sync::Arc;
 
+use crate::bitmap::utils::count_zeros;
 use crate::buffer::BytesAllocator;
 use crate::{
     array::*,
@@ -253,15 +255,22 @@ unsafe fn create_bitmap(
     data_type: &DataType,
     owner: InternalArrowArray,
     index: usize,
+    // if this is the validity bitmap
+    // we can use the null count directly
+    is_validity: bool,
 ) -> Result<Bitmap> {
     let ptr = get_buffer_ptr(array, data_type, index)?;
 
     let len: usize = array.length.try_into().expect("length to fit in `usize`");
-    let offset: usize = array.offset.try_into().expect("Offset to fit in `usize`");
-    let null_count: usize = array.null_count();
+    let offset: usize = array.offset.try_into().expect("offset to fit in `usize`");
     let bytes_len = bytes_for(offset + len);
     let bytes = Bytes::from_foreign(ptr, bytes_len, BytesAllocator::InternalArrowArray(owner));
 
+    let null_count: usize = if is_validity {
+        array.null_count()
+    } else {
+        count_zeros(bytes.as_ref(), offset, len)
+    };
     Bitmap::from_inner(Arc::new(bytes), offset, len, null_count)
 }
 
@@ -420,7 +429,7 @@ pub trait ArrowArrayRef: std::fmt::Debug {
         if self.array().null_count() == 0 {
             Ok(None)
         } else {
-            create_bitmap(self.array(), self.data_type(), self.owner(), 0).map(Some)
+            create_bitmap(self.array(), self.data_type(), self.owner(), 0, true).map(Some)
         }
     }
 
@@ -436,7 +445,7 @@ pub trait ArrowArrayRef: std::fmt::Debug {
     /// * the buffer at position `index` is valid for the declared length
     /// * the buffers' pointer is not mutable for the lifetime of `owner`
     unsafe fn bitmap(&self, index: usize) -> Result<Bitmap> {
-        create_bitmap(self.array(), self.data_type(), self.owner(), index)
+        create_bitmap(self.array(), self.data_type(), self.owner(), index, false)
     }
 
     /// # Safety
