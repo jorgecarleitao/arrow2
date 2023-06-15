@@ -75,6 +75,7 @@ macro_rules! primitive_dyn {
 /// If this function returns true to stay consistent with the `cast` kernel below.
 pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
     use self::DataType::*;
+    let from_type = from_type.to_logical_type();
     if from_type == to_type {
         return true;
     }
@@ -435,7 +436,7 @@ fn cast_list_to_fixed_size_list<O: Offset>(
 /// * Interval and duration
 pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Result<Box<dyn Array>> {
     use DataType::*;
-    let from_type = array.data_type();
+    let from_type = array.data_type().to_logical_type();
 
     // clone array if types are the same
     if from_type == to_type {
