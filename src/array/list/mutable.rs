@@ -149,6 +149,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         offsets: Offsets<O>,
         validity: Option<MutableBitmap>,
     ) -> Self {
+        assert_eq!(values.len(), offsets.last().to_usize());
         let data_type = values.data_type().clone();
         Self {
             data_type,
