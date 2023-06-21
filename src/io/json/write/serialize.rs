@@ -7,8 +7,10 @@ use crate::bitmap::utils::ZipValidity;
 use crate::datatypes::{IntegerType, TimeUnit};
 use crate::io::iterator::BufStreamingIterator;
 use crate::offset::Offset;
+#[cfg(feature = "chrono-tz")]
+use crate::temporal_conversions::parse_offset_tz;
 use crate::temporal_conversions::{
-    date32_to_date, date64_to_date, parse_offset, parse_offset_tz, timestamp_ms_to_datetime,
+    date32_to_date, date64_to_date, parse_offset, timestamp_ms_to_datetime,
     timestamp_ns_to_datetime, timestamp_s_to_datetime, timestamp_to_datetime,
     timestamp_us_to_datetime,
 };
@@ -313,7 +315,7 @@ fn timestamp_tz_serializer<'a>(
                 materialize_serializer(f, array.iter(), offset, take)
             }
             _ => {
-                panic!("Invalid Offset format (must be [-]00:00) or chrono-tz feature not active");
+                panic!("Timezone {} is invalid or not supported", tz);
             }
         },
         #[cfg(not(feature = "chrono-tz"))]
@@ -418,15 +420,13 @@ pub(crate) fn new_serializer<'a>(
                 take,
             )
         }
-        DataType::Timestamp(time_unit, Some(tz)) => {
-            timestamp_tz_serializer(
-                array.as_any().downcast_ref().unwrap(),
-                *time_unit,
-                tz,
-                offset,
-                take,
-            )
-        }
+        DataType::Timestamp(time_unit, Some(tz)) => timestamp_tz_serializer(
+            array.as_any().downcast_ref().unwrap(),
+            *time_unit,
+            tz,
+            offset,
+            take,
+        ),
         other => todo!("Writing {:?} to JSON", other),
     }
 }
