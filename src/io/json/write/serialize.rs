@@ -51,6 +51,15 @@ fn boolean_serializer<'a>(
     materialize_serializer(f, array.iter(), offset, take)
 }
 
+fn null_serializer(
+    len: usize,
+    offset: usize,
+    take: usize,
+) -> Box<dyn StreamingIterator<Item = [u8]> + Send + Sync> {
+    let f = |_x: (), buf: &mut Vec<u8>| buf.extend_from_slice(b"null");
+    materialize_serializer(f, std::iter::repeat(()).take(len), offset, take)
+}
+
 fn primitive_serializer<'a, T: NativeType + ToLexical>(
     array: &'a PrimitiveArray<T>,
     offset: usize,
@@ -376,6 +385,7 @@ pub(crate) fn new_serializer<'a>(
                 )
             }
         }
+        DataType::Null => null_serializer(array.len(), offset, take),
         other => todo!("Writing {:?} to JSON", other),
     }
 }

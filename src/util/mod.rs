@@ -5,6 +5,7 @@
     feature = "io_csv_write",
     feature = "io_csv_read",
     feature = "io_json",
+    feature = "io_json_write",
     feature = "compute_cast"
 ))]
 mod lexical;
@@ -13,6 +14,7 @@ mod lexical;
     feature = "io_csv_write",
     feature = "io_csv_read",
     feature = "io_json",
+    feature = "io_json_write",
     feature = "compute_cast"
 ))]
 pub use lexical::*;
