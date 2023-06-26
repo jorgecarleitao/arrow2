@@ -1,5 +1,6 @@
 use std::hint::unreachable_unchecked;
 use std::iter::FromIterator;
+use std::sync::Arc;
 
 use crate::bitmap::utils::{merge_reversed, set_bit_unchecked};
 use crate::error::Error;
@@ -336,8 +337,19 @@ impl From<MutableBitmap> for Bitmap {
 impl From<MutableBitmap> for Option<Bitmap> {
     #[inline]
     fn from(buffer: MutableBitmap) -> Self {
-        if buffer.unset_bits() > 0 {
-            Some(Bitmap::try_new(buffer.buffer, buffer.length).unwrap())
+        let unset_bits = buffer.unset_bits();
+        if unset_bits > 0 {
+            // safety:
+            // invariants of the `MutableBitmap` equal that of `Bitmap`
+            let bitmap = unsafe {
+                Bitmap::from_inner_unchecked(
+                    Arc::new(buffer.buffer.into()),
+                    0,
+                    buffer.length,
+                    unset_bits,
+                )
+            };
+            Some(bitmap)
         } else {
             None
         }

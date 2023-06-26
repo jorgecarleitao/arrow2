@@ -27,6 +27,15 @@ fn int32() -> Result<()> {
 }
 
 #[test]
+fn null() -> Result<()> {
+    let array = NullArray::new(DataType::Null, 3);
+
+    let expected = r#"[null,null,null]"#;
+
+    test!(array, expected)
+}
+
+#[test]
 fn f32() -> Result<()> {
     let array = Float32Array::from([
         Some(1.5),

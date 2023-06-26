@@ -625,14 +625,11 @@ fn allocate_array(f: &Field) -> Box<dyn MutableArray> {
             f.data_type().clone(),
             *size,
         )),
-        DataType::List(inner) => match inner.data_type() {
-            DataType::List(_) => Box::new(MutableListArray::<i32, _>::new_from(
-                allocate_array(inner),
-                inner.data_type().clone(),
-                0,
-            )),
-            _ => allocate_array(inner),
-        },
+        DataType::List(inner) => Box::new(MutableListArray::<i32, _>::new_from(
+            allocate_array(inner),
+            f.data_type().clone(),
+            0,
+        )),
         _ => todo!(),
     }
 }
