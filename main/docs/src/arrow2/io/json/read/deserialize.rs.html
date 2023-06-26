@@ -689,9 +689,6 @@
 <a href="#689" id="689">689</a>
 <a href="#690" id="690">690</a>
 <a href="#691" id="691">691</a>
-<a href="#692" id="692">692</a>
-<a href="#693" id="693">693</a>
-<a href="#694" id="694">694</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::borrow::Borrow;
 <span class="kw">use </span>std::collections::hash_map::DefaultHasher;
 <span class="kw">use </span>std::hash::Hasher;
@@ -1319,14 +1316,11 @@
             f.data_type().clone(),
             <span class="kw-2">*</span>size,
         )),
-        DataType::List(inner) =&gt; <span class="kw">match </span>inner.data_type() {
-            DataType::List(<span class="kw">_</span>) =&gt; Box::new(MutableListArray::&lt;i32, <span class="kw">_</span>&gt;::new_from(
-                allocate_array(inner),
-                inner.data_type().clone(),
-                <span class="number">0</span>,
-            )),
-            <span class="kw">_ </span>=&gt; allocate_array(inner),
-        },
+        DataType::List(inner) =&gt; Box::new(MutableListArray::&lt;i32, <span class="kw">_</span>&gt;::new_from(
+            allocate_array(inner),
+            f.data_type().clone(),
+            <span class="number">0</span>,
+        )),
         <span class="kw">_ </span>=&gt; <span class="macro">todo!</span>(),
     }
 }
