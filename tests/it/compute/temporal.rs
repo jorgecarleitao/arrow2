@@ -346,7 +346,7 @@ fn consistency_check<O: arrow2::types::NativeType>(
         Timestamp(TimeUnit::Millisecond, None),
         Timestamp(TimeUnit::Microsecond, None),
         Timestamp(TimeUnit::Nanosecond, None),
-        Timestamp(TimeUnit::Nanosecond, Some("+00:00".to_string())),
+        Timestamp(TimeUnit::Nanosecond, Some("UTC".to_string())),
         Time64(TimeUnit::Microsecond),
         Time64(TimeUnit::Nanosecond),
         Date32,

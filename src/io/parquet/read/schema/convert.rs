@@ -79,7 +79,7 @@ fn from_int64(
             let timezone = if is_adjusted_to_utc {
                 // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
                 // A TIMESTAMP with isAdjustedToUTC=true is defined as [...] elapsed since the Unix epoch
-                Some("+00:00".to_string())
+                Some("UTC".to_string())
             } else {
                 // PARQUET:
                 // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
@@ -867,7 +867,7 @@ mod tests {
             ),
             Field::new(
                 "ts_nano",
-                DataType::Timestamp(TimeUnit::Nanosecond, Some("+00:00".to_string())),
+                DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".to_string())),
                 false,
             ),
         ];
