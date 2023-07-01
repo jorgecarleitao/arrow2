@@ -528,8 +528,8 @@ macro_rules! impl_sliced {
         /// The caller must ensure that `offset + length <= self.len()`.
         #[inline]
         #[must_use]
-        pub fn sliced_unchecked(mut self, offset: usize, length: usize) -> Self {
-            unsafe { self.slice_unchecked(offset, length) };
+        pub unsafe fn sliced_unchecked(mut self, offset: usize, length: usize) -> Self {
+            self.slice_unchecked(offset, length);
             self
         }
     };
