@@ -11,8 +11,9 @@ use crate::offset::Offset;
 use crate::temporal_conversions::parse_offset_tz;
 use crate::temporal_conversions::{
     date32_to_date, date64_to_date, duration_ms_to_duration, duration_ns_to_duration,
-    duration_s_to_duration, duration_us_to_duration, timestamp_ms_to_datetime,
-    timestamp_ns_to_datetime, timestamp_s_to_datetime, timestamp_us_to_datetime,
+    duration_s_to_duration, duration_us_to_duration, parse_offset, timestamp_ms_to_datetime,
+    timestamp_ns_to_datetime, timestamp_s_to_datetime, timestamp_to_datetime,
+    timestamp_us_to_datetime,
 };
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
