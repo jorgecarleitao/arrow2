@@ -2,7 +2,7 @@
 
 use chrono::{
     format::{parse, Parsed, StrftimeItems},
-    Datelike, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime,
+    Datelike, Duration, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime,
 };
 
 use crate::error::Result;
@@ -64,6 +64,30 @@ pub fn date64_to_date(milliseconds: i64) -> NaiveDate {
 #[inline]
 pub fn time32s_to_time(v: i32) -> NaiveTime {
     NaiveTime::from_num_seconds_from_midnight_opt(v as u32, 0).expect("invalid time")
+}
+
+/// converts a `i64` representing a `duration(s)` to [`Duration`]
+#[inline]
+pub fn duration_s_to_duration(v: i64) -> Duration {
+    Duration::seconds(v)
+}
+
+/// converts a `i64` representing a `duration(ms)` to [`Duration`]
+#[inline]
+pub fn duration_ms_to_duration(v: i64) -> Duration {
+    Duration::milliseconds(v)
+}
+
+/// converts a `i64` representing a `duration(us)` to [`Duration`]
+#[inline]
+pub fn duration_us_to_duration(v: i64) -> Duration {
+    Duration::microseconds(v)
+}
+
+/// converts a `i64` representing a `duration(ns)` to [`Duration`]
+#[inline]
+pub fn duration_ns_to_duration(v: i64) -> Duration {
+    Duration::nanoseconds(v)
 }
 
 /// converts a `i32` representing a `time32(ms)` to [`NaiveTime`]

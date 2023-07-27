@@ -1,7 +1,3 @@
-use arrow_array::temporal_conversions::{
-    duration_ms_to_duration, duration_ns_to_duration, duration_s_to_duration,
-    duration_us_to_duration,
-};
 use chrono::{Duration, NaiveDate, NaiveDateTime};
 use lexical_core::ToLexical;
 use std::io::Write;
@@ -12,8 +8,9 @@ use crate::datatypes::{IntegerType, TimeUnit};
 use crate::io::iterator::BufStreamingIterator;
 use crate::offset::Offset;
 use crate::temporal_conversions::{
-    date32_to_date, date64_to_date, timestamp_ms_to_datetime, timestamp_ns_to_datetime,
-    timestamp_s_to_datetime, timestamp_us_to_datetime,
+    date32_to_date, date64_to_date, duration_ms_to_duration, duration_ns_to_duration,
+    duration_s_to_duration, duration_us_to_duration, timestamp_ms_to_datetime,
+    timestamp_ns_to_datetime, timestamp_s_to_datetime, timestamp_us_to_datetime,
 };
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
