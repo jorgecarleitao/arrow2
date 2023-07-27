@@ -506,6 +506,48 @@
 <a href="#506" id="506">506</a>
 <a href="#507" id="507">507</a>
 <a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Conversion methods for dates and times.
 
 </span><span class="kw">use </span>chrono::{
@@ -540,14 +582,25 @@
 <span class="doccomment">/// converts a `i32` representing a `date32` to [`NaiveDateTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>date32_to_datetime(v: i32) -&gt; NaiveDateTime {
+    date32_to_datetime_opt(v).expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+}
+
+<span class="doccomment">/// converts a `i32` representing a `date32` to [`NaiveDateTime`]
+</span><span class="attr">#[inline]
+</span><span class="kw">pub fn </span>date32_to_datetime_opt(v: i32) -&gt; <span class="prelude-ty">Option</span>&lt;NaiveDateTime&gt; {
     NaiveDateTime::from_timestamp_opt(v <span class="kw">as </span>i64 * SECONDS_IN_DAY, <span class="number">0</span>)
-        .expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
 }
 
 <span class="doccomment">/// converts a `i32` representing a `date32` to [`NaiveDate`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>date32_to_date(days: i32) -&gt; NaiveDate {
-    NaiveDate::from_num_days_from_ce_opt(EPOCH_DAYS_FROM_CE + days).expect(<span class="string">&quot;out-of-range date&quot;</span>)
+    date32_to_date_opt(days).expect(<span class="string">&quot;out-of-range date&quot;</span>)
+}
+
+<span class="doccomment">/// converts a `i32` representing a `date32` to [`NaiveDate`]
+</span><span class="attr">#[inline]
+</span><span class="kw">pub fn </span>date32_to_date_opt(days: i32) -&gt; <span class="prelude-ty">Option</span>&lt;NaiveDate&gt; {
+    NaiveDate::from_num_days_from_ce_opt(EPOCH_DAYS_FROM_CE + days)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `date64` to [`NaiveDateTime`]
@@ -613,6 +666,12 @@
 <span class="doccomment">/// converts a `i64` representing a `time64(us)` to [`NaiveTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>time64us_to_time(v: i64) -&gt; NaiveTime {
+    time64us_to_time_opt(v).expect(<span class="string">&quot;invalid time&quot;</span>)
+}
+
+<span class="doccomment">/// converts a `i64` representing a `time64(us)` to [`NaiveTime`]
+</span><span class="attr">#[inline]
+</span><span class="kw">pub fn </span>time64us_to_time_opt(v: i64) -&gt; <span class="prelude-ty">Option</span>&lt;NaiveTime&gt; {
     NaiveTime::from_num_seconds_from_midnight_opt(
         <span class="comment">// extract seconds from microseconds
         </span>(v / MICROSECONDS) <span class="kw">as </span>u32,
@@ -620,30 +679,46 @@
         // nanoseconds
         </span>(v % MICROSECONDS * MILLISECONDS) <span class="kw">as </span>u32,
     )
-    .expect(<span class="string">&quot;invalid time&quot;</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `time64(ns)` to [`NaiveTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>time64ns_to_time(v: i64) -&gt; NaiveTime {
+    time64ns_to_time_opt(v).expect(<span class="string">&quot;invalid time&quot;</span>)
+}
+
+<span class="doccomment">/// converts a `i64` representing a `time64(ns)` to [`NaiveTime`]
+</span><span class="attr">#[inline]
+</span><span class="kw">pub fn </span>time64ns_to_time_opt(v: i64) -&gt; <span class="prelude-ty">Option</span>&lt;NaiveTime&gt; {
     NaiveTime::from_num_seconds_from_midnight_opt(
         <span class="comment">// extract seconds from nanoseconds
         </span>(v / NANOSECONDS) <span class="kw">as </span>u32,
         <span class="comment">// discard extracted seconds
         </span>(v % NANOSECONDS) <span class="kw">as </span>u32,
     )
-    .expect(<span class="string">&quot;invalid time&quot;</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(s)` to [`NaiveDateTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_s_to_datetime(seconds: i64) -&gt; NaiveDateTime {
-    NaiveDateTime::from_timestamp_opt(seconds, <span class="number">0</span>).expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+    timestamp_s_to_datetime_opt(seconds).expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+}
+
+<span class="doccomment">/// converts a `i64` representing a `timestamp(s)` to [`NaiveDateTime`]
+</span><span class="attr">#[inline]
+</span><span class="kw">pub fn </span>timestamp_s_to_datetime_opt(seconds: i64) -&gt; <span class="prelude-ty">Option</span>&lt;NaiveDateTime&gt; {
+    NaiveDateTime::from_timestamp_opt(seconds, <span class="number">0</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(ms)` to [`NaiveDateTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_ms_to_datetime(v: i64) -&gt; NaiveDateTime {
+    timestamp_ms_to_datetime_opt(v).expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+}
+
+<span class="doccomment">/// converts a `i64` representing a `timestamp(ms)` to [`NaiveDateTime`]
+</span><span class="attr">#[inline]
+</span><span class="kw">pub fn </span>timestamp_ms_to_datetime_opt(v: i64) -&gt; <span class="prelude-ty">Option</span>&lt;NaiveDateTime&gt; {
     <span class="kw">if </span>v &gt;= <span class="number">0 </span>{
         NaiveDateTime::from_timestamp_opt(
             <span class="comment">// extract seconds from milliseconds
@@ -665,12 +740,17 @@
             )
         }
     }
-    .expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(us)` to [`NaiveDateTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_us_to_datetime(v: i64) -&gt; NaiveDateTime {
+    timestamp_us_to_datetime_opt(v).expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+}
+
+<span class="doccomment">/// converts a `i64` representing a `timestamp(us)` to [`NaiveDateTime`]
+</span><span class="attr">#[inline]
+</span><span class="kw">pub fn </span>timestamp_us_to_datetime_opt(v: i64) -&gt; <span class="prelude-ty">Option</span>&lt;NaiveDateTime&gt; {
     <span class="kw">if </span>v &gt;= <span class="number">0 </span>{
         NaiveDateTime::from_timestamp_opt(
             <span class="comment">// extract seconds from microseconds
@@ -692,12 +772,17 @@
             )
         }
     }
-    .expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(ns)` to [`NaiveDateTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_ns_to_datetime(v: i64) -&gt; NaiveDateTime {
+    timestamp_ns_to_datetime_opt(v).expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+}
+
+<span class="doccomment">/// converts a `i64` representing a `timestamp(ns)` to [`NaiveDateTime`]
+</span><span class="attr">#[inline]
+</span><span class="kw">pub fn </span>timestamp_ns_to_datetime_opt(v: i64) -&gt; <span class="prelude-ty">Option</span>&lt;NaiveDateTime&gt; {
     <span class="kw">if </span>v &gt;= <span class="number">0 </span>{
         NaiveDateTime::from_timestamp_opt(
             <span class="comment">// extract seconds from nanoseconds
@@ -719,7 +804,6 @@
             )
         }
     }
-    .expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
 }
 
 <span class="doccomment">/// Converts a timestamp in `time_unit` and `timezone` into [`chrono::DateTime`].
