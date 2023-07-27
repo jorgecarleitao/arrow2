@@ -1,4 +1,8 @@
-use chrono::{NaiveDate, NaiveDateTime};
+use arrow_array::temporal_conversions::{
+    duration_ms_to_duration, duration_ns_to_duration, duration_s_to_duration,
+    duration_us_to_duration,
+};
+use chrono::{Duration, NaiveDate, NaiveDateTime};
 use lexical_core::ToLexical;
 use std::io::Write;
 use streaming_iterator::StreamingIterator;
@@ -266,6 +270,28 @@ where
     materialize_serializer(f, array.iter(), offset, take)
 }
 
+fn duration_serializer<'a, T, F>(
+    array: &'a PrimitiveArray<T>,
+    convert: F,
+    offset: usize,
+    take: usize,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync>
+where
+    T: NativeType,
+    F: Fn(T) -> Duration + 'static + Send + Sync,
+{
+    let f = move |x: Option<&T>, buf: &mut Vec<u8>| {
+        if let Some(x) = x {
+            let duration = convert(*x);
+            write!(buf, "\"{duration}\"").unwrap();
+        } else {
+            buf.extend_from_slice(b"null")
+        }
+    };
+
+    materialize_serializer(f, array.iter(), offset, take)
+}
+
 fn timestamp_serializer<'a, F>(
     array: &'a PrimitiveArray<i64>,
     convert: F,
@@ -384,6 +410,20 @@ pub(crate) fn new_serializer<'a>(
                     take,
                 )
             }
+        }
+        DataType::Duration(tu) => {
+            let convert = match tu {
+                TimeUnit::Nanosecond => duration_ns_to_duration,
+                TimeUnit::Microsecond => duration_us_to_duration,
+                TimeUnit::Millisecond => duration_ms_to_duration,
+                TimeUnit::Second => duration_s_to_duration,
+            };
+            duration_serializer(
+                array.as_any().downcast_ref().unwrap(),
+                convert,
+                offset,
+                take,
+            )
         }
         DataType::Null => null_serializer(array.len(), offset, take),
         other => todo!("Writing {:?} to JSON", other),
