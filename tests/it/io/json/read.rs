@@ -43,7 +43,9 @@ fn read_json_records() -> Result<()> {
                 [2, 3],
                 [4, 5, 6]
             ],
-            "b": [1, 2, 3]
+            "b": [1, 2, 3],
+            "c": ["test"],
+            "d": [true]
         },
         {
             "a": [
@@ -53,7 +55,9 @@ fn read_json_records() -> Result<()> {
             ]
         },
         {
-            "b": [7, 8, 9]
+            "b": [7, 8, 9],
+            "c": ["string"],
+            "d": [false]
         }
     ]"#;
 
@@ -96,6 +100,30 @@ fn read_json_records() -> Result<()> {
     b.try_extend(b_iter).unwrap();
     let b_expected: ListArray<i32> = b.into();
 
+    let c_iter = vec![vec![Some("test")], vec![Some("string")]];
+
+    let c_iter = c_iter.into_iter().map(Some);
+    let mut c = MutableListArray::<i32, MutableUtf8Array<i32>>::new_with_field(
+        MutableUtf8Array::<i32>::new(),
+        "item",
+        true,
+    );
+
+    c.try_extend(c_iter).unwrap();
+    let c_expected: ListArray<i32> = c.into();
+
+    let d_iter = vec![vec![Some(true)], vec![Some(false)]];
+
+    let d_iter = d_iter.into_iter().map(Some);
+    let mut d = MutableListArray::<i32, MutableBooleanArray>::new_with_field(
+        MutableBooleanArray::new(),
+        "item",
+        true,
+    );
+
+    d.try_extend(d_iter).unwrap();
+    let d_expected: ListArray<i32> = d.into();
+
     let json = json_deserializer::parse(data)?;
 
     let schema = read::infer_records_schema(&json)?;
@@ -106,6 +134,10 @@ fn read_json_records() -> Result<()> {
             (&a_expected, arr.as_ref())
         } else if f.name == "b" {
             (&b_expected, arr.as_ref())
+        } else if f.name == "c" {
+            (&c_expected, arr.as_ref())
+        } else if f.name == "d" {
+            (&d_expected, arr.as_ref())
         } else {
             panic!("unexpected field found: {}", f.name);
         };

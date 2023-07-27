@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{Duration, NaiveDate, NaiveDateTime};
 use lexical_core::ToLexical;
 use std::io::Write;
 use streaming_iterator::StreamingIterator;
@@ -10,9 +10,9 @@ use crate::offset::Offset;
 #[cfg(feature = "chrono-tz")]
 use crate::temporal_conversions::parse_offset_tz;
 use crate::temporal_conversions::{
-    date32_to_date, date64_to_date, parse_offset, timestamp_ms_to_datetime,
-    timestamp_ns_to_datetime, timestamp_s_to_datetime, timestamp_to_datetime,
-    timestamp_us_to_datetime,
+    date32_to_date, date64_to_date, duration_ms_to_duration, duration_ns_to_duration,
+    duration_s_to_duration, duration_us_to_duration, timestamp_ms_to_datetime,
+    timestamp_ns_to_datetime, timestamp_s_to_datetime, timestamp_us_to_datetime,
 };
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
@@ -269,6 +269,28 @@ where
     materialize_serializer(f, array.iter(), offset, take)
 }
 
+fn duration_serializer<'a, T, F>(
+    array: &'a PrimitiveArray<T>,
+    convert: F,
+    offset: usize,
+    take: usize,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync>
+where
+    T: NativeType,
+    F: Fn(T) -> Duration + 'static + Send + Sync,
+{
+    let f = move |x: Option<&T>, buf: &mut Vec<u8>| {
+        if let Some(x) = x {
+            let duration = convert(*x);
+            write!(buf, "\"{duration}\"").unwrap();
+        } else {
+            buf.extend_from_slice(b"null")
+        }
+    };
+
+    materialize_serializer(f, array.iter(), offset, take)
+}
+
 fn timestamp_serializer<'a, F>(
     array: &'a PrimitiveArray<i64>,
     convert: F,
@@ -436,6 +458,20 @@ pub(crate) fn new_serializer<'a>(
             offset,
             take,
         ),
+        DataType::Duration(tu) => {
+            let convert = match tu {
+                TimeUnit::Nanosecond => duration_ns_to_duration,
+                TimeUnit::Microsecond => duration_us_to_duration,
+                TimeUnit::Millisecond => duration_ms_to_duration,
+                TimeUnit::Second => duration_s_to_duration,
+            };
+            duration_serializer(
+                array.as_any().downcast_ref().unwrap(),
+                convert,
+                offset,
+                take,
+            )
+        }
         DataType::Null => null_serializer(array.len(), offset, take),
         other => todo!("Writing {:?} to JSON", other),
     }

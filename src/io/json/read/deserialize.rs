@@ -620,6 +620,9 @@ fn allocate_array(f: &Field) -> Box<dyn MutableArray> {
         DataType::Float16 => Box::new(MutablePrimitiveArray::<f16>::new()),
         DataType::Float32 => Box::new(MutablePrimitiveArray::<f32>::new()),
         DataType::Float64 => Box::new(MutablePrimitiveArray::<f64>::new()),
+        DataType::Boolean => Box::new(MutableBooleanArray::new()),
+        DataType::Utf8 => Box::new(MutableUtf8Array::<i32>::new()),
+        DataType::LargeUtf8 => Box::new(MutableUtf8Array::<i64>::new()),
         DataType::FixedSizeList(inner, size) => Box::new(MutableFixedSizeListArray::<_>::new_from(
             allocate_array(inner),
             f.data_type().clone(),

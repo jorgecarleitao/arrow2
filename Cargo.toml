@@ -1,6 +1,6 @@
 [package]
 name = "arrow2"
-version = "0.17.1"
+version = "0.17.3"
 license = "Apache-2.0"
 description = "Unofficial implementation of Apache Arrow spec in safe Rust"
 homepage = "https://github.com/jorgecarleitao/arrow2"
@@ -101,10 +101,10 @@ odbc-api = { version = "0.36", optional = true }
 ahash = "0.8"
 
 # Support conversion to/from arrow-rs
-arrow-buffer = { version = "^40.0.0", optional = true }
-arrow-schema = { version = "^40.0.0", optional = true }
-arrow-data = { version = "^40.0.0", optional = true }
-arrow-array = { version = "^40.0.0", optional = true }
+arrow-buffer = { version = ">=40, <44", optional = true }
+arrow-schema = { version = ">=40, <44", optional = true }
+arrow-data = { version = ">=40, <44", optional = true }
+arrow-array = { version = ">=40, <44", optional = true }
 
 [target.wasm32-unknown-unknown.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
@@ -129,6 +129,14 @@ proptest = { version = "1", default_features = false, features = ["std"] }
 avro-rs = { version = "0.13", features = ["snappy"] }
 # use for flaky testing
 rand = "0.8"
+# use for generating and testing random data samples
+sample-arrow2 = "0.1"
+sample-std = "0.1"
+sample-test = "0.1"
+
+# ugly hack needed to match this library in sample_arrow2
+[patch.crates-io]
+arrow2 = { path = "." }
 
 [package.metadata.docs.rs]
 features = ["full"]
@@ -187,6 +195,9 @@ io_parquet_compression = [
     "io_parquet_lz4",
     "io_parquet_brotli"
 ]
+
+# sample testing of generated arrow data
+io_parquet_sample_test = ["io_parquet"]
 
 # compression backends
 io_parquet_zstd = ["parquet2/zstd"]

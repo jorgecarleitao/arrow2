@@ -21,6 +21,9 @@ mod read_indexes;
 mod write;
 mod write_async;
 
+#[cfg(feature = "io_parquet_sample_test")]
+mod sample_tests;
+
 type ArrayStats = (Box<dyn Array>, Statistics);
 
 fn new_struct(
