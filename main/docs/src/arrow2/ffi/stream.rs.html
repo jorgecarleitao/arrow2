@@ -214,6 +214,13 @@
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::ffi::{CStr, CString};
 <span class="kw">use </span>std::ops::DerefMut;
 
@@ -270,7 +277,8 @@
 <span class="kw">impl</span>&lt;Iter: DerefMut&lt;Target = ArrowArrayStream&gt;&gt; ArrowArrayStreamReader&lt;Iter&gt; {
     <span class="doccomment">/// Returns a new [`ArrowArrayStreamReader`]
     /// # Error
-    /// Errors iff the [`ArrowArrayStream`] is out of specification
+    /// Errors iff the [`ArrowArrayStream`] is out of specification,
+    /// or was already released prior to calling this function.
     /// # Safety
     /// This method is intrinsically `unsafe` since it assumes that the `ArrowArrayStream`
     /// contains a valid Arrow C stream interface.
@@ -278,6 +286,12 @@
     /// * The `ArrowArrayStream` fulfills the invariants of the C stream interface
     /// * The schema `get_schema` produces fulfills the C data interface
     </span><span class="kw">pub unsafe fn </span>try_new(<span class="kw-2">mut </span>iter: Iter) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">if </span>iter.release.is_none() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgumentError(
+                <span class="string">&quot;The C stream was already released&quot;</span>.to_string(),
+            ));
+        };
+
         <span class="kw">if </span>iter.get_next.is_none() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
                 <span class="string">&quot;The C stream MUST contain a non-null get_next&quot;</span>.to_string(),
