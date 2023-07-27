@@ -134,7 +134,7 @@ pub fn time64us_to_time_opt(v: i64) -> Option<NaiveTime> {
 /// converts a `i64` representing a `time64(ns)` to [`NaiveTime`]
 #[inline]
 pub fn time64ns_to_time(v: i64) -> NaiveTime {
-    time64ns_to_time(v).expect("invalid time")
+    time64ns_to_time_opt(v).expect("invalid time")
 }
 
 /// converts a `i64` representing a `time64(ns)` to [`NaiveTime`]
@@ -163,7 +163,7 @@ pub fn timestamp_s_to_datetime_opt(seconds: i64) -> Option<NaiveDateTime> {
 /// converts a `i64` representing a `timestamp(ms)` to [`NaiveDateTime`]
 #[inline]
 pub fn timestamp_ms_to_datetime(v: i64) -> NaiveDateTime {
-    timestamp_ms_to_datetime(v).expect("invalid or out-of-range datetime")
+    timestamp_ms_to_datetime_opt(v).expect("invalid or out-of-range datetime")
 }
 
 /// converts a `i64` representing a `timestamp(ms)` to [`NaiveDateTime`]
@@ -195,7 +195,7 @@ pub fn timestamp_ms_to_datetime_opt(v: i64) -> Option<NaiveDateTime> {
 /// converts a `i64` representing a `timestamp(us)` to [`NaiveDateTime`]
 #[inline]
 pub fn timestamp_us_to_datetime(v: i64) -> NaiveDateTime {
-    timestamp_us_to_datetime(v).expect("invalid or out-of-range datetime")
+    timestamp_us_to_datetime_opt(v).expect("invalid or out-of-range datetime")
 }
 
 /// converts a `i64` representing a `timestamp(us)` to [`NaiveDateTime`]
@@ -227,7 +227,7 @@ pub fn timestamp_us_to_datetime_opt(v: i64) -> Option<NaiveDateTime> {
 /// converts a `i64` representing a `timestamp(ns)` to [`NaiveDateTime`]
 #[inline]
 pub fn timestamp_ns_to_datetime(v: i64) -> NaiveDateTime {
-    timestamp_ns_to_datetime(v).expect("invalid or out-of-range datetime")
+    timestamp_ns_to_datetime_opt(v).expect("invalid or out-of-range datetime")
 }
 
 /// converts a `i64` representing a `timestamp(ns)` to [`NaiveDateTime`]
