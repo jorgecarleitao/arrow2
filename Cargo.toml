@@ -129,6 +129,14 @@ proptest = { version = "1", default_features = false, features = ["std"] }
 avro-rs = { version = "0.13", features = ["snappy"] }
 # use for flaky testing
 rand = "0.8"
+# use for generating and testing random data samples
+sample-arrow2 = "0.1"
+sample-std = "0.1"
+sample-test = "0.1"
+
+# ugly hack needed to match this library in sample_arrow2
+[patch.crates-io]
+arrow2 = { path = "." }
 
 [package.metadata.docs.rs]
 features = ["full"]
@@ -187,6 +195,9 @@ io_parquet_compression = [
     "io_parquet_lz4",
     "io_parquet_brotli"
 ]
+
+# sample testing of generated arrow data
+io_parquet_sample_test = ["io_parquet"]
 
 # compression backends
 io_parquet_zstd = ["parquet2/zstd"]
