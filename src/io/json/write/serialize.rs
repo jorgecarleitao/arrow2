@@ -7,10 +7,13 @@ use crate::bitmap::utils::ZipValidity;
 use crate::datatypes::{IntegerType, TimeUnit};
 use crate::io::iterator::BufStreamingIterator;
 use crate::offset::Offset;
+#[cfg(feature = "chrono-tz")]
+use crate::temporal_conversions::parse_offset_tz;
 use crate::temporal_conversions::{
     date32_to_date, date64_to_date, duration_ms_to_duration, duration_ns_to_duration,
-    duration_s_to_duration, duration_us_to_duration, timestamp_ms_to_datetime,
-    timestamp_ns_to_datetime, timestamp_s_to_datetime, timestamp_us_to_datetime,
+    duration_s_to_duration, duration_us_to_duration, parse_offset, timestamp_ms_to_datetime,
+    timestamp_ns_to_datetime, timestamp_s_to_datetime, timestamp_to_datetime,
+    timestamp_us_to_datetime,
 };
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
@@ -309,6 +312,51 @@ where
     materialize_serializer(f, array.iter(), offset, take)
 }
 
+fn timestamp_tz_serializer<'a>(
+    array: &'a PrimitiveArray<i64>,
+    time_unit: TimeUnit,
+    tz: &str,
+    offset: usize,
+    take: usize,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
+    match parse_offset(tz) {
+        Ok(parsed_tz) => {
+            let f = move |x: Option<&i64>, buf: &mut Vec<u8>| {
+                if let Some(x) = x {
+                    let dt_str = timestamp_to_datetime(*x, time_unit, &parsed_tz).to_rfc3339();
+                    write!(buf, "\"{dt_str}\"").unwrap();
+                } else {
+                    buf.extend_from_slice(b"null")
+                }
+            };
+
+            materialize_serializer(f, array.iter(), offset, take)
+        }
+        #[cfg(feature = "chrono-tz")]
+        _ => match parse_offset_tz(tz) {
+            Ok(parsed_tz) => {
+                let f = move |x: Option<&i64>, buf: &mut Vec<u8>| {
+                    if let Some(x) = x {
+                        let dt_str = timestamp_to_datetime(*x, time_unit, &parsed_tz).to_rfc3339();
+                        write!(buf, "\"{dt_str}\"").unwrap();
+                    } else {
+                        buf.extend_from_slice(b"null")
+                    }
+                };
+
+                materialize_serializer(f, array.iter(), offset, take)
+            }
+            _ => {
+                panic!("Timezone {} is invalid or not supported", tz);
+            }
+        },
+        #[cfg(not(feature = "chrono-tz"))]
+        _ => {
+            panic!("Invalid Offset format (must be [-]00:00) or chrono-tz feature not active");
+        }
+    }
+}
+
 pub(crate) fn new_serializer<'a>(
     array: &'a dyn Array,
     offset: usize,
@@ -390,24 +438,27 @@ pub(crate) fn new_serializer<'a>(
             offset,
             take,
         ),
-        DataType::Timestamp(tu, tz) => {
-            if tz.is_some() {
-                todo!("still have to implement timezone")
-            } else {
-                let convert = match tu {
-                    TimeUnit::Nanosecond => timestamp_ns_to_datetime,
-                    TimeUnit::Microsecond => timestamp_us_to_datetime,
-                    TimeUnit::Millisecond => timestamp_ms_to_datetime,
-                    TimeUnit::Second => timestamp_s_to_datetime,
-                };
-                timestamp_serializer(
-                    array.as_any().downcast_ref().unwrap(),
-                    convert,
-                    offset,
-                    take,
-                )
-            }
+        DataType::Timestamp(tu, None) => {
+            let convert = match tu {
+                TimeUnit::Nanosecond => timestamp_ns_to_datetime,
+                TimeUnit::Microsecond => timestamp_us_to_datetime,
+                TimeUnit::Millisecond => timestamp_ms_to_datetime,
+                TimeUnit::Second => timestamp_s_to_datetime,
+            };
+            timestamp_serializer(
+                array.as_any().downcast_ref().unwrap(),
+                convert,
+                offset,
+                take,
+            )
         }
+        DataType::Timestamp(time_unit, Some(tz)) => timestamp_tz_serializer(
+            array.as_any().downcast_ref().unwrap(),
+            *time_unit,
+            tz,
+            offset,
+            take,
+        ),
         DataType::Duration(tu) => {
             let convert = match tu {
                 TimeUnit::Nanosecond => duration_ns_to_duration,
