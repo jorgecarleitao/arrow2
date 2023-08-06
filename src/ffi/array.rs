@@ -209,7 +209,7 @@ unsafe fn get_buffer_ptr<T: NativeType>(
     let ptr = *buffers.add(index);
     if ptr.is_null() {
         return Err(Error::oos(format!(
-            "An array of type {data_type:?}
+            "An array of type {data_type:?} with a non-zero length
             must have a non-null buffer {index}"
         )));
     }
@@ -235,9 +235,14 @@ unsafe fn create_buffer<T: NativeType>(
     owner: InternalArrowArray,
     index: usize,
 ) -> Result<Buffer<T>> {
+    let len = buffer_len(array, data_type, index)?;
+
+    if len == 0 {
+        return Ok(Buffer::new());
+    }
+
     let ptr = get_buffer_ptr(array, data_type, index)?;
 
-    let len = buffer_len(array, data_type, index)?;
     let offset = buffer_offset(array, data_type, index);
     let bytes = Bytes::from_foreign(ptr, len, BytesAllocator::InternalArrowArray(owner));
 
@@ -258,9 +263,12 @@ unsafe fn create_bitmap(
     // we can use the null count directly
     is_validity: bool,
 ) -> Result<Bitmap> {
+    let len: usize = array.length.try_into().expect("length to fit in `usize`");
+    if len == 0 {
+        return Ok(Bitmap::new());
+    }
     let ptr = get_buffer_ptr(array, data_type, index)?;
 
-    let len: usize = array.length.try_into().expect("length to fit in `usize`");
     let offset: usize = array.offset.try_into().expect("offset to fit in `usize`");
     let bytes_len = bytes_for(offset + len);
     let bytes = Bytes::from_foreign(ptr, bytes_len, BytesAllocator::InternalArrowArray(owner));
