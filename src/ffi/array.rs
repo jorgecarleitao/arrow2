@@ -209,7 +209,7 @@ unsafe fn get_buffer_ptr<T: NativeType>(
     let ptr = *buffers.add(index);
     if ptr.is_null() {
         return Err(Error::oos(format!(
-            "An array of type {data_type:?} with a non-zero length
+            "An array of type {data_type:?} 
             must have a non-null buffer {index}"
         )));
     }
