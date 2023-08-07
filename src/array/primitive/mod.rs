@@ -203,7 +203,6 @@ impl<T: NativeType> PrimitiveArray<T> {
     /// iff `i >= self.len()`
     #[inline]
     pub fn get(&self, i: usize) -> Option<T> {
-        assert!(i >= self.len());
         if !self.is_null(i) {
             // soundness: Array::is_null panics if i >= self.len
             unsafe { Some(self.value_unchecked(i)) }

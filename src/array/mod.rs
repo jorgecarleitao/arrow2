@@ -70,12 +70,21 @@ pub trait Array: Send + Sync + dyn_clone::DynClone + 'static {
 
     /// Returns whether slot `i` is null.
     /// # Panic
-    /// Panics iff `i >= self.len()` and validity is set.
+    /// Panics iff `i >= self.len()`
     #[inline]
     fn is_null(&self, i: usize) -> bool {
+        assert!(i < self.len());
+        unsafe { self.is_null_unchecked(i) }
+    }
+
+    /// Returns whether slot `i` is null.
+    /// # Safety
+    /// The caller must ensure `i < self.len()`
+    #[inline]
+    unsafe fn is_null_unchecked(&self, i: usize) -> bool {
         self.validity()
             .as_ref()
-            .map(|x| !x.get_bit(i))
+            .map(|x| !x.get_bit_unchecked(i))
             .unwrap_or(false)
     }
 
