@@ -70,7 +70,7 @@ pub trait Array: Send + Sync + dyn_clone::DynClone + 'static {
 
     /// Returns whether slot `i` is null.
     /// # Panic
-    /// Panics iff `i >= self.len()`
+    /// Panics iff `i >= self.len()`.
     #[inline]
     fn is_null(&self, i: usize) -> bool {
         assert!(i < self.len());
