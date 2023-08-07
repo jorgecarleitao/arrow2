@@ -216,7 +216,7 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     let start = reader.stream_position()?;
     reader.read_exact(&mut magic_buffer)?;
     if magic_buffer != ARROW_MAGIC_V2 {
-        if &magic_buffer[..4] == ARROW_MAGIC_V1 {
+        if magic_buffer[..4] == ARROW_MAGIC_V1 {
             return Err(Error::NotYetImplemented("feather v1 not supported".into()));
         }
         return Err(Error::from(OutOfSpecKind::InvalidHeader));
