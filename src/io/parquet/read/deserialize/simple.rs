@@ -391,6 +391,44 @@ fn unifiy_timestmap_unit(
     }
 }
 
+#[inline]
+pub fn int96_to_i64_us(value: [u32; 3]) -> i64 {
+    const JULIAN_DAY_OF_EPOCH: i64 = 2_440_588;
+    const SECONDS_PER_DAY: i64 = 86_400;
+    const MICROS_PER_SECOND: i64 = 1_000_000;
+
+    let day = value[2] as i64;
+    let microseconds = (((value[1] as i64) << 32) + value[0] as i64) / 1_000;
+    let seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
+
+    seconds * MICROS_PER_SECOND + microseconds
+}
+
+#[inline]
+pub fn int96_to_i64_ms(value: [u32; 3]) -> i64 {
+    const JULIAN_DAY_OF_EPOCH: i64 = 2_440_588;
+    const SECONDS_PER_DAY: i64 = 86_400;
+    const MILLIS_PER_SECOND: i64 = 1_000;
+
+    let day = value[2] as i64;
+    let milliseconds = (((value[1] as i64) << 32) + value[0] as i64) / 1_000_000;
+    let seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
+
+    seconds * MILLIS_PER_SECOND + milliseconds
+}
+
+#[inline]
+pub fn int96_to_i64_s(value: [u32; 3]) -> i64 {
+    const JULIAN_DAY_OF_EPOCH: i64 = 2_440_588;
+    const SECONDS_PER_DAY: i64 = 86_400;
+
+    let day = value[2] as i64;
+    let seconds = (((value[1] as i64) << 32) + value[0] as i64) / 1_000_000_000;
+    let day_seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
+
+    day_seconds + seconds
+}
+
 fn timestamp<'a, I: Pages + 'a>(
     pages: I,
     physical_type: &PhysicalType,
@@ -401,17 +439,14 @@ fn timestamp<'a, I: Pages + 'a>(
     time_unit: TimeUnit,
 ) -> Result<ArrayIter<'a>> {
     if physical_type == &PhysicalType::Int96 {
-        let iter = primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_ns);
-        let logical_type = PrimitiveLogicalType::Timestamp {
-            unit: ParquetTimeUnit::Nanoseconds,
-            is_adjusted_to_utc: false,
+        let conversion_op = match time_unit {
+            TimeUnit::Nanosecond => int96_to_i64_ns,
+            TimeUnit::Microsecond => int96_to_i64_us,
+            TimeUnit::Millisecond => int96_to_i64_ms,
+            TimeUnit::Second => int96_to_i64_s,
         };
-        let (factor, is_multiplier) = unifiy_timestmap_unit(&Some(logical_type), time_unit);
-        return match (factor, is_multiplier) {
-            (1, _) => Ok(dyn_iter(iden(iter))),
-            (a, true) => Ok(dyn_iter(op(iter, move |x| x * a))),
-            (a, false) => Ok(dyn_iter(op(iter, move |x| x / a))),
-        };
+        let iter = primitive::Iter::new(pages, data_type, num_rows, chunk_size, conversion_op);
+        return Ok(dyn_iter(iden(iter)))
     };
 
     if physical_type != &PhysicalType::Int64 {
