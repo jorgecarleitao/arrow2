@@ -445,13 +445,12 @@ fn timestamp<'a, I: Pages + 'a>(
             TimeUnit::Millisecond => int96_to_i64_ms,
             TimeUnit::Second => int96_to_i64_s,
         };
-        let iter = match time_unit {
-            TimeUnit::Nanosecond => primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_ns),
-            TimeUnit::Microsecond => primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_us),
-            TimeUnit::Millisecond => primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_ms),
-            TimeUnit::Second => primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_s),
+        return match time_unit {
+            TimeUnit::Nanosecond => Ok(dyn_iter(iden(primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_ns)))),
+            TimeUnit::Microsecond => Ok(dyn_iter(iden(primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_us)))),
+            TimeUnit::Millisecond => Ok(dyn_iter(iden(primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_ms)))),
+            TimeUnit::Second => Ok(dyn_iter(iden(primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_s)))),
         };
-        return Ok(dyn_iter(iden(iter)))
     };
 
     if physical_type != &PhysicalType::Int64 {
