@@ -213,13 +213,7 @@ unsafe fn get_buffer_ptr<T: NativeType>(
             must have a non-null buffer {index}"
         )));
     }
-    if ptr.align_offset(std::mem::align_of::<T>()) != 0 {
-        return Err(Error::oos(format!(
-            "An ArrowArray of type {data_type:?}
-            must have buffer {index} aligned to type {}",
-            std::any::type_name::<T>()
-        )));
-    }
+
     // note: we can't prove that this pointer is not mutably shared - part of the safety invariant
     Ok(ptr as *mut T)
 }
@@ -241,12 +235,21 @@ unsafe fn create_buffer<T: NativeType>(
         return Ok(Buffer::new());
     }
 
-    let ptr = get_buffer_ptr(array, data_type, index)?;
-
     let offset = buffer_offset(array, data_type, index);
-    let bytes = Bytes::from_foreign(ptr, len, BytesAllocator::InternalArrowArray(owner));
+    let ptr: *mut T = get_buffer_ptr(array, data_type, index)?;
 
-    Ok(Buffer::from_bytes(bytes).sliced(offset, len - offset))
+    // We have to check alignment.
+    // This is the zero-copy path.
+    if ptr.align_offset(std::mem::align_of::<T>()) == 0 {
+        let bytes = Bytes::from_foreign(ptr, len, BytesAllocator::InternalArrowArray(owner));
+        Ok(Buffer::from_bytes(bytes).sliced(offset, len - offset))
+    }
+    // This is the path where alignment isn't correct.
+    // We copy the data to a new vec
+    else {
+        let buf = std::slice::from_raw_parts(ptr, len - offset).to_vec();
+        Ok(Buffer::from(buf))
+    }
 }
 
 /// returns the buffer `i` of `array` interpreted as a [`Bitmap`].
@@ -268,6 +271,8 @@ unsafe fn create_bitmap(
         return Ok(Bitmap::new());
     }
     let ptr = get_buffer_ptr(array, data_type, index)?;
+
+    // Pointer of u8 has alignment 1, so we don't have to check alignment.
 
     let offset: usize = array.offset.try_into().expect("offset to fit in `usize`");
     let bytes_len = bytes_for(offset + len);
