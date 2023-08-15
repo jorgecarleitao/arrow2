@@ -101,10 +101,10 @@ odbc-api = { version = "0.36", optional = true }
 ahash = "0.8"
 
 # Support conversion to/from arrow-rs
-arrow-buffer = { version = ">=40, <44", optional = true }
-arrow-schema = { version = ">=40, <44", optional = true }
-arrow-data = { version = ">=40, <44", optional = true }
-arrow-array = { version = ">=40, <44", optional = true }
+arrow-buffer = { version = ">=40, <46", optional = true }
+arrow-schema = { version = ">=40, <46", optional = true }
+arrow-data = { version = ">=40, <46", optional = true }
+arrow-array = { version = ">=40, <46", optional = true }
 
 [target.wasm32-unknown-unknown.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
