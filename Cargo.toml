@@ -16,7 +16,7 @@ bench = false
 
 [dependencies]
 foreign_vec = "0.1.0"
-either = "1.6"
+either = "1.9"
 num-traits = "0.2"
 dyn-clone = "1"
 bytemuck = { version = "1", features = ["derive"] }
@@ -29,10 +29,10 @@ ethnum = "1"
 # crate provides HashMap that assumes pre-hashed values.
 hash_hasher = "^2.0.3"
 # For SIMD utf8 validation
-simdutf8 = "0.1.3"
+simdutf8 = "0.1.4"
 
 # A Rust port of SwissTable
-hashbrown = { version = "0.13", default-features = false, optional = true }
+hashbrown = { version = "0.14", default-features = false, optional = true }
 
 # for timezone support
 chrono-tz = { version = "0.8", optional = true }
@@ -46,8 +46,8 @@ csv-core = { version = "0.1", optional = true }
 # for csv async io
 csv-async = { version = "^1.1", optional = true }
 
-regex = { version = "^1.3", optional = true }
-regex-syntax = { version = "^0.6", optional = true }
+regex = { version = "1.9", optional = true }
+regex-syntax = { version = "0.7", optional = true }
 streaming-iterator = { version = "0.1", optional = true }
 fallible-streaming-iterator = { version = "0.1", optional = true }
 
@@ -62,7 +62,7 @@ arrow-format = { version = "0.8", optional = true, features = ["ipc"] }
 hex = { version = "^0.4", optional = true }
 
 # for IPC compression
-lz4 = { version = "1.23.1", optional = true }
+lz4 = { version = "1.24", optional = true }
 zstd = { version = "0.12", optional = true }
 
 rand = { version = "0.8", optional = true }
