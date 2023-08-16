@@ -24,7 +24,13 @@ use crate::{
     offset::{Offset, Offsets},
 };
 
-fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>) -> Utf8Array<O> {
+/// Returns a Utf8Array<O> with a substring starting from `start` and with optional length `length` of each of the elements in `array`.
+/// `start` can be negative, in which case the start counts from the end of the string.
+pub fn utf8_substring<O: Offset>(
+    array: &Utf8Array<O>,
+    start: O,
+    length: &Option<O>,
+) -> Utf8Array<O> {
     let length = length.map(|v| v.to_usize());
 
     let iter = array.values_iter().map(|str_val| {
@@ -68,7 +74,9 @@ fn utf8_substring<O: Offset>(array: &Utf8Array<O>, start: O, length: &Option<O>)
     new.with_validity(array.validity().cloned())
 }
 
-fn binary_substring<O: Offset>(
+/// Returns a BinaryArray<O> with a substring starting from `start` and with optional length `length` of each of the elements in `array`.
+/// `start` can be negative, in which case the start counts from the end of the string.
+pub fn binary_substring<O: Offset>(
     array: &BinaryArray<O>,
     start: O,
     length: &Option<O>,
