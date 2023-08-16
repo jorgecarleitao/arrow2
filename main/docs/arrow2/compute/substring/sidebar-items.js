@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["can_substring","substring"]};
+window.SIDEBAR_ITEMS = {"fn":["binary_substring","can_substring","substring","utf8_substring"]};
