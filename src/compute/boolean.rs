@@ -251,7 +251,7 @@ pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
 pub fn any(array: &BooleanArray) -> bool {
     if array.is_empty() {
         false
-    } else if array.validity().is_some() {
+    } else if array.null_count() > 0 {
         array.into_iter().any(|v| v == Some(true))
     } else {
         let vals = array.values();

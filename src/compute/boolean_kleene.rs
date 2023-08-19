@@ -256,7 +256,7 @@ pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray 
 pub fn any(array: &BooleanArray) -> Option<bool> {
     if array.is_empty() {
         Some(false)
-    } else if array.validity().is_some() {
+    } else if array.null_count() > 0 {
         if array.into_iter().any(|v| v == Some(true)) {
             Some(true)
         } else {
@@ -290,7 +290,7 @@ pub fn any(array: &BooleanArray) -> Option<bool> {
 pub fn all(array: &BooleanArray) -> Option<bool> {
     if array.is_empty() {
         Some(true)
-    } else if array.validity().is_some() {
+    } else if array.null_count() > 0 {
         if array.into_iter().any(|v| v == Some(false)) {
             Some(false)
         } else {
