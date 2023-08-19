@@ -400,7 +400,11 @@ fn cast_list_to_fixed_size_list<O: Offset>(
             "incompatible offsets in source list".to_string(),
         )),
         None => {
-            let new_values = cast(list.values().as_ref(), inner.data_type(), options)?;
+            let sliced_values = list.values().sliced(
+                list.offsets().first().to_usize(),
+                list.offsets().range().to_usize(),
+            );
+            let new_values = cast(sliced_values.as_ref(), inner.data_type(), options)?;
             Ok(FixedSizeListArray::new(
                 DataType::FixedSizeList(Box::new(inner.clone()), size),
                 new_values,
