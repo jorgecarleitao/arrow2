@@ -992,6 +992,10 @@
 <a href="#992" id="992">992</a>
 <a href="#993" id="993">993</a>
 <a href="#994" id="994">994</a>
+<a href="#995" id="995">995</a>
+<a href="#996" id="996">996</a>
+<a href="#997" id="997">997</a>
+<a href="#998" id="998">998</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Defines different casting operators such as [`cast`] or [`primitive_to_binary`].
 
 </span><span class="kw">mod </span>binary_to;
@@ -1394,7 +1398,11 @@
             <span class="string">&quot;incompatible offsets in source list&quot;</span>.to_string(),
         )),
         <span class="prelude-val">None </span>=&gt; {
-            <span class="kw">let </span>new_values = cast(list.values().as_ref(), inner.data_type(), options)<span class="question-mark">?</span>;
+            <span class="kw">let </span>sliced_values = list.values().sliced(
+                list.offsets().first().to_usize(),
+                list.offsets().range().to_usize(),
+            );
+            <span class="kw">let </span>new_values = cast(sliced_values.as_ref(), inner.data_type(), options)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(FixedSizeListArray::new(
                 DataType::FixedSizeList(Box::new(inner.clone()), size),
                 new_values,
