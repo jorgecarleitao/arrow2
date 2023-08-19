@@ -232,7 +232,7 @@ pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
 
 /// Returns whether any of the values in the array are `true`.
 ///
-/// Null values are treated as `false`.
+/// Null values are ignored.
 ///
 /// # Example
 ///
@@ -261,7 +261,7 @@ pub fn any(array: &BooleanArray) -> bool {
 
 /// Returns whether all values in the array are `true`.
 ///
-/// Null values are treated as `false`.
+/// Null values are ignored.
 ///
 /// # Example
 ///
@@ -275,13 +275,13 @@ pub fn any(array: &BooleanArray) -> bool {
 ///
 /// assert_eq!(all(&a), true);
 /// assert_eq!(all(&b), false);
-/// assert_eq!(all(&c), false);
+/// assert_eq!(all(&c), true);
 /// ```
 pub fn all(array: &BooleanArray) -> bool {
     if array.is_empty() {
         true
     } else if array.null_count() > 0 {
-        false
+        !array.into_iter().any(|v| v == Some(false))
     } else {
         let vals = array.values();
         vals.unset_bits() == 0
