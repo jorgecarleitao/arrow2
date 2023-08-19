@@ -230,11 +230,28 @@ pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
     }
 }
 
-/// Returns whether any of the values in the array is `true`
+/// Returns whether any of the values in the array are `true`.
+///
+/// Null values are ignored.
+///
+/// # Example
+///
+/// ```
+/// use arrow2::array::BooleanArray;
+/// use arrow2::compute::boolean::any;
+///
+/// let a = BooleanArray::from(&[Some(true), Some(false)]);
+/// let b = BooleanArray::from(&[Some(false), Some(false)]);
+/// let c = BooleanArray::from(&[None, Some(false)]);
+///
+/// assert_eq!(any(&a), true);
+/// assert_eq!(any(&b), false);
+/// assert_eq!(any(&c), false);
+/// ```
 pub fn any(array: &BooleanArray) -> bool {
     if array.is_empty() {
         false
-    } else if array.validity().is_some() {
+    } else if array.null_count() > 0 {
         array.into_iter().any(|v| v == Some(true))
     } else {
         let vals = array.values();
@@ -242,12 +259,29 @@ pub fn any(array: &BooleanArray) -> bool {
     }
 }
 
-/// Check if all of the values in the array are `true`
+/// Returns whether all values in the array are `true`.
+///
+/// Null values are ignored.
+///
+/// # Example
+///
+/// ```
+/// use arrow2::array::BooleanArray;
+/// use arrow2::compute::boolean::all;
+///
+/// let a = BooleanArray::from(&[Some(true), Some(true)]);
+/// let b = BooleanArray::from(&[Some(false), Some(true)]);
+/// let c = BooleanArray::from(&[None, Some(true)]);
+///
+/// assert_eq!(all(&a), true);
+/// assert_eq!(all(&b), false);
+/// assert_eq!(all(&c), true);
+/// ```
 pub fn all(array: &BooleanArray) -> bool {
     if array.is_empty() {
         true
     } else if array.null_count() > 0 {
-        false
+        !array.into_iter().any(|v| v == Some(false))
     } else {
         let vals = array.values();
         vals.unset_bits() == 0

@@ -218,6 +218,6 @@ fn array_or_none() {
 #[test]
 fn array_empty() {
     let array = BooleanArray::from(&[]);
-    assert!(!any(&array));
-    assert!(all(&array));
+    assert_eq!(any(&array), Some(false));
+    assert_eq!(all(&array), Some(true));
 }
