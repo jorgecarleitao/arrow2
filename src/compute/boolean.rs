@@ -230,7 +230,24 @@ pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
     }
 }
 
-/// Returns whether any of the values in the array is `true`
+/// Returns whether any of the values in the array are `true`.
+///
+/// Null values are treated as `false`.
+///
+/// # Example
+///
+/// ```
+/// use arrow2::array::BooleanArray;
+/// use arrow2::compute::boolean::any;
+///
+/// let a = BooleanArray::from(&[Some(true), Some(false)]);
+/// let b = BooleanArray::from(&[Some(false), Some(false)]);
+/// let c = BooleanArray::from(&[None, Some(false)]);
+///
+/// assert_eq!(any(&a), true);
+/// assert_eq!(any(&b), false);
+/// assert_eq!(any(&c), false);
+/// ```
 pub fn any(array: &BooleanArray) -> bool {
     if array.is_empty() {
         false
@@ -242,7 +259,24 @@ pub fn any(array: &BooleanArray) -> bool {
     }
 }
 
-/// Check if all of the values in the array are `true`
+/// Returns whether all values in the array are `true`.
+///
+/// Null values are treated as `false`.
+///
+/// # Example
+///
+/// ```
+/// use arrow2::array::BooleanArray;
+/// use arrow2::compute::boolean::all;
+///
+/// let a = BooleanArray::from(&[Some(true), Some(true)]);
+/// let b = BooleanArray::from(&[Some(false), Some(true)]);
+/// let c = BooleanArray::from(&[None, Some(true)]);
+///
+/// assert_eq!(all(&a), true);
+/// assert_eq!(all(&b), false);
+/// assert_eq!(all(&c), false);
+/// ```
 pub fn all(array: &BooleanArray) -> bool {
     if array.is_empty() {
         true
