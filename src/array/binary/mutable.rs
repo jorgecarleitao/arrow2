@@ -414,7 +414,10 @@ impl<O: Offset> MutableBinaryArray<O> {
     {
         let mut iter = iter.into_iter();
         self.reserve(iter.size_hint().0, 0);
-        iter.try_for_each(|x| Ok(self.push(x?)))
+        iter.try_for_each(|x| {
+            self.push(x?);
+            Ok(())
+        })
     }
 }
 
