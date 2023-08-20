@@ -483,6 +483,18 @@ impl<O: Offset> MutableUtf8Array<O> {
     pub fn from_iter_values<T: AsRef<str>, I: Iterator<Item = T>>(iterator: I) -> Self {
         MutableUtf8ValuesArray::from_iter(iterator).into()
     }
+
+    /// Extend with a fallible iterator
+    pub fn extend_fallible<T, I, E>(&mut self, iter: I) -> std::result::Result<(), E>
+    where
+        E: std::error::Error,
+        I: IntoIterator<Item = std::result::Result<Option<T>, E>>,
+        T: AsRef<str>,
+    {
+        let mut iter = iter.into_iter();
+        self.reserve(iter.size_hint().0, 0);
+        iter.try_for_each(|x| Ok(self.push(x?)))
+    }
 }
 
 impl<O: Offset, T: AsRef<str>> Extend<Option<T>> for MutableUtf8Array<O> {
