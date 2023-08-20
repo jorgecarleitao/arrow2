@@ -996,6 +996,20 @@
 <a href="#996" id="996">996</a>
 <a href="#997" id="997">997</a>
 <a href="#998" id="998">998</a>
+<a href="#999" id="999">999</a>
+<a href="#1000" id="1000">1000</a>
+<a href="#1001" id="1001">1001</a>
+<a href="#1002" id="1002">1002</a>
+<a href="#1003" id="1003">1003</a>
+<a href="#1004" id="1004">1004</a>
+<a href="#1005" id="1005">1005</a>
+<a href="#1006" id="1006">1006</a>
+<a href="#1007" id="1007">1007</a>
+<a href="#1008" id="1008">1008</a>
+<a href="#1009" id="1009">1009</a>
+<a href="#1010" id="1010">1010</a>
+<a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Defines different casting operators such as [`cast`] or [`primitive_to_binary`].
 
 </span><span class="kw">mod </span>binary_to;
@@ -1102,6 +1116,7 @@
         (List(list_from), LargeList(list_to)) <span class="kw">if </span>list_from == list_to =&gt; <span class="bool-val">true</span>,
         (LargeList(list_from), List(list_to)) <span class="kw">if </span>list_from == list_to =&gt; <span class="bool-val">true</span>,
         (<span class="kw">_</span>, List(list_to)) =&gt; can_cast_types(from_type, <span class="kw-2">&amp;</span>list_to.data_type),
+        (<span class="kw">_</span>, LargeList(list_to)) =&gt; can_cast_types(from_type, <span class="kw-2">&amp;</span>list_to.data_type),
         (Dictionary(<span class="kw">_</span>, from_value_type, <span class="kw">_</span>), Dictionary(<span class="kw">_</span>, to_value_type, <span class="kw">_</span>)) =&gt; {
             can_cast_types(from_value_type, to_value_type)
         }
@@ -1503,6 +1518,19 @@
             </span><span class="kw">let </span>offsets = <span class="kw">unsafe </span>{ Offsets::new_unchecked(offsets) };
 
             <span class="kw">let </span>list_array = ListArray::&lt;i32&gt;::new(to_type.clone(), offsets.into(), values, <span class="prelude-val">None</span>);
+
+            <span class="prelude-val">Ok</span>(Box::new(list_array))
+        }
+
+        (<span class="kw">_</span>, LargeList(to)) =&gt; {
+            <span class="comment">// cast primitive to list&#39;s primitive
+            </span><span class="kw">let </span>values = cast(array, <span class="kw-2">&amp;</span>to.data_type, options)<span class="question-mark">?</span>;
+            <span class="comment">// create offsets, where if array.len() = 2, we have [0,1,2]
+            </span><span class="kw">let </span>offsets = (<span class="number">0</span>..=array.len() <span class="kw">as </span>i64).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+            <span class="comment">// Safety: offsets _are_ monotonically increasing
+            </span><span class="kw">let </span>offsets = <span class="kw">unsafe </span>{ Offsets::new_unchecked(offsets) };
+
+            <span class="kw">let </span>list_array = ListArray::&lt;i64&gt;::new(to_type.clone(), offsets.into(), values, <span class="prelude-val">None</span>);
 
             <span class="prelude-val">Ok</span>(Box::new(list_array))
         }
