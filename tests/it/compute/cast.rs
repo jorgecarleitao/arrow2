@@ -1,6 +1,7 @@
 use arrow2::array::*;
 use arrow2::compute::cast::{can_cast_types, cast, CastOptions};
 use arrow2::datatypes::*;
+use arrow2::datatypes::DataType::LargeList;
 use arrow2::types::{days_ms, months_days_ns, NativeType};
 
 #[test]
@@ -117,6 +118,28 @@ fn i32_to_i32() {
 
     let expected = &[5, 6, 7, 8, 9];
     let expected = Int32Array::from_slice(expected);
+    assert_eq!(c, &expected);
+}
+
+#[test]
+fn i32_to_large_list_i32() {
+    let array = Int32Array::from_slice([5, 6, 7, 8, 9]);
+    let b = cast(
+        &array,
+        &LargeList(Box::new(Field::new("item", DataType::Int32, true))),
+        CastOptions::default(),
+    )
+        .unwrap();
+
+    let arr = b.as_any().downcast_ref::<ListArray<i64>>().unwrap();
+    assert_eq!(&[0, 1, 2, 3, 4, 5], arr.offsets().as_slice());
+    let values = arr.values();
+    let c = values
+        .as_any()
+        .downcast_ref::<PrimitiveArray<i32>>()
+        .unwrap();
+
+    let expected = Int32Array::from_slice([5, 6, 7, 8, 9]);
     assert_eq!(c, &expected);
 }
 

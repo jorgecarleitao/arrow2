@@ -509,6 +509,19 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             Ok(Box::new(list_array))
         }
 
+        (_, LargeList(to)) => {
+            // cast primitive to list's primitive
+            let values = cast(array, &to.data_type, options)?;
+            // create offsets, where if array.len() = 2, we have [0,1,2]
+            let offsets = (0..=array.len() as i64).collect::<Vec<_>>();
+            // Safety: offsets _are_ monotonically increasing
+            let offsets = unsafe { Offsets::new_unchecked(offsets) };
+
+            let list_array = ListArray::<i64>::new(to_type.clone(), offsets.into(), values, None);
+
+            Ok(Box::new(list_array))
+        }
+
         (Dictionary(index_type, ..), _) => match_integer_type!(index_type, |$T| {
             dictionary_cast_dyn::<$T>(array, to_type, options)
         }),
