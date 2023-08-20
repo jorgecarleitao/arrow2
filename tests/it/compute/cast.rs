@@ -1,7 +1,7 @@
 use arrow2::array::*;
 use arrow2::compute::cast::{can_cast_types, cast, CastOptions};
-use arrow2::datatypes::*;
 use arrow2::datatypes::DataType::LargeList;
+use arrow2::datatypes::*;
 use arrow2::types::{days_ms, months_days_ns, NativeType};
 
 #[test]
@@ -129,7 +129,7 @@ fn i32_to_large_list_i32() {
         &LargeList(Box::new(Field::new("item", DataType::Int32, true))),
         CastOptions::default(),
     )
-        .unwrap();
+    .unwrap();
 
     let arr = b.as_any().downcast_ref::<ListArray<i64>>().unwrap();
     assert_eq!(&[0, 1, 2, 3, 4, 5], arr.offsets().as_slice());

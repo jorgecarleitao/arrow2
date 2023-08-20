@@ -104,6 +104,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (List(list_from), LargeList(list_to)) if list_from == list_to => true,
         (LargeList(list_from), List(list_to)) if list_from == list_to => true,
         (_, List(list_to)) => can_cast_types(from_type, &list_to.data_type),
+        (_, LargeList(list_to)) => can_cast_types(from_type, &list_to.data_type),
         (Dictionary(_, from_value_type, _), Dictionary(_, to_value_type, _)) => {
             can_cast_types(from_value_type, to_value_type)
         }
