@@ -404,6 +404,18 @@ impl<O: Offset> MutableBinaryArray<O> {
         let (offsets, values) = values_iter(iterator);
         Self::try_new(Self::default_data_type(), offsets, values, None).unwrap()
     }
+
+    /// Extend with a fallible iterator
+    pub fn extend_fallible<T, I, E>(&mut self, iter: I) -> std::result::Result<(), E>
+    where
+        E: std::error::Error,
+        I: IntoIterator<Item = std::result::Result<Option<T>, E>>,
+        T: AsRef<[u8]>,
+    {
+        let mut iter = iter.into_iter();
+        self.reserve(iter.size_hint().0, 0);
+        iter.try_for_each(|x| Ok(self.push(x?)))
+    }
 }
 
 impl<O: Offset, T: AsRef<[u8]>> Extend<Option<T>> for MutableBinaryArray<O> {
