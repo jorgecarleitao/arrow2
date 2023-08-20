@@ -406,6 +406,9 @@
 <a href="#406" id="406">406</a>
 <a href="#407" id="407">407</a>
 <a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, sync::Arc};
 
 <span class="kw">use crate</span>::{
@@ -777,7 +780,10 @@
     {
         <span class="kw">let </span><span class="kw-2">mut </span>iter = iter.into_iter();
         <span class="self">self</span>.reserve(iter.size_hint().<span class="number">0</span>, <span class="number">0</span>);
-        iter.try_for_each(|x| <span class="prelude-val">Ok</span>(<span class="self">self</span>.push(x<span class="question-mark">?</span>)))
+        iter.try_for_each(|x| {
+            <span class="self">self</span>.push(x<span class="question-mark">?</span>);
+            <span class="prelude-val">Ok</span>(())
+        })
     }
 }
 

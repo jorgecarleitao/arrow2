@@ -548,6 +548,9 @@
 <a href="#548" id="548">548</a>
 <a href="#549" id="549">549</a>
 <a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{iter::FromIterator, sync::Arc};
 
 <span class="kw">use </span><span class="kw">crate</span>::array::{physical_binary::<span class="kw-2">*</span>, TryExtendFromSelf};
@@ -1043,7 +1046,10 @@
     {
         <span class="kw">let </span><span class="kw-2">mut </span>iter = iter.into_iter();
         <span class="self">self</span>.reserve(iter.size_hint().<span class="number">0</span>, <span class="number">0</span>);
-        iter.try_for_each(|x| <span class="prelude-val">Ok</span>(<span class="self">self</span>.push(x<span class="question-mark">?</span>)))
+        iter.try_for_each(|x| {
+            <span class="self">self</span>.push(x<span class="question-mark">?</span>);
+            <span class="prelude-val">Ok</span>(())
+        })
     }
 }
 
