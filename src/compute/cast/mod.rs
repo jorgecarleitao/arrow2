@@ -104,7 +104,6 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (List(list_from), LargeList(list_to)) if list_from == list_to => true,
         (LargeList(list_from), List(list_to)) if list_from == list_to => true,
         (_, List(list_to)) => can_cast_types(from_type, &list_to.data_type),
-        (_, LargeList(list_to)) => can_cast_types(from_type, &list_to.data_type),
         (Dictionary(_, from_value_type, _), Dictionary(_, to_value_type, _)) => {
             can_cast_types(from_value_type, to_value_type)
         }
@@ -151,7 +150,7 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Timestamp(_, _), LargeUtf8) => true,
         (_, Utf8) => is_numeric(from_type) || from_type == &Binary,
         (_, LargeUtf8) => is_numeric(from_type) || from_type == &LargeBinary,
-
+        (_, LargeList(list_to)) => can_cast_types(from_type, &list_to.data_type),
         (_, Binary) => is_numeric(from_type),
         (_, LargeBinary) => is_numeric(from_type),
 
@@ -510,19 +509,6 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             Ok(Box::new(list_array))
         }
 
-        (_, LargeList(to)) => {
-            // cast primitive to list's primitive
-            let values = cast(array, &to.data_type, options)?;
-            // create offsets, where if array.len() = 2, we have [0,1,2]
-            let offsets = (0..=array.len() as i64).collect::<Vec<_>>();
-            // Safety: offsets _are_ monotonically increasing
-            let offsets = unsafe { Offsets::new_unchecked(offsets) };
-
-            let list_array = ListArray::<i64>::new(to_type.clone(), offsets.into(), values, None);
-
-            Ok(Box::new(list_array))
-        }
-
         (Dictionary(index_type, ..), _) => match_integer_type!(index_type, |$T| {
             dictionary_cast_dyn::<$T>(array, to_type, options)
         }),
@@ -753,6 +739,19 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
+
+        (_, LargeList(to)) => {
+            // cast primitive to list's primitive
+            let values = cast(array, &to.data_type, options)?;
+            // create offsets, where if array.len() = 2, we have [0,1,2]
+            let offsets = (0..=array.len() as i64).collect::<Vec<_>>();
+            // Safety: offsets _are_ monotonically increasing
+            let offsets = unsafe { Offsets::new_unchecked(offsets) };
+
+            let list_array = ListArray::<i64>::new(to_type.clone(), offsets.into(), values, None);
+
+            Ok(Box::new(list_array))
+        }
 
         (_, Binary) => match from_type {
             UInt8 => primitive_to_binary_dyn::<u8, i32>(array),
