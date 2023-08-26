@@ -1,25 +1,21 @@
 use std::collections::VecDeque;
 
+use parquet2::encoding::hybrid_rle;
 use parquet2::{
-    deserialize::SliceFilteredIter,
-    encoding::{hybrid_rle, Encoding},
+    encoding::Encoding,
     page::{split_buffer, DataPage, DictPage},
     schema::Repetition,
 };
 
-use crate::{
-    array::FixedSizeBinaryArray, bitmap::MutableBitmap, datatypes::DataType, error::Result,
-};
-
 use super::super::utils::{
-    dict_indices_decoder, extend_from_decoder, get_selected_rows, next, not_implemented,
-    DecodedState, Decoder, FilteredOptionalPageValidity, MaybeNext, OptionalPageValidity,
-    PageState, Pushable,
+    dict_indices_decoder, not_implemented, MaybeNext, OptionalPageValidity, PageState,
 };
-use super::super::Pages;
 use super::utils::FixedSizeBinary;
-
-pub(super) type Dict = Vec<u8>;
+use crate::array::FixedSizeBinaryArray;
+use crate::io::parquet::read::deserialize::fixed_size_binary::basic::{finish, Dict};
+use crate::io::parquet::read::deserialize::nested_utils::{next, NestedDecoder};
+use crate::io::parquet::read::{InitNested, NestedState};
+use crate::{bitmap::MutableBitmap, datatypes::DataType, error::Result, io::parquet::read::Pages};
 
 #[derive(Debug)]
 struct Optional<'a> {
@@ -50,29 +46,6 @@ impl<'a> Required<'a> {
         let values = page.buffer();
         assert_eq!(values.len() % size, 0);
         let values = values.chunks_exact(size);
-        Self { values }
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.values.size_hint().0
-    }
-}
-
-#[derive(Debug)]
-struct FilteredRequired<'a> {
-    pub values: SliceFilteredIter<std::slice::ChunksExact<'a, u8>>,
-}
-
-impl<'a> FilteredRequired<'a> {
-    fn new(page: &'a DataPage, size: usize) -> Self {
-        let values = page.buffer();
-        assert_eq!(values.len() % size, 0);
-        let values = values.chunks_exact(size);
-
-        let rows = get_selected_rows(page);
-        let values = SliceFilteredIter::new(values, rows);
-
         Self { values }
     }
 
@@ -126,11 +99,6 @@ enum State<'a> {
     Required(Required<'a>),
     RequiredDictionary(RequiredDictionary<'a>),
     OptionalDictionary(OptionalDictionary<'a>),
-    FilteredRequired(FilteredRequired<'a>),
-    FilteredOptional(
-        FilteredOptionalPageValidity<'a>,
-        std::slice::ChunksExact<'a, u8>,
-    ),
 }
 
 impl<'a> PageState<'a> for State<'a> {
@@ -140,28 +108,25 @@ impl<'a> PageState<'a> for State<'a> {
             State::Required(state) => state.len(),
             State::RequiredDictionary(state) => state.len(),
             State::OptionalDictionary(state) => state.validity.len(),
-            State::FilteredRequired(state) => state.len(),
-            State::FilteredOptional(state, _) => state.len(),
         }
     }
 }
 
+#[derive(Debug, Default)]
 struct BinaryDecoder {
     size: usize,
 }
 
-impl DecodedState for (FixedSizeBinary, MutableBitmap) {
-    fn len(&self) -> usize {
-        self.0.len()
-    }
-}
-
-impl<'a> Decoder<'a> for BinaryDecoder {
+impl<'a> NestedDecoder<'a> for BinaryDecoder {
     type State = State<'a>;
-    type Dict = Dict;
+    type Dictionary = Dict;
     type DecodedState = (FixedSizeBinary, MutableBitmap);
 
-    fn build_state(&self, page: &'a DataPage, dict: Option<&'a Self::Dict>) -> Result<Self::State> {
+    fn build_state(
+        &self,
+        page: &'a DataPage,
+        dict: Option<&'a Self::Dictionary>,
+    ) -> Result<Self::State> {
         let is_optional =
             page.descriptor.primitive_type.field_info.repetition == Repetition::Optional;
         let is_filtered = page.selected_rows().is_some();
@@ -179,17 +144,6 @@ impl<'a> Decoder<'a> for BinaryDecoder {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 OptionalDictionary::try_new(page, dict).map(State::OptionalDictionary)
             }
-            (Encoding::Plain, None, false, true) => Ok(State::FilteredRequired(
-                FilteredRequired::new(page, self.size),
-            )),
-            (Encoding::Plain, _, true, true) => {
-                let (_, _, values) = split_buffer(page)?;
-
-                Ok(State::FilteredOptional(
-                    FilteredOptionalPageValidity::try_new(page)?,
-                    values.chunks_exact(self.size),
-                ))
-            }
             _ => Err(not_implemented(page)),
         }
     }
@@ -201,97 +155,83 @@ impl<'a> Decoder<'a> for BinaryDecoder {
         )
     }
 
-    fn extend_from_state(
-        &self,
-        state: &mut Self::State,
-        decoded: &mut Self::DecodedState,
-
-        remaining: usize,
-    ) {
+    fn push_valid(&self, state: &mut Self::State, decoded: &mut Self::DecodedState) -> Result<()> {
         let (values, validity) = decoded;
         match state {
-            State::Optional(page) => extend_from_decoder(
-                validity,
-                &mut page.validity,
-                Some(remaining),
-                values,
-                &mut page.values,
-            ),
+            State::Optional(page) => {
+                let value = page.values.by_ref().next().unwrap_or_default();
+                values.push(value);
+                validity.push(true);
+            }
             State::Required(page) => {
-                for x in page.values.by_ref().take(remaining) {
-                    values.push(x)
-                }
+                let value = page.values.by_ref().next().unwrap_or_default();
+                values.push(value);
             }
-            State::FilteredRequired(page) => {
-                for x in page.values.by_ref().take(remaining) {
-                    values.push(x)
-                }
-            }
-            State::OptionalDictionary(page) => extend_from_decoder(
-                validity,
-                &mut page.validity,
-                Some(remaining),
-                values,
-                page.values.by_ref().map(|index| {
-                    let index = index.unwrap() as usize;
-                    &page.dict[index * self.size..(index + 1) * self.size]
-                }),
-            ),
             State::RequiredDictionary(page) => {
-                for x in page
+                let item = page
                     .values
                     .by_ref()
+                    .next()
                     .map(|index| {
                         let index = index.unwrap() as usize;
                         &page.dict[index * self.size..(index + 1) * self.size]
                     })
-                    .take(remaining)
-                {
-                    values.push(x)
-                }
+                    .unwrap_or_default();
+                values.push(item);
             }
-            State::FilteredOptional(page_validity, page_values) => {
-                extend_from_decoder(
-                    validity,
-                    page_validity,
-                    Some(remaining),
-                    values,
-                    page_values.by_ref(),
-                );
+            State::OptionalDictionary(page) => {
+                let item = page
+                    .values
+                    .by_ref()
+                    .next()
+                    .map(|index| {
+                        let index = index.unwrap() as usize;
+                        &page.dict[index * self.size..(index + 1) * self.size]
+                    })
+                    .unwrap_or_default();
+                values.push(item);
+                validity.push(true);
             }
         }
+        Ok(())
     }
 
-    fn deserialize_dict(&self, page: &DictPage) -> Self::Dict {
+    fn push_null(&self, decoded: &mut Self::DecodedState) {
+        let (values, validity) = decoded;
+        values.push(&[]);
+        validity.push(false);
+    }
+
+    fn deserialize_dict(&self, page: &DictPage) -> Self::Dictionary {
         page.buffer.clone()
     }
 }
 
-pub fn finish(
-    data_type: &DataType,
-    values: FixedSizeBinary,
-    validity: MutableBitmap,
-) -> FixedSizeBinaryArray {
-    FixedSizeBinaryArray::new(data_type.clone(), values.values.into(), validity.into())
-}
-
-pub struct Iter<I: Pages> {
+pub struct NestedIter<I: Pages> {
     iter: I,
     data_type: DataType,
     size: usize,
-    items: VecDeque<(FixedSizeBinary, MutableBitmap)>,
+    init: Vec<InitNested>,
+    items: VecDeque<(NestedState, (FixedSizeBinary, MutableBitmap))>,
     dict: Option<Dict>,
     chunk_size: Option<usize>,
     remaining: usize,
 }
 
-impl<I: Pages> Iter<I> {
-    pub fn new(iter: I, data_type: DataType, num_rows: usize, chunk_size: Option<usize>) -> Self {
+impl<I: Pages> NestedIter<I> {
+    pub fn new(
+        iter: I,
+        init: Vec<InitNested>,
+        data_type: DataType,
+        num_rows: usize,
+        chunk_size: Option<usize>,
+    ) -> Self {
         let size = FixedSizeBinaryArray::get_size(&data_type);
         Self {
             iter,
             data_type,
             size,
+            init,
             items: VecDeque::new(),
             dict: None,
             chunk_size,
@@ -300,8 +240,8 @@ impl<I: Pages> Iter<I> {
     }
 }
 
-impl<I: Pages> Iterator for Iter<I> {
-    type Item = Result<FixedSizeBinaryArray>;
+impl<I: Pages> Iterator for NestedIter<I> {
+    type Item = Result<(NestedState, FixedSizeBinaryArray)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let maybe_state = next(
@@ -309,12 +249,13 @@ impl<I: Pages> Iterator for Iter<I> {
             &mut self.items,
             &mut self.dict,
             &mut self.remaining,
+            &self.init,
             self.chunk_size,
             &BinaryDecoder { size: self.size },
         );
         match maybe_state {
-            MaybeNext::Some(Ok((values, validity))) => {
-                Some(Ok(finish(&self.data_type, values, validity)))
+            MaybeNext::Some(Ok((nested, decoded))) => {
+                Some(Ok((nested, finish(&self.data_type, decoded.0, decoded.1))))
             }
             MaybeNext::Some(Err(e)) => Some(Err(e)),
             MaybeNext::None => None,

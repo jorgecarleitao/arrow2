@@ -1,5 +1,6 @@
 use parquet2::schema::types::PrimitiveType;
 
+use crate::array::PrimitiveArray;
 use crate::{
     datatypes::{DataType, Field},
     error::{Error, Result},
@@ -261,6 +262,66 @@ where
                 });
                 Box::new(iter) as _
             }
+            DataType::Decimal(precision, _) => {
+                init.push(InitNested::Primitive(field.is_nullable));
+                let type_ = types.pop().unwrap();
+                match type_.physical_type {
+                    PhysicalType::Int32 if *precision <= 9 => {
+                        primitive(primitive::NestedIter::new(
+                            columns.pop().unwrap(),
+                            init,
+                            field.data_type.clone(),
+                            num_rows,
+                            chunk_size,
+                            |x: i32| x as i128,
+                        ))
+                    }
+                    PhysicalType::Int64 if *precision <= 18 => {
+                        primitive(primitive::NestedIter::new(
+                            columns.pop().unwrap(),
+                            init,
+                            field.data_type.clone(),
+                            num_rows,
+                            chunk_size,
+                            |x: i64| x as i128,
+                        ))
+                    }
+                    PhysicalType::FixedLenByteArray(n) => {
+                        let iter = fixed_size_binary::NestedIter::new(
+                            columns.pop().unwrap(),
+                            init,
+                            DataType::FixedSizeBinary(n),
+                            num_rows,
+                            chunk_size,
+                        );
+                        // Convert the fixed length byte array to Decimal.
+                        let iter = iter.map(move |x| {
+                            let (nested, array) = x?;
+                            let values = array
+                                .values()
+                                .chunks_exact(n)
+                                .map(|value: &[u8]| super::super::convert_i128(value, n))
+                                .collect::<Vec<_>>();
+                            let validity = array.validity().cloned();
+
+                            let array: Box<dyn Array> = Box::new(PrimitiveArray::<i128>::try_new(
+                                field.data_type.clone(),
+                                values.into(),
+                                validity,
+                            )?);
+
+                            Ok((nested, array))
+                        });
+                        Box::new(iter) as _
+                    }
+                    _ => {
+                        return Err(Error::nyi(format!(
+                            "Deserializing type for Decimal {:?} from parquet",
+                            type_.physical_type
+                        )))
+                    }
+                }
+            }
             DataType::Struct(fields) => {
                 let columns = fields
                     .iter()
@@ -270,6 +331,7 @@ where
                         init.push(InitNested::Struct(field.is_nullable));
                         let n = n_columns(&f.data_type);
                         let columns = columns.drain(columns.len() - n..).collect();
+                        dbg!(&types);
                         let types = types.drain(types.len() - n..).collect();
                         columns_to_iter_recursive(
                             columns,
