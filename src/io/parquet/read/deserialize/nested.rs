@@ -284,7 +284,7 @@ where
                         |x: i64| x as i128,
                     )),
                     PhysicalType::FixedLenByteArray(n) if n > 16 => {
-                        return Err(Error::nyi(format!(
+                        return Err(Error::InvalidArgumentError(format!(
                             "Can't decode Decimal128 type from `FixedLenByteArray` of len {n}"
                         )))
                     }
@@ -402,7 +402,7 @@ where
                         Box::new(iter) as _
                     }
                     PhysicalType::FixedLenByteArray(n) => {
-                        return Err(Error::NotYetImplemented(format!(
+                        return Err(Error::InvalidArgumentError(format!(
                             "Can't decode Decimal256 type from from `FixedLenByteArray` of len {n}"
                         )))
                     }

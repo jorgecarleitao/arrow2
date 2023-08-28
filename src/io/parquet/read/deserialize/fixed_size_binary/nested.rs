@@ -1,97 +1,20 @@
 use std::collections::VecDeque;
 
-use parquet2::encoding::hybrid_rle;
 use parquet2::{
     encoding::Encoding,
-    page::{split_buffer, DataPage, DictPage},
+    page::{DataPage, DictPage},
     schema::Repetition,
 };
 
-use super::super::utils::{
-    dict_indices_decoder, not_implemented, MaybeNext, OptionalPageValidity, PageState,
-};
+use super::super::utils::{not_implemented, MaybeNext, PageState};
 use super::utils::FixedSizeBinary;
 use crate::array::FixedSizeBinaryArray;
-use crate::io::parquet::read::deserialize::fixed_size_binary::basic::{finish, Dict};
+use crate::io::parquet::read::deserialize::fixed_size_binary::basic::{
+    finish, Dict, Optional, OptionalDictionary, Required, RequiredDictionary,
+};
 use crate::io::parquet::read::deserialize::nested_utils::{next, NestedDecoder};
 use crate::io::parquet::read::{InitNested, NestedState};
 use crate::{bitmap::MutableBitmap, datatypes::DataType, error::Result, io::parquet::read::Pages};
-
-#[derive(Debug)]
-struct Optional<'a> {
-    values: std::slice::ChunksExact<'a, u8>,
-    validity: OptionalPageValidity<'a>,
-}
-
-impl<'a> Optional<'a> {
-    fn try_new(page: &'a DataPage, size: usize) -> Result<Self> {
-        let (_, _, values) = split_buffer(page)?;
-
-        let values = values.chunks_exact(size);
-
-        Ok(Self {
-            values,
-            validity: OptionalPageValidity::try_new(page)?,
-        })
-    }
-}
-
-#[derive(Debug)]
-struct Required<'a> {
-    pub values: std::slice::ChunksExact<'a, u8>,
-}
-
-impl<'a> Required<'a> {
-    fn new(page: &'a DataPage, size: usize) -> Self {
-        let values = page.buffer();
-        assert_eq!(values.len() % size, 0);
-        let values = values.chunks_exact(size);
-        Self { values }
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.values.size_hint().0
-    }
-}
-
-#[derive(Debug)]
-struct RequiredDictionary<'a> {
-    pub values: hybrid_rle::HybridRleDecoder<'a>,
-    dict: &'a Dict,
-}
-
-impl<'a> RequiredDictionary<'a> {
-    fn try_new(page: &'a DataPage, dict: &'a Dict) -> Result<Self> {
-        let values = dict_indices_decoder(page)?;
-
-        Ok(Self { dict, values })
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.values.size_hint().0
-    }
-}
-
-#[derive(Debug)]
-struct OptionalDictionary<'a> {
-    values: hybrid_rle::HybridRleDecoder<'a>,
-    validity: OptionalPageValidity<'a>,
-    dict: &'a Dict,
-}
-
-impl<'a> OptionalDictionary<'a> {
-    fn try_new(page: &'a DataPage, dict: &'a Dict) -> Result<Self> {
-        let values = dict_indices_decoder(page)?;
-
-        Ok(Self {
-            values,
-            validity: OptionalPageValidity::try_new(page)?,
-            dict,
-        })
-    }
-}
 
 #[derive(Debug)]
 enum State<'a> {
