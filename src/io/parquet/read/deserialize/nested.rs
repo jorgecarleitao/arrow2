@@ -298,7 +298,7 @@ where
                         );
                         // Convert the fixed length byte array to Decimal.
                         let iter = iter.map(move |x| {
-                            let (nested, array) = x?;
+                            let (mut nested, array) = x?;
                             let values = array
                                 .values()
                                 .chunks_exact(n)
@@ -312,9 +312,11 @@ where
                                 validity,
                             )?);
 
+                            let _ = nested.nested.pop().unwrap(); // the primitive
+
                             Ok((nested, array))
                         });
-                        Box::new(iter) as _
+                        Box::new(iter)
                     }
                     _ => {
                         return Err(Error::nyi(format!(
@@ -354,7 +356,7 @@ where
                         );
                         // Convert the fixed length byte array to Decimal.
                         let iter = iter.map(move |x| {
-                            let (nested, array) = x?;
+                            let (mut nested, array) = x?;
                             let values = array
                                 .values()
                                 .chunks_exact(n)
@@ -367,6 +369,8 @@ where
                                 values.into(),
                                 validity,
                             )?);
+
+                            let _ = nested.nested.pop().unwrap(); // the primitive
 
                             Ok((nested, array))
                         });
@@ -383,7 +387,7 @@ where
                         );
                         // Convert the fixed length byte array to Decimal.
                         let iter = iter.map(move |x| {
-                            let (nested, array) = x?;
+                            let (mut nested, array) = x?;
                             let values = array
                                 .values()
                                 .chunks_exact(n)
@@ -396,6 +400,8 @@ where
                                 values.into(),
                                 validity,
                             )?);
+
+                            let _ = nested.nested.pop().unwrap(); // the primitive
 
                             Ok((nested, array))
                         });
@@ -423,7 +429,6 @@ where
                         init.push(InitNested::Struct(field.is_nullable));
                         let n = n_columns(&f.data_type);
                         let columns = columns.drain(columns.len() - n..).collect();
-                        dbg!(&types);
                         let types = types.drain(types.len() - n..).collect();
                         columns_to_iter_recursive(
                             columns,

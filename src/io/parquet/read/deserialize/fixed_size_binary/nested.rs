@@ -13,6 +13,7 @@ use crate::io::parquet::read::deserialize::fixed_size_binary::basic::{
     finish, Dict, Optional, OptionalDictionary, Required, RequiredDictionary,
 };
 use crate::io::parquet::read::deserialize::nested_utils::{next, NestedDecoder};
+use crate::io::parquet::read::deserialize::utils::Pushable;
 use crate::io::parquet::read::{InitNested, NestedState};
 use crate::{bitmap::MutableBitmap, datatypes::DataType, error::Result, io::parquet::read::Pages};
 
@@ -121,7 +122,7 @@ impl<'a> NestedDecoder<'a> for BinaryDecoder {
 
     fn push_null(&self, decoded: &mut Self::DecodedState) {
         let (values, validity) = decoded;
-        values.push(&[]);
+        values.push_null();
         validity.push(false);
     }
 

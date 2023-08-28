@@ -62,6 +62,8 @@ fn test_pyarrow_integration(
         "list_nested_i64",
         "list_utf8",
         "list_bool",
+        "list_decimal",
+        "list_decimal256",
         "list_nested_inner_required_required_i64",
         "list_nested_inner_required_i64",
         // pyarrow counts null struct items as nulls

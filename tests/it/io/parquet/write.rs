@@ -409,7 +409,7 @@ fn list_decimal_nullable() -> Result<()> {
     round_trip_opt_stats(
         "list_decimal",
         "nested",
-        Version::V2,
+        Version::V1,
         CompressionOptions::Uncompressed,
         vec![Encoding::Plain],
         true,
@@ -421,7 +421,7 @@ fn list_decimal256_nullable() -> Result<()> {
     round_trip_opt_stats(
         "list_decimal256",
         "nested",
-        Version::V2,
+        Version::V1,
         CompressionOptions::Uncompressed,
         vec![Encoding::Plain],
         true,
