@@ -1,3 +1,4 @@
+use ethnum::I256;
 use parquet2::schema::types::PrimitiveType;
 
 use crate::array::PrimitiveArray;
@@ -262,29 +263,30 @@ where
                 });
                 Box::new(iter) as _
             }
-            DataType::Decimal(precision, _) => {
+            DataType::Decimal(_, _) => {
                 init.push(InitNested::Primitive(field.is_nullable));
                 let type_ = types.pop().unwrap();
                 match type_.physical_type {
-                    PhysicalType::Int32 if *precision <= 9 => {
-                        primitive(primitive::NestedIter::new(
-                            columns.pop().unwrap(),
-                            init,
-                            field.data_type.clone(),
-                            num_rows,
-                            chunk_size,
-                            |x: i32| x as i128,
-                        ))
-                    }
-                    PhysicalType::Int64 if *precision <= 18 => {
-                        primitive(primitive::NestedIter::new(
-                            columns.pop().unwrap(),
-                            init,
-                            field.data_type.clone(),
-                            num_rows,
-                            chunk_size,
-                            |x: i64| x as i128,
-                        ))
+                    PhysicalType::Int32 => primitive(primitive::NestedIter::new(
+                        columns.pop().unwrap(),
+                        init,
+                        field.data_type.clone(),
+                        num_rows,
+                        chunk_size,
+                        |x: i32| x as i128,
+                    )),
+                    PhysicalType::Int64 => primitive(primitive::NestedIter::new(
+                        columns.pop().unwrap(),
+                        init,
+                        field.data_type.clone(),
+                        num_rows,
+                        chunk_size,
+                        |x: i64| x as i128,
+                    )),
+                    PhysicalType::FixedLenByteArray(n) if n > 16 => {
+                        return Err(Error::nyi(format!(
+                            "Can't decode Decimal128 type from `FixedLenByteArray` of len {n}"
+                        )))
                     }
                     PhysicalType::FixedLenByteArray(n) => {
                         let iter = fixed_size_binary::NestedIter::new(
@@ -313,6 +315,96 @@ where
                             Ok((nested, array))
                         });
                         Box::new(iter) as _
+                    }
+                    _ => {
+                        return Err(Error::nyi(format!(
+                            "Deserializing type for Decimal {:?} from parquet",
+                            type_.physical_type
+                        )))
+                    }
+                }
+            }
+            DataType::Decimal256(_, _) => {
+                init.push(InitNested::Primitive(field.is_nullable));
+                let type_ = types.pop().unwrap();
+                match type_.physical_type {
+                    PhysicalType::Int32 => primitive(primitive::NestedIter::new(
+                        columns.pop().unwrap(),
+                        init,
+                        field.data_type.clone(),
+                        num_rows,
+                        chunk_size,
+                        |x: i32| i256(I256::new(x as i128)),
+                    )),
+                    PhysicalType::Int64 => primitive(primitive::NestedIter::new(
+                        columns.pop().unwrap(),
+                        init,
+                        field.data_type.clone(),
+                        num_rows,
+                        chunk_size,
+                        |x: i64| i256(I256::new(x as i128)),
+                    )),
+                    PhysicalType::FixedLenByteArray(n) if n <= 16 => {
+                        let iter = fixed_size_binary::NestedIter::new(
+                            columns.pop().unwrap(),
+                            init,
+                            DataType::FixedSizeBinary(n),
+                            num_rows,
+                            chunk_size,
+                        );
+                        // Convert the fixed length byte array to Decimal.
+                        let iter = iter.map(move |x| {
+                            let (nested, array) = x?;
+                            let values = array
+                                .values()
+                                .chunks_exact(n)
+                                .map(|value| i256(I256::new(super::super::convert_i128(value, n))))
+                                .collect::<Vec<_>>();
+                            let validity = array.validity().cloned();
+
+                            let array: Box<dyn Array> = Box::new(PrimitiveArray::<i256>::try_new(
+                                field.data_type.clone(),
+                                values.into(),
+                                validity,
+                            )?);
+
+                            Ok((nested, array))
+                        });
+                        Box::new(iter) as _
+                    }
+
+                    PhysicalType::FixedLenByteArray(n) if n <= 32 => {
+                        let iter = fixed_size_binary::NestedIter::new(
+                            columns.pop().unwrap(),
+                            init,
+                            DataType::FixedSizeBinary(n),
+                            num_rows,
+                            chunk_size,
+                        );
+                        // Convert the fixed length byte array to Decimal.
+                        let iter = iter.map(move |x| {
+                            let (nested, array) = x?;
+                            let values = array
+                                .values()
+                                .chunks_exact(n)
+                                .map(super::super::convert_i256)
+                                .collect::<Vec<_>>();
+                            let validity = array.validity().cloned();
+
+                            let array: Box<dyn Array> = Box::new(PrimitiveArray::<i256>::try_new(
+                                field.data_type.clone(),
+                                values.into(),
+                                validity,
+                            )?);
+
+                            Ok((nested, array))
+                        });
+                        Box::new(iter) as _
+                    }
+                    PhysicalType::FixedLenByteArray(n) => {
+                        return Err(Error::NotYetImplemented(format!(
+                            "Can't decode Decimal256 type from from `FixedLenByteArray` of len {n}"
+                        )))
                     }
                     _ => {
                         return Err(Error::nyi(format!(
