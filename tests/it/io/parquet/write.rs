@@ -405,6 +405,30 @@ fn list_struct_nullable() -> Result<()> {
 }
 
 #[test]
+fn list_decimal_nullable() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal",
+        "nested",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal256_nullable() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal256",
+        "nested",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
 fn v1_nested_struct_list_nullable() -> Result<()> {
     round_trip_opt_stats(
         "struct_list_nullable",

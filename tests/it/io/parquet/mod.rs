@@ -131,26 +131,26 @@ pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
 }
 
 pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
+    let i64_values = &[
+        Some(0),
+        Some(1),
+        Some(2),
+        None,
+        Some(3),
+        Some(4),
+        Some(5),
+        Some(6),
+        Some(7),
+        Some(8),
+        Some(9),
+        Some(10),
+    ];
     let offsets = vec![0, 2, 2, 5, 8, 8, 11, 11, 12].try_into().unwrap();
 
     let values = match column {
         "list_int64" => {
             // [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
-            PrimitiveArray::<i64>::from(&[
-                Some(0),
-                Some(1),
-                Some(2),
-                None,
-                Some(3),
-                Some(4),
-                Some(5),
-                Some(6),
-                Some(7),
-                Some(8),
-                Some(9),
-                Some(10),
-            ])
-            .boxed()
+            PrimitiveArray::<i64>::from(i64_values).boxed()
         }
         "list_int64_required" | "list_int64_optional_required" | "list_int64_required_required" => {
             // [[0, 1], None, [2, 0, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
@@ -241,6 +241,20 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             Some(b"bbb".to_vec()),
             Some(b"".to_vec()),
         ])),
+        "list_decimal" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| x as i128))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(9, 0)))
+        }
+        "list_decimal256" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| i256(x.as_i256())))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(39, 0)))
+        }
         "list_nested_i64"
         | "list_nested_inner_required_i64"
         | "list_nested_inner_required_required_i64" => Box::new(NullArray::new(DataType::Null, 1)),
@@ -867,6 +881,20 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
             null_count: new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed(),
             min_value: new_list(Box::new(BinaryArray::<i64>::from_slice([b""])), true).boxed(),
             max_value: new_list(Box::new(BinaryArray::<i64>::from_slice([b"ccc"])), true).boxed(),
+        },
+        "list_decimal" => Statistics {
+            distinct_count: new_list(UInt64Array::from([None]).boxed(), true).boxed(),
+            null_count: new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed(),
+            min_value: new_list(
+                Box::new(Int128Array::from_slice([0]).to(DataType::Decimal(10, 0))),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                Box::new(Int128Array::from_slice([10]).to(DataType::Decimal(10, 0))),
+                true,
+            )
+            .boxed(),
         },
         "list_int64" => Statistics {
             distinct_count: new_list(UInt64Array::from([None]).boxed(), true).boxed(),
