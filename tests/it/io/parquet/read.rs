@@ -62,6 +62,8 @@ fn test_pyarrow_integration(
         "list_nested_i64",
         "list_utf8",
         "list_bool",
+        "list_decimal",
+        "list_decimal256",
         "list_nested_inner_required_required_i64",
         "list_nested_inner_required_i64",
         // pyarrow counts null struct items as nulls
@@ -320,6 +322,16 @@ fn v2_nested_large_binary() -> Result<()> {
 #[test]
 fn v1_nested_large_binary() -> Result<()> {
     test_pyarrow_integration("list_large_binary", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal256_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256", 2, "nested", false, false, None)
 }
 
 #[test]
