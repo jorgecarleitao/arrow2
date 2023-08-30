@@ -67,15 +67,31 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
     /// # Errors
     /// Errors if the array is non-empty.
     pub fn try_empty(values: M) -> Result<Self> {
-        let value_map = ValueMap::<K, M>::try_empty(values)?;
+        Ok(Self::from_value_map(ValueMap::<K, M>::try_empty(values)?))
+    }
+
+    /// Creates an empty [`MutableDictionaryArray`] preloaded with a given dictionary of values.
+    /// Indices associated with those values are automatically assigned based on the order of
+    /// the values.
+    /// # Errors
+    /// Errors if there's more values than the maximum value of `K`.
+    pub fn from_values(values: M) -> Result<Self>
+    where
+        M: Indexable,
+        M::Type: Eq + Hash,
+    {
+        Ok(Self::from_value_map(ValueMap::<K, M>::from_values(values)?))
+    }
+
+    fn from_value_map(value_map: ValueMap<K, M>) -> Self {
         let keys = MutablePrimitiveArray::<K>::new();
         let data_type =
             DataType::Dictionary(K::KEY_TYPE, Box::new(value_map.data_type().clone()), false);
-        Ok(Self {
+        Self {
             data_type,
             map: value_map,
             keys,
-        })
+        }
     }
 
     /// pushes a null value

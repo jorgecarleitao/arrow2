@@ -129,6 +129,21 @@ impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
         })
     }
 
+    pub fn from_values(values: M) -> Result<Self>
+    where
+        M: Indexable,
+        M::Type: Eq + Hash,
+    {
+        let values = Box::pin(values);
+        let map = (0..values.len())
+            .map(|i| {
+                let key = K::try_from(i).map_err(|_| Error::Overflow)?;
+                Ok((ValueRef::new(&values, i), key))
+            })
+            .collect::<Result<_>>()?;
+        Ok(Self { values, map })
+    }
+
     pub fn data_type(&self) -> &DataType {
         Pin::get_ref(self.values.as_ref()).data_type()
     }
