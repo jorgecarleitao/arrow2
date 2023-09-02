@@ -439,17 +439,35 @@ fn timestamp<'a, I: Pages + 'a>(
     time_unit: TimeUnit,
 ) -> Result<ArrayIter<'a>> {
     if physical_type == &PhysicalType::Int96 {
-        let conversion_op = match time_unit {
-            TimeUnit::Nanosecond => int96_to_i64_ns,
-            TimeUnit::Microsecond => int96_to_i64_us,
-            TimeUnit::Millisecond => int96_to_i64_ms,
-            TimeUnit::Second => int96_to_i64_s,
-        };
         return match time_unit {
-            TimeUnit::Nanosecond => Ok(dyn_iter(iden(primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_ns)))),
-            TimeUnit::Microsecond => Ok(dyn_iter(iden(primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_us)))),
-            TimeUnit::Millisecond => Ok(dyn_iter(iden(primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_ms)))),
-            TimeUnit::Second => Ok(dyn_iter(iden(primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_s)))),
+            TimeUnit::Nanosecond => Ok(dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                num_rows,
+                chunk_size,
+                int96_to_i64_ns,
+            )))),
+            TimeUnit::Microsecond => Ok(dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                num_rows,
+                chunk_size,
+                int96_to_i64_us,
+            )))),
+            TimeUnit::Millisecond => Ok(dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                num_rows,
+                chunk_size,
+                int96_to_i64_ms,
+            )))),
+            TimeUnit::Second => Ok(dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                num_rows,
+                chunk_size,
+                int96_to_i64_s,
+            )))),
         };
     };
 

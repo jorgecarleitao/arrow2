@@ -791,18 +791,22 @@ fn read_int96_timestamps() -> Result<()> {
         0x06, 0x19, 0x35, 0x10, 0x00, 0x06, 0x19, 0x18, 0x0a, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74,
         0x61, 0x6d, 0x70, 0x73, 0x15, 0x02, 0x16, 0x06, 0x16, 0x9e, 0x01, 0x16, 0x96, 0x01, 0x26,
         0x60, 0x26, 0x08, 0x29, 0x2c, 0x15, 0x04, 0x15, 0x00, 0x15, 0x02, 0x00, 0x15, 0x00, 0x15,
-        0x10, 0x15, 0x02, 0x00, 0x00, 0x00, 0x16, 0x9e, 0x01, 0x16, 0x06, 0x26, 0x08, 0x16, 0x96, 
+        0x10, 0x15, 0x02, 0x00, 0x00, 0x00, 0x16, 0x9e, 0x01, 0x16, 0x06, 0x26, 0x08, 0x16, 0x96,
         0x01, 0x14, 0x00, 0x00, 0x28, 0x20, 0x70, 0x61, 0x72, 0x71, 0x75, 0x65, 0x74, 0x2d, 0x63,
         0x70, 0x70, 0x2d, 0x61, 0x72, 0x72, 0x6f, 0x77, 0x20, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f,
         0x6e, 0x20, 0x31, 0x32, 0x2e, 0x30, 0x2e, 0x30, 0x19, 0x1c, 0x1c, 0x00, 0x00, 0x00, 0x95,
-        0x00, 0x00, 0x00, 0x50, 0x41, 0x52, 0x31
+        0x00, 0x00, 0x00, 0x50, 0x41, 0x52, 0x31,
     ];
 
     let parse = |time_unit: TimeUnit| {
         let mut reader = Cursor::new(timestamp_data);
         let metadata = read_metadata(&mut reader)?;
-        let schema = arrow2::datatypes::Schema{
-            fields: vec![arrow2::datatypes::Field::new("timestamps", arrow2::datatypes::DataType::Timestamp(time_unit, None), false)],
+        let schema = arrow2::datatypes::Schema {
+            fields: vec![arrow2::datatypes::Field::new(
+                "timestamps",
+                arrow2::datatypes::DataType::Timestamp(time_unit, None),
+                false,
+            )],
             metadata: BTreeMap::new(),
         };
         let reader = FileReader::new(reader, metadata.row_groups, schema, Some(5), None, None);
@@ -812,10 +816,15 @@ fn read_int96_timestamps() -> Result<()> {
     // This data contains int96 timestamps in the year 1000 and 3000, which are out of range for
     // Timestamp(TimeUnit::Nanoseconds) and will cause a panic in dev builds/overflow in release builds
     // However, the code should work for the Microsecond/Millisecond time units
-    for time_unit in [arrow2::datatypes::TimeUnit::Microsecond, arrow2::datatypes::TimeUnit::Millisecond, arrow2::datatypes::TimeUnit::Second] {
+    for time_unit in [
+        arrow2::datatypes::TimeUnit::Microsecond,
+        arrow2::datatypes::TimeUnit::Millisecond,
+        arrow2::datatypes::TimeUnit::Second,
+    ] {
         parse(time_unit).expect("Should not error");
     }
-    std::panic::catch_unwind(|| parse(arrow2::datatypes::TimeUnit::Nanosecond)).expect_err("Should be a panic error");
+    std::panic::catch_unwind(|| parse(arrow2::datatypes::TimeUnit::Nanosecond))
+        .expect_err("Should be a panic error");
 
     Ok(())
 }
