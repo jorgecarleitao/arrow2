@@ -32,7 +32,7 @@ hash_hasher = "^2.0.3"
 simdutf8 = "0.1.4"
 
 # A Rust port of SwissTable
-hashbrown = { version = "0.14", default-features = false, features = ["ahash"] }
+hashbrown = { version = "0.14", default-features = false, optional = true }
 
 # for timezone support
 chrono-tz = { version = "0.8", optional = true }
@@ -243,7 +243,7 @@ compute_merge_sort = ["itertools", "compute_sort"]
 compute_nullif = ["compute_comparison"]
 compute_partition = ["compute_sort"]
 compute_regex_match = ["regex"]
-compute_sort = ["compute_take"]
+compute_sort = ["compute_take", "hashbrown"]
 compute_substring = []
 compute_take = []
 compute_temporal = []
