@@ -97,8 +97,17 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
     /// Creates an empty [`MutableDictionaryArray`] retaining the same dictionary as the current
     /// mutable dictionary array, but with no data. This may come useful when serializing the
     /// array into multiple chunks, where there's a requirement that the dictionary is the same.
+    /// No copying is performed, the value map is moved over to the new array.
     pub fn into_empty(self) -> Self {
         Self::from_value_map(self.map)
+    }
+
+    /// Same as `into_empty` but clones the inner value map instead of taking full ownership.
+    pub fn to_empty(&self) -> Self
+    where
+        M: Clone,
+    {
+        Self::from_value_map(self.map.clone())
     }
 
     /// pushes a null value

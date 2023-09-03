@@ -15,6 +15,7 @@ use crate::{
 
 use super::DictionaryKey;
 
+#[derive(Clone)]
 pub struct ValueMap<K: DictionaryKey, M: MutableArray> {
     values: M,
     map: HashMap<K, ()>, // NB: *only* use insert_hashed_nocheck() and no other hashmap API
