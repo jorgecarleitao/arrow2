@@ -20,6 +20,7 @@ mod iterator;
 mod mutable;
 use crate::array::specification::check_indexes_unchecked;
 mod typed_iterator;
+mod value_map;
 
 use crate::array::dictionary::typed_iterator::{DictValue, DictionaryValuesIterTyped};
 pub use iterator::*;

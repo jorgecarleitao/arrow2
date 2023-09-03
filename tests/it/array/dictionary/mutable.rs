@@ -1,8 +1,5 @@
 use arrow2::array::*;
 use arrow2::error::Result;
-use hash_hasher::HashedMap;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 
 #[test]
 fn primitive() -> Result<()> {
@@ -61,16 +58,4 @@ fn push_utf8() {
     expected_keys.push(Some(0));
     expected_keys.push(Some(1));
     assert_eq!(*new.keys(), expected_keys);
-
-    let expected_map = ["A", "B", "C"]
-        .iter()
-        .enumerate()
-        .map(|(index, value)| {
-            let mut hasher = DefaultHasher::new();
-            value.hash(&mut hasher);
-            let hash = hasher.finish();
-            (hash, index as i32)
-        })
-        .collect::<HashedMap<_, _>>();
-    assert_eq!(*new.map(), expected_map);
 }
