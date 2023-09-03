@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/read/deserialize/simple.rs`."><title>simple.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-47e7ab555ef2818a.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (4e78abb43 2023-08-28)" data-channel="nightly" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-ef3a2de404864b0b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/read/deserialize/simple.rs`."><title>simple.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-47e7ab555ef2818a.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (35e416303 2023-09-01)" data-channel="nightly" data-search-js="search-6dfdfced5eff6596.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-ef3a2de404864b0b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -602,6 +602,63 @@
 <a href="#602" id="602">602</a>
 <a href="#603" id="603">603</a>
 <a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>ethnum::I256;
 <span class="kw">use </span>parquet2::{
     schema::types::{
@@ -995,6 +1052,44 @@
     }
 }
 
+<span class="attr">#[inline]
+</span><span class="kw">pub fn </span>int96_to_i64_us(value: [u32; <span class="number">3</span>]) -&gt; i64 {
+    <span class="kw">const </span>JULIAN_DAY_OF_EPOCH: i64 = <span class="number">2_440_588</span>;
+    <span class="kw">const </span>SECONDS_PER_DAY: i64 = <span class="number">86_400</span>;
+    <span class="kw">const </span>MICROS_PER_SECOND: i64 = <span class="number">1_000_000</span>;
+
+    <span class="kw">let </span>day = value[<span class="number">2</span>] <span class="kw">as </span>i64;
+    <span class="kw">let </span>microseconds = (((value[<span class="number">1</span>] <span class="kw">as </span>i64) &lt;&lt; <span class="number">32</span>) + value[<span class="number">0</span>] <span class="kw">as </span>i64) / <span class="number">1_000</span>;
+    <span class="kw">let </span>seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
+
+    seconds * MICROS_PER_SECOND + microseconds
+}
+
+<span class="attr">#[inline]
+</span><span class="kw">pub fn </span>int96_to_i64_ms(value: [u32; <span class="number">3</span>]) -&gt; i64 {
+    <span class="kw">const </span>JULIAN_DAY_OF_EPOCH: i64 = <span class="number">2_440_588</span>;
+    <span class="kw">const </span>SECONDS_PER_DAY: i64 = <span class="number">86_400</span>;
+    <span class="kw">const </span>MILLIS_PER_SECOND: i64 = <span class="number">1_000</span>;
+
+    <span class="kw">let </span>day = value[<span class="number">2</span>] <span class="kw">as </span>i64;
+    <span class="kw">let </span>milliseconds = (((value[<span class="number">1</span>] <span class="kw">as </span>i64) &lt;&lt; <span class="number">32</span>) + value[<span class="number">0</span>] <span class="kw">as </span>i64) / <span class="number">1_000_000</span>;
+    <span class="kw">let </span>seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
+
+    seconds * MILLIS_PER_SECOND + milliseconds
+}
+
+<span class="attr">#[inline]
+</span><span class="kw">pub fn </span>int96_to_i64_s(value: [u32; <span class="number">3</span>]) -&gt; i64 {
+    <span class="kw">const </span>JULIAN_DAY_OF_EPOCH: i64 = <span class="number">2_440_588</span>;
+    <span class="kw">const </span>SECONDS_PER_DAY: i64 = <span class="number">86_400</span>;
+
+    <span class="kw">let </span>day = value[<span class="number">2</span>] <span class="kw">as </span>i64;
+    <span class="kw">let </span>seconds = (((value[<span class="number">1</span>] <span class="kw">as </span>i64) &lt;&lt; <span class="number">32</span>) + value[<span class="number">0</span>] <span class="kw">as </span>i64) / <span class="number">1_000_000_000</span>;
+    <span class="kw">let </span>day_seconds = (day - JULIAN_DAY_OF_EPOCH) * SECONDS_PER_DAY;
+
+    day_seconds + seconds
+}
+
 <span class="kw">fn </span>timestamp&lt;<span class="lifetime">&#39;a</span>, I: Pages + <span class="lifetime">&#39;a</span>&gt;(
     pages: I,
     physical_type: <span class="kw-2">&amp;</span>PhysicalType,
@@ -1005,16 +1100,35 @@
     time_unit: TimeUnit,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;ArrayIter&lt;<span class="lifetime">&#39;a</span>&gt;&gt; {
     <span class="kw">if </span>physical_type == <span class="kw-2">&amp;</span>PhysicalType::Int96 {
-        <span class="kw">let </span>iter = primitive::Iter::new(pages, data_type, num_rows, chunk_size, int96_to_i64_ns);
-        <span class="kw">let </span>logical_type = PrimitiveLogicalType::Timestamp {
-            unit: ParquetTimeUnit::Nanoseconds,
-            is_adjusted_to_utc: <span class="bool-val">false</span>,
-        };
-        <span class="kw">let </span>(factor, is_multiplier) = unifiy_timestmap_unit(<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(logical_type), time_unit);
-        <span class="kw">return match </span>(factor, is_multiplier) {
-            (<span class="number">1</span>, <span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(dyn_iter(iden(iter))),
-            (a, <span class="bool-val">true</span>) =&gt; <span class="prelude-val">Ok</span>(dyn_iter(op(iter, <span class="kw">move </span>|x| x * a))),
-            (a, <span class="bool-val">false</span>) =&gt; <span class="prelude-val">Ok</span>(dyn_iter(op(iter, <span class="kw">move </span>|x| x / a))),
+        <span class="kw">return match </span>time_unit {
+            TimeUnit::Nanosecond =&gt; <span class="prelude-val">Ok</span>(dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                num_rows,
+                chunk_size,
+                int96_to_i64_ns,
+            )))),
+            TimeUnit::Microsecond =&gt; <span class="prelude-val">Ok</span>(dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                num_rows,
+                chunk_size,
+                int96_to_i64_us,
+            )))),
+            TimeUnit::Millisecond =&gt; <span class="prelude-val">Ok</span>(dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                num_rows,
+                chunk_size,
+                int96_to_i64_ms,
+            )))),
+            TimeUnit::Second =&gt; <span class="prelude-val">Ok</span>(dyn_iter(iden(primitive::Iter::new(
+                pages,
+                data_type,
+                num_rows,
+                chunk_size,
+                int96_to_i64_s,
+            )))),
         };
     };
 
