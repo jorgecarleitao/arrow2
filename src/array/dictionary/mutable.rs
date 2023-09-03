@@ -42,7 +42,7 @@ impl<K: DictionaryKey, M: MutableArray> From<MutableDictionaryArray<K, M>> for D
             DictionaryArray::<K>::try_new_unchecked(
                 other.data_type,
                 other.keys.into(),
-                other.map.into_boxed().as_box(),
+                other.map.into_values().as_box(),
             )
             .unwrap()
         }
@@ -74,7 +74,7 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
     /// Indices associated with those values are automatically assigned based on the order of
     /// the values.
     /// # Errors
-    /// Errors if there's more values than the maximum value of `K`.
+    /// Errors if there's more values than the maximum value of `K` or if values are not unique.
     pub fn from_values(values: M) -> Result<Self>
     where
         M: Indexable,
@@ -92,6 +92,13 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
             map: value_map,
             keys,
         }
+    }
+
+    /// Creates an empty [`MutableDictionaryArray`] retaining the same dictionary as the current
+    /// mutable dictionary array, but with no data. This may come useful when serializing the
+    /// array into multiple chunks, where there's a requirement that the dictionary is the same.
+    pub fn into_empty(self) -> Self {
+        Self::from_value_map(self.map)
     }
 
     /// pushes a null value
