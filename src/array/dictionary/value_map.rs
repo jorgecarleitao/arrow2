@@ -17,7 +17,7 @@ use super::DictionaryKey;
 
 pub struct ValueMap<K: DictionaryKey, M: MutableArray> {
     values: M,
-    map: HashMap<usize, K>, // NB: *only* use insert_hashed_nocheck() and no other hashmap API
+    map: HashMap<K, ()>, // NB: *only* use insert_hashed_nocheck() and no other hashmap API
 }
 
 impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
@@ -53,7 +53,7 @@ impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
                     ))
                 }
                 RawEntryMut::Vacant(entry) => {
-                    entry.insert_hashed_nocheck(hash, index, key); // NB: don't use .insert() here!
+                    entry.insert_hashed_nocheck(hash, key, ()); // NB: don't use .insert() here!
                 }
             }
         }
@@ -95,16 +95,18 @@ impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
         let hash = hasher.finish();
 
         Ok(
-            match self.map.raw_entry_mut().from_hash(hash, |index| {
+            match self.map.raw_entry_mut().from_hash(hash, |key| {
+                // safety: we've already checked (the inverse) when we pushed it, so it should be ok?
+                let index = unsafe { key.as_usize() };
                 // safety: invariant of the struct, it's always in bounds since we maintain it
-                let stored_value = unsafe { self.values.value_unchecked_at(*index) };
+                let stored_value = unsafe { self.values.value_unchecked_at(index) };
                 stored_value.borrow() == value.as_indexed()
             }) {
-                RawEntryMut::Occupied(entry) => *entry.get(),
+                RawEntryMut::Occupied(entry) => *entry.key(),
                 RawEntryMut::Vacant(entry) => {
                     let index = self.values.len();
                     let key = K::try_from(index).map_err(|_| Error::Overflow)?;
-                    entry.insert_hashed_nocheck(hash, index, key); // NB: don't use .insert() here!
+                    entry.insert_hashed_nocheck(hash, key, ()); // NB: don't use .insert() here!
                     push(&mut self.values, value)?;
                     key
                 }

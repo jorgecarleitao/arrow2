@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::hint::unreachable_unchecked;
 
 use crate::{
@@ -34,7 +35,7 @@ use super::{new_null_array, specification::check_indexes};
 ///
 /// Any implementation of this trait must ensure that `always_fits_usize` only
 /// returns `true` if all values succeeds on `value::try_into::<usize>().unwrap()`.
-pub unsafe trait DictionaryKey: NativeType + TryInto<usize> + TryFrom<usize> {
+pub unsafe trait DictionaryKey: NativeType + TryInto<usize> + TryFrom<usize> + Hash {
     /// The corresponding [`IntegerType`] of this key
     const KEY_TYPE: IntegerType;
 
