@@ -788,6 +788,8 @@
 <a href="#788" id="788">788</a>
 <a href="#789" id="789">789</a>
 <a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Contains the [`Array`] and [`MutableArray`] trait objects declaring arrays,
 //! as well as concrete arrays (such as [`Utf8Array`] and [`MutableUtf8Array`]).
 //!
@@ -1510,8 +1512,10 @@
 <span class="kw">mod </span>equal;
 <span class="kw">mod </span>ffi;
 <span class="kw">mod </span>fmt;
-<span class="kw">pub mod </span>growable;
+<span class="kw">mod </span>indexable;
 <span class="kw">mod </span>iterator;
+
+<span class="kw">pub mod </span>growable;
 <span class="kw">pub mod </span>ord;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use </span>iterator::ArrayAccessor;

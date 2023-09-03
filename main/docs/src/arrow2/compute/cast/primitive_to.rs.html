@@ -895,9 +895,9 @@
     from: <span class="kw-2">&amp;</span>PrimitiveArray&lt;T&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;DictionaryArray&lt;K&gt;&gt; {
     <span class="kw">let </span>iter = from.iter().map(|x| x.copied());
-    <span class="kw">let </span><span class="kw-2">mut </span>array = MutableDictionaryArray::&lt;K, <span class="kw">_</span>&gt;::from(MutablePrimitiveArray::&lt;T&gt;::from(
+    <span class="kw">let </span><span class="kw-2">mut </span>array = MutableDictionaryArray::&lt;K, <span class="kw">_</span>&gt;::try_empty(MutablePrimitiveArray::&lt;T&gt;::from(
         from.data_type().clone(),
-    ));
+    ))<span class="question-mark">?</span>;
     array.try_extend(iter)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(array.into())
