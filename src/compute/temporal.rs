@@ -288,7 +288,9 @@ where
             let op = |x| {
                 let datetime = timestamp_s_to_datetime(x);
                 let offset = timezone.offset_from_utc_datetime(&datetime);
-                extract(chrono::DateTime::<T>::from_utc(datetime, offset))
+                extract(chrono::DateTime::<T>::from_naive_utc_and_offset(
+                    datetime, offset,
+                ))
             };
             unary(array, op, A::PRIMITIVE.into())
         }
@@ -296,7 +298,9 @@ where
             let op = |x| {
                 let datetime = timestamp_ms_to_datetime(x);
                 let offset = timezone.offset_from_utc_datetime(&datetime);
-                extract(chrono::DateTime::<T>::from_utc(datetime, offset))
+                extract(chrono::DateTime::<T>::from_naive_utc_and_offset(
+                    datetime, offset,
+                ))
             };
             unary(array, op, A::PRIMITIVE.into())
         }
@@ -304,7 +308,9 @@ where
             let op = |x| {
                 let datetime = timestamp_us_to_datetime(x);
                 let offset = timezone.offset_from_utc_datetime(&datetime);
-                extract(chrono::DateTime::<T>::from_utc(datetime, offset))
+                extract(chrono::DateTime::<T>::from_naive_utc_and_offset(
+                    datetime, offset,
+                ))
             };
             unary(array, op, A::PRIMITIVE.into())
         }
@@ -312,7 +318,9 @@ where
             let op = |x| {
                 let datetime = timestamp_ns_to_datetime(x);
                 let offset = timezone.offset_from_utc_datetime(&datetime);
-                extract(chrono::DateTime::<T>::from_utc(datetime, offset))
+                extract(chrono::DateTime::<T>::from_naive_utc_and_offset(
+                    datetime, offset,
+                ))
             };
             unary(array, op, A::PRIMITIVE.into())
         }
