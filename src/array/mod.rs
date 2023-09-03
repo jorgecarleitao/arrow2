@@ -720,7 +720,8 @@ mod utf8;
 mod equal;
 mod ffi;
 mod fmt;
-mod indexable;
+#[doc(hidden)]
+pub mod indexable;
 mod iterator;
 
 pub mod growable;
