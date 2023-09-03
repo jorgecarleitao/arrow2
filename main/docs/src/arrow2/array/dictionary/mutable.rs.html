@@ -225,18 +225,39 @@
 <a href="#225" id="225">225</a>
 <a href="#226" id="226">226</a>
 <a href="#227" id="227">227</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::hash::Hash;
-<span class="kw">use </span>std::sync::Arc;
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::hash::{Hash, Hasher};
+<span class="kw">use </span>std::{collections::hash_map::DefaultHasher, sync::Arc};
 
-<span class="kw">use </span><span class="kw">crate</span>::array::indexable::{AsIndexed, Indexable};
+<span class="kw">use </span>hash_hasher::HashedMap;
+
 <span class="kw">use crate</span>::{
     array::{primitive::MutablePrimitiveArray, Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::DataType,
-    error::Result,
+    error::{Error, <span class="prelude-ty">Result</span>},
 };
 
-<span class="kw">use </span><span class="kw">super</span>::value_map::ValueMap;
 <span class="kw">use super</span>::{DictionaryArray, DictionaryKey};
 
 <span class="doccomment">/// A mutable, strong-typed version of [`DictionaryArray`].
@@ -257,21 +278,37 @@
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>MutableDictionaryArray&lt;K: DictionaryKey, M: MutableArray&gt; {
     data_type: DataType,
-    map: ValueMap&lt;K, M&gt;,
-    <span class="comment">// invariant: `max(keys) &lt; map.values().len()`
-    </span>keys: MutablePrimitiveArray&lt;K&gt;,
+    keys: MutablePrimitiveArray&lt;K&gt;,
+    map: HashedMap&lt;u64, K&gt;,
+    <span class="comment">// invariant: `keys.len() &lt;= values.len()`
+    </span>values: M,
 }
 
 <span class="kw">impl</span>&lt;K: DictionaryKey, M: MutableArray&gt; From&lt;MutableDictionaryArray&lt;K, M&gt;&gt; <span class="kw">for </span>DictionaryArray&lt;K&gt; {
-    <span class="kw">fn </span>from(other: MutableDictionaryArray&lt;K, M&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>from(<span class="kw-2">mut </span>other: MutableDictionaryArray&lt;K, M&gt;) -&gt; <span class="self">Self </span>{
         <span class="comment">// Safety - the invariant of this struct ensures that this is up-held
         </span><span class="kw">unsafe </span>{
             DictionaryArray::&lt;K&gt;::try_new_unchecked(
                 other.data_type,
                 other.keys.into(),
-                other.map.into_boxed().as_box(),
+                other.values.as_box(),
             )
             .unwrap()
+        }
+    }
+}
+
+<span class="kw">impl</span>&lt;K: DictionaryKey, M: MutableArray&gt; From&lt;M&gt; <span class="kw">for </span>MutableDictionaryArray&lt;K, M&gt; {
+    <span class="kw">fn </span>from(values: M) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            data_type: DataType::Dictionary(
+                K::KEY_TYPE,
+                Box::new(values.data_type().clone()),
+                <span class="bool-val">false</span>,
+            ),
+            keys: MutablePrimitiveArray::&lt;K&gt;::new(),
+            map: HashedMap::default(),
+            values,
         }
     }
 }
@@ -279,7 +316,17 @@
 <span class="kw">impl</span>&lt;K: DictionaryKey, M: MutableArray + Default&gt; MutableDictionaryArray&lt;K, M&gt; {
     <span class="doccomment">/// Creates an empty [`MutableDictionaryArray`].
     </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>::try_empty(M::default()).unwrap()
+        <span class="kw">let </span>values = M::default();
+        <span class="self">Self </span>{
+            data_type: DataType::Dictionary(
+                K::KEY_TYPE,
+                Box::new(values.data_type().clone()),
+                <span class="bool-val">false</span>,
+            ),
+            keys: MutablePrimitiveArray::&lt;K&gt;::new(),
+            map: HashedMap::default(),
+            values,
+        }
     }
 }
 
@@ -290,34 +337,22 @@
 }
 
 <span class="kw">impl</span>&lt;K: DictionaryKey, M: MutableArray&gt; MutableDictionaryArray&lt;K, M&gt; {
-    <span class="doccomment">/// Creates an empty [`MutableDictionaryArray`] from a given empty values array.
-    /// # Errors
-    /// Errors if the array is non-empty.
-    </span><span class="kw">pub fn </span>try_empty(values: M) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::from_value_map(ValueMap::&lt;K, M&gt;::try_empty(values)<span class="question-mark">?</span>))
-    }
-
-    <span class="doccomment">/// Creates an empty [`MutableDictionaryArray`] preloaded with a given dictionary of values.
-    /// Indices associated with those values are automatically assigned based on the order of
-    /// the values.
-    /// # Errors
-    /// Errors if there&#39;s more values than the maximum value of `K`.
-    </span><span class="kw">pub fn </span>from_values(values: M) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt;
-    <span class="kw">where
-        </span>M: Indexable,
-        M::Type: Eq + Hash,
-    {
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::from_value_map(ValueMap::&lt;K, M&gt;::from_values(values)<span class="question-mark">?</span>))
-    }
-
-    <span class="kw">fn </span>from_value_map(value_map: ValueMap&lt;K, M&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>keys = MutablePrimitiveArray::&lt;K&gt;::new();
-        <span class="kw">let </span>data_type =
-            DataType::Dictionary(K::KEY_TYPE, Box::new(value_map.data_type().clone()), <span class="bool-val">false</span>);
-        <span class="self">Self </span>{
-            data_type,
-            map: value_map,
-            keys,
+    <span class="doccomment">/// Returns whether the value should be pushed to the values or not
+    </span><span class="kw">fn </span>try_push_valid&lt;T: Hash&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: <span class="kw-2">&amp;</span>T) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>hasher = DefaultHasher::new();
+        value.hash(<span class="kw-2">&amp;mut </span>hasher);
+        <span class="kw">let </span>hash = hasher.finish();
+        <span class="kw">match </span><span class="self">self</span>.map.get(<span class="kw-2">&amp;</span>hash) {
+            <span class="prelude-val">Some</span>(key) =&gt; {
+                <span class="self">self</span>.keys.push(<span class="prelude-val">Some</span>(<span class="kw-2">*</span>key));
+                <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>)
+            }
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">let </span>key = K::try_from(<span class="self">self</span>.map.len()).map_err(|<span class="kw">_</span>| Error::Overflow)<span class="question-mark">?</span>;
+                <span class="self">self</span>.map.insert(hash, key);
+                <span class="self">self</span>.keys.push(<span class="prelude-val">Some</span>(key));
+                <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
+            }
         }
     }
 
@@ -326,9 +361,14 @@
         <span class="self">self</span>.keys.push(<span class="prelude-val">None</span>)
     }
 
+    <span class="doccomment">/// returns a mutable reference to the inner values.
+    </span><span class="kw">fn </span>mut_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>M {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.values
+    }
+
     <span class="doccomment">/// returns a reference to the inner values.
     </span><span class="kw">pub fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>M {
-        <span class="self">self</span>.map.values()
+        <span class="kw-2">&amp;</span><span class="self">self</span>.values
     }
 
     <span class="doccomment">/// converts itself into [`Arc&lt;dyn Array&gt;`]
@@ -350,8 +390,13 @@
 
     <span class="doccomment">/// Shrinks the capacity of the [`MutableDictionaryArray`] to fit its current length.
     </span><span class="kw">pub fn </span>shrink_to_fit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="self">self</span>.map.shrink_to_fit();
+        <span class="self">self</span>.values.shrink_to_fit();
         <span class="self">self</span>.keys.shrink_to_fit();
+    }
+
+    <span class="doccomment">/// Returns the dictionary map
+    </span><span class="kw">pub fn </span>map(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashedMap&lt;u64, K&gt; {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.map
     }
 
     <span class="doccomment">/// Returns the dictionary keys
@@ -363,7 +408,7 @@
         DictionaryArray::&lt;K&gt;::try_new(
             <span class="self">self</span>.data_type.clone(),
             std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.keys).into(),
-            <span class="self">self</span>.map.take_into(),
+            <span class="self">self</span>.values.as_box(),
         )
         .unwrap()
     }
@@ -411,20 +456,17 @@
     }
 }
 
-<span class="kw">impl</span>&lt;K, M, T&gt; TryExtend&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>MutableDictionaryArray&lt;K, M&gt;
+<span class="kw">impl</span>&lt;K, M, T: Hash&gt; TryExtend&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>MutableDictionaryArray&lt;K, M&gt;
 <span class="kw">where
     </span>K: DictionaryKey,
-    M: MutableArray + Indexable + TryExtend&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;,
-    T: AsIndexed&lt;M&gt;,
-    M::Type: Eq + Hash,
+    M: MutableArray + TryExtend&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;,
 {
     <span class="kw">fn </span>try_extend&lt;II: IntoIterator&lt;Item = <span class="prelude-ty">Option</span>&lt;T&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iter: II) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">for </span>value <span class="kw">in </span>iter {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = value {
-                <span class="kw">let </span>key = <span class="self">self
-                    </span>.map
-                    .try_push_valid(value, |arr, v| arr.try_extend(std::iter::once(<span class="prelude-val">Some</span>(v))))<span class="question-mark">?</span>;
-                <span class="self">self</span>.keys.try_push(<span class="prelude-val">Some</span>(key))<span class="question-mark">?</span>;
+                <span class="kw">if </span><span class="self">self</span>.try_push_valid(<span class="kw-2">&amp;</span>value)<span class="question-mark">? </span>{
+                    <span class="self">self</span>.mut_values().try_extend(std::iter::once(<span class="prelude-val">Some</span>(value)))<span class="question-mark">?</span>;
+                }
             } <span class="kw">else </span>{
                 <span class="self">self</span>.push_null();
             }
@@ -436,20 +478,20 @@
 <span class="kw">impl</span>&lt;K, M, T&gt; TryPush&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>MutableDictionaryArray&lt;K, M&gt;
 <span class="kw">where
     </span>K: DictionaryKey,
-    M: MutableArray + Indexable + TryPush&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;,
-    T: AsIndexed&lt;M&gt;,
-    M::Type: Eq + Hash,
+    M: MutableArray + TryPush&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;,
+    T: Hash,
 {
     <span class="kw">fn </span>try_push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: <span class="prelude-ty">Option</span>&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = item {
-            <span class="kw">let </span>key = <span class="self">self
-                </span>.map
-                .try_push_valid(value, |arr, v| arr.try_push(<span class="prelude-val">Some</span>(v)))<span class="question-mark">?</span>;
-            <span class="self">self</span>.keys.try_push(<span class="prelude-val">Some</span>(key))<span class="question-mark">?</span>;
+            <span class="kw">if </span><span class="self">self</span>.try_push_valid(<span class="kw-2">&amp;</span>value)<span class="question-mark">? </span>{
+                <span class="self">self</span>.values.try_push(<span class="prelude-val">Some</span>(value))
+            } <span class="kw">else </span>{
+                <span class="prelude-val">Ok</span>(())
+            }
         } <span class="kw">else </span>{
             <span class="self">self</span>.push_null();
+            <span class="prelude-val">Ok</span>(())
         }
-        <span class="prelude-val">Ok</span>(())
     }
 }
 </code></pre></div></section></main></body></html>
