@@ -306,9 +306,9 @@ pub fn primitive_to_dictionary<T: NativeType + Eq + Hash, K: DictionaryKey>(
     from: &PrimitiveArray<T>,
 ) -> Result<DictionaryArray<K>> {
     let iter = from.iter().map(|x| x.copied());
-    let mut array = MutableDictionaryArray::<K, _>::try_empty(MutablePrimitiveArray::<T>::from(
+    let mut array = MutableDictionaryArray::<K, _>::from(MutablePrimitiveArray::<T>::from(
         from.data_type().clone(),
-    ))?;
+    ));
     array.try_extend(iter)?;
 
     Ok(array.into())
