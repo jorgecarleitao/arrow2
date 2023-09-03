@@ -14,7 +14,7 @@ fn naive() {
         "1996-12-19T13:39:57-03:00",
         "1996-12-19 13:39:57-03:00", // missing T
     ]);
-    let r = temporal_conversions::utf8_to_naive_timestamp_ns(&array, fmt);
+    let r = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
     assert_eq!(format!("{r:?}"), expected);
 
     let fmt = "%Y-%m-%dT%H:%M:%S"; // no tz info
@@ -23,7 +23,7 @@ fn naive() {
         "1996-12-19T13:39:57-03:00",
         "1996-12-19 13:39:57-03:00", // missing T
     ]);
-    let r = temporal_conversions::utf8_to_naive_timestamp_ns(&array, fmt);
+    let r = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
     assert_eq!(format!("{r:?}"), expected);
 }
 
@@ -120,7 +120,7 @@ fn naive_no_tz() {
         "1996-12-19T13:39:57",
         "1996-12-19 13:39:57", // missing T
     ]);
-    let r = temporal_conversions::utf8_to_naive_timestamp_ns(&array, fmt);
+    let r = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
     assert_eq!(format!("{r:?}"), expected);
 }
 
@@ -202,7 +202,8 @@ fn tz_aware() {
         "1996-12-19T16:39:57.0-03:00", // same time at a different TZ
         "1996-12-19 13:39:57.0-03:00",
     ]);
-    let r = temporal_conversions::utf8_to_timestamp_ns(&array, fmt, tz).unwrap();
+    let r = temporal_conversions::utf8_to_timestamp(&array, fmt, tz, TimeUnit::Nanosecond).unwrap();
+
     assert_eq!(format!("{r:?}"), expected);
 }
 
@@ -216,7 +217,7 @@ fn tz_aware_no_timezone() {
         "1996-12-19T17:39:57.0",
         "1996-12-19 13:39:57.0",
     ]);
-    let r = temporal_conversions::utf8_to_timestamp_ns(&array, fmt, tz).unwrap();
+    let r = temporal_conversions::utf8_to_timestamp(&array, fmt, tz, TimeUnit::Nanosecond).unwrap();
     assert_eq!(format!("{r:?}"), expected);
 }
 

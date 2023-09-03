@@ -806,12 +806,49 @@ fn utf8_to_timestamp_with_tz() {
 }
 
 #[test]
-fn utf8_to_naive_timestamp() {
+fn utf8_to_naive_timestamp_ns() {
     let array =
         Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
     // the timezone is disregarded from the string and we assume UTC
     let expected = Int64Array::from_slice([851013597000000000, 851017197000000000])
         .to(DataType::Timestamp(TimeUnit::Nanosecond, None));
+
+    let result = cast(&array, expected.data_type(), CastOptions::default()).expect("cast failed");
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn utf8_to_naive_timestamp_ms() {
+    let array =
+        Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
+    // the timezone is disregarded from the string and we assume UTC
+    let expected = Int64Array::from_slice([851013597000, 851017197000])
+        .to(DataType::Timestamp(TimeUnit::Millisecond, None));
+
+    let result = cast(&array, expected.data_type(), CastOptions::default()).expect("cast failed");
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn utf8_to_naive_timestamp_us() {
+    let array =
+        Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
+    // the timezone is disregarded from the string and we assume UTC
+    let expected = Int64Array::from_slice([851013597000000, 851017197000000])
+        .to(DataType::Timestamp(TimeUnit::Microsecond, None));
+
+    let result = cast(&array, expected.data_type(), CastOptions::default()).expect("cast failed");
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn utf8_to_timestamp_ms_with_tz() {
+    let tz = "-02:00".to_string();
+    let array =
+        Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
+    // the timezone is used to map the time to UTC.
+    let expected = Int64Array::from_slice([851013597000, 851017197000])
+        .to(DataType::Timestamp(TimeUnit::Millisecond, Some(tz)));
 
     let result = cast(&array, expected.data_type(), CastOptions::default()).expect("cast failed");
     assert_eq!(expected, result.as_ref());
