@@ -433,7 +433,7 @@ where
                 x.map(|x| {
                     let datetime = timestamp_ns_to_datetime(*x);
                     let offset = timezone.offset_from_utc_datetime(&datetime);
-                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                    chrono::DateTime::<T>::from_naive_utc_and_offset(datetime, offset).to_rfc3339()
                 })
             });
             Utf8Array::from_trusted_len_iter(iter)
@@ -443,7 +443,7 @@ where
                 x.map(|x| {
                     let datetime = timestamp_us_to_datetime(*x);
                     let offset = timezone.offset_from_utc_datetime(&datetime);
-                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                    chrono::DateTime::<T>::from_naive_utc_and_offset(datetime, offset).to_rfc3339()
                 })
             });
             Utf8Array::from_trusted_len_iter(iter)
@@ -453,7 +453,7 @@ where
                 x.map(|x| {
                     let datetime = timestamp_ms_to_datetime(*x);
                     let offset = timezone.offset_from_utc_datetime(&datetime);
-                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                    chrono::DateTime::<T>::from_naive_utc_and_offset(datetime, offset).to_rfc3339()
                 })
             });
             Utf8Array::from_trusted_len_iter(iter)
@@ -463,7 +463,7 @@ where
                 x.map(|x| {
                     let datetime = timestamp_s_to_datetime(*x);
                     let offset = timezone.offset_from_utc_datetime(&datetime);
-                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                    chrono::DateTime::<T>::from_naive_utc_and_offset(datetime, offset).to_rfc3339()
                 })
             });
             Utf8Array::from_trusted_len_iter(iter)
