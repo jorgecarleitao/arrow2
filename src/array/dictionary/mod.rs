@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::hint::unreachable_unchecked;
 
 use crate::{
@@ -20,6 +21,7 @@ mod iterator;
 mod mutable;
 use crate::array::specification::check_indexes_unchecked;
 mod typed_iterator;
+mod value_map;
 
 use crate::array::dictionary::typed_iterator::{DictValue, DictionaryValuesIterTyped};
 pub use iterator::*;
@@ -33,7 +35,7 @@ use super::{new_null_array, specification::check_indexes};
 ///
 /// Any implementation of this trait must ensure that `always_fits_usize` only
 /// returns `true` if all values succeeds on `value::try_into::<usize>().unwrap()`.
-pub unsafe trait DictionaryKey: NativeType + TryInto<usize> + TryFrom<usize> {
+pub unsafe trait DictionaryKey: NativeType + TryInto<usize> + TryFrom<usize> + Hash {
     /// The corresponding [`IntegerType`] of this key
     const KEY_TYPE: IntegerType;
 

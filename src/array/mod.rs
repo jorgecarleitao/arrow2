@@ -720,8 +720,11 @@ mod utf8;
 mod equal;
 mod ffi;
 mod fmt;
-pub mod growable;
+#[doc(hidden)]
+pub mod indexable;
 mod iterator;
+
+pub mod growable;
 pub mod ord;
 
 pub(crate) use iterator::ArrayAccessor;
