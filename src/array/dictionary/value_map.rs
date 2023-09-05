@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 use std::fmt::{self, Debug};
-use std::hash::{BuildHasher, Hash, Hasher};
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
 
 use hashbrown::hash_map::RawEntryMut;
 use hashbrown::HashMap;
@@ -15,10 +15,61 @@ use crate::{
 
 use super::DictionaryKey;
 
+/// Hasher for pre-hashed values; similar to `hash_hasher` but with native endianness.
+///
+/// We know that we'll only use it for `u64` values, so we can avoid endian conversion.
+///
+/// Invariant: hash of a u64 value is always equal to itself.
+#[derive(Copy, Clone, Default)]
+pub struct HashHasherNative(u64);
+
+impl Hasher for HashHasherNative {
+    #[inline]
+    fn write(&mut self, value: &[u8]) {
+        #[cfg(target_endian = "little")]
+        {
+            for (index, item) in value.iter().enumerate().take(8) {
+                self.0 ^= u64::from(*item) << (index * 8);
+            }
+        }
+        #[cfg(target_endian = "big")]
+        {
+            for (index, item) in value.iter().rev().enumerate().take(8) {
+                self.0 ^= u64::from(*item) << (index * 8);
+            }
+        }
+    }
+
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.0
+    }
+}
+
+#[derive(Clone)]
+pub struct Hashed<K> {
+    hash: u64,
+    key: K,
+}
+
+#[inline]
+fn ahash_hash<T: Hash + ?Sized>(value: &T) -> u64 {
+    let mut hasher = BuildHasherDefault::<ahash::AHasher>::default().build_hasher();
+    value.hash(&mut hasher);
+    hasher.finish()
+}
+
+impl<K> Hash for Hashed<K> {
+    #[inline]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.hash.hash(state)
+    }
+}
+
 #[derive(Clone)]
 pub struct ValueMap<K: DictionaryKey, M: MutableArray> {
-    values: M,
-    map: HashMap<K, ()>, // NB: *only* use insert_hashed_nocheck() and no other hashmap API
+    pub values: M,
+    pub map: HashMap<Hashed<K>, (), BuildHasherDefault<HashHasherNative>>, // NB: *only* use insert_hashed_nocheck() and no other hashmap API
 }
 
 impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
@@ -39,22 +90,29 @@ impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
         M: Indexable,
         M::Type: Eq + Hash,
     {
-        let mut map = HashMap::with_capacity(values.len());
+        let mut map = HashMap::<Hashed<K>, _, _>::with_capacity_and_hasher(
+            values.len(),
+            BuildHasherDefault::<HashHasherNative>::default(),
+        );
         for index in 0..values.len() {
             let key = K::try_from(index).map_err(|_| Error::Overflow)?;
             // safety: we only iterate within bounds
             let value = unsafe { values.value_unchecked_at(index) };
-            let mut hasher = map.hasher().build_hasher();
-            value.borrow().hash(&mut hasher);
-            let hash = hasher.finish();
-            match map.raw_entry_mut().from_hash(hash, |_| true) {
+            let hash = ahash_hash(value.borrow());
+            let hash_hash = hash; // NOTE: we can do this ONLY due to the invariant of HashHasherNative
+            match map.raw_entry_mut().from_hash(hash_hash, |item| {
+                // safety: invariant of the struct, it's always in bounds since we maintain it
+                let stored_value = unsafe { values.value_unchecked_at(item.key.as_usize()) };
+                stored_value.borrow() == value.borrow()
+            }) {
                 RawEntryMut::Occupied(_) => {
                     return Err(Error::InvalidArgumentError(
                         "duplicate value in dictionary values array".into(),
                     ))
                 }
                 RawEntryMut::Vacant(entry) => {
-                    entry.insert_hashed_nocheck(hash, key, ()); // NB: don't use .insert() here!
+                    entry.insert_hashed_nocheck(hash_hash, Hashed { hash, key }, ());
+                    // NB: don't use .insert() here!
                 }
             }
         }
@@ -91,24 +149,24 @@ impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
         V: AsIndexed<M>,
         M::Type: Eq + Hash,
     {
-        let mut hasher = self.map.hasher().build_hasher();
-        value.as_indexed().hash(&mut hasher);
-        let hash = hasher.finish();
+        let hash = ahash_hash(value.as_indexed());
+        let hash_hash = hash; // NOTE: we can do this ONLY due to the invariant of HashHasherNative
 
         Ok(
-            match self.map.raw_entry_mut().from_hash(hash, |key| {
+            match self.map.raw_entry_mut().from_hash(hash_hash, |item| {
                 // safety: we've already checked (the inverse) when we pushed it, so it should be ok?
-                let index = unsafe { key.as_usize() };
+                let index = unsafe { item.key.as_usize() };
                 // safety: invariant of the struct, it's always in bounds since we maintain it
                 let stored_value = unsafe { self.values.value_unchecked_at(index) };
                 stored_value.borrow() == value.as_indexed()
             }) {
-                RawEntryMut::Occupied(entry) => *entry.key(),
+                RawEntryMut::Occupied(entry) => entry.key().key,
                 RawEntryMut::Vacant(entry) => {
                     let index = self.values.len();
                     let key = K::try_from(index).map_err(|_| Error::Overflow)?;
-                    entry.insert_hashed_nocheck(hash, key, ()); // NB: don't use .insert() here!
+                    entry.insert_hashed_nocheck(hash_hash, Hashed { hash, key }, ()); // NB: don't use .insert() here!
                     push(&mut self.values, value)?;
+                    assert_eq!(self.values.len(), index + 1);
                     key
                 }
             },
