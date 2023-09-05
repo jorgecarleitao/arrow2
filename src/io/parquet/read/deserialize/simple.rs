@@ -8,7 +8,7 @@ use parquet2::{
 
 use crate::types::i256;
 use crate::{
-    array::{Array, DictionaryKey, MutablePrimitiveArray, PrimitiveArray, BinaryArray},
+    array::{Array, BinaryArray, DictionaryKey, MutablePrimitiveArray, PrimitiveArray},
     datatypes::{DataType, IntervalUnit, TimeUnit},
     error::{Error, Result},
     types::{days_ms, NativeType},
@@ -231,26 +231,22 @@ pub fn page_iter_to_arrays<'a, I: Pages + 'a>(
             Box::new(arrays) as _
         }
         (PhysicalType::ByteArray, Decimal(_, _)) => {
-            let pages = binary::Iter::<i32, _>::new(
-                pages,
-                DataType::Binary,
-                chunk_size,
-                num_rows,
-            );
+            let pages = binary::Iter::<i32, _>::new(pages, DataType::Binary, chunk_size, num_rows);
 
             let pages = pages.map(move |maybe_array| {
                 let array = maybe_array?;
                 let array_len = array.len();
                 let array = array.as_any().downcast_ref::<BinaryArray<i32>>().unwrap();
-                let values = (0..array_len).map(|i| {
-                    let value = array.value(i);
-                    let n = value.len();
-                    if n > 16 {
-                        return Err(Error::Overflow);
-                    }
-                    Ok(super::super::convert_i128(value, n))
-                })
-                .collect::<Result<Vec<_>>>();
+                let values = (0..array_len)
+                    .map(|i| {
+                        let value = array.value(i);
+                        let n = value.len();
+                        if n > 16 {
+                            return Err(Error::Overflow);
+                        }
+                        Ok(super::super::convert_i128(value, n))
+                    })
+                    .collect::<Result<Vec<_>>>();
                 let validity = array.validity().cloned();
 
                 PrimitiveArray::<i128>::try_new(data_type.clone(), values?.into(), validity)
