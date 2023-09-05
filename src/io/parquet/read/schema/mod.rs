@@ -5,7 +5,7 @@ use crate::error::Result;
 mod convert;
 mod metadata;
 
-pub use convert::{parquet_to_arrow_schema_with_options, parquet_to_arrow_schema};
+pub use convert::{parquet_to_arrow_schema, parquet_to_arrow_schema_with_options};
 pub use metadata::read_schema_from_metadata;
 pub use parquet2::metadata::{FileMetaData, KeyValue, SchemaDescriptor};
 pub use parquet2::schema::types::ParquetType;
