@@ -17,8 +17,14 @@ pub fn parquet_to_arrow_schema(fields: &[ParquetType]) -> Vec<Field> {
 }
 
 /// Like [`parquet_to_arrow_schema`] but with configurable options which affect the behavior of schema inference
-pub fn parquet_to_arrow_schema_with_options(fields: &[ParquetType], options: &Option<SchemaInferenceOptions>) -> Vec<Field> {
-    fields.iter().filter_map(|f| to_field(f, options.as_ref().unwrap_or(&Default::default()))).collect::<Vec<_>>()
+pub fn parquet_to_arrow_schema_with_options(
+    fields: &[ParquetType],
+    options: &Option<SchemaInferenceOptions>,
+) -> Vec<Field> {
+    fields
+        .iter()
+        .filter_map(|f| to_field(f, options.as_ref().unwrap_or(&Default::default())))
+        .collect::<Vec<_>>()
 }
 
 fn from_int32(
@@ -175,7 +181,10 @@ fn from_fixed_len_byte_array(
 }
 
 /// Maps a [`PhysicalType`] with optional metadata to a [`DataType`]
-fn to_primitive_type_inner(primitive_type: &PrimitiveType, options: &SchemaInferenceOptions) -> DataType {
+fn to_primitive_type_inner(
+    primitive_type: &PrimitiveType,
+    options: &SchemaInferenceOptions,
+) -> DataType {
     match primitive_type.physical_type {
         PhysicalType::Boolean => DataType::Boolean,
         PhysicalType::Int32 => {
@@ -237,7 +246,10 @@ fn non_repeated_group(
 /// Converts a parquet group type to an arrow [`DataType::Struct`].
 /// Returns [`None`] if all its fields are empty
 fn to_struct(fields: &[ParquetType], options: &SchemaInferenceOptions) -> Option<DataType> {
-    let fields = fields.iter().filter_map(|f| to_field(f, options)).collect::<Vec<Field>>();
+    let fields = fields
+        .iter()
+        .filter_map(|f| to_field(f, options))
+        .collect::<Vec<Field>>();
     if fields.is_empty() {
         None
     } else {
@@ -299,7 +311,11 @@ fn to_field(type_: &ParquetType, options: &SchemaInferenceOptions) -> Option<Fie
 ///
 /// To fully understand this algorithm, please refer to
 /// [parquet doc](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md).
-fn to_list(fields: &[ParquetType], parent_name: &str, options: &SchemaInferenceOptions) -> Option<DataType> {
+fn to_list(
+    fields: &[ParquetType],
+    parent_name: &str,
+    options: &SchemaInferenceOptions,
+) -> Option<DataType> {
     let item = fields.first().unwrap();
 
     let item_type = match item {
@@ -354,7 +370,10 @@ fn to_list(fields: &[ParquetType], parent_name: &str, options: &SchemaInferenceO
 ///
 /// If this schema is a group type and none of its children is reserved in the
 /// conversion, the result is Ok(None).
-pub(crate) fn to_data_type(type_: &ParquetType, options: &SchemaInferenceOptions) -> Option<DataType> {
+pub(crate) fn to_data_type(
+    type_: &ParquetType,
+    options: &SchemaInferenceOptions,
+) -> Option<DataType> {
     match type_ {
         ParquetType::PrimitiveType(primitive) => Some(to_primitive_type(primitive, options)),
         ParquetType::GroupType {
@@ -985,7 +1004,12 @@ mod tests {
 
     #[test]
     fn test_int96_options() -> Result<()> {
-        for tu in [TimeUnit::Second, TimeUnit::Microsecond, TimeUnit::Millisecond, TimeUnit::Nanosecond] {
+        for tu in [
+            TimeUnit::Second,
+            TimeUnit::Microsecond,
+            TimeUnit::Millisecond,
+            TimeUnit::Nanosecond,
+        ] {
             let message_type = "
             message arrow_schema {
                 REQUIRED INT96   int96_field;
@@ -1009,17 +1033,18 @@ mod tests {
                 ),
                 Field::new(
                     "int96_struct",
-                    DataType::Struct(vec![
-                        Field::new("int96_field", coerced_to.clone(), false),
-                    ]),
+                    DataType::Struct(vec![Field::new("int96_field", coerced_to.clone(), false)]),
                     false,
                 ),
             ];
-    
+
             let parquet_schema = SchemaDescriptor::try_from_message(message_type)?;
-            let fields = parquet_to_arrow_schema_with_options(parquet_schema.fields(), &Some(SchemaInferenceOptions{
-                int96_coerce_to_timeunit: tu,
-            }));
+            let fields = parquet_to_arrow_schema_with_options(
+                parquet_schema.fields(),
+                &Some(SchemaInferenceOptions {
+                    int96_coerce_to_timeunit: tu,
+                }),
+            );
             assert_eq!(arrow_fields, fields);
         }
         Ok(())
