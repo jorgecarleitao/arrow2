@@ -156,7 +156,7 @@ impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
                     let key = K::try_from(index).map_err(|_| Error::Overflow)?;
                     entry.insert_hashed_nocheck(hash, Hashed { hash, key }, ()); // NB: don't use .insert() here!
                     push(&mut self.values, value)?;
-                    assert_eq!(self.values.len(), index + 1);
+                    debug_assert_eq!(self.values.len(), index + 1);
                     key
                 }
             },
