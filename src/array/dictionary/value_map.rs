@@ -21,23 +21,16 @@ use super::DictionaryKey;
 ///
 /// Invariant: hash of a u64 value is always equal to itself.
 #[derive(Copy, Clone, Default)]
-pub struct HashHasherNative(u64);
+pub struct PassthroughHasher(u64);
 
-impl Hasher for HashHasherNative {
+impl Hasher for PassthroughHasher {
     #[inline]
-    fn write(&mut self, value: &[u8]) {
-        #[cfg(target_endian = "little")]
-        {
-            for (index, item) in value.iter().enumerate().take(8) {
-                self.0 ^= u64::from(*item) << (index * 8);
-            }
-        }
-        #[cfg(target_endian = "big")]
-        {
-            for (index, item) in value.iter().rev().enumerate().take(8) {
-                self.0 ^= u64::from(*item) << (index * 8);
-            }
-        }
+    fn write_u64(&mut self, value: u64) {
+        self.0 = value;
+    }
+
+    fn write(&mut self, _: &[u8]) {
+        unreachable!();
     }
 
     #[inline]
@@ -69,7 +62,7 @@ impl<K> Hash for Hashed<K> {
 #[derive(Clone)]
 pub struct ValueMap<K: DictionaryKey, M: MutableArray> {
     pub values: M,
-    pub map: HashMap<Hashed<K>, (), BuildHasherDefault<HashHasherNative>>, // NB: *only* use insert_hashed_nocheck() and no other hashmap API
+    pub map: HashMap<Hashed<K>, (), BuildHasherDefault<PassthroughHasher>>, // NB: *only* use insert_hashed_nocheck() and no other hashmap API
 }
 
 impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
@@ -92,15 +85,14 @@ impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
     {
         let mut map = HashMap::<Hashed<K>, _, _>::with_capacity_and_hasher(
             values.len(),
-            BuildHasherDefault::<HashHasherNative>::default(),
+            BuildHasherDefault::<PassthroughHasher>::default(),
         );
         for index in 0..values.len() {
             let key = K::try_from(index).map_err(|_| Error::Overflow)?;
             // safety: we only iterate within bounds
             let value = unsafe { values.value_unchecked_at(index) };
             let hash = ahash_hash(value.borrow());
-            let hash_hash = hash; // NOTE: we can do this ONLY due to the invariant of HashHasherNative
-            match map.raw_entry_mut().from_hash(hash_hash, |item| {
+            match map.raw_entry_mut().from_hash(hash, |item| {
                 // safety: invariant of the struct, it's always in bounds since we maintain it
                 let stored_value = unsafe { values.value_unchecked_at(item.key.as_usize()) };
                 stored_value.borrow() == value.borrow()
@@ -111,8 +103,8 @@ impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
                     ))
                 }
                 RawEntryMut::Vacant(entry) => {
-                    entry.insert_hashed_nocheck(hash_hash, Hashed { hash, key }, ());
                     // NB: don't use .insert() here!
+                    entry.insert_hashed_nocheck(hash, Hashed { hash, key }, ());
                 }
             }
         }
@@ -150,10 +142,8 @@ impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
         M::Type: Eq + Hash,
     {
         let hash = ahash_hash(value.as_indexed());
-        let hash_hash = hash; // NOTE: we can do this ONLY due to the invariant of HashHasherNative
-
         Ok(
-            match self.map.raw_entry_mut().from_hash(hash_hash, |item| {
+            match self.map.raw_entry_mut().from_hash(hash, |item| {
                 // safety: we've already checked (the inverse) when we pushed it, so it should be ok?
                 let index = unsafe { item.key.as_usize() };
                 // safety: invariant of the struct, it's always in bounds since we maintain it
@@ -164,7 +154,7 @@ impl<K: DictionaryKey, M: MutableArray> ValueMap<K, M> {
                 RawEntryMut::Vacant(entry) => {
                     let index = self.values.len();
                     let key = K::try_from(index).map_err(|_| Error::Overflow)?;
-                    entry.insert_hashed_nocheck(hash_hash, Hashed { hash, key }, ()); // NB: don't use .insert() here!
+                    entry.insert_hashed_nocheck(hash, Hashed { hash, key }, ()); // NB: don't use .insert() here!
                     push(&mut self.values, value)?;
                     assert_eq!(self.values.len(), index + 1);
                     key
