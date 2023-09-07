@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/read/schema/convert.rs`."><title>convert.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-47e7ab555ef2818a.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (a991861ec 2023-09-05)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-ef3a2de404864b0b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/read/schema/convert.rs`."><title>convert.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-47e7ab555ef2818a.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (e3abbd499 2023-09-06)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-ef3a2de404864b0b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../../arrow2/index.html"><img class="rust-logo" src="../../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -974,7 +974,83 @@
 <a href="#974" id="974">974</a>
 <a href="#975" id="975">975</a>
 <a href="#976" id="976">976</a>
-</pre></div><pre class="rust"><code><span class="doccomment">//! This module has a single entry point, [`parquet_to_arrow_schema`].
+<a href="#977" id="977">977</a>
+<a href="#978" id="978">978</a>
+<a href="#979" id="979">979</a>
+<a href="#980" id="980">980</a>
+<a href="#981" id="981">981</a>
+<a href="#982" id="982">982</a>
+<a href="#983" id="983">983</a>
+<a href="#984" id="984">984</a>
+<a href="#985" id="985">985</a>
+<a href="#986" id="986">986</a>
+<a href="#987" id="987">987</a>
+<a href="#988" id="988">988</a>
+<a href="#989" id="989">989</a>
+<a href="#990" id="990">990</a>
+<a href="#991" id="991">991</a>
+<a href="#992" id="992">992</a>
+<a href="#993" id="993">993</a>
+<a href="#994" id="994">994</a>
+<a href="#995" id="995">995</a>
+<a href="#996" id="996">996</a>
+<a href="#997" id="997">997</a>
+<a href="#998" id="998">998</a>
+<a href="#999" id="999">999</a>
+<a href="#1000" id="1000">1000</a>
+<a href="#1001" id="1001">1001</a>
+<a href="#1002" id="1002">1002</a>
+<a href="#1003" id="1003">1003</a>
+<a href="#1004" id="1004">1004</a>
+<a href="#1005" id="1005">1005</a>
+<a href="#1006" id="1006">1006</a>
+<a href="#1007" id="1007">1007</a>
+<a href="#1008" id="1008">1008</a>
+<a href="#1009" id="1009">1009</a>
+<a href="#1010" id="1010">1010</a>
+<a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
+<a href="#1013" id="1013">1013</a>
+<a href="#1014" id="1014">1014</a>
+<a href="#1015" id="1015">1015</a>
+<a href="#1016" id="1016">1016</a>
+<a href="#1017" id="1017">1017</a>
+<a href="#1018" id="1018">1018</a>
+<a href="#1019" id="1019">1019</a>
+<a href="#1020" id="1020">1020</a>
+<a href="#1021" id="1021">1021</a>
+<a href="#1022" id="1022">1022</a>
+<a href="#1023" id="1023">1023</a>
+<a href="#1024" id="1024">1024</a>
+<a href="#1025" id="1025">1025</a>
+<a href="#1026" id="1026">1026</a>
+<a href="#1027" id="1027">1027</a>
+<a href="#1028" id="1028">1028</a>
+<a href="#1029" id="1029">1029</a>
+<a href="#1030" id="1030">1030</a>
+<a href="#1031" id="1031">1031</a>
+<a href="#1032" id="1032">1032</a>
+<a href="#1033" id="1033">1033</a>
+<a href="#1034" id="1034">1034</a>
+<a href="#1035" id="1035">1035</a>
+<a href="#1036" id="1036">1036</a>
+<a href="#1037" id="1037">1037</a>
+<a href="#1038" id="1038">1038</a>
+<a href="#1039" id="1039">1039</a>
+<a href="#1040" id="1040">1040</a>
+<a href="#1041" id="1041">1041</a>
+<a href="#1042" id="1042">1042</a>
+<a href="#1043" id="1043">1043</a>
+<a href="#1044" id="1044">1044</a>
+<a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
+<a href="#1047" id="1047">1047</a>
+<a href="#1048" id="1048">1048</a>
+<a href="#1049" id="1049">1049</a>
+<a href="#1050" id="1050">1050</a>
+<a href="#1051" id="1051">1051</a>
+<a href="#1052" id="1052">1052</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! This module has entry points, [`parquet_to_arrow_schema`] and the more configurable [`parquet_to_arrow_schema_with_options`].
 </span><span class="kw">use </span>parquet2::schema::{
     types::{
         FieldInfo, GroupConvertedType, GroupLogicalType, IntegerType, ParquetType, PhysicalType,
@@ -984,11 +1060,23 @@
 };
 
 <span class="kw">use </span><span class="kw">crate</span>::datatypes::{DataType, Field, IntervalUnit, TimeUnit};
+<span class="kw">use </span><span class="kw">crate</span>::io::parquet::read::schema::SchemaInferenceOptions;
 
 <span class="doccomment">/// Converts [`ParquetType`]s to a [`Field`], ignoring parquet fields that do not contain
 /// any physical column.
 </span><span class="kw">pub fn </span>parquet_to_arrow_schema(fields: <span class="kw-2">&amp;</span>[ParquetType]) -&gt; Vec&lt;Field&gt; {
-    fields.iter().filter_map(to_field).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+    parquet_to_arrow_schema_with_options(fields, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>)
+}
+
+<span class="doccomment">/// Like [`parquet_to_arrow_schema`] but with configurable options which affect the behavior of schema inference
+</span><span class="kw">pub fn </span>parquet_to_arrow_schema_with_options(
+    fields: <span class="kw-2">&amp;</span>[ParquetType],
+    options: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;SchemaInferenceOptions&gt;,
+) -&gt; Vec&lt;Field&gt; {
+    fields
+        .iter()
+        .filter_map(|f| to_field(f, options.as_ref().unwrap_or(<span class="kw-2">&amp;</span>Default::default())))
+        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 }
 
 <span class="kw">fn </span>from_int32(
@@ -1145,7 +1233,10 @@
 }
 
 <span class="doccomment">/// Maps a [`PhysicalType`] with optional metadata to a [`DataType`]
-</span><span class="kw">fn </span>to_primitive_type_inner(primitive_type: <span class="kw-2">&amp;</span>PrimitiveType) -&gt; DataType {
+</span><span class="kw">fn </span>to_primitive_type_inner(
+    primitive_type: <span class="kw-2">&amp;</span>PrimitiveType,
+    options: <span class="kw-2">&amp;</span>SchemaInferenceOptions,
+) -&gt; DataType {
     <span class="kw">match </span>primitive_type.physical_type {
         PhysicalType::Boolean =&gt; DataType::Boolean,
         PhysicalType::Int32 =&gt; {
@@ -1154,7 +1245,7 @@
         PhysicalType::Int64 =&gt; {
             from_int64(primitive_type.logical_type, primitive_type.converted_type)
         }
-        PhysicalType::Int96 =&gt; DataType::Timestamp(TimeUnit::Nanosecond, <span class="prelude-val">None</span>),
+        PhysicalType::Int96 =&gt; DataType::Timestamp(options.int96_coerce_to_timeunit, <span class="prelude-val">None</span>),
         PhysicalType::Float =&gt; DataType::Float32,
         PhysicalType::Double =&gt; DataType::Float64,
         PhysicalType::ByteArray =&gt; {
@@ -1171,8 +1262,8 @@
 <span class="doccomment">/// Entry point for converting parquet primitive type to arrow type.
 ///
 /// This function takes care of repetition.
-</span><span class="kw">fn </span>to_primitive_type(primitive_type: <span class="kw-2">&amp;</span>PrimitiveType) -&gt; DataType {
-    <span class="kw">let </span>base_type = to_primitive_type_inner(primitive_type);
+</span><span class="kw">fn </span>to_primitive_type(primitive_type: <span class="kw-2">&amp;</span>PrimitiveType, options: <span class="kw-2">&amp;</span>SchemaInferenceOptions) -&gt; DataType {
+    <span class="kw">let </span>base_type = to_primitive_type_inner(primitive_type, options);
 
     <span class="kw">if </span>primitive_type.field_info.repetition == Repetition::Repeated {
         DataType::List(Box::new(Field::new(
@@ -1190,23 +1281,27 @@
     converted_type: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GroupConvertedType&gt;,
     fields: <span class="kw-2">&amp;</span>[ParquetType],
     parent_name: <span class="kw-2">&amp;</span>str,
+    options: <span class="kw-2">&amp;</span>SchemaInferenceOptions,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;DataType&gt; {
     <span class="macro">debug_assert!</span>(!fields.is_empty());
     <span class="kw">match </span>(logical_type, converted_type) {
-        (<span class="prelude-val">Some</span>(GroupLogicalType::List), <span class="kw">_</span>) =&gt; to_list(fields, parent_name),
-        (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(GroupConvertedType::List)) =&gt; to_list(fields, parent_name),
-        (<span class="prelude-val">Some</span>(GroupLogicalType::Map), <span class="kw">_</span>) =&gt; to_list(fields, parent_name),
+        (<span class="prelude-val">Some</span>(GroupLogicalType::List), <span class="kw">_</span>) =&gt; to_list(fields, parent_name, options),
+        (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(GroupConvertedType::List)) =&gt; to_list(fields, parent_name, options),
+        (<span class="prelude-val">Some</span>(GroupLogicalType::Map), <span class="kw">_</span>) =&gt; to_list(fields, parent_name, options),
         (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(GroupConvertedType::Map) | <span class="prelude-val">Some</span>(GroupConvertedType::MapKeyValue)) =&gt; {
-            to_map(fields)
+            to_map(fields, options)
         }
-        <span class="kw">_ </span>=&gt; to_struct(fields),
+        <span class="kw">_ </span>=&gt; to_struct(fields, options),
     }
 }
 
 <span class="doccomment">/// Converts a parquet group type to an arrow [`DataType::Struct`].
 /// Returns [`None`] if all its fields are empty
-</span><span class="kw">fn </span>to_struct(fields: <span class="kw-2">&amp;</span>[ParquetType]) -&gt; <span class="prelude-ty">Option</span>&lt;DataType&gt; {
-    <span class="kw">let </span>fields = fields.iter().filter_map(to_field).collect::&lt;Vec&lt;Field&gt;&gt;();
+</span><span class="kw">fn </span>to_struct(fields: <span class="kw-2">&amp;</span>[ParquetType], options: <span class="kw-2">&amp;</span>SchemaInferenceOptions) -&gt; <span class="prelude-ty">Option</span>&lt;DataType&gt; {
+    <span class="kw">let </span>fields = fields
+        .iter()
+        .filter_map(|f| to_field(f, options))
+        .collect::&lt;Vec&lt;Field&gt;&gt;();
     <span class="kw">if </span>fields.is_empty() {
         <span class="prelude-val">None
     </span>} <span class="kw">else </span>{
@@ -1216,8 +1311,8 @@
 
 <span class="doccomment">/// Converts a parquet group type to an arrow [`DataType::Struct`].
 /// Returns [`None`] if all its fields are empty
-</span><span class="kw">fn </span>to_map(fields: <span class="kw-2">&amp;</span>[ParquetType]) -&gt; <span class="prelude-ty">Option</span>&lt;DataType&gt; {
-    <span class="kw">let </span>inner = to_field(<span class="kw-2">&amp;</span>fields[<span class="number">0</span>])<span class="question-mark">?</span>;
+</span><span class="kw">fn </span>to_map(fields: <span class="kw-2">&amp;</span>[ParquetType], options: <span class="kw-2">&amp;</span>SchemaInferenceOptions) -&gt; <span class="prelude-ty">Option</span>&lt;DataType&gt; {
+    <span class="kw">let </span>inner = to_field(<span class="kw-2">&amp;</span>fields[<span class="number">0</span>], options)<span class="question-mark">?</span>;
     <span class="prelude-val">Some</span>(DataType::Map(Box::new(inner), <span class="bool-val">false</span>))
 }
 
@@ -1230,16 +1325,17 @@
     converted_type: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;GroupConvertedType&gt;,
     fields: <span class="kw-2">&amp;</span>[ParquetType],
     parent_name: <span class="kw-2">&amp;</span>str,
+    options: <span class="kw-2">&amp;</span>SchemaInferenceOptions,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;DataType&gt; {
     <span class="macro">debug_assert!</span>(!fields.is_empty());
     <span class="kw">if </span>field_info.repetition == Repetition::Repeated {
         <span class="prelude-val">Some</span>(DataType::List(Box::new(Field::new(
             <span class="kw-2">&amp;</span>field_info.name,
-            to_struct(fields)<span class="question-mark">?</span>,
+            to_struct(fields, options)<span class="question-mark">?</span>,
             is_nullable(field_info),
         ))))
     } <span class="kw">else </span>{
-        non_repeated_group(logical_type, converted_type, fields, parent_name)
+        non_repeated_group(logical_type, converted_type, fields, parent_name, options)
     }
 }
 
@@ -1255,10 +1351,10 @@
 <span class="doccomment">/// Converts parquet schema to arrow field.
 /// Returns `None` iff the parquet type has no associated primitive types,
 /// i.e. if it is a column-less group type.
-</span><span class="kw">fn </span>to_field(type_: <span class="kw-2">&amp;</span>ParquetType) -&gt; <span class="prelude-ty">Option</span>&lt;Field&gt; {
+</span><span class="kw">fn </span>to_field(type_: <span class="kw-2">&amp;</span>ParquetType, options: <span class="kw-2">&amp;</span>SchemaInferenceOptions) -&gt; <span class="prelude-ty">Option</span>&lt;Field&gt; {
     <span class="prelude-val">Some</span>(Field::new(
         <span class="kw-2">&amp;</span>type_.get_field_info().name,
-        to_data_type(type_)<span class="question-mark">?</span>,
+        to_data_type(type_, options)<span class="question-mark">?</span>,
         is_nullable(type_.get_field_info()),
     ))
 }
@@ -1267,11 +1363,15 @@
 ///
 /// To fully understand this algorithm, please refer to
 /// [parquet doc](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md).
-</span><span class="kw">fn </span>to_list(fields: <span class="kw-2">&amp;</span>[ParquetType], parent_name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;DataType&gt; {
+</span><span class="kw">fn </span>to_list(
+    fields: <span class="kw-2">&amp;</span>[ParquetType],
+    parent_name: <span class="kw-2">&amp;</span>str,
+    options: <span class="kw-2">&amp;</span>SchemaInferenceOptions,
+) -&gt; <span class="prelude-ty">Option</span>&lt;DataType&gt; {
     <span class="kw">let </span>item = fields.first().unwrap();
 
     <span class="kw">let </span>item_type = <span class="kw">match </span>item {
-        ParquetType::PrimitiveType(primitive) =&gt; <span class="prelude-val">Some</span>(to_primitive_type_inner(primitive)),
+        ParquetType::PrimitiveType(primitive) =&gt; <span class="prelude-val">Some</span>(to_primitive_type_inner(primitive, options)),
         ParquetType::GroupType { fields, .. } =&gt; {
             <span class="kw">if </span>fields.len() == <span class="number">1
                 </span>&amp;&amp; item.name() != <span class="string">&quot;array&quot;
@@ -1279,9 +1379,9 @@
             {
                 <span class="comment">// extract the repetition field
                 </span><span class="kw">let </span>nested_item = fields.first().unwrap();
-                to_data_type(nested_item)
+                to_data_type(nested_item, options)
             } <span class="kw">else </span>{
-                to_struct(fields)
+                to_struct(fields, options)
             }
         }
     }<span class="question-mark">?</span>;
@@ -1322,9 +1422,12 @@
 ///
 /// If this schema is a group type and none of its children is reserved in the
 /// conversion, the result is Ok(None).
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>to_data_type(type_: <span class="kw-2">&amp;</span>ParquetType) -&gt; <span class="prelude-ty">Option</span>&lt;DataType&gt; {
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>to_data_type(
+    type_: <span class="kw-2">&amp;</span>ParquetType,
+    options: <span class="kw-2">&amp;</span>SchemaInferenceOptions,
+) -&gt; <span class="prelude-ty">Option</span>&lt;DataType&gt; {
     <span class="kw">match </span>type_ {
-        ParquetType::PrimitiveType(primitive) =&gt; <span class="prelude-val">Some</span>(to_primitive_type(primitive)),
+        ParquetType::PrimitiveType(primitive) =&gt; <span class="prelude-val">Some</span>(to_primitive_type(primitive, options)),
         ParquetType::GroupType {
             field_info,
             logical_type,
@@ -1340,6 +1443,7 @@
                     converted_type,
                     fields,
                     <span class="kw-2">&amp;</span>field_info.name,
+                    options,
                 )
             }
         }
@@ -1947,6 +2051,54 @@
         <span class="kw">let </span>fields = parquet_to_arrow_schema(parquet_schema.fields());
 
         <span class="macro">assert_eq!</span>(arrow_fields, fields);
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_int96_options() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="kw">for </span>tu <span class="kw">in </span>[
+            TimeUnit::Second,
+            TimeUnit::Microsecond,
+            TimeUnit::Millisecond,
+            TimeUnit::Nanosecond,
+        ] {
+            <span class="kw">let </span>message_type = <span class="string">&quot;
+            message arrow_schema {
+                REQUIRED INT96   int96_field;
+                OPTIONAL GROUP   int96_list (LIST) {
+                    REPEATED GROUP list {
+                        OPTIONAL INT96 element;
+                    }
+                }
+                REQUIRED GROUP int96_struct {
+                    REQUIRED INT96 int96_field;
+                }
+            }
+            &quot;</span>;
+            <span class="kw">let </span>coerced_to = DataType::Timestamp(tu, <span class="prelude-val">None</span>);
+            <span class="kw">let </span>arrow_fields = <span class="macro">vec!</span>[
+                Field::new(<span class="string">&quot;int96_field&quot;</span>, coerced_to.clone(), <span class="bool-val">false</span>),
+                Field::new(
+                    <span class="string">&quot;int96_list&quot;</span>,
+                    DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, coerced_to.clone(), <span class="bool-val">true</span>))),
+                    <span class="bool-val">true</span>,
+                ),
+                Field::new(
+                    <span class="string">&quot;int96_struct&quot;</span>,
+                    DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">&quot;int96_field&quot;</span>, coerced_to.clone(), <span class="bool-val">false</span>)]),
+                    <span class="bool-val">false</span>,
+                ),
+            ];
+
+            <span class="kw">let </span>parquet_schema = SchemaDescriptor::try_from_message(message_type)<span class="question-mark">?</span>;
+            <span class="kw">let </span>fields = parquet_to_arrow_schema_with_options(
+                parquet_schema.fields(),
+                <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(SchemaInferenceOptions {
+                    int96_coerce_to_timeunit: tu,
+                }),
+            );
+            <span class="macro">assert_eq!</span>(arrow_fields, fields);
+        }
         <span class="prelude-val">Ok</span>(())
     }
 }
