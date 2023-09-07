@@ -291,7 +291,7 @@ fn to_group_type(
 pub(crate) fn is_nullable(field_info: &FieldInfo) -> bool {
     match field_info.repetition {
         Repetition::Optional => true,
-        Repetition::Repeated => true,
+        Repetition::Repeated => false,
         Repetition::Required => false,
     }
 }
@@ -345,12 +345,12 @@ fn to_list(
             let field = fields.first().unwrap();
             (
                 &field.get_field_info().name,
-                field.get_field_info().repetition != Repetition::Required,
+                field.get_field_info().repetition == Repetition::Optional,
             )
         }
         _ => (
             &item.get_field_info().name,
-            item.get_field_info().repetition != Repetition::Required,
+            item.get_field_info().repetition == Repetition::Optional,
         ),
     };
 
@@ -599,7 +599,7 @@ mod tests {
         {
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("element", DataType::Utf8, true))),
+                DataType::List(Box::new(Field::new("element", DataType::Utf8, false))),
                 true,
             ));
         }
@@ -611,7 +611,7 @@ mod tests {
         {
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("element", DataType::Int32, true))),
+                DataType::List(Box::new(Field::new("element", DataType::Int32, false))),
                 true,
             ));
         }
@@ -630,7 +630,7 @@ mod tests {
             ]);
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("element", arrow_struct, true))),
+                DataType::List(Box::new(Field::new("element", arrow_struct, false))),
                 true,
             ));
         }
@@ -646,7 +646,7 @@ mod tests {
             let arrow_struct = DataType::Struct(vec![Field::new("str", DataType::Utf8, false)]);
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("array", arrow_struct, true))),
+                DataType::List(Box::new(Field::new("array", arrow_struct, false))),
                 true,
             ));
         }
@@ -662,7 +662,7 @@ mod tests {
             let arrow_struct = DataType::Struct(vec![Field::new("str", DataType::Utf8, false)]);
             arrow_fields.push(Field::new(
                 "my_list",
-                DataType::List(Box::new(Field::new("my_list_tuple", arrow_struct, true))),
+                DataType::List(Box::new(Field::new("my_list_tuple", arrow_struct, false))),
                 true,
             ));
         }
@@ -672,8 +672,50 @@ mod tests {
         {
             arrow_fields.push(Field::new(
                 "name",
-                DataType::List(Box::new(Field::new("name", DataType::Int32, true))),
-                true,
+                DataType::List(Box::new(Field::new("name", DataType::Int32, false))),
+                false,
+            ));
+        }
+
+        let parquet_schema = SchemaDescriptor::try_from_message(message_type)?;
+        let fields = parquet_to_arrow_schema(parquet_schema.fields());
+
+        assert_eq!(arrow_fields, fields);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parquet_list_with_struct() -> Result<()> {
+        let mut arrow_fields = Vec::new();
+
+        let message_type = "
+            message eventlog {
+              REQUIRED group events (LIST) {
+                REPEATED group array {
+                  REQUIRED BYTE_ARRAY event_name (STRING);
+                  REQUIRED INT64 event_time (TIMESTAMP(MILLIS,true));
+                }
+              }
+            }
+        ";
+
+        {
+            let struct_fields = vec![
+                Field::new("event_name", DataType::Utf8, false),
+                Field::new(
+                    "event_time",
+                    DataType::Timestamp(TimeUnit::Millisecond, Some("+00:00".into())),
+                    false,
+                ),
+            ];
+            arrow_fields.push(Field::new(
+                "events",
+                DataType::List(Box::new(Field::new(
+                    "array",
+                    DataType::Struct(struct_fields),
+                    false,
+                ))),
+                false,
             ));
         }
 
@@ -800,9 +842,9 @@ mod tests {
                 DataType::List(Box::new(Field::new(
                     "innerGroup",
                     DataType::Struct(vec![Field::new("leaf3", DataType::Int32, true)]),
-                    true,
+                    false,
                 ))),
-                true,
+                false,
             );
 
             let outer_group_list = Field::new(
@@ -813,9 +855,9 @@ mod tests {
                         Field::new("leaf2", DataType::Int32, true),
                         inner_group_list,
                     ]),
-                    true,
+                    false,
                 ))),
-                true,
+                false,
             );
             arrow_fields.push(outer_group_list);
         }
@@ -876,8 +918,8 @@ mod tests {
             Field::new("string", DataType::Utf8, true),
             Field::new(
                 "bools",
-                DataType::List(Box::new(Field::new("bools", DataType::Boolean, true))),
-                true,
+                DataType::List(Box::new(Field::new("bools", DataType::Boolean, false))),
+                false,
             ),
             Field::new("date", DataType::Date32, true),
             Field::new("time_milli", DataType::Time32(TimeUnit::Millisecond), true),
