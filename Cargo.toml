@@ -100,6 +100,9 @@ odbc-api = { version = "0.36", optional = true }
 # Faster hashing
 ahash = "0.8"
 
+# workaround for pre-polonius borrow checker
+polonius-the-crab = "0.3"
+
 # Support conversion to/from arrow-rs
 arrow-buffer = { version = ">=40", optional = true }
 arrow-schema = { version = ">=40", optional = true }
