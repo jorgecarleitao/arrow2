@@ -7,15 +7,21 @@ use chrono::NaiveDateTime;
 
 #[test]
 fn naive() {
-    let expected = "Timestamp(Nanosecond, None)[1996-12-19 16:39:57, 1996-12-19 13:39:57, None]";
+    let expected_ns = "Timestamp(Nanosecond, None)[1996-12-19 16:39:57, 1996-12-19 13:39:57, None]";
+    let expected_ms = "Timestamp(Millisecond, None)[1996-12-19 16:39:57, 1996-12-19 13:39:57, None]";
+    let expected_us = "Timestamp(Microsecond, None)[1996-12-19 16:39:57, 1996-12-19 13:39:57, None]";
     let fmt = "%Y-%m-%dT%H:%M:%S:z";
     let array = Utf8Array::<i32>::from_slice([
         "1996-12-19T16:39:57-02:00",
         "1996-12-19T13:39:57-03:00",
         "1996-12-19 13:39:57-03:00", // missing T
     ]);
-    let r = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
-    assert_eq!(format!("{r:?}"), expected);
+    let r_ns = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
+    let r_ms = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Millisecond);
+    let r_us = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Microsecond);
+    assert_eq!(format!("{r_ns:?}"), expected_ns);
+    assert_eq!(format!("{r_ms:?}"), expected_ms);
+    assert_eq!(format!("{r_us:?}"), expected_us);
 
     let fmt = "%Y-%m-%dT%H:%M:%S"; // no tz info
     let array = Utf8Array::<i32>::from_slice([
@@ -23,8 +29,12 @@ fn naive() {
         "1996-12-19T13:39:57-03:00",
         "1996-12-19 13:39:57-03:00", // missing T
     ]);
-    let r = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
-    assert_eq!(format!("{r:?}"), expected);
+    let r_ns = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
+    let r_ms = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Millisecond);
+    let r_us = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Microsecond);
+    assert_eq!(format!("{r_ns:?}"), expected_ns);
+    assert_eq!(format!("{r_ms:?}"), expected_ms);
+    assert_eq!(format!("{r_us:?}"), expected_us);
 }
 
 #[test]
@@ -113,15 +123,21 @@ fn scalar_tz_aware_no_timezone() {
 
 #[test]
 fn naive_no_tz() {
-    let expected = "Timestamp(Nanosecond, None)[1996-12-19 16:39:57, 1996-12-19 13:39:57, None]";
+    let expected_ns = "Timestamp(Nanosecond, None)[1996-12-19 16:39:57, 1996-12-19 13:39:57, None]";
+    let expected_ms = "Timestamp(Millisecond, None)[1996-12-19 16:39:57, 1996-12-19 13:39:57, None]";
+    let expected_us = "Timestamp(Microsecond, None)[1996-12-19 16:39:57, 1996-12-19 13:39:57, None]";
     let fmt = "%Y-%m-%dT%H:%M:%S"; // no tz info
     let array = Utf8Array::<i32>::from_slice([
         "1996-12-19T16:39:57",
         "1996-12-19T13:39:57",
         "1996-12-19 13:39:57", // missing T
     ]);
-    let r = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
-    assert_eq!(format!("{r:?}"), expected);
+    let r_ns = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
+    let r_ms = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Millisecond);
+    let r_us = temporal_conversions::utf8_to_naive_timestamp(&array, fmt, TimeUnit::Microsecond);
+    assert_eq!(format!("{r_ns:?}"), expected_ns);
+    assert_eq!(format!("{r_ms:?}"), expected_ms);
+    assert_eq!(format!("{r_us:?}"), expected_us);
 }
 
 #[test]
@@ -194,31 +210,46 @@ fn timestamp_to_negative_datetime() {
 #[test]
 fn tz_aware() {
     let tz = "-02:00".to_string();
-    let expected =
+    let expected_ns =
         "Timestamp(Nanosecond, Some(\"-02:00\"))[1996-12-19 16:39:57 -02:00, 1996-12-19 17:39:57 -02:00, None]";
+    let expected_ms =
+        "Timestamp(Millisecond, Some(\"-02:00\"))[1996-12-19 16:39:57 -02:00, 1996-12-19 17:39:57 -02:00, None]";
+    let expected_us =
+        "Timestamp(Microsecond, Some(\"-02:00\"))[1996-12-19 16:39:57 -02:00, 1996-12-19 17:39:57 -02:00, None]";
+
     let fmt = "%Y-%m-%dT%H:%M:%S%.f%:z";
     let array = Utf8Array::<i32>::from_slice([
-        "1996-12-19T16:39:57.0-02:00",
-        "1996-12-19T16:39:57.0-03:00", // same time at a different TZ
-        "1996-12-19 13:39:57.0-03:00",
+        "1996-12-19T16:39:57.000-02:00",
+        "1996-12-19T16:39:57.000-03:00", // same time at a different TZ
+        "1996-12-19 13:39:57.000-03:00",
     ]);
-    let r = temporal_conversions::utf8_to_timestamp(&array, fmt, tz, TimeUnit::Nanosecond).unwrap();
+    let r_ns = temporal_conversions::utf8_to_timestamp(&array, fmt, tz.clone(), TimeUnit::Nanosecond).unwrap();
+    let r_ms = temporal_conversions::utf8_to_timestamp(&array, fmt, tz.clone(), TimeUnit::Millisecond).unwrap();
+    let r_us = temporal_conversions::utf8_to_timestamp(&array, fmt, tz.clone(), TimeUnit::Microsecond).unwrap();
 
-    assert_eq!(format!("{r:?}"), expected);
+    assert_eq!(format!("{r_ns:?}"), expected_ns);
+    assert_eq!(format!("{r_ms:?}"), expected_ms);
+    assert_eq!(format!("{r_us:?}"), expected_us);
 }
 
 #[test]
 fn tz_aware_no_timezone() {
     let tz = "-02:00".to_string();
-    let expected = "Timestamp(Nanosecond, Some(\"-02:00\"))[None, None, None]";
+    let expected_ns = "Timestamp(Nanosecond, Some(\"-02:00\"))[None, None, None]";
+    let expected_ms = "Timestamp(Millisecond, Some(\"-02:00\"))[None, None, None]";
+    let expected_us = "Timestamp(Microsecond, Some(\"-02:00\"))[None, None, None]";
     let fmt = "%Y-%m-%dT%H:%M:%S%.f";
     let array = Utf8Array::<i32>::from_slice([
         "1996-12-19T16:39:57.0",
         "1996-12-19T17:39:57.0",
         "1996-12-19 13:39:57.0",
     ]);
-    let r = temporal_conversions::utf8_to_timestamp(&array, fmt, tz, TimeUnit::Nanosecond).unwrap();
-    assert_eq!(format!("{r:?}"), expected);
+    let r_ns = temporal_conversions::utf8_to_timestamp(&array, fmt, tz.clone(), TimeUnit::Nanosecond).unwrap();
+    let r_ms = temporal_conversions::utf8_to_timestamp(&array, fmt, tz.clone(), TimeUnit::Millisecond).unwrap();
+    let r_us = temporal_conversions::utf8_to_timestamp(&array, fmt, tz.clone(), TimeUnit::Microsecond).unwrap();
+    assert_eq!(format!("{r_ns:?}"), expected_ns);
+    assert_eq!(format!("{r_ms:?}"), expected_ms);
+    assert_eq!(format!("{r_us:?}"), expected_us);
 }
 
 #[test]

@@ -793,7 +793,7 @@ fn timestamp_with_tz_to_utf8() {
 }
 
 #[test]
-fn utf8_to_timestamp_with_tz() {
+fn utf8_to_timestamp_ns_with_tz() {
     let tz = "-02:00".to_string();
     let array =
         Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
@@ -847,8 +847,21 @@ fn utf8_to_timestamp_ms_with_tz() {
     let array =
         Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
     // the timezone is used to map the time to UTC.
-    let expected = Int64Array::from_slice([851013597000, 851017197000])
+    let expected = Int64Array::from_slice([851020797000, 851024397000])
         .to(DataType::Timestamp(TimeUnit::Millisecond, Some(tz)));
+
+    let result = cast(&array, expected.data_type(), CastOptions::default()).expect("cast failed");
+    assert_eq!(expected, result.as_ref());
+}
+
+#[test]
+fn utf8_to_timestamp_us_with_tz() {
+    let tz = "-02:00".to_string();
+    let array =
+        Utf8Array::<i32>::from_slice(["1996-12-19T16:39:57-02:00", "1996-12-19T17:39:57-02:00"]);
+    // the timezone is used to map the time to UTC.
+    let expected = Int64Array::from_slice([851020797000000, 851024397000000])
+        .to(DataType::Timestamp(TimeUnit::Microsecond, Some(tz)));
 
     let result = cast(&array, expected.data_type(), CastOptions::default()).expect("cast failed");
     assert_eq!(expected, result.as_ref());
