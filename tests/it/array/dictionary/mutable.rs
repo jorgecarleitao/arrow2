@@ -150,3 +150,20 @@ fn test_push_utf8_ex() {
 fn test_push_i64_ex() {
     test_push_ex::<MutablePrimitiveArray<i64>, _>(vec![10, 20, 30, 20], |i| 1000 + i as i64);
 }
+
+#[test]
+fn test_big_dict() {
+    let n = 10;
+    let strings = (0..10).map(|i| i.to_string()).collect::<Vec<_>>();
+    let mut arr = MutableDictionaryArray::<u8, MutableUtf8Array<i32>>::new();
+    for s in &strings {
+        arr.try_push(Some(s)).unwrap();
+    }
+    assert_eq!(arr.values().len(), n);
+    for _ in 0..10_000 {
+        for s in &strings {
+            arr.try_push(Some(s)).unwrap();
+        }
+    }
+    assert_eq!(arr.values().len(), n);
+}
