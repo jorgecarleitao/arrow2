@@ -779,20 +779,21 @@ pub fn downcast_ref<M: 'static>(array: &(impl downcast::ArrayAny + ?Sized)) -> R
 
 /// Downcast a mutable array reference to a concrete type.
 #[inline]
-pub fn downcast_mut<M: 'static>(
-    mut array: &mut (impl downcast::ArrayAny + ?Sized),
-) -> Result<&mut M> {
-    use polonius_the_crab::{polonius, polonius_return};
-    polonius!(|array| -> Result<&'polonius mut M> {
-        if let Some(array) = array.as_mut_any().downcast_mut::<M>() {
-            polonius_return!(Ok(array));
-        }
-    });
-    Err(Error::oos(format!(
-        "Unable to downcast array of data type {:?} into {}",
-        array.data_type(),
-        type_name::<M>()
-    )))
+pub fn downcast_mut<M: 'static>(array: &mut (impl downcast::ArrayAny + ?Sized)) -> Result<&mut M> {
+    let arr_ptr = array.as_mut_any() as *mut dyn Any;
+    // Safety: this is sound and is only to avoid non-polonius borrow checker which erroneously
+    // thinks that array will be mutable borrowed even past the return point; we know that the
+    // pointer comes from a mutable reference and we are returning a reference bound to the same
+    // lifetime.
+    if let Some(array) = unsafe { (*arr_ptr).downcast_mut::<M>() } {
+        Ok(array)
+    } else {
+        Err(Error::oos(format!(
+            "Unable to downcast array of data type {:?} into {}",
+            array.data_type(),
+            type_name::<M>()
+        )))
+    }
 }
 
 mod binary;
