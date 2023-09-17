@@ -136,7 +136,7 @@ fn deserialize_datetime<T: chrono::TimeZone>(string: &str, tz: &T) -> Option<i64
             .to_datetime()
             .map(|x| x.naive_utc())
             .map(|x| tz.from_utc_datetime(&x))
-            .map(|x| x.timestamp_nanos())
+            .map(|x| x.timestamp_nanos_opt().unwrap())
             .ok()
     } else {
         None
@@ -228,7 +228,7 @@ pub(crate) fn deserialize_column<B: ByteRecordGeneric>(
         Timestamp(time_unit, None) => deserialize_primitive(rows, column, datatype, |bytes| {
             to_utf8(bytes)
                 .and_then(|x| x.parse::<chrono::NaiveDateTime>().ok())
-                .map(|x| x.timestamp_nanos())
+                .map(|x| x.timestamp_nanos_opt().unwrap())
                 .map(|x| match time_unit {
                     TimeUnit::Second => x / 1_000_000_000,
                     TimeUnit::Millisecond => x / 1_000_000,
