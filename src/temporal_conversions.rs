@@ -363,7 +363,7 @@ pub fn utf8_to_timestamp_scalar<T: chrono::TimeZone>(
                 TimeUnit::Second => x.timestamp(),
                 TimeUnit::Millisecond => x.timestamp_millis(),
                 TimeUnit::Microsecond => x.timestamp_micros(),
-                TimeUnit::Nanosecond => x.timestamp_nanos(),
+                TimeUnit::Nanosecond => x.timestamp_nanos_opt().unwrap(),
             })
             .ok()
     } else {
@@ -390,7 +390,7 @@ pub fn utf8_to_naive_timestamp_scalar(value: &str, fmt: &str, tu: &TimeUnit) -> 
             TimeUnit::Second => x.timestamp(),
             TimeUnit::Millisecond => x.timestamp_millis(),
             TimeUnit::Microsecond => x.timestamp_micros(),
-            TimeUnit::Nanosecond => x.timestamp_nanos(),
+            TimeUnit::Nanosecond => x.timestamp_nanos_opt().unwrap(),
         })
         .ok()
 }
@@ -515,8 +515,8 @@ pub fn add_naive_interval(timestamp: i64, time_unit: TimeUnit, interval: months_
     match time_unit {
         TimeUnit::Second => new_datetime_tz.timestamp_millis() / 1000,
         TimeUnit::Millisecond => new_datetime_tz.timestamp_millis(),
-        TimeUnit::Microsecond => new_datetime_tz.timestamp_nanos() / 1000,
-        TimeUnit::Nanosecond => new_datetime_tz.timestamp_nanos(),
+        TimeUnit::Microsecond => new_datetime_tz.timestamp_nanos_opt().unwrap() / 1000,
+        TimeUnit::Nanosecond => new_datetime_tz.timestamp_nanos_opt().unwrap(),
     }
 }
 
@@ -544,7 +544,7 @@ pub fn add_interval<T: chrono::TimeZone>(
     match time_unit {
         TimeUnit::Second => new_datetime_tz.timestamp_millis() / 1000,
         TimeUnit::Millisecond => new_datetime_tz.timestamp_millis(),
-        TimeUnit::Microsecond => new_datetime_tz.timestamp_nanos() / 1000,
-        TimeUnit::Nanosecond => new_datetime_tz.timestamp_nanos(),
+        TimeUnit::Microsecond => new_datetime_tz.timestamp_nanos_opt().unwrap() / 1000,
+        TimeUnit::Nanosecond => new_datetime_tz.timestamp_nanos_opt().unwrap(),
     }
 }

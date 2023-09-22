@@ -165,10 +165,18 @@ fn from_fixed_len_byte_array(
 ) -> DataType {
     match (logical_type, converted_type) {
         (Some(PrimitiveLogicalType::Decimal(precision, scale)), _) => {
-            DataType::Decimal(precision, scale)
+            if length < 32 {
+                DataType::Decimal(precision, scale)
+            } else {
+                DataType::Decimal256(precision, scale)
+            }
         }
         (None, Some(PrimitiveConvertedType::Decimal(precision, scale))) => {
-            DataType::Decimal(precision, scale)
+            if length < 32 {
+                DataType::Decimal(precision, scale)
+            } else {
+                DataType::Decimal256(precision, scale)
+            }
         }
         (None, Some(PrimitiveConvertedType::Interval)) => {
             // There is currently no reliable way of determining which IntervalUnit
@@ -451,11 +459,15 @@ mod tests {
         message test_schema {
             REQUIRED BYTE_ARRAY binary;
             REQUIRED FIXED_LEN_BYTE_ARRAY (20) fixed_binary;
+            REQUIRED FIXED_LEN_BYTE_ARRAY (7) decimal_128 (Decimal(16, 2)) ;
+            REQUIRED FIXED_LEN_BYTE_ARRAY (32) decimal_256 (Decimal(44, 2)) ;
         }
         ";
         let expected = vec![
             Field::new("binary", DataType::Binary, false),
             Field::new("fixed_binary", DataType::FixedSizeBinary(20), false),
+            Field::new("decimal_128", DataType::Decimal(16, 2), false),
+            Field::new("decimal_256", DataType::Decimal256(44, 2), false),
         ];
 
         let parquet_schema = SchemaDescriptor::try_from_message(message)?;
