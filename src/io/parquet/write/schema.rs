@@ -333,8 +333,8 @@ pub fn to_parquet_type(field: &Field) -> Result<ParquetType> {
                     name,
                     PhysicalType::FixedLenByteArray(32),
                     repetition,
-                    None,
-                    None,
+                    Some(PrimitiveConvertedType::Decimal(precision, scale)),
+                    logical_type,
                     None,
                 )?)
             }
