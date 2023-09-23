@@ -74,7 +74,7 @@ use crate::error::Result;
 /// This is used to keep track of contiguous blocks of slots.
 /// An array of MergeSlice, `[MergeSlice]`, represents inter-leaved array slices.
 /// For example, `[(0, 0, 2), (1, 0, 1), (0, 2, 3)]` represents 2 arrays (a0 and a1) arranged as follows:
-/// `[a0[0..2], a1[0..1], a0[2..3]]`
+/// `[a0[0..2], a1[0..1], a0[2..5]]`
 /// This representation is useful when building arrays in memory as it allows to memcopy slices of arrays.
 /// This is particularly useful in merge-sort because sorted arrays (passed to the merge-sort) are more likely
 /// to have contiguous blocks of sorted elements (than by random).
