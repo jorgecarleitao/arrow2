@@ -179,6 +179,16 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
     ]
 
     decimal_nullable = [[Decimal(n) if n is not None else None for n in sublist] if sublist is not None else None for sublist in items_nullable]
+    decimal_nested = [
+        [[Decimal(0), Decimal(1)]],
+        None,
+        [[Decimal(2), None], [Decimal(3)]],
+        [[Decimal(4), Decimal(5)], [Decimal(6)]],
+        [],
+        [[Decimal(7)], None, [Decimal(9)]],
+        [[], [None], None],
+        [[Decimal(10)]],
+    ]
 
     list_struct_nullable = [
         [{"a": "a"}, {"a": "b"}],
@@ -227,6 +237,7 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
         pa.field("list_decimal", pa.list_(pa.decimal128(9, 0))),
         pa.field("list_decimal256", pa.list_(pa.decimal256(9, 0))),
         pa.field("list_nested_i64", pa.list_(pa.list_(pa.int64()))),
+        pa.field("list_nested_decimal", pa.list_(pa.list_(pa.decimal128(9, 0)))),
         pa.field("list_nested_inner_required_i64", pa.list_(pa.list_(pa.int64()))),
         pa.field(
             "list_nested_inner_required_required_i64", pa.list_(pa.list_(pa.int64()))
@@ -258,6 +269,7 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
             "list_decimal": decimal_nullable,
             "list_decimal256": decimal_nullable,
             "list_nested_i64": items_nested,
+            "list_nested_decimal": decimal_nested,
             "list_nested_inner_required_i64": items_required_nested,
             "list_nested_inner_required_required_i64": items_required_nested_2,
             "list_struct_nullable": list_struct_nullable,
