@@ -340,6 +340,11 @@ fn v2_nested_nested() -> Result<()> {
 }
 
 #[test]
+fn v2_nested_nested_decimal() -> Result<()> {
+    test_pyarrow_integration("list_nested_decimal", 2, "nested", false, false, None)
+}
+
+#[test]
 fn v2_nested_nested_required() -> Result<()> {
     test_pyarrow_integration(
         "list_nested_inner_required_i64",

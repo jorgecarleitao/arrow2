@@ -256,6 +256,7 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             Box::new(array)
         }
         "list_nested_i64"
+        | "list_nested_decimal"
         | "list_nested_inner_required_i64"
         | "list_nested_inner_required_required_i64" => Box::new(NullArray::new(DataType::Null, 1)),
         "struct_list_nullable" => pyarrow_nested_nullable("list_utf8"),
@@ -387,6 +388,48 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 MutableListArray::<i32, MutableListArray<i32, MutablePrimitiveArray<i64>>>::new();
             a.try_extend(data).unwrap();
             let array: ListArray<i32> = a.into();
+            Box::new(array)
+        }
+        "list_nested_decimal" => {
+            // [
+            //     [[Decimal(0), Decimal(1)]],
+            //     None,
+            //     [[Decimal(2), None], [Decimal(3)]],
+            //     [[Decimal(4), Decimal(5)], [Decimal(6)]],
+            //     [],
+            //     [[Decimal(7)], None, [Decimal(9)]],
+            //     [[], [None], None],
+            //     [[Decimal(10)]],
+            // ]
+
+            let data = [
+                Some(vec![Some(vec![Some(0), Some(1)])]),
+                None,
+                Some(vec![Some(vec![Some(2), None]), Some(vec![Some(3)])]),
+                Some(vec![Some(vec![Some(4), Some(5)]), Some(vec![Some(6)])]),
+                Some(vec![]),
+                Some(vec![Some(vec![Some(7)]), None, Some(vec![Some(9)])]),
+                Some(vec![Some(vec![]), Some(vec![None]), None]),
+                Some(vec![Some(vec![Some(10)])]),
+            ];
+
+            let inner_array = MutablePrimitiveArray::<i128>::from(DataType::Decimal(9, 0));
+            let middle_array = MutableListArray::<i32, MutablePrimitiveArray<i128>>::new_from(
+                inner_array.clone(),
+                ListArray::<i32>::default_datatype(inner_array.data_type().clone()),
+                0,
+            );
+            let mut outer_array = MutableListArray::<
+                i32,
+                MutableListArray<i32, MutablePrimitiveArray<i128>>,
+            >::new_from(
+                middle_array.clone(),
+                ListArray::<i32>::default_datatype(middle_array.data_type().clone()),
+                0,
+            );
+
+            outer_array.try_extend(data).unwrap();
+            let array: ListArray<i32> = outer_array.into();
             Box::new(array)
         }
         "list_nested_inner_required_i64" => {
@@ -944,6 +987,36 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
             .boxed(),
             max_value: new_list(
                 new_list(Box::new(Int64Array::from_slice([10])), true).boxed(),
+                true,
+            )
+            .boxed(),
+        },
+        "list_nested_decimal" => Statistics {
+            distinct_count: new_list(
+                new_list(UInt64Array::from([None]).boxed(), true).boxed(),
+                true,
+            )
+            .boxed(),
+            null_count: new_list(
+                new_list(Box::new(UInt64Array::from_slice([7])), true).boxed(),
+                true,
+            )
+            .boxed(),
+            min_value: new_list(
+                new_list(
+                    Box::new(Int128Array::from_slice([0]).to(DataType::Decimal(9, 0))),
+                    true,
+                )
+                .boxed(),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                new_list(
+                    Box::new(Int128Array::from_slice([10]).to(DataType::Decimal(9, 0))),
+                    true,
+                )
+                .boxed(),
                 true,
             )
             .boxed(),
