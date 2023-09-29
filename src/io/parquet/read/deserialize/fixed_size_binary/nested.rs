@@ -60,7 +60,7 @@ impl<'a> NestedDecoder<'a> for BinaryDecoder {
                 Ok(State::Optional(Optional::try_new(page, self.size)?))
             }
             (Encoding::Plain, _, false, false) => {
-                Ok(State::Required(Required::new(page, self.size)))
+                Ok(State::Required(Required::try_new(page, self.size)?))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 RequiredDictionary::try_new(page, dict).map(State::RequiredDictionary)
