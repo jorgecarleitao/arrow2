@@ -175,12 +175,12 @@ impl Bitmap {
         // we don't do a bitcount in the following cases:
         // 1. if there isn't any data sliced.
         // 2. if this [`Bitmap`] is all true or all false.
-        if !(offset == 0 && length == self.length
-            || self.unset_bits == 0
-            || self.unset_bits == self.length)
-        {
-            // count the smallest chunk
-            if length < self.length / 2 {
+        if !(offset == 0 && length == self.length || self.unset_bits == 0) {
+            // if `self.unset_bits == self.length` is false, we count the smallest chunk
+            // and do a bitcount.
+            if (self.unset_bits == self.length) {
+                self.unset_bits = length;
+            } else if length < self.length / 2 {
                 // count the null values in the slice
                 self.unset_bits = count_zeros(&self.bytes, self.offset + offset, length);
             } else {
