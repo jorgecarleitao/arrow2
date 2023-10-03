@@ -174,7 +174,10 @@ impl Bitmap {
     pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
         // first guard a no-op slice so that we don't do a bitcount
         // if there isn't any data sliced
-        if !(offset == 0 && length == self.length) {
+        if !(offset == 0 && length == self.length
+            || self.unset_bits == 0
+            || self.unset_bits == self.length)
+        {
             // count the smallest chunk
             if length < self.length / 2 {
                 // count the null values in the slice
@@ -186,9 +189,9 @@ impl Bitmap {
                 let tail_count = count_zeros(&self.bytes, start_end, self.length - length - offset);
                 self.unset_bits -= head_count + tail_count;
             }
-            self.offset += offset;
-            self.length = length;
         }
+        self.offset += offset;
+        self.length = length;
     }
 
     /// Slices `self`, offsetting by `offset` and truncating up to `length` bits.
