@@ -178,7 +178,7 @@ impl Bitmap {
         if !(offset == 0 && length == self.length || self.unset_bits == 0) {
             // if `self.unset_bits == self.length` is false, we count the smallest chunk
             // and do a bitcount.
-            if (self.unset_bits == self.length) {
+            if self.unset_bits == self.length {
                 self.unset_bits = length;
             } else if length < self.length / 2 {
                 // count the null values in the slice
