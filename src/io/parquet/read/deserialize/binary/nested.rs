@@ -185,7 +185,7 @@ impl<O: Offset, I: Pages> Iterator for NestedIter<O, I> {
                     return Some(
                         finish(&self.data_type, decoded.0, decoded.1).map(|array| (nested, array)),
                     )
-                },
+                }
                 MaybeNext::Some(Err(e)) => return Some(Err(e)),
                 MaybeNext::None => return None,
                 MaybeNext::More => continue, // Using continue in a loop instead of calling next helps prevent stack overflow.
