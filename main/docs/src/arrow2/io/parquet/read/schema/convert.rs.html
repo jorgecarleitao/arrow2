@@ -1062,6 +1062,48 @@
 <a href="#1062" id="1062">1062</a>
 <a href="#1063" id="1063">1063</a>
 <a href="#1064" id="1064">1064</a>
+<a href="#1065" id="1065">1065</a>
+<a href="#1066" id="1066">1066</a>
+<a href="#1067" id="1067">1067</a>
+<a href="#1068" id="1068">1068</a>
+<a href="#1069" id="1069">1069</a>
+<a href="#1070" id="1070">1070</a>
+<a href="#1071" id="1071">1071</a>
+<a href="#1072" id="1072">1072</a>
+<a href="#1073" id="1073">1073</a>
+<a href="#1074" id="1074">1074</a>
+<a href="#1075" id="1075">1075</a>
+<a href="#1076" id="1076">1076</a>
+<a href="#1077" id="1077">1077</a>
+<a href="#1078" id="1078">1078</a>
+<a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
+<a href="#1081" id="1081">1081</a>
+<a href="#1082" id="1082">1082</a>
+<a href="#1083" id="1083">1083</a>
+<a href="#1084" id="1084">1084</a>
+<a href="#1085" id="1085">1085</a>
+<a href="#1086" id="1086">1086</a>
+<a href="#1087" id="1087">1087</a>
+<a href="#1088" id="1088">1088</a>
+<a href="#1089" id="1089">1089</a>
+<a href="#1090" id="1090">1090</a>
+<a href="#1091" id="1091">1091</a>
+<a href="#1092" id="1092">1092</a>
+<a href="#1093" id="1093">1093</a>
+<a href="#1094" id="1094">1094</a>
+<a href="#1095" id="1095">1095</a>
+<a href="#1096" id="1096">1096</a>
+<a href="#1097" id="1097">1097</a>
+<a href="#1098" id="1098">1098</a>
+<a href="#1099" id="1099">1099</a>
+<a href="#1100" id="1100">1100</a>
+<a href="#1101" id="1101">1101</a>
+<a href="#1102" id="1102">1102</a>
+<a href="#1103" id="1103">1103</a>
+<a href="#1104" id="1104">1104</a>
+<a href="#1105" id="1105">1105</a>
+<a href="#1106" id="1106">1106</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! This module has entry points, [`parquet_to_arrow_schema`] and the more configurable [`parquet_to_arrow_schema_with_options`].
 </span><span class="kw">use </span>parquet2::schema::{
     types::{
@@ -1363,7 +1405,7 @@
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>is_nullable(field_info: <span class="kw-2">&amp;</span>FieldInfo) -&gt; bool {
     <span class="kw">match </span>field_info.repetition {
         Repetition::Optional =&gt; <span class="bool-val">true</span>,
-        Repetition::Repeated =&gt; <span class="bool-val">true</span>,
+        Repetition::Repeated =&gt; <span class="bool-val">false</span>,
         Repetition::Required =&gt; <span class="bool-val">false</span>,
     }
 }
@@ -1417,12 +1459,12 @@
             <span class="kw">let </span>field = fields.first().unwrap();
             (
                 <span class="kw-2">&amp;</span>field.get_field_info().name,
-                field.get_field_info().repetition != Repetition::Required,
+                field.get_field_info().repetition == Repetition::Optional,
             )
         }
         <span class="kw">_ </span>=&gt; (
             <span class="kw-2">&amp;</span>item.get_field_info().name,
-            item.get_field_info().repetition != Repetition::Required,
+            item.get_field_info().repetition == Repetition::Optional,
         ),
     };
 
@@ -1675,7 +1717,7 @@
         </span>{
             arrow_fields.push(Field::new(
                 <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Utf8, <span class="bool-val">true</span>))),
+                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1687,7 +1729,7 @@
         </span>{
             arrow_fields.push(Field::new(
                 <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Int32, <span class="bool-val">true</span>))),
+                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Int32, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1706,7 +1748,7 @@
             ]);
             arrow_fields.push(Field::new(
                 <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, arrow_struct, <span class="bool-val">true</span>))),
+                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, arrow_struct, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1722,7 +1764,7 @@
             <span class="kw">let </span>arrow_struct = DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">&quot;str&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>)]);
             arrow_fields.push(Field::new(
                 <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;array&quot;</span>, arrow_struct, <span class="bool-val">true</span>))),
+                DataType::List(Box::new(Field::new(<span class="string">&quot;array&quot;</span>, arrow_struct, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1738,7 +1780,7 @@
             <span class="kw">let </span>arrow_struct = DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">&quot;str&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>)]);
             arrow_fields.push(Field::new(
                 <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;my_list_tuple&quot;</span>, arrow_struct, <span class="bool-val">true</span>))),
+                DataType::List(Box::new(Field::new(<span class="string">&quot;my_list_tuple&quot;</span>, arrow_struct, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1748,8 +1790,50 @@
         </span>{
             arrow_fields.push(Field::new(
                 <span class="string">&quot;name&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;name&quot;</span>, DataType::Int32, <span class="bool-val">true</span>))),
-                <span class="bool-val">true</span>,
+                DataType::List(Box::new(Field::new(<span class="string">&quot;name&quot;</span>, DataType::Int32, <span class="bool-val">false</span>))),
+                <span class="bool-val">false</span>,
+            ));
+        }
+
+        <span class="kw">let </span>parquet_schema = SchemaDescriptor::try_from_message(message_type)<span class="question-mark">?</span>;
+        <span class="kw">let </span>fields = parquet_to_arrow_schema(parquet_schema.fields());
+
+        <span class="macro">assert_eq!</span>(arrow_fields, fields);
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_parquet_list_with_struct() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>arrow_fields = Vec::new();
+
+        <span class="kw">let </span>message_type = <span class="string">&quot;
+            message eventlog {
+              REQUIRED group events (LIST) {
+                REPEATED group array {
+                  REQUIRED BYTE_ARRAY event_name (STRING);
+                  REQUIRED INT64 event_time (TIMESTAMP(MILLIS,true));
+                }
+              }
+            }
+        &quot;</span>;
+
+        {
+            <span class="kw">let </span>struct_fields = <span class="macro">vec!</span>[
+                Field::new(<span class="string">&quot;event_name&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>),
+                Field::new(
+                    <span class="string">&quot;event_time&quot;</span>,
+                    DataType::Timestamp(TimeUnit::Millisecond, <span class="prelude-val">Some</span>(<span class="string">&quot;+00:00&quot;</span>.into())),
+                    <span class="bool-val">false</span>,
+                ),
+            ];
+            arrow_fields.push(Field::new(
+                <span class="string">&quot;events&quot;</span>,
+                DataType::List(Box::new(Field::new(
+                    <span class="string">&quot;array&quot;</span>,
+                    DataType::Struct(struct_fields),
+                    <span class="bool-val">false</span>,
+                ))),
+                <span class="bool-val">false</span>,
             ));
         }
 
@@ -1876,9 +1960,9 @@
                 DataType::List(Box::new(Field::new(
                     <span class="string">&quot;innerGroup&quot;</span>,
                     DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">&quot;leaf3&quot;</span>, DataType::Int32, <span class="bool-val">true</span>)]),
-                    <span class="bool-val">true</span>,
+                    <span class="bool-val">false</span>,
                 ))),
-                <span class="bool-val">true</span>,
+                <span class="bool-val">false</span>,
             );
 
             <span class="kw">let </span>outer_group_list = Field::new(
@@ -1889,9 +1973,9 @@
                         Field::new(<span class="string">&quot;leaf2&quot;</span>, DataType::Int32, <span class="bool-val">true</span>),
                         inner_group_list,
                     ]),
-                    <span class="bool-val">true</span>,
+                    <span class="bool-val">false</span>,
                 ))),
-                <span class="bool-val">true</span>,
+                <span class="bool-val">false</span>,
             );
             arrow_fields.push(outer_group_list);
         }
@@ -1952,8 +2036,8 @@
             Field::new(<span class="string">&quot;string&quot;</span>, DataType::Utf8, <span class="bool-val">true</span>),
             Field::new(
                 <span class="string">&quot;bools&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;bools&quot;</span>, DataType::Boolean, <span class="bool-val">true</span>))),
-                <span class="bool-val">true</span>,
+                DataType::List(Box::new(Field::new(<span class="string">&quot;bools&quot;</span>, DataType::Boolean, <span class="bool-val">false</span>))),
+                <span class="bool-val">false</span>,
             ),
             Field::new(<span class="string">&quot;date&quot;</span>, DataType::Date32, <span class="bool-val">true</span>),
             Field::new(<span class="string">&quot;time_milli&quot;</span>, DataType::Time32(TimeUnit::Millisecond), <span class="bool-val">true</span>),
