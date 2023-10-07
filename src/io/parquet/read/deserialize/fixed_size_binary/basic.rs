@@ -46,11 +46,11 @@ pub(super) struct Required<'a> {
 }
 
 impl<'a> Required<'a> {
-    pub(super) fn new(page: &'a DataPage, size: usize) -> Self {
-        let values = page.buffer();
+    pub(super) fn try_new(page: &'a DataPage, size: usize) -> Result<Self> {
+        let (_, _, values) = split_buffer(page)?;
         assert_eq!(values.len() % size, 0);
         let values = values.chunks_exact(size);
-        Self { values }
+        Ok(Self { values })
     }
 
     #[inline]
@@ -171,7 +171,7 @@ impl<'a> Decoder<'a> for BinaryDecoder {
                 Ok(State::Optional(Optional::try_new(page, self.size)?))
             }
             (Encoding::Plain, _, false, false) => {
-                Ok(State::Required(Required::new(page, self.size)))
+                Ok(State::Required(Required::try_new(page, self.size)?))
             }
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), false, false) => {
                 RequiredDictionary::try_new(page, dict).map(State::RequiredDictionary)

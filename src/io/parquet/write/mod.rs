@@ -727,7 +727,7 @@ fn array_to_page_nested(
                     values.into(),
                     array.validity().cloned(),
                 );
-                fixed_len_bytes::array_to_page(&array, options, type_, statistics)
+                fixed_len_bytes::nested_array_to_page(&array, options, type_, statistics, nested)
             }
         }
         Decimal256(precision, _) => {
@@ -782,7 +782,7 @@ fn array_to_page_nested(
                     values.into(),
                     array.validity().cloned(),
                 );
-                fixed_len_bytes::array_to_page(&array, options, type_, statistics)
+                fixed_len_bytes::nested_array_to_page(&array, options, type_, statistics, nested)
             } else {
                 let size = 32;
                 let array = array
@@ -807,7 +807,7 @@ fn array_to_page_nested(
                     array.validity().cloned(),
                 );
 
-                fixed_len_bytes::array_to_page(&array, options, type_, statistics)
+                fixed_len_bytes::nested_array_to_page(&array, options, type_, statistics, nested)
             }
         }
         other => Err(Error::NotYetImplemented(format!(
