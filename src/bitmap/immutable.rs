@@ -283,12 +283,30 @@ impl Bitmap {
         }
     }
 
+    /// Initializes an new [`Bitmap`] filled with set/unset values.
+    #[inline]
+    pub fn new_constant(value: bool, length: usize) -> Self {
+        match value {
+            true => Self::new_trued(length),
+            false => Self::new_zeroed(length),
+        }
+    }
+
     /// Initializes an new [`Bitmap`] filled with unset values.
     #[inline]
     pub fn new_zeroed(length: usize) -> Self {
         // don't use `MutableBitmap::from_len_zeroed().into()`
         // it triggers a bitcount
         let bytes = vec![0; length.saturating_add(7) / 8];
+        unsafe { Bitmap::from_inner_unchecked(Arc::new(bytes.into()), 0, length, length) }
+    }
+
+    /// Initializes an new [`Bitmap`] filled with set values.
+    #[inline]
+    pub fn new_trued(length: usize) -> Self {
+        // just set each byte to u8::MAX
+        // we will not access data with index >= length
+        let bytes = vec![0b11111111u8; length.saturating_add(7) / 8];
         unsafe { Bitmap::from_inner_unchecked(Arc::new(bytes.into()), 0, length, length) }
     }
 
