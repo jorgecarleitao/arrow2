@@ -283,6 +283,15 @@ impl Bitmap {
         }
     }
 
+    /// Initializes an new [`Bitmap`] filled with set/unset values.
+    #[inline]
+    pub fn new_constant(value: bool, length: usize) -> Self {
+        match value { 
+            true => Self::new_trued(length),
+            false => Self::new_zeroed(length),
+        }
+    }
+
     /// Initializes an new [`Bitmap`] filled with unset values.
     #[inline]
     pub fn new_zeroed(length: usize) -> Self {
