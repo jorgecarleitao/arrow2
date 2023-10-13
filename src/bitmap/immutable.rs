@@ -3,7 +3,6 @@ use std::{iter::FromIterator, ops::Deref, sync::Arc};
 use either::Either;
 
 use crate::{buffer::Bytes, error::Error, trusted_len::TrustedLen};
-use super::utils::set;
 
 use super::{
     chunk_iter_to_vec,
