@@ -3,6 +3,7 @@ use std::{iter::FromIterator, ops::Deref, sync::Arc};
 use either::Either;
 
 use crate::{buffer::Bytes, error::Error, trusted_len::TrustedLen};
+use super::utils::set;
 
 use super::{
     chunk_iter_to_vec,
@@ -289,6 +290,15 @@ impl Bitmap {
         // don't use `MutableBitmap::from_len_zeroed().into()`
         // it triggers a bitcount
         let bytes = vec![0; length.saturating_add(7) / 8];
+        unsafe { Bitmap::from_inner_unchecked(Arc::new(bytes.into()), 0, length, length) }
+    }
+
+    /// Initializes an new [`Bitmap`] filled with set values.
+    #[inline]
+    pub fn new_trued(length: usize) -> Self {
+        // just set each byte to u8::MAX
+        // we will not access data with index >= length
+        let bytes = vec![u8::MAX; length.saturating_add(7) / 8];
         unsafe { Bitmap::from_inner_unchecked(Arc::new(bytes.into()), 0, length, length) }
     }
 
