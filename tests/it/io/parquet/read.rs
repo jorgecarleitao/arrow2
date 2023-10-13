@@ -62,8 +62,14 @@ fn test_pyarrow_integration(
         "list_nested_i64",
         "list_utf8",
         "list_bool",
-        "list_decimal",
-        "list_decimal256",
+        "list_decimal_9",
+        "list_decimal_18",
+        "list_decimal_26",
+        "list_decimal256_9",
+        "list_decimal256_18",
+        "list_decimal256_26",
+        "list_decimal256_39",
+        "list_decimal256_76",
         "list_nested_inner_required_required_i64",
         "list_nested_inner_required_i64",
         // pyarrow counts null struct items as nulls
@@ -325,13 +331,83 @@ fn v1_nested_large_binary() -> Result<()> {
 }
 
 #[test]
-fn v2_nested_decimal_nullable() -> Result<()> {
-    test_pyarrow_integration("list_decimal", 2, "nested", false, false, None)
+fn v1_nested_decimal_9_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_9", 1, "nested", false, false, None)
 }
 
 #[test]
-fn v2_nested_decimal256_nullable() -> Result<()> {
-    test_pyarrow_integration("list_decimal256", 2, "nested", false, false, None)
+fn v1_nested_decimal_18_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_18", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal_26_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_26", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal_9_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_9", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal_18_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_18", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal_26_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_26", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal256_9_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_9", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal256_18_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_18", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal256_26_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_26", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal256_39_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_39", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal256_76_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_76", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal256_9_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_9", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal256_18_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_18", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal256_26_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_26", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal256_39_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_39", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal256_76_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_76", 2, "nested", false, false, None)
 }
 
 #[test]
