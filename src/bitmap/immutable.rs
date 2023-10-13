@@ -297,7 +297,7 @@ impl Bitmap {
     pub fn new_trued(length: usize) -> Self {
         // just set each byte to u8::MAX
         // we will not access data with index >= length
-        let bytes = vec![u8::MAX; length.saturating_add(7) / 8];
+        let bytes = vec![0b11111111u8; length.saturating_add(7) / 8];
         unsafe { Bitmap::from_inner_unchecked(Arc::new(bytes.into()), 0, length, length) }
     }
 
