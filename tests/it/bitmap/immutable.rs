@@ -33,6 +33,25 @@ fn as_slice_offset_middle() {
 }
 
 #[test]
+fn new_constant() {
+    let b = Bitmap::new_constant(true, 9);
+    let (slice, offset, length) = b.as_slice();
+    assert_eq!(slice[0], 0b11111111);
+    assert!((slice[1] & 0b00000001) > 0);
+    assert_eq!(offset, 0);
+    assert_eq!(length, 9);
+    assert_eq!(b.unset_bits(), 0);
+
+    let b = Bitmap::new_constant(false, 9);
+    let (slice, offset, length) = b.as_slice();
+    assert_eq!(slice[0], 0b00000000);
+    assert!((slice[1] & 0b00000001) == 0);
+    assert_eq!(offset, 0);
+    assert_eq!(length, 9);
+    assert_eq!(b.unset_bits(), 9);
+}
+
+#[test]
 fn debug() {
     let b = Bitmap::from([true, true, false, true, true, true, true, true, true]);
     let b = b.sliced(2, 7);

@@ -307,7 +307,7 @@ impl Bitmap {
         // just set each byte to u8::MAX
         // we will not access data with index >= length
         let bytes = vec![0b11111111u8; length.saturating_add(7) / 8];
-        unsafe { Bitmap::from_inner_unchecked(Arc::new(bytes.into()), 0, length, length) }
+        unsafe { Bitmap::from_inner_unchecked(Arc::new(bytes.into()), 0, length, 0) }
     }
 
     /// Counts the nulls (unset bits) starting from `offset` bits and for `length` bits.
