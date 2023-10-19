@@ -48,7 +48,8 @@ impl<O: Offset> Binary<O> {
         if self.offsets.len_proxy() == 100 && self.offsets.capacity() > 100 {
             let bytes_per_row = self.values.len() / 100 + 1;
             let bytes_estimate = bytes_per_row * self.offsets.capacity();
-            if bytes_estimate > self.values.capacity() {
+
+            if bytes_estimate > self.values.capacity() && bytes_estimate < 10 * 1024 * 1024 {
                 self.values.reserve(bytes_estimate - self.values.capacity());
             }
         }
