@@ -101,7 +101,7 @@ odbc-api = { version = "0.36", optional = true }
 ahash = "0.8"
 
 # For `LIKE` matching "contains" fast-path 
-memchr = { version = "2.6.4", optional = true }
+memchr = { version = "2.6", optional = true }
 
 # Support conversion to/from arrow-rs
 arrow-buffer = { version = ">=40", optional = true }
