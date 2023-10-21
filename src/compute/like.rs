@@ -159,7 +159,10 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
     {
         let needle = &rhs[1..rhs.len() - 1];
         let finder = memchr::memmem::Finder::new(needle);
-        Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(finder.find(x.as_bytes()).is_some())))
+        Bitmap::from_trusted_len_iter(
+            lhs.values_iter()
+                .map(|x| op(finder.find(x.as_bytes()).is_some())),
+        )
     } else {
         let re_pattern = replace_pattern(rhs);
         let re = Regex::new(&format!("^{re_pattern}$")).map_err(|e| {
