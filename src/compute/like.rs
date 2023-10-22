@@ -152,6 +152,17 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
         // fast path, can use ends_with
         let ends_with = &rhs[1..];
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.ends_with(ends_with))))
+    } else if rhs.starts_with('%')
+        && rhs.ends_with('%')
+        && !rhs.ends_with("\\%")
+        && !rhs[1..rhs.len() - 1].contains(is_like_pattern)
+    {
+        let needle = &rhs[1..rhs.len() - 1];
+        let finder = memchr::memmem::Finder::new(needle);
+        Bitmap::from_trusted_len_iter(
+            lhs.values_iter()
+                .map(|x| op(finder.find(x.as_bytes()).is_some())),
+        )
     } else {
         let re_pattern = replace_pattern(rhs);
         let re = Regex::new(&format!("^{re_pattern}$")).map_err(|e| {

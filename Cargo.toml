@@ -100,6 +100,9 @@ odbc-api = { version = "0.36", optional = true }
 # Faster hashing
 ahash = "0.8"
 
+# For `LIKE` matching "contains" fast-path 
+memchr = { version = "2.6", optional = true }
+
 # Support conversion to/from arrow-rs
 arrow-buffer = { version = ">=40", optional = true }
 arrow-schema = { version = ">=40", optional = true }
@@ -237,7 +240,7 @@ compute_filter = []
 compute_hash = ["multiversion"]
 compute_if_then_else = []
 compute_length = []
-compute_like = ["regex", "regex-syntax"]
+compute_like = ["regex", "regex-syntax", "dep:memchr"]
 compute_limit = []
 compute_merge_sort = ["itertools", "compute_sort"]
 compute_nullif = ["compute_comparison"]
@@ -394,3 +397,8 @@ harness = false
 [[bench]]
 name = "assign_ops"
 harness = false
+
+[[bench]]
+name = "like_kernels"
+harness = false
+
