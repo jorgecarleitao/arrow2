@@ -214,3 +214,22 @@ where
             .map(|x| x.map(|x| x.1)),
     ))
 }
+
+/// Basically the same as `column_iter_to_arrays`, with the addition of the `init` parameter
+/// to read the inner columns of the nested type directly, instead of reading the entire nested type.
+pub fn nested_column_iter_to_arrays<'a, I: 'a>(
+    columns: Vec<I>,
+    types: Vec<&PrimitiveType>,
+    field: Field,
+    init: Vec<InitNested>,
+    chunk_size: Option<usize>,
+    num_rows: usize,
+) -> Result<ArrayIter<'a>>
+where
+    I: Pages,
+{
+    Ok(Box::new(
+        nested::columns_to_iter_recursive(columns, types, field, init, num_rows, chunk_size)?
+            .map(|x| x.map(|x| x.1)),
+    ))
+}

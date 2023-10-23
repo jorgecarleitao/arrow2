@@ -37,7 +37,7 @@ use crate::{array::Array, error::Result};
 use crate::types::{i256, NativeType};
 pub use deserialize::{
     column_iter_to_arrays, create_list, create_map, get_page_iterator, init_nested, n_columns,
-    InitNested, NestedArrayIter, NestedState, StructIterator,
+    nested_column_iter_to_arrays, InitNested, NestedArrayIter, NestedState, StructIterator,
 };
 pub use file::{FileReader, RowGroupReader};
 pub use row_group::*;
