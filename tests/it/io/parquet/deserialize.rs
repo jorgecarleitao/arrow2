@@ -13,7 +13,7 @@ use arrow2::{
 #[test]
 fn test_deserialize_nested_column() -> Result<()> {
     let path = "testing/parquet-testing/data/nested_structs.rust.parquet";
-    let mut reader = File::open(&path).unwrap();
+    let mut reader = File::open(path).unwrap();
 
     let metadata = read_metadata(&mut reader)?;
     let schema = infer_schema(&metadata)?;
