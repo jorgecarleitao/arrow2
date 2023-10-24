@@ -14,6 +14,7 @@ use arrow2::{
     types::{days_ms, NativeType},
 };
 
+mod deserialize;
 #[cfg(feature = "io_json_integration")]
 mod integration;
 mod read;
