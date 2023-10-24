@@ -1,23 +1,24 @@
 use std::fs::File;
 
-use arrow::{
+use arrow2::{
     array::StructArray,
     datatypes::DataType,
-    error::Error,
+    error::{Error, Result},
     io::parquet::read::{
         infer_schema, n_columns, nested_column_iter_to_arrays, read_columns, read_metadata,
         to_deserializer, BasicDecompressor, InitNested, PageReader,
     },
+    util::test_util::parquet_test_data,
 };
 
 #[test]
 fn test_deserialize_nested_column() -> Result<()> {
-    let testdata = arrow::util::test_util::parquet_test_data();
+    let testdata = parquet_test_data();
     let path = format!("{testdata}/nested_structs.rust.parquet");
     let mut reader = File::open(&path).unwrap();
 
-    let metadata = read::read_metadata(&mut reader)?;
-    let schema = read::infer_schema(&metadata)?;
+    let metadata = read_metadata(&mut reader)?;
+    let schema = infer_schema(&metadata)?;
 
     let num_rows = metadata.num_rows;
     let row_group = metadata.row_groups[0].clone();
