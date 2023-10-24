@@ -3,18 +3,16 @@ use std::fs::File;
 use arrow2::{
     array::StructArray,
     datatypes::DataType,
-    error::{Error, Result},
+    error::Result,
     io::parquet::read::{
         infer_schema, n_columns, nested_column_iter_to_arrays, read_columns, read_metadata,
         to_deserializer, BasicDecompressor, InitNested, PageReader,
     },
-    util::test_util::parquet_test_data,
 };
 
 #[test]
 fn test_deserialize_nested_column() -> Result<()> {
-    let testdata = parquet_test_data();
-    let path = format!("{testdata}/nested_structs.rust.parquet");
+    let path = "testing/parquet-testing/data/nested_structs.rust.parquet";
     let mut reader = File::open(&path).unwrap();
 
     let metadata = read_metadata(&mut reader)?;
@@ -27,7 +25,7 @@ fn test_deserialize_nested_column() -> Result<()> {
         .fields
         .iter()
         .map(|field| read_columns(&mut reader, row_group.columns(), &field.name))
-        .collect::<Result<Vec<_>, Error>>()?;
+        .collect::<Result<Vec<_>>>()?;
 
     let fields = schema.fields.clone();
     for (mut columns, field) in field_columns.into_iter().zip(fields.iter()) {
