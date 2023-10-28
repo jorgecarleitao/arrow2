@@ -22,6 +22,7 @@ mod pages;
 mod primitive;
 mod row_group;
 mod schema;
+#[cfg(feature = "io_parquet_async")]
 mod sink;
 mod utf8;
 mod utils;
@@ -68,6 +69,8 @@ use crate::compute::aggregate::estimated_bytes_size;
 pub use file::FileWriter;
 pub use row_group::{row_group_iter, RowGroupIterator};
 pub use schema::to_parquet_type;
+#[cfg(feature = "io_parquet_async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_parquet_async")))]
 pub use sink::FileSink;
 
 pub use pages::array_to_columns;

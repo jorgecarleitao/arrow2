@@ -100,7 +100,7 @@ odbc-api = { version = "0.36", optional = true }
 # Faster hashing
 ahash = "0.8"
 
-# For `LIKE` matching "contains" fast-path 
+# For `LIKE` matching "contains" fast-path
 memchr = { version = "2.6", optional = true }
 
 # Support conversion to/from arrow-rs
@@ -117,7 +117,6 @@ getrandom = { version = "0.2", features = ["js"] }
 version = "0.17"
 optional = true
 default_features = false
-features = ["async"]
 
 [dev-dependencies]
 criterion = "0.4"
@@ -160,7 +159,7 @@ full = [
     "io_ipc_compression",
     "io_json_integration",
     "io_print",
-    "io_parquet",
+    "io_parquet_async",
     "io_parquet_compression",
     "io_avro",
     "io_orc",
@@ -189,7 +188,8 @@ io_ipc_compression = ["lz4", "zstd"]
 io_flight = ["io_ipc", "arrow-format/flight-data"]
 
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
-io_parquet = ["parquet2", "io_ipc", "base64", "futures", "streaming-iterator", "fallible-streaming-iterator"]
+io_parquet = ["parquet2", "io_ipc", "base64", "streaming-iterator", "fallible-streaming-iterator"]
+io_parquet_async = ["futures", "io_parquet", "parquet2/async"]
 
 io_parquet_compression = [
     "io_parquet_zstd",
@@ -200,7 +200,7 @@ io_parquet_compression = [
 ]
 
 # sample testing of generated arrow data
-io_parquet_sample_test = ["io_parquet"]
+io_parquet_sample_test = ["io_parquet_async"]
 
 # compression backends
 io_parquet_zstd = ["parquet2/zstd"]

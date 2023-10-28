@@ -1,5 +1,6 @@
 use std::io::{Read, Seek};
 
+#[cfg(feature = "io_parquet_async")]
 use futures::{
     future::{try_join_all, BoxFuture},
     AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt,
@@ -138,6 +139,7 @@ where
     Ok((meta, chunk))
 }
 
+#[cfg(feature = "io_parquet_async")]
 async fn _read_single_column_async<'b, R, F>(
     reader_factory: F,
     meta: &ColumnChunkMetaData,
@@ -163,6 +165,8 @@ where
 ///
 /// It does so asynchronously via a single `join_all` over all the necessary columns for
 /// `field_name`.
+#[cfg(feature = "io_parquet_async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_parquet_async")))]
 pub async fn read_columns_async<
     'a,
     'b,
@@ -303,6 +307,8 @@ pub fn read_columns_many<'a, R: Read + Seek>(
 /// This operation is IO-bounded `O(C)` where C is the number of columns in the row group -
 /// it reads all the columns to memory from the row group associated to the requested fields.
 /// It does so asynchronously via `join_all`
+#[cfg(feature = "io_parquet_async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_parquet_async")))]
 pub async fn read_columns_many_async<
     'a,
     'b,
