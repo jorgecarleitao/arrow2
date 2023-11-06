@@ -100,6 +100,16 @@ pub struct MutableNullArray {
 
 impl MutableNullArray {
     /// Returns a new [`MutableNullArray`].
+    /// # Errors
+    /// This function errors iff:
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to [`crate::datatypes::PhysicalType::Null`].
+    pub fn try_new(data_type: DataType, length: usize) -> Result<Self, Error> {
+        Ok(Self {
+            inner: NullArray::try_new(data_type, length)?,
+        })
+    }
+
+    /// Returns a new [`MutableNullArray`].
     /// # Panics
     /// This function errors iff:
     /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to [`crate::datatypes::PhysicalType::Null`].
