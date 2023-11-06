@@ -2,6 +2,7 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use crate::array::indexable::{AsIndexed, Indexable};
+use crate::array::specification::{check_indexes, check_indexes_unchecked};
 use crate::{
     array::{primitive::MutablePrimitiveArray, Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
@@ -63,6 +64,32 @@ impl<K: DictionaryKey, M: MutableArray + Default> Default for MutableDictionaryA
 }
 
 impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
+    /// Creates an [`MutableDictionaryArray`] from a given keys array and values array.
+    /// # Errors
+    /// Errors if the keys array have duplicates or if the keys are out of bounds of the values array.
+    pub fn try_new(data_type: DataType, keys: MutablePrimitiveArray<K>, values: M) -> Result<Self>
+    where
+        M: Indexable,
+        M::Type: Eq + Hash,
+    {
+        if keys.null_count() != keys.len() {
+            if K::always_fits_usize() {
+                // safety: we just checked that conversion to `usize` always
+                // succeeds
+                unsafe { check_indexes_unchecked(keys.values(), values.len()) }?;
+            } else {
+                check_indexes(keys.values(), values.len())?;
+            }
+        }
+
+        let map = ValueMap::<K, M>::from_values(values)?;
+        Ok(Self {
+            data_type,
+            map,
+            keys,
+        })
+    }
+
     /// Creates an empty [`MutableDictionaryArray`] from a given empty values array.
     /// # Errors
     /// Errors if the array is non-empty.
