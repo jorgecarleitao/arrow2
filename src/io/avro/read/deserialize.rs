@@ -522,7 +522,7 @@ pub fn deserialize(
         arrays
             .iter_mut()
             .zip(projection.iter())
-            .filter_map(|x| x.1.then(|| x.0))
+            .filter_map(|x| x.1.then_some(x.0))
             .map(|array| array.as_box())
             .collect(),
     )

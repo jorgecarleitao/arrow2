@@ -129,7 +129,7 @@ impl MutableBooleanArray {
         let value = self.values.pop()?;
         self.validity
             .as_mut()
-            .map(|x| x.pop()?.then(|| value))
+            .map(|x| x.pop()?.then_some(value))
             .unwrap_or_else(|| Some(value))
     }
 

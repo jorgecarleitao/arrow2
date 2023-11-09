@@ -19,6 +19,7 @@ macro_rules! dyn_primitive {
     }};
 }
 
+#[allow(clippy::type_complexity)]
 pub fn get_write_value<'a, T: NativeType, F: Write>(
     array: &'a PrimitiveArray<T>,
 ) -> Box<dyn Fn(&mut F, usize) -> Result + 'a> {

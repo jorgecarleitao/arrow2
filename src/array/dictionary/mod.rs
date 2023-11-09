@@ -265,6 +265,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     /// # Panics
     ///
     /// This function panics if the `values` array
+    #[allow(clippy::type_complexity)]
     pub fn iter_typed<V: DictValue>(
         &self,
     ) -> Result<ZipValidity<V::IterValue<'_>, DictionaryValuesIterTyped<K, V>, BitmapIter>, Error>
@@ -333,6 +334,12 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     #[inline]
     pub fn len(&self) -> usize {
         self.keys.len()
+    }
+
+    /// Returns `true` if the array has a length of 0.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// The optional validity. Equivalent to `self.keys().validity()`.

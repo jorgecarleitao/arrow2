@@ -132,6 +132,12 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
         self.offsets.len_proxy()
     }
 
+    /// Returns `true` if the array has a length of 0.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Pushes a new item to the array.
     /// # Panic
     /// This operation panics iff the length of all values (in bytes) exceeds `O` maximum value.
@@ -143,7 +149,7 @@ impl<O: Offset> MutableBinaryValuesArray<O> {
     /// Pop the last entry from [`MutableBinaryValuesArray`].
     /// This function returns `None` iff this array is empty.
     pub fn pop(&mut self) -> Option<Vec<u8>> {
-        if self.len() == 0 {
+        if self.is_empty() {
             return None;
         }
         self.offsets.pop()?;

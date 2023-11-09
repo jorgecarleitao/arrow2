@@ -125,7 +125,7 @@ impl<O: Offset> ListArray<O> {
     pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
         self.validity.as_mut().and_then(|bitmap| {
             bitmap.slice_unchecked(offset, length);
-            (bitmap.unset_bits() > 0).then(|| bitmap)
+            (bitmap.unset_bits() > 0).then_some(bitmap)
         });
         self.offsets.slice_unchecked(offset, length + 1);
     }
@@ -141,6 +141,12 @@ impl<O: Offset> ListArray<O> {
     #[inline]
     pub fn len(&self) -> usize {
         self.offsets.len_proxy()
+    }
+
+    /// Returns `true` if the array has a length of 0.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Returns the element at index `i`
