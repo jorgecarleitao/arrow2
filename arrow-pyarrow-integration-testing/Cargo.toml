@@ -18,7 +18,10 @@
 [package]
 name = "arrow-pyarrow-integration-testing"
 version = "0.0.0"
-authors = ["Jorge C. Leitao <jorgecarleitao@gmail.com>", "Apache Arrow <dev@arrow.apache.org>"]
+authors = [
+  "Jorge C. Leitao <jorgecarleitao@gmail.com>",
+  "Apache Arrow <dev@arrow.apache.org>",
+]
 license = "Apache-2.0"
 edition = "2021"
 
