@@ -2,70 +2,82 @@
 mod schema;
 mod serialize;
 
-use crate::{array::Array, chunk::Chunk, datatypes::Field, error::Result};
+use crate::{array::Array, chunk::Chunk, error::Result};
 
 use super::api;
-pub use schema::infer_descriptions;
+use crate::io::odbc::api::{Connection, ConnectionOptions, Environment};
+pub use api::buffers::{BufferDesc, ColumnarAnyBuffer};
+pub use api::ColumnDescription;
+pub use schema::data_type_to;
 pub use serialize::serialize;
 
 /// Creates a [`api::buffers::ColumnarBuffer`] from [`api::ColumnDescription`]s.
 ///
 /// This is useful when separating the serialization (CPU-bounded) to writing to the DB (IO-bounded).
 pub fn buffer_from_description(
-    descriptions: Vec<api::ColumnDescription>,
+    descriptions: Vec<ColumnDescription>,
     capacity: usize,
-) -> api::buffers::ColumnarBuffer<api::buffers::AnyColumnBuffer> {
-    let descs = descriptions
-        .into_iter()
-        .map(|description| api::buffers::BufferDescription {
-            nullable: description.could_be_nullable(),
-            kind: api::buffers::BufferKind::from_data_type(description.data_type).unwrap(),
-        });
+) -> ColumnarAnyBuffer {
+    let descs = descriptions.into_iter().map(|description| {
+        BufferDesc::from_data_type(description.data_type, description.could_be_nullable()).unwrap()
+    });
 
-    api::buffers::buffer_from_description(capacity, descs)
+    ColumnarAnyBuffer::from_descs(capacity, descs)
 }
 
 /// A writer of [`Chunk`]s to an ODBC [`api::Prepared`] statement.
 /// # Implementation
 /// This struct mixes CPU-bounded and IO-bounded tasks and is not ideal
 /// for an `async` context.
-pub struct Writer<'a> {
-    fields: Vec<Field>,
-    buffer: api::buffers::ColumnarBuffer<api::buffers::AnyColumnBuffer>,
-    prepared: api::Prepared<'a>,
+pub struct Writer {
+    connection_string: String,
+    query: String,
+    login_timeout_sec: Option<u32>,
 }
 
-impl<'a> Writer<'a> {
-    /// Creates a new [`Writer`].
-    /// # Errors
-    /// Errors iff any of the types from [`Field`] is not supported.
-    pub fn try_new(prepared: api::Prepared<'a>, fields: Vec<Field>) -> Result<Self> {
-        let buffer = buffer_from_description(infer_descriptions(&fields)?, 0);
-        Ok(Self {
-            fields,
-            buffer,
-            prepared,
-        })
+impl Writer {
+    pub fn new(connection_string: String, query: String, login_timeout_sec: Option<u32>) -> Self {
+        Self {
+            connection_string,
+            query,
+            login_timeout_sec,
+        }
     }
 
     /// Writes a chunk to the writer.
     /// # Errors
     /// Errors iff the execution of the statement fails.
     pub fn write<A: AsRef<dyn Array>>(&mut self, chunk: &Chunk<A>) -> Result<()> {
-        if chunk.len() > self.buffer.num_rows() {
-            // if the chunk is larger, we re-allocate new buffers to hold it
-            self.buffer = buffer_from_description(infer_descriptions(&self.fields)?, chunk.len());
-        }
+        let env = Environment::new().unwrap();
 
-        self.buffer.set_num_rows(chunk.len());
+        let conn: Connection = env
+            .connect_with_connection_string(
+                self.connection_string.as_str(),
+                ConnectionOptions {
+                    login_timeout_sec: self.login_timeout_sec,
+                },
+            )
+            .unwrap();
 
-        // serialize (CPU-bounded)
+        let buf_descs = chunk.arrays().iter().map(|array| {
+            BufferDesc::from_data_type(
+                data_type_to(array.as_ref().data_type()).unwrap(),
+                array.as_ref().null_count() > 0,
+            )
+            .unwrap()
+        });
+
+        let prepared = conn.prepare(self.query.as_str()).unwrap();
+        let mut prebound = prepared
+            .into_column_inserter(chunk.len(), buf_descs)
+            .unwrap();
+        prebound.set_num_rows(chunk.len());
+
         for (i, column) in chunk.arrays().iter().enumerate() {
-            serialize(column.as_ref(), &mut self.buffer.column_mut(i))?;
+            serialize(column.as_ref(), &mut prebound.column_mut(i)).unwrap();
         }
+        prebound.execute().unwrap();
 
-        // write (IO-bounded)
-        self.prepared.execute(&self.buffer)?;
         Ok(())
     }
 }
