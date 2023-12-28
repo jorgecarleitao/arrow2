@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     make_growable,
-    utils::{build_extend_null_bits, ExtendNullBits},
+    utils::{extend_validity, prepare_validity},
     Growable,
 };
 
@@ -35,10 +35,9 @@ fn extend_offset_values<O: Offset>(
 /// Concrete [`Growable`] for the [`ListArray`].
 pub struct GrowableList<'a, O: Offset> {
     arrays: Vec<&'a ListArray<O>>,
-    validity: MutableBitmap,
+    validity: Option<MutableBitmap>,
     values: Box<dyn Growable<'a> + 'a>,
     offsets: Offsets<O>,
-    extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
 impl<'a, O: Offset> GrowableList<'a, O> {
@@ -52,11 +51,6 @@ impl<'a, O: Offset> GrowableList<'a, O> {
             use_validity = true;
         };
 
-        let extend_null_bits = arrays
-            .iter()
-            .map(|array| build_extend_null_bits(*array, use_validity))
-            .collect();
-
         let inner = arrays
             .iter()
             .map(|array| array.values().as_ref())
@@ -67,8 +61,7 @@ impl<'a, O: Offset> GrowableList<'a, O> {
             arrays,
             offsets: Offsets::with_capacity(capacity),
             values,
-            validity: MutableBitmap::with_capacity(capacity),
-            extend_null_bits,
+            validity: prepare_validity(use_validity, capacity),
         }
     }
 
@@ -81,20 +74,23 @@ impl<'a, O: Offset> GrowableList<'a, O> {
             self.arrays[0].data_type().clone(),
             offsets.into(),
             values,
-            validity.into(),
+            validity.map(|v| v.into()),
         )
     }
 }
 
 impl<'a, O: Offset> Growable<'a> for GrowableList<'a, O> {
     fn extend(&mut self, index: usize, start: usize, len: usize) {
-        (self.extend_null_bits[index])(&mut self.validity, start, len);
+        let array = self.arrays[index];
+        extend_validity(&mut self.validity, array, start, len);
         extend_offset_values::<O>(self, index, start, len);
     }
 
     fn extend_validity(&mut self, additional: usize) {
         self.offsets.extend_constant(additional);
-        self.validity.extend_constant(additional, false);
+        if let Some(validity) = &mut self.validity {
+            validity.extend_constant(additional, false);
+        }
     }
 
     #[inline]
