@@ -157,7 +157,16 @@ pub enum DataType {
     /// Decimal backed by 256 bits
     Decimal256(usize, usize),
     /// Extension type.
+    /// - name
+    /// - physical type
+    /// - metadata
     Extension(String, Box<DataType>, Option<String>),
+    /// A binary type that inlines small values
+    /// and can intern bytes.
+    BinaryView,
+    /// A string type that inlines small values
+    /// and can intern strings.
+    Utf8View,
 }
 
 #[cfg(feature = "arrow")]
@@ -213,9 +222,16 @@ impl From<DataType> for arrow_schema::DataType {
                 Box::new(DataType::from(key).into()),
                 Box::new((*value).into()),
             ),
-            DataType::Decimal(precision, scale) => Self::Decimal128(precision as _, scale as _),
-            DataType::Decimal256(precision, scale) => Self::Decimal256(precision as _, scale as _),
+            DataType::Decimal(precision, scale) => {
+                Self::Decimal128(precision as _, scale as _)
+            },
+            DataType::Decimal256(precision, scale) => {
+                Self::Decimal256(precision as _, scale as _)
+            },
             DataType::Extension(_, d, _) => (*d).into(),
+            DataType::BinaryView | DataType::Utf8View => {
+                panic!("view datatypes not supported by arrow-rs")
+            },
         }
     }
 }
@@ -441,6 +457,8 @@ impl DataType {
             LargeBinary => PhysicalType::LargeBinary,
             Utf8 => PhysicalType::Utf8,
             LargeUtf8 => PhysicalType::LargeUtf8,
+            BinaryView => PhysicalType::BinaryView,
+            Utf8View => PhysicalType::Utf8View,
             List(_) => PhysicalType::List,
             FixedSizeList(_, _) => PhysicalType::FixedSizeList,
             LargeList(_) => PhysicalType::LargeList,
@@ -461,6 +479,19 @@ impl DataType {
             Extension(_, key, _) => key.to_logical_type(),
             _ => self,
         }
+    }
+
+    pub fn inner_dtype(&self) -> Option<&DataType> {
+        match self {
+            DataType::List(inner) => Some(inner.data_type()),
+            DataType::LargeList(inner) => Some(inner.data_type()),
+            DataType::FixedSizeList(inner, _) => Some(inner.data_type()),
+            _ => None,
+        }
+    }
+
+    pub fn is_view(&self) -> bool {
+        matches!(self, DataType::Utf8View | DataType::BinaryView)
     }
 }
 
@@ -497,6 +528,7 @@ impl From<PrimitiveType> for DataType {
             PrimitiveType::Float64 => DataType::Float64,
             PrimitiveType::DaysMs => DataType::Interval(IntervalUnit::DayTime),
             PrimitiveType::MonthDayNano => DataType::Interval(IntervalUnit::MonthDayNano),
+            PrimitiveType::UInt128 => unimplemented!(),
         }
     }
 }

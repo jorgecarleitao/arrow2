@@ -1,6 +1,7 @@
 use std::{iter::FromIterator, ops::Deref, sync::Arc, usize};
 
 use either::Either;
+use num_traits::Zero;
 
 use super::Bytes;
 use super::IntoIter;
@@ -267,6 +268,12 @@ impl<T> Buffer<T> {
             offset,
             length,
         }
+    }
+}
+
+impl<T: Zero + Copy> Buffer<T> {
+    pub fn zeroed(len: usize) -> Self {
+        vec![T::zero(); len].into()
     }
 }
 

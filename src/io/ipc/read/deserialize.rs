@@ -226,6 +226,7 @@ pub fn read<R: Read + Seek>(
             scratch,
         )
         .map(|x| x.boxed()),
+        Utf8View | BinaryView => todo!(),
     }
 }
 
@@ -249,5 +250,6 @@ pub fn skip(
         Dictionary(_) => skip_dictionary(field_nodes, buffers),
         Union => skip_union(field_nodes, data_type, buffers),
         Map => skip_map(field_nodes, data_type, buffers),
+        BinaryView | Utf8View => todo!(),
     }
 }

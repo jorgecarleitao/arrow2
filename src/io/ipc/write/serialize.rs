@@ -565,7 +565,8 @@ pub fn write(
                 is_little_endian,
                 compression,
             );
-        }
+        },
+        Utf8View | BinaryView => todo!(),
     }
 }
 
