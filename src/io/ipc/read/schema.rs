@@ -281,6 +281,8 @@ fn get_data_type(
         LargeBinary(_) => (DataType::LargeBinary, IpcField::default()),
         Utf8(_) => (DataType::Utf8, IpcField::default()),
         LargeUtf8(_) => (DataType::LargeUtf8, IpcField::default()),
+        BinaryView(_) => (DataType::BinaryView, IpcField::default()),
+        Utf8View(_) => (DataType::Utf8View, IpcField::default()),
         FixedSizeBinary(fixed) => (
             DataType::FixedSizeBinary(
                 fixed
@@ -354,8 +356,6 @@ fn get_data_type(
         Union(union_) => deserialize_union(union_, field)?,
         Map(map) => deserialize_map(map, field)?,
         RunEndEncoded(_) => todo!(),
-        BinaryView(_) => todo!(),
-        Utf8View(_) => todo!(),
         LargeListView(_) | ListView(_) => todo!(),
     })
 }
