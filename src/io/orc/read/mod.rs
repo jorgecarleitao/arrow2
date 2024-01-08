@@ -356,4 +356,3 @@ pub fn deserialize(data_type: DataType, column: &Column) -> Result<Box<dyn Array
         dt => Err(Error::nyi(format!("Deserializing {dt:?} from ORC"))),
     }
 }
-
