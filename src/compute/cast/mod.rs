@@ -1,6 +1,7 @@
 //! Defines different casting operators such as [`cast`] or [`primitive_to_binary`].
 
 mod binary_to;
+mod binview_to;
 mod boolean_to;
 mod decimal_to;
 mod dictionary_to;
@@ -565,7 +566,36 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
-
+        (Utf8View, _) => match to_type {
+            BinaryView => Ok(array
+                .as_any()
+                .downcast_ref::<Utf8ViewArray>()
+                .unwrap()
+                .to_binview()
+                .boxed()),
+            LargeUtf8 => Ok(binview_to::utf8view_to_utf8::<i64>(
+                array.as_any().downcast_ref().unwrap(),
+            )
+            .boxed()),
+            _ => Err(Error::NotYetImplemented(format!(
+                "Casting from {from_type:?} to {to_type:?} not supported",
+            ))),
+        },
+        (BinaryView, _) => match to_type {
+            BinaryView => array
+                .as_any()
+                .downcast_ref::<BinaryViewArray>()
+                .unwrap()
+                .to_utf8view()
+                .map(|arr| arr.boxed()),
+            LargeBinary => Ok(binview_to::view_to_binary::<i64>(
+                array.as_any().downcast_ref().unwrap(),
+            )
+            .boxed()),
+            _ => Err(Error::NotYetImplemented(format!(
+                "Casting from {from_type:?} to {to_type:?} not supported",
+            ))),
+        },
         (Utf8, _) => match to_type {
             UInt8 => utf8_to_primitive_dyn::<i32, u8>(array, to_type, options),
             UInt16 => utf8_to_primitive_dyn::<i32, u16>(array, to_type, options),

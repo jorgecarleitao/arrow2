@@ -10,12 +10,10 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use polars_error::*;
-
 use crate::array::Array;
 use crate::bitmap::Bitmap;
 use crate::buffer::Buffer;
-use crate::datatypes::ArrowDataType;
+use crate::datatypes::DataType;
 
 mod private {
     pub trait Sealed: Send + Sync {}
@@ -23,20 +21,22 @@ mod private {
     impl Sealed for str {}
     impl Sealed for [u8] {}
 }
+pub use mutable::MutableBinaryViewArray;
 use private::Sealed;
 
 use crate::array::binview::iterator::BinaryViewValueIter;
-use crate::array::binview::mutable::MutableBinaryViewArray;
-use crate::array::binview::view::{validate_binary_view, validate_utf8_view};
-use crate::array::iterator::NonNullValuesIter;
+use crate::array::binview::view::{
+    validate_binary_view, validate_utf8_only_view, validate_utf8_view,
+};
 use crate::bitmap::utils::{BitmapIter, ZipValidity};
+use crate::error::{Error, Result};
 
 pub type BinaryViewArray = BinaryViewArrayGeneric<[u8]>;
 pub type Utf8ViewArray = BinaryViewArrayGeneric<str>;
 
-pub trait ViewType: Sealed + 'static + PartialEq {
+pub trait ViewType: Sealed + 'static + PartialEq + AsRef<Self> {
     const IS_UTF8: bool;
-    const DATA_TYPE: ArrowDataType;
+    const DATA_TYPE: DataType;
     type Owned: Debug + Clone + Sync + Send + AsRef<Self>;
 
     /// # Safety
@@ -51,7 +51,7 @@ pub trait ViewType: Sealed + 'static + PartialEq {
 
 impl ViewType for str {
     const IS_UTF8: bool = true;
-    const DATA_TYPE: ArrowDataType = ArrowDataType::Utf8View;
+    const DATA_TYPE: DataType = DataType::Utf8View;
     type Owned = String;
 
     #[inline(always)]
@@ -71,7 +71,7 @@ impl ViewType for str {
 
 impl ViewType for [u8] {
     const IS_UTF8: bool = false;
-    const DATA_TYPE: ArrowDataType = ArrowDataType::BinaryView;
+    const DATA_TYPE: DataType = DataType::BinaryView;
     type Owned = Vec<u8>;
 
     #[inline(always)]
@@ -90,13 +90,17 @@ impl ViewType for [u8] {
 }
 
 pub struct BinaryViewArrayGeneric<T: ViewType + ?Sized> {
-    data_type: ArrowDataType,
+    data_type: DataType,
     views: Buffer<u128>,
     buffers: Arc<[Buffer<u8>]>,
     // Raw buffer access. (pointer, len).
     raw_buffers: Arc<[(*const u8, usize)]>,
     validity: Option<Bitmap>,
     phantom: PhantomData<T>,
+    /// Total bytes length if we would concatenate them all.
+    total_bytes_len: usize,
+    /// Total bytes in the buffer (excluding remaining capacity)
+    total_buffer_len: usize,
 }
 
 impl<T: ViewType + ?Sized> Clone for BinaryViewArrayGeneric<T> {
@@ -108,6 +112,8 @@ impl<T: ViewType + ?Sized> Clone for BinaryViewArrayGeneric<T> {
             raw_buffers: self.raw_buffers.clone(),
             validity: self.validity.clone(),
             phantom: Default::default(),
+            total_bytes_len: self.total_bytes_len,
+            total_buffer_len: self.total_buffer_len,
         }
     }
 }
@@ -128,10 +134,12 @@ impl<T: ViewType + ?Sized> BinaryViewArrayGeneric<T> {
     /// - the data is valid utf8 (if required)
     /// - The offsets match the buffers.
     pub unsafe fn new_unchecked(
-        data_type: ArrowDataType,
+        data_type: DataType,
         views: Buffer<u128>,
         buffers: Arc<[Buffer<u8>]>,
         validity: Option<Bitmap>,
+        total_bytes_len: usize,
+        total_buffer_len: usize,
     ) -> Self {
         let raw_buffers = buffers_into_raw(&buffers);
         Self {
@@ -141,11 +149,34 @@ impl<T: ViewType + ?Sized> BinaryViewArrayGeneric<T> {
             raw_buffers,
             validity,
             phantom: Default::default(),
+            total_bytes_len,
+            total_buffer_len,
         }
     }
 
-    pub fn data_buffers(&self) -> &[Buffer<u8>] {
-        self.buffers.as_ref()
+    /// Create a new BinaryViewArray but initialize a statistics compute.
+    /// # Safety
+    /// The caller must ensure the invariants
+    pub unsafe fn new_unchecked_unknown_md(
+        data_type: DataType,
+        views: Buffer<u128>,
+        buffers: Arc<[Buffer<u8>]>,
+        validity: Option<Bitmap>,
+    ) -> Self {
+        let total_bytes_len = views.iter().map(|v| (*v as u32) as usize).sum();
+        let total_buffer_len = buffers.iter().map(|b| b.len()).sum();
+        Self::new_unchecked(
+            data_type,
+            views,
+            buffers,
+            validity,
+            total_bytes_len,
+            total_buffer_len,
+        )
+    }
+
+    pub fn data_buffers(&self) -> &Arc<[Buffer<u8>]> {
+        &self.buffers
     }
 
     pub fn variadic_buffer_lengths(&self) -> Vec<i64> {
@@ -157,11 +188,11 @@ impl<T: ViewType + ?Sized> BinaryViewArrayGeneric<T> {
     }
 
     pub fn try_new(
-        data_type: ArrowDataType,
+        data_type: DataType,
         views: Buffer<u128>,
         buffers: Arc<[Buffer<u8>]>,
         validity: Option<Bitmap>,
-    ) -> PolarsResult<Self> {
+    ) -> Result<Self> {
         if T::IS_UTF8 {
             validate_utf8_view(views.as_ref(), buffers.as_ref())?;
         } else {
@@ -172,28 +203,33 @@ impl<T: ViewType + ?Sized> BinaryViewArrayGeneric<T> {
             polars_ensure!(validity.len()== views.len(), ComputeError: "validity mask length must match the number of values" )
         }
 
-        let raw_buffers = buffers_into_raw(&buffers);
-        Ok(Self {
-            data_type,
-            views,
-            buffers,
-            raw_buffers,
-            validity,
-            phantom: Default::default(),
-        })
+        unsafe {
+            Ok(Self::new_unchecked_unknown_md(
+                data_type, views, buffers, validity,
+            ))
+        }
     }
 
     /// Creates an empty [`BinaryViewArrayGeneric`], i.e. whose `.len` is zero.
     #[inline]
-    pub fn new_empty(data_type: ArrowDataType) -> Self {
-        unsafe { Self::new_unchecked(data_type, Buffer::new(), Arc::from([]), None) }
+    pub fn new_empty(data_type: DataType) -> Self {
+        unsafe { Self::new_unchecked(data_type, Buffer::new(), Arc::from([]), None, 0, 0) }
     }
 
     /// Returns a new null [`BinaryViewArrayGeneric`] of `length`.
     #[inline]
-    pub fn new_null(data_type: ArrowDataType, length: usize) -> Self {
+    pub fn new_null(data_type: DataType, length: usize) -> Self {
         let validity = Some(Bitmap::new_zeroed(length));
-        unsafe { Self::new_unchecked(data_type, Buffer::zeroed(length), Arc::from([]), validity) }
+        unsafe {
+            Self::new_unchecked(
+                data_type,
+                Buffer::zeroed(length),
+                Arc::from([]),
+                validity,
+                0,
+                0,
+            )
+        }
     }
 
     /// Returns the element at index `i`
@@ -247,20 +283,69 @@ impl<T: ViewType + ?Sized> BinaryViewArrayGeneric<T> {
         BinaryViewValueIter::new(self)
     }
 
-    /// Returns an iterator of the non-null values.
-    #[inline]
-    pub fn non_null_values_iter(&self) -> NonNullValuesIter<'_, BinaryViewArrayGeneric<T>> {
-        NonNullValuesIter::new(self, self.validity())
-    }
-
     impl_sliced!();
     impl_mut_validity!();
     impl_into_array!();
 
     pub fn from<S: AsRef<T>, P: AsRef<[Option<S>]>>(slice: P) -> Self {
-        let mutable =
-            MutableBinaryViewArray::from_iter(slice.as_ref().iter().map(|opt_v| opt_v.as_ref()));
+        let mutable = MutableBinaryViewArray::from_iterator(
+            slice.as_ref().iter().map(|opt_v| opt_v.as_ref()),
+        );
         mutable.into()
+    }
+
+    /// Get the total length of bytes that it would take to concatenate all binary/str values in this array.
+    pub fn total_bytes_len(&self) -> usize {
+        self.total_bytes_len
+    }
+
+    /// Get the length of bytes that are stored in the variadic buffers.
+    pub fn total_buffer_len(&self) -> usize {
+        self.total_buffer_len
+    }
+}
+
+impl BinaryViewArray {
+    /// Validate the underlying bytes on UTF-8.
+    pub fn validate_utf8(&self) -> Result<()> {
+        validate_utf8_only_view(&self.views, &self.buffers)
+    }
+
+    /// Convert [`BinaryViewArray`] to [`Utf8ViewArray`].
+    pub fn to_utf8view(&self) -> Result<Utf8ViewArray> {
+        self.validate_utf8()?;
+        unsafe { Ok(self.to_utf8view_unchecked()) }
+    }
+
+    /// Convert [`BinaryViewArray`] to [`Utf8ViewArray`] without checking UTF-8.
+    ///
+    /// # Safety
+    /// The caller must ensure the underlying data is valid UTF-8.
+    pub unsafe fn to_utf8view_unchecked(&self) -> Utf8ViewArray {
+        Utf8ViewArray::new_unchecked(
+            DataType::Utf8View,
+            self.views.clone(),
+            self.buffers.clone(),
+            self.validity.clone(),
+            self.total_bytes_len,
+            self.total_buffer_len,
+        )
+    }
+}
+
+impl Utf8ViewArray {
+    pub fn to_binview(&self) -> BinaryViewArray {
+        // SAFETY: same invariants.
+        unsafe {
+            BinaryViewArray::new_unchecked(
+                DataType::BinaryView,
+                self.views.clone(),
+                self.buffers.clone(),
+                self.validity.clone(),
+                self.total_bytes_len,
+                self.total_buffer_len,
+            )
+        }
     }
 }
 
@@ -277,7 +362,7 @@ impl<T: ViewType + ?Sized> Array for BinaryViewArrayGeneric<T> {
         self.views.len()
     }
 
-    fn data_type(&self) -> &ArrowDataType {
+    fn data_type(&self) -> &DataType {
         &self.data_type
     }
 
@@ -291,7 +376,6 @@ impl<T: ViewType + ?Sized> Array for BinaryViewArrayGeneric<T> {
             "the offset of the new Buffer cannot exceed the existing length"
         );
         unsafe { self.slice_unchecked(offset, length) }
-        todo!()
     }
 
     unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
