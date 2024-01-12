@@ -23,8 +23,8 @@ use super::NativeArithmetics;
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub;
-/// use arrow2::array::Int32Array;
+/// use re_arrow2::compute::arithmetics::basic::sub;
+/// use re_arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
 /// let b = Int32Array::from(&[Some(5), None, None, Some(6)]);
@@ -44,8 +44,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::wrapping_sub;
-/// use arrow2::array::PrimitiveArray;
+/// use re_arrow2::compute::arithmetics::basic::wrapping_sub;
+/// use re_arrow2::array::PrimitiveArray;
 ///
 /// let a = PrimitiveArray::from([Some(-100i8), Some(-100i8), Some(100i8)]);
 /// let b = PrimitiveArray::from([Some(0i8), Some(100i8), Some(0i8)]);
@@ -67,8 +67,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::checked_sub;
-/// use arrow2::array::Int8Array;
+/// use re_arrow2::compute::arithmetics::basic::checked_sub;
+/// use re_arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(100i8), Some(-100i8), Some(100i8)]);
 /// let b = Int8Array::from(&[Some(1i8), Some(100i8), Some(0i8)]);
@@ -91,8 +91,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::saturating_sub;
-/// use arrow2::array::Int8Array;
+/// use re_arrow2::compute::arithmetics::basic::saturating_sub;
+/// use re_arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8)]);
 /// let b = Int8Array::from(&[Some(100i8)]);
@@ -116,8 +116,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::overflowing_sub;
-/// use arrow2::array::Int8Array;
+/// use re_arrow2::compute::arithmetics::basic::overflowing_sub;
+/// use re_arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
 /// let b = Int8Array::from(&[Some(1i8), Some(100i8)]);
@@ -191,8 +191,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::sub_scalar;
-/// use arrow2::array::Int32Array;
+/// use re_arrow2::compute::arithmetics::basic::sub_scalar;
+/// use re_arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
 /// let result = sub_scalar(&a, &1i32);
@@ -212,8 +212,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::wrapping_sub_scalar;
-/// use arrow2::array::Int8Array;
+/// use re_arrow2::compute::arithmetics::basic::wrapping_sub_scalar;
+/// use re_arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[None, Some(-100)]);
 /// let result = wrapping_sub_scalar(&a, &100i8);
@@ -233,8 +233,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::checked_sub_scalar;
-/// use arrow2::array::Int8Array;
+/// use re_arrow2::compute::arithmetics::basic::checked_sub_scalar;
+/// use re_arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[None, Some(-100), None, Some(-100)]);
 /// let result = checked_sub_scalar(&a, &100i8);
@@ -257,8 +257,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::saturating_sub_scalar;
-/// use arrow2::array::Int8Array;
+/// use re_arrow2::compute::arithmetics::basic::saturating_sub_scalar;
+/// use re_arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8)]);
 /// let result = saturating_sub_scalar(&a, &100i8);
@@ -282,8 +282,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::overflowing_sub_scalar;
-/// use arrow2::array::Int8Array;
+/// use re_arrow2::compute::arithmetics::basic::overflowing_sub_scalar;
+/// use re_arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(1i8), Some(-100i8)]);
 /// let (result, overflow) = overflowing_sub_scalar(&a, &100i8);

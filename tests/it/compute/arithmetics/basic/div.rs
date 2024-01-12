@@ -1,6 +1,6 @@
-use arrow2::array::*;
-use arrow2::compute::arithmetics::basic::*;
-use arrow2::compute::arithmetics::{ArrayCheckedDiv, ArrayDiv};
+use re_arrow2::array::*;
+use re_arrow2::compute::arithmetics::basic::*;
+use re_arrow2::compute::arithmetics::{ArrayCheckedDiv, ArrayDiv};
 
 #[test]
 #[should_panic]

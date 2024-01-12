@@ -1,8 +1,8 @@
 use tokio::fs::File;
 use tokio_util::compat::*;
 
-use arrow2::error::Result;
-use arrow2::io::csv::read_async::*;
+use re_arrow2::error::Result;
+use re_arrow2::io::csv::read_async::*;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {

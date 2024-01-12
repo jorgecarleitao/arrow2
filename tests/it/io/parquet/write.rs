@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
-use arrow2::error::Result;
-use arrow2::io::parquet::write::*;
+use re_arrow2::error::Result;
+use re_arrow2::io::parquet::write::*;
 
 use super::*;
 

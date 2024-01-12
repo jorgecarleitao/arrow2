@@ -1,7 +1,7 @@
 use proptest::prelude::*;
 
-use arrow2::bitmap::utils::SlicesIterator;
-use arrow2::bitmap::Bitmap;
+use re_arrow2::bitmap::utils::SlicesIterator;
+use re_arrow2::bitmap::Bitmap;
 
 use crate::bitmap::bitmap_strategy;
 

@@ -1,10 +1,10 @@
 use std::fs::File;
 
-use arrow2::array::{Array, Int32Array, Utf8Array};
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::{DataType, Field, Schema};
-use arrow2::error::Result;
-use arrow2::io::ipc::write;
+use re_arrow2::array::{Array, Int32Array, Utf8Array};
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::{DataType, Field, Schema};
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::write;
 
 fn write_batches(path: &str, schema: Schema, chunks: &[Chunk<Box<dyn Array>>]) -> Result<()> {
     let file = File::create(path)?;

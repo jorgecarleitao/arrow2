@@ -1,6 +1,6 @@
-use arrow2::array::{MutableArray, MutableUtf8Array, TryExtendFromSelf, Utf8Array};
-use arrow2::bitmap::Bitmap;
-use arrow2::datatypes::DataType;
+use re_arrow2::array::{MutableArray, MutableUtf8Array, TryExtendFromSelf, Utf8Array};
+use re_arrow2::bitmap::Bitmap;
+use re_arrow2::datatypes::DataType;
 
 #[test]
 fn capacities() {

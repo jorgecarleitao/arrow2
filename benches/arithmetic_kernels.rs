@@ -1,10 +1,10 @@
-use arrow2::compute::arithmetics::basic::NativeArithmetics;
 use criterion::{criterion_group, criterion_main, Criterion};
+use re_arrow2::compute::arithmetics::basic::NativeArithmetics;
 
-use arrow2::array::*;
-use arrow2::util::bench_util::*;
-use arrow2::{compute::arithmetics::basic::add, compute::arithmetics::basic::div_scalar};
 use num_traits::NumCast;
+use re_arrow2::array::*;
+use re_arrow2::util::bench_util::*;
+use re_arrow2::{compute::arithmetics::basic::add, compute::arithmetics::basic::div_scalar};
 use std::ops::{Add, Div};
 
 fn bench_div_scalar<T>(lhs: &PrimitiveArray<T>, rhs: &T)

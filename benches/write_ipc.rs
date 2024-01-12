@@ -1,12 +1,14 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::io::Cursor;
 
-use arrow2::array::*;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::Field;
-use arrow2::error::Result;
-use arrow2::io::ipc::write::*;
-use arrow2::util::bench_util::{create_boolean_array, create_primitive_array, create_string_array};
+use re_arrow2::array::*;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::Field;
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::write::*;
+use re_arrow2::util::bench_util::{
+    create_boolean_array, create_primitive_array, create_string_array,
+};
 
 fn write(array: &dyn Array) -> Result<()> {
     let field = Field::new("c1", array.data_type().clone(), true);

@@ -1,6 +1,6 @@
-use arrow2::array::*;
-use arrow2::buffer::Buffer;
-use arrow2::datatypes::DataType;
+use re_arrow2::array::*;
+use re_arrow2::buffer::Buffer;
+use re_arrow2::datatypes::DataType;
 
 mod mutable;
 

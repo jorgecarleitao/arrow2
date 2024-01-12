@@ -1,11 +1,11 @@
 use std::fs::File;
 
-use arrow2::array::Array;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::Schema;
-use arrow2::error::Result;
-use arrow2::io::ipc::read;
-use arrow2::io::print;
+use re_arrow2::array::Array;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::Schema;
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::read;
+use re_arrow2::io::print;
 
 /// Simplest way: read all record batches from the file. This can be used e.g. for random access.
 #[allow(clippy::type_complexity)]

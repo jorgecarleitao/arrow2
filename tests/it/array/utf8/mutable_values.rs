@@ -1,6 +1,6 @@
-use arrow2::array::MutableArray;
-use arrow2::array::MutableUtf8ValuesArray;
-use arrow2::datatypes::DataType;
+use re_arrow2::array::MutableArray;
+use re_arrow2::array::MutableUtf8ValuesArray;
+use re_arrow2::datatypes::DataType;
 
 #[test]
 fn capacity() {

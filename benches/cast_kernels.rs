@@ -19,10 +19,10 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use rand::distributions::Uniform;
 use rand::Rng;
 
-use arrow2::array::*;
-use arrow2::compute::cast;
-use arrow2::datatypes::*;
-use arrow2::util::bench_util::*;
+use re_arrow2::array::*;
+use re_arrow2::compute::cast;
+use re_arrow2::datatypes::*;
+use re_arrow2::util::bench_util::*;
 
 fn build_utf8_date_array(size: usize, with_nulls: bool) -> Utf8Array<i32> {
     use chrono::NaiveDate;

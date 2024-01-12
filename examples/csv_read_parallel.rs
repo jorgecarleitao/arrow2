@@ -3,9 +3,9 @@ use crossbeam_channel::unbounded;
 use std::thread;
 use std::time::SystemTime;
 
-use arrow2::array::Array;
-use arrow2::chunk::Chunk;
-use arrow2::{error::Result, io::csv::read};
+use re_arrow2::array::Array;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::{error::Result, io::csv::read};
 
 fn parallel_read(path: &str) -> Result<Vec<Chunk<Box<dyn Array>>>> {
     let batch_size = 100;

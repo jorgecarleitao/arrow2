@@ -19,9 +19,9 @@ use super::utils::combine_validities;
 /// * The arguments do not have the same length
 /// # Example
 /// ```rust
-/// # use arrow2::array::Int32Array;
-/// # use arrow2::datatypes::DataType;
-/// # use arrow2::compute::nullif::primitive_nullif;
+/// # use re_arrow2::array::Int32Array;
+/// # use re_arrow2::datatypes::DataType;
+/// # use re_arrow2::compute::nullif::primitive_nullif;
 /// # fn main() {
 /// let lhs = Int32Array::from(&[None, None, Some(1), Some(1), Some(1)]);
 /// let rhs = Int32Array::from(&[None, Some(1), None, Some(1), Some(0)]);
@@ -53,9 +53,9 @@ where
 /// * The arguments do not have the same logical type
 /// # Example
 /// ```rust
-/// # use arrow2::array::Int32Array;
-/// # use arrow2::datatypes::DataType;
-/// # use arrow2::compute::nullif::primitive_nullif_scalar;
+/// # use re_arrow2::array::Int32Array;
+/// # use re_arrow2::datatypes::DataType;
+/// # use re_arrow2::compute::nullif::primitive_nullif_scalar;
 /// # fn main() {
 /// let lhs = Int32Array::from(&[None, None, Some(1), Some(0), Some(1)]);
 /// let result = primitive_nullif_scalar(&lhs, 0);
@@ -89,9 +89,9 @@ where
 /// * The physical type is not supported for this operation (use [`can_nullif`] to check)
 /// # Example
 /// ```rust
-/// # use arrow2::array::Int32Array;
-/// # use arrow2::datatypes::DataType;
-/// # use arrow2::compute::nullif::nullif;
+/// # use re_arrow2::array::Int32Array;
+/// # use re_arrow2::datatypes::DataType;
+/// # use re_arrow2::compute::nullif::nullif;
 /// # fn main() {
 /// let lhs = Int32Array::from(&[None, None, Some(1), Some(1), Some(1)]);
 /// let rhs = Int32Array::from(&[None, Some(1), None, Some(1), Some(0)]);
@@ -127,10 +127,10 @@ pub fn nullif(lhs: &dyn Array, rhs: &dyn Array) -> Box<dyn Array> {
 /// * The physical type is not supported for this operation (use [`can_nullif`] to check)
 /// # Example
 /// ```rust
-/// # use arrow2::array::Int32Array;
-/// # use arrow2::scalar::PrimitiveScalar;
-/// # use arrow2::datatypes::DataType;
-/// # use arrow2::compute::nullif::nullif_scalar;
+/// # use re_arrow2::array::Int32Array;
+/// # use re_arrow2::scalar::PrimitiveScalar;
+/// # use re_arrow2::datatypes::DataType;
+/// # use re_arrow2::compute::nullif::nullif_scalar;
 /// # fn main() {
 /// let lhs = Int32Array::from(&[None, None, Some(1), Some(0), Some(1)]);
 /// let rhs = PrimitiveScalar::<i32>::from(Some(0));

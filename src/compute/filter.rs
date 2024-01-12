@@ -258,9 +258,9 @@ pub fn build_filter(filter: &BooleanArray) -> Result<Filter> {
 ///
 /// # Example
 /// ```rust
-/// # use arrow2::array::{Int32Array, PrimitiveArray, BooleanArray};
-/// # use arrow2::error::Result;
-/// # use arrow2::compute::filter::filter;
+/// # use re_arrow2::array::{Int32Array, PrimitiveArray, BooleanArray};
+/// # use re_arrow2::error::Result;
+/// # use re_arrow2::compute::filter::filter;
 /// # fn main() -> Result<()> {
 /// let array = PrimitiveArray::from_slice([5, 6, 7, 8, 9]);
 /// let filter_array = BooleanArray::from_slice(&vec![true, false, false, true, false]);

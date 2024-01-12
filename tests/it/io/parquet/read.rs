@@ -1,8 +1,8 @@
 use std::fs::File;
 
-use arrow2::array::*;
-use arrow2::error::*;
-use arrow2::io::parquet::read::*;
+use re_arrow2::array::*;
+use re_arrow2::error::*;
+use re_arrow2::io::parquet::read::*;
 
 use super::*;
 
@@ -894,10 +894,10 @@ fn read_int96_timestamps() -> Result<()> {
     let parse = |time_unit: TimeUnit| {
         let mut reader = Cursor::new(timestamp_data);
         let metadata = read_metadata(&mut reader)?;
-        let schema = arrow2::datatypes::Schema {
-            fields: vec![arrow2::datatypes::Field::new(
+        let schema = re_arrow2::datatypes::Schema {
+            fields: vec![re_arrow2::datatypes::Field::new(
                 "timestamps",
-                arrow2::datatypes::DataType::Timestamp(time_unit, None),
+                re_arrow2::datatypes::DataType::Timestamp(time_unit, None),
                 false,
             )],
             metadata: BTreeMap::new(),
@@ -910,13 +910,13 @@ fn read_int96_timestamps() -> Result<()> {
     // Timestamp(TimeUnit::Nanoseconds) and will cause a panic in dev builds/overflow in release builds
     // However, the code should work for the Microsecond/Millisecond time units
     for time_unit in [
-        arrow2::datatypes::TimeUnit::Microsecond,
-        arrow2::datatypes::TimeUnit::Millisecond,
-        arrow2::datatypes::TimeUnit::Second,
+        re_arrow2::datatypes::TimeUnit::Microsecond,
+        re_arrow2::datatypes::TimeUnit::Millisecond,
+        re_arrow2::datatypes::TimeUnit::Second,
     ] {
         parse(time_unit).expect("Should not error");
     }
-    std::panic::catch_unwind(|| parse(arrow2::datatypes::TimeUnit::Nanosecond))
+    std::panic::catch_unwind(|| parse(re_arrow2::datatypes::TimeUnit::Nanosecond))
         .expect_err("Should be a panic error");
 
     Ok(())

@@ -18,8 +18,8 @@ pub use mutable::*;
 /// multiple [`Array`] with the same number of rows.
 /// # Example
 /// ```
-/// use arrow2::array::*;
-/// use arrow2::datatypes::*;
+/// use re_arrow2::array::*;
+/// use re_arrow2::datatypes::*;
 /// let boolean = BooleanArray::from_slice(&[false, false, true, true]).boxed();
 /// let int = Int32Array::from_slice(&[42, 28, 19, 31]).boxed();
 ///
@@ -69,7 +69,7 @@ impl StructArray {
             .try_for_each(|(index, (data_type, child))| {
                 if data_type != child {
                     Err(Error::oos(format!(
-                        "The children DataTypes of a StructArray must equal the children data types. 
+                        "The children DataTypes of a StructArray must equal the children data types.
                          However, the field {index} has data type {data_type:?} but the value has data type {child:?}"
                     )))
                 } else {

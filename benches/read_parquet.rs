@@ -3,8 +3,8 @@ use std::{fs, io::Cursor, path::PathBuf};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::error::Result;
-use arrow2::io::parquet::read;
+use re_arrow2::error::Result;
+use re_arrow2::io::parquet::read;
 
 fn to_buffer(
     size: usize,

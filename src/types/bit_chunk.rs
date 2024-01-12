@@ -56,7 +56,7 @@ bit_chunk!(u64);
 /// to the first slot, as defined by the arrow specification.
 /// # Example
 /// ```
-/// use arrow2::types::BitChunkIter;
+/// use re_arrow2::types::BitChunkIter;
 /// let a = 0b00010000u8;
 /// let iter = BitChunkIter::new(a, 7);
 /// let r = iter.collect::<Vec<_>>();
@@ -109,7 +109,7 @@ unsafe impl<T: BitChunk> crate::trusted_len::TrustedLen for BitChunkIter<T> {}
 /// See <https://lemire.me/blog/2018/03/08/iterating-over-set-bits-quickly-simd-edition/> for details
 /// # Example
 /// ```
-/// use arrow2::types::BitChunkOnes;
+/// use re_arrow2::types::BitChunkOnes;
 /// let a = 0b00010000u8;
 /// let iter = BitChunkOnes::new(a);
 /// let r = iter.collect::<Vec<_>>();

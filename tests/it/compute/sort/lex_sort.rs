@@ -1,5 +1,5 @@
-use arrow2::array::*;
-use arrow2::compute::sort::{lexsort, SortColumn, SortOptions};
+use re_arrow2::array::*;
+use re_arrow2::compute::sort::{lexsort, SortColumn, SortOptions};
 
 fn test_lex_sort_arrays(input: Vec<SortColumn>, expected: Vec<Box<dyn Array>>) {
     let sorted = lexsort::<i32>(&input, None).unwrap();

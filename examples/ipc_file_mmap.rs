@@ -1,10 +1,10 @@
 //! Example showing how to memory map an Arrow IPC file into a [`Chunk`].
 use std::sync::Arc;
 
-use arrow2::array::{Array, BooleanArray};
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::{Field, Schema};
-use arrow2::error::Error;
+use re_arrow2::array::{Array, BooleanArray};
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::{Field, Schema};
+use re_arrow2::error::Error;
 
 // Arrow2 requires something that implements `AsRef<[u8]>`, which
 // `Mmap` supports. Here we mock it
@@ -22,12 +22,12 @@ impl AsRef<[u8]> for Mmap {
 fn write(
     chunks: &[Chunk<Box<dyn Array>>],
     schema: &Schema,
-    ipc_fields: Option<Vec<arrow2::io::ipc::IpcField>>,
-    compression: Option<arrow2::io::ipc::write::Compression>,
+    ipc_fields: Option<Vec<re_arrow2::io::ipc::IpcField>>,
+    compression: Option<re_arrow2::io::ipc::write::Compression>,
 ) -> Result<Vec<u8>, Error> {
     let result = vec![];
-    let options = arrow2::io::ipc::write::WriteOptions { compression };
-    let mut writer = arrow2::io::ipc::write::FileWriter::try_new(
+    let options = re_arrow2::io::ipc::write::WriteOptions { compression };
+    let mut writer = re_arrow2::io::ipc::write::FileWriter::try_new(
         result,
         schema.clone(),
         ipc_fields.clone(),
@@ -49,16 +49,16 @@ fn check_round_trip(array: Box<dyn Array>) -> Result<(), Error> {
 
     // we first read the files' metadata
     let metadata =
-        arrow2::io::ipc::read::read_file_metadata(&mut std::io::Cursor::new(data.as_ref()))?;
+        re_arrow2::io::ipc::read::read_file_metadata(&mut std::io::Cursor::new(data.as_ref()))?;
 
     // next we mmap the dictionaries
     // Safety: `write` above guarantees that this is a valid Arrow IPC file
     let dictionaries =
-        unsafe { arrow2::mmap::mmap_dictionaries_unchecked(&metadata, data.clone())? };
+        unsafe { re_arrow2::mmap::mmap_dictionaries_unchecked(&metadata, data.clone())? };
 
     // and finally mmap a chunk (0 in this case).
     // Safety: `write` above guarantees that this is a valid Arrow IPC file
-    let new_array = unsafe { arrow2::mmap::mmap_unchecked(&metadata, &dictionaries, data, 0)? };
+    let new_array = unsafe { re_arrow2::mmap::mmap_unchecked(&metadata, &dictionaries, data, 0)? };
     assert_eq!(new_array.into_arrays()[0], array);
     Ok(())
 }

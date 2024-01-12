@@ -1,4 +1,4 @@
-use arrow2::bitmap::{
+use re_arrow2::bitmap::{
     utils::{BitmapIter, ZipValidity},
     Bitmap,
 };

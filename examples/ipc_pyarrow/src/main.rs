@@ -2,10 +2,10 @@ use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
 
-use arrow2::array::{Array, Int64Array};
-use arrow2::datatypes::DataType;
-use arrow2::error::Result;
-use arrow2::io::ipc::read;
+use re_arrow2::array::{Array, Int64Array};
+use re_arrow2::datatypes::DataType;
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::read;
 
 fn main() -> Result<()> {
     const ADDRESS: &str = "127.0.0.1:12989";

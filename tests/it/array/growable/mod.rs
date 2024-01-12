@@ -11,9 +11,9 @@ mod struct_;
 mod union;
 mod utf8;
 
-use arrow2::array::growable::make_growable;
-use arrow2::array::*;
-use arrow2::datatypes::{DataType, Field};
+use re_arrow2::array::growable::make_growable;
+use re_arrow2::array::*;
+use re_arrow2::datatypes::{DataType, Field};
 
 #[test]
 fn test_make_growable() {

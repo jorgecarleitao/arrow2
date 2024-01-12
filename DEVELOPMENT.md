@@ -4,7 +4,6 @@ This crate follows the standard for developing a Rust library via `cargo`.
 The CI is our "ground truth" over the state of the library. Check out the different parts of
 the CI to understand how to test the different parts of this library locally.
 
-
 ## Checks
 
 PRs will run the following checks:

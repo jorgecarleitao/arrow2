@@ -1,4 +1,4 @@
-use arrow2::bitmap::Bitmap;
+use re_arrow2::bitmap::Bitmap;
 
 #[test]
 fn as_slice() {

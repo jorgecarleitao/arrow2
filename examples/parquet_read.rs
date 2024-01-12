@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::time::SystemTime;
 
-use arrow2::error::Error;
-use arrow2::io::parquet::read;
+use re_arrow2::error::Error;
+use re_arrow2::io::parquet::read;
 
 fn main() -> Result<(), Error> {
     // say we have a file

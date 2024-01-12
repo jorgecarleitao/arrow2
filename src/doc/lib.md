@@ -11,12 +11,12 @@ Below is an example of some of the things you can do with it:
 ```rust
 use std::sync::Arc;
 
-use arrow2::array::*;
-use arrow2::datatypes::{Field, DataType, Schema};
-use arrow2::compute::arithmetics;
-use arrow2::error::Result;
-use arrow2::io::parquet::write::*;
-use arrow2::chunk::Chunk;
+use re_arrow2::array::*;
+use re_arrow2::datatypes::{Field, DataType, Schema};
+use re_arrow2::compute::arithmetics;
+use re_arrow2::error::Result;
+use re_arrow2::io::parquet::write::*;
+use re_arrow2::chunk::Chunk;
 
 fn main() -> Result<()> {
     // declare arrays
@@ -83,5 +83,5 @@ functionality, such as:
 * `compute` to operate on arrays (addition, sum, sort, etc.)
 
 The feature `simd` (not part of `full`) produces more explicit SIMD instructions
-via [`std::simd`](https://doc.rust-lang.org/nightly/std/simd/index.html), but requires the 
+via [`std::simd`](https://doc.rust-lang.org/nightly/std/simd/index.html), but requires the
 nightly channel.

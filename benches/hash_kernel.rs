@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::compute::hash::hash;
-use arrow2::util::bench_util::*;
+use re_arrow2::compute::hash::hash;
+use re_arrow2::util::bench_util::*;
 
 fn add_benchmark(c: &mut Criterion) {
     let log2_size = 10;

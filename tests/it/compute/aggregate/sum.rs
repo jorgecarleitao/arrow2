@@ -1,8 +1,8 @@
-use arrow2::array::*;
-use arrow2::compute::aggregate::{sum, sum_primitive};
-use arrow2::compute::arithmetics;
-use arrow2::datatypes::DataType;
-use arrow2::scalar::{PrimitiveScalar, Scalar};
+use re_arrow2::array::*;
+use re_arrow2::compute::aggregate::{sum, sum_primitive};
+use re_arrow2::compute::arithmetics;
+use re_arrow2::datatypes::DataType;
+use re_arrow2::scalar::{PrimitiveScalar, Scalar};
 
 #[test]
 fn test_primitive_array_sum() {

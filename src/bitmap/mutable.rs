@@ -22,7 +22,7 @@ use super::Bitmap;
 /// A [`MutableBitmap`] can be converted to a [`Bitmap`] at `O(1)`.
 /// # Examples
 /// ```
-/// use arrow2::bitmap::MutableBitmap;
+/// use re_arrow2::bitmap::MutableBitmap;
 ///
 /// let bitmap = MutableBitmap::from([true, false, true]);
 /// assert_eq!(bitmap.iter().collect::<Vec<_>>(), vec![true, false, true]);

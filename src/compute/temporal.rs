@@ -331,8 +331,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::temporal::can_year;
-/// use arrow2::datatypes::{DataType};
+/// use re_arrow2::compute::temporal::can_year;
+/// use re_arrow2::datatypes::{DataType};
 ///
 /// assert_eq!(can_year(&DataType::Date32), true);
 /// assert_eq!(can_year(&DataType::Int8), false);
@@ -372,8 +372,8 @@ fn can_date(data_type: &DataType) -> bool {
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::temporal::can_hour;
-/// use arrow2::datatypes::{DataType, TimeUnit};
+/// use re_arrow2::compute::temporal::can_hour;
+/// use re_arrow2::datatypes::{DataType, TimeUnit};
 ///
 /// assert_eq!(can_hour(&DataType::Time32(TimeUnit::Second)), true);
 /// assert_eq!(can_hour(&DataType::Int8), false);

@@ -2,8 +2,8 @@ use futures::StreamExt;
 use tokio::fs::File;
 use tokio_util::compat::*;
 
-use arrow2::error::Result;
-use arrow2::io::ipc::read::stream_async::*;
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::read::stream_async::*;
 
 use crate::io::ipc::common::read_gzip_json;
 

@@ -1,6 +1,6 @@
 mod mutable;
 
-use arrow2::{
+use re_arrow2::{
     array::*,
     bitmap::Bitmap,
     datatypes::{DataType, Field},

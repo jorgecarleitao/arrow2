@@ -1,4 +1,4 @@
-use arrow2::{array::BinaryArray, bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
+use re_arrow2::{array::BinaryArray, bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
 
 #[test]
 fn not_shared() {

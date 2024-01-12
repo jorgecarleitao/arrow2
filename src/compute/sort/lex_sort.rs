@@ -32,9 +32,9 @@ pub struct SortColumn<'a> {
 ///
 /// ```
 /// use std::convert::From;
-/// use arrow2::array::{Utf8Array, Int64Array, Array};
-/// use arrow2::compute::sort::{SortColumn, SortOptions, lexsort};
-/// use arrow2::datatypes::DataType;
+/// use re_arrow2::array::{Utf8Array, Int64Array, Array};
+/// use re_arrow2::compute::sort::{SortColumn, SortOptions, lexsort};
+/// use re_arrow2::datatypes::DataType;
 ///
 /// let int64 = Int64Array::from(&[None, Some(-2), Some(89), Some(-64), Some(101)]);
 /// let utf8 = Utf8Array::<i32>::from(&vec![Some("hello"), Some("world"), Some(","), Some("foobar"), Some("!")]);

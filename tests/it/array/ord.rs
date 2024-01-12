@@ -1,9 +1,9 @@
 use std::cmp::Ordering;
 
-use arrow2::array::ord::build_compare;
-use arrow2::array::*;
-use arrow2::datatypes::DataType;
-use arrow2::error::Result;
+use re_arrow2::array::ord::build_compare;
+use re_arrow2::array::*;
+use re_arrow2::datatypes::DataType;
+use re_arrow2::error::Result;
 
 #[test]
 fn i32() -> Result<()> {

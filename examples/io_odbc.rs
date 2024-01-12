@@ -5,14 +5,14 @@
 //! sudo apt install libsqliteodbc sqlite3 unixodbc-dev
 //! sudo sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
 //! ```
-use arrow2::array::{Array, Int32Array, Utf8Array};
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::{DataType, Field};
-use arrow2::error::Result;
-use arrow2::io::odbc::api;
-use arrow2::io::odbc::api::Cursor;
-use arrow2::io::odbc::read;
-use arrow2::io::odbc::write;
+use re_arrow2::array::{Array, Int32Array, Utf8Array};
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::{DataType, Field};
+use re_arrow2::error::Result;
+use re_arrow2::io::odbc::api;
+use re_arrow2::io::odbc::api::Cursor;
+use re_arrow2::io::odbc::read;
+use re_arrow2::io::odbc::write;
 
 fn main() -> Result<()> {
     let connector = "Driver={SQLite3};Database=sqlite-test.db";

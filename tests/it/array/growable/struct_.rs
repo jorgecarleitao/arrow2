@@ -1,9 +1,9 @@
-use arrow2::array::{
+use re_arrow2::array::{
     growable::{Growable, GrowableStruct},
     Array, PrimitiveArray, StructArray, Utf8Array,
 };
-use arrow2::bitmap::Bitmap;
-use arrow2::datatypes::{DataType, Field};
+use re_arrow2::bitmap::Bitmap;
+use re_arrow2::datatypes::{DataType, Field};
 
 fn some_values() -> (DataType, Vec<Box<dyn Array>>) {
     let strings: Box<dyn Array> = Box::new(Utf8Array::<i32>::from([

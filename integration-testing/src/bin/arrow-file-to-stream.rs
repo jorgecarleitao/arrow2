@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use arrow2::error::Result;
-use arrow2::io::ipc::read;
-use arrow2::io::ipc::write;
 use clap::Parser;
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::read;
+use re_arrow2::io::ipc::write;
 use std::fs::File;
 
 #[derive(Debug, Parser)]

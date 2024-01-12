@@ -1,6 +1,6 @@
-use arrow2::array::{new_null_array, Int32Array};
-use arrow2::compute::window::*;
-use arrow2::datatypes::DataType;
+use re_arrow2::array::{new_null_array, Int32Array};
+use re_arrow2::compute::window::*;
+use re_arrow2::datatypes::DataType;
 
 #[test]
 fn shift_pos() {

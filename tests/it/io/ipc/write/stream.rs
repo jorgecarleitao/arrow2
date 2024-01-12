@@ -1,13 +1,13 @@
 use std::io::Cursor;
 
-use arrow2::array::Array;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::Schema;
-use arrow2::error::Result;
-use arrow2::io::ipc::read::read_stream_metadata;
-use arrow2::io::ipc::read::StreamReader;
-use arrow2::io::ipc::write::{StreamWriter, WriteOptions};
-use arrow2::io::ipc::IpcField;
+use re_arrow2::array::Array;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::Schema;
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::read::read_stream_metadata;
+use re_arrow2::io::ipc::read::StreamReader;
+use re_arrow2::io::ipc::write::{StreamWriter, WriteOptions};
+use re_arrow2::io::ipc::IpcField;
 
 use crate::io::ipc::common::read_arrow_stream;
 use crate::io::ipc::common::read_gzip_json;

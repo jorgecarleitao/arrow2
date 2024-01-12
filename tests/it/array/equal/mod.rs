@@ -1,4 +1,4 @@
-use arrow2::array::*;
+use re_arrow2::array::*;
 
 mod dictionary;
 mod fixed_size_list;

@@ -1,7 +1,7 @@
-use arrow2::array::{MutableArray, MutableBooleanArray, TryExtendFromSelf};
-use arrow2::bitmap::MutableBitmap;
-use arrow2::datatypes::DataType;
-use arrow2::error::Result;
+use re_arrow2::array::{MutableArray, MutableBooleanArray, TryExtendFromSelf};
+use re_arrow2::bitmap::MutableBitmap;
+use re_arrow2::datatypes::DataType;
+use re_arrow2::error::Result;
 
 #[test]
 fn set() {

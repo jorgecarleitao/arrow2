@@ -44,8 +44,8 @@ pub fn upper(array: &dyn Array) -> Result<Box<dyn Array>> {
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::utf8::can_upper;
-/// use arrow2::datatypes::{DataType};
+/// use re_arrow2::compute::utf8::can_upper;
+/// use re_arrow2::datatypes::{DataType};
 ///
 /// let data_type = DataType::Utf8;
 /// assert_eq!(can_upper(&data_type), true);
@@ -86,8 +86,8 @@ pub fn lower(array: &dyn Array) -> Result<Box<dyn Array>> {
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::utf8::can_lower;
-/// use arrow2::datatypes::{DataType};
+/// use re_arrow2::compute::utf8::can_lower;
+/// use re_arrow2::datatypes::{DataType};
 ///
 /// let data_type = DataType::Utf8;
 /// assert_eq!(can_lower(&data_type), true);

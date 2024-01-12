@@ -1,8 +1,8 @@
-use arrow2::array::*;
-use arrow2::compute::partition::*;
-use arrow2::compute::sort::{SortColumn, SortOptions};
-use arrow2::datatypes::DataType;
-use arrow2::error::Result;
+use re_arrow2::array::*;
+use re_arrow2::compute::partition::*;
+use re_arrow2::compute::sort::{SortColumn, SortOptions};
+use re_arrow2::datatypes::DataType;
+use re_arrow2::error::Result;
 
 #[test]
 fn lexicographical_partition_ranges_empty() {

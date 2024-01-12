@@ -1,5 +1,6 @@
 use ahash::AHashMap;
-use arrow2::{
+use futures::{future::BoxFuture, io::Cursor, SinkExt};
+use re_arrow2::{
     array::{Float32Array, Int32Array},
     chunk::Chunk,
     datatypes::{DataType, Field, Schema},
@@ -9,7 +10,6 @@ use arrow2::{
         write::{CompressionOptions, Encoding, Version, WriteOptions},
     },
 };
-use futures::{future::BoxFuture, io::Cursor, SinkExt};
 
 use super::FileSink;
 

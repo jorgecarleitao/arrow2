@@ -1,10 +1,10 @@
-use arrow2::array::Array;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::Schema;
-use arrow2::error::Error;
+use re_arrow2::array::Array;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::Schema;
+use re_arrow2::error::Error;
 
-use arrow2::io::flight::*;
-use arrow2::io::ipc::write::{default_ipc_fields, WriteOptions};
+use re_arrow2::io::flight::*;
+use re_arrow2::io::ipc::write::{default_ipc_fields, WriteOptions};
 
 use super::ipc::read_gzip_json;
 

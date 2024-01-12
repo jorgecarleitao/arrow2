@@ -1,4 +1,4 @@
-use arrow2::error::Result;
+use re_arrow2::error::Result;
 
 use super::{integration_read, integration_write};
 use crate::io::ipc::read_gzip_json;

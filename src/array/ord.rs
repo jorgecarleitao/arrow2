@@ -161,9 +161,9 @@ macro_rules! dyn_dict {
 /// between two [`Array`].
 /// # Example
 /// ```
-/// use arrow2::array::{ord::build_compare, PrimitiveArray};
+/// use re_arrow2::array::{ord::build_compare, PrimitiveArray};
 ///
-/// # fn main() -> arrow2::error::Result<()> {
+/// # fn main() -> re_arrow2::error::Result<()> {
 /// let array1 = PrimitiveArray::from_slice([1, 2]);
 /// let array2 = PrimitiveArray::from_slice([3, 4]);
 ///

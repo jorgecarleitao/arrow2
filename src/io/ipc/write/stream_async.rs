@@ -21,10 +21,10 @@ use crate::error::{Error, Result};
 ///
 /// ```
 /// use futures::SinkExt;
-/// use arrow2::array::{Array, Int32Array};
-/// use arrow2::datatypes::{DataType, Field, Schema};
-/// use arrow2::chunk::Chunk;
-/// # use arrow2::io::ipc::write::stream_async::StreamSink;
+/// use re_arrow2::array::{Array, Int32Array};
+/// use re_arrow2::datatypes::{DataType, Field, Schema};
+/// use re_arrow2::chunk::Chunk;
+/// # use re_arrow2::io::ipc::write::stream_async::StreamSink;
 /// # futures::executor::block_on(async move {
 /// let schema = Schema::from(vec![
 ///     Field::new("values", DataType::Int32, true),
@@ -44,7 +44,7 @@ use crate::error::{Error, Result};
 ///     sink.feed(chunk.into()).await?;
 /// }
 /// sink.close().await?;
-/// # arrow2::error::Result::Ok(())
+/// # re_arrow2::error::Result::Ok(())
 /// # }).unwrap();
 /// ```
 pub struct StreamSink<'a, W: AsyncWrite + Unpin + Send + 'a> {

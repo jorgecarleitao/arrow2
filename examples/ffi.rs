@@ -1,7 +1,7 @@
-use arrow2::array::{Array, PrimitiveArray};
-use arrow2::datatypes::Field;
-use arrow2::error::Result;
-use arrow2::ffi;
+use re_arrow2::array::{Array, PrimitiveArray};
+use re_arrow2::datatypes::Field;
+use re_arrow2::error::Result;
+use re_arrow2::ffi;
 
 fn export(array: Box<dyn Array>) -> (ffi::ArrowArray, ffi::ArrowSchema) {
     // importing an array requires an associated field so that the consumer knows its datatype.

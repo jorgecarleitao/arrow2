@@ -3,7 +3,7 @@ use std::ops::{BitAnd, BitOr, BitXor, Not};
 use criterion::{criterion_group, criterion_main, Criterion};
 use num_traits::NumCast;
 
-use arrow2::{
+use re_arrow2::{
     array::PrimitiveArray, compute::bitwise::*, types::NativeType,
     util::bench_util::create_primitive_array_with_seed,
 };

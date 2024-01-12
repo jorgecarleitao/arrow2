@@ -17,8 +17,8 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::array::*;
-use arrow2::compute::length::length;
+use re_arrow2::array::*;
+use re_arrow2::compute::length::length;
 
 fn bench_length(array: &Utf8Array<i32>) {
     criterion::black_box(length(array).unwrap());

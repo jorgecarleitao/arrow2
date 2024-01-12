@@ -1,10 +1,10 @@
-use arrow2::array::*;
-use arrow2::bitmap::Bitmap;
-use arrow2::datatypes::{DataType, Field, IntegerType, TimeUnit, UnionMode};
-use arrow2::offset::Offsets;
 use arrow_array::ArrayRef;
 use arrow_data::ArrayDataBuilder;
 use proptest::num::i32;
+use re_arrow2::array::*;
+use re_arrow2::bitmap::Bitmap;
+use re_arrow2::datatypes::{DataType, Field, IntegerType, TimeUnit, UnionMode};
+use re_arrow2::offset::Offsets;
 
 fn test_arrow2_roundtrip(array: &dyn arrow_array::Array) {
     let arrow2 = Box::<dyn Array>::from(array);

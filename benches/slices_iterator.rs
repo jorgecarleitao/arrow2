@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::bitmap::{utils::SlicesIterator, Bitmap};
+use re_arrow2::bitmap::{utils::SlicesIterator, Bitmap};
 
 fn bench_slices(lhs: &Bitmap) {
     let set_count = lhs.len() - lhs.unset_bits();

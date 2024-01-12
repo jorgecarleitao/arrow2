@@ -1,5 +1,5 @@
-use arrow2::array::*;
-use arrow2::compute::contains::contains;
+use re_arrow2::array::*;
+use re_arrow2::compute::contains::contains;
 
 // disable wrapping inside literal vectors used for test data and assertions
 #[rustfmt::skip::macros(vec)]

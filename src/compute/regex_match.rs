@@ -50,8 +50,8 @@ pub fn regex_match<O: Offset>(values: &Utf8Array<O>, regex: &Utf8Array<O>) -> Re
 /// Regex matches
 /// # Example
 /// ```
-/// use arrow2::array::{Utf8Array, BooleanArray};
-/// use arrow2::compute::regex_match::regex_match_scalar;
+/// use re_arrow2::array::{Utf8Array, BooleanArray};
+/// use re_arrow2::compute::regex_match::regex_match_scalar;
 ///
 /// let strings = Utf8Array::<i32>::from_slice(&vec!["ArAow", "A_B", "AAA"]);
 ///

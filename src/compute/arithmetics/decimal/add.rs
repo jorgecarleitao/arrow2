@@ -23,9 +23,9 @@ use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::add;
-/// use arrow2::array::PrimitiveArray;
-/// use arrow2::datatypes::DataType;
+/// use re_arrow2::compute::arithmetics::decimal::add;
+/// use re_arrow2::array::PrimitiveArray;
+/// use re_arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(1i128), Some(1i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(1i128), Some(2i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
@@ -61,9 +61,9 @@ pub fn add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::saturating_add;
-/// use arrow2::array::PrimitiveArray;
-/// use arrow2::datatypes::DataType;
+/// use re_arrow2::compute::arithmetics::decimal::saturating_add;
+/// use re_arrow2::array::PrimitiveArray;
+/// use re_arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
@@ -105,9 +105,9 @@ pub fn saturating_add(
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::checked_add;
-/// use arrow2::array::PrimitiveArray;
-/// use arrow2::datatypes::DataType;
+/// use re_arrow2::compute::arithmetics::decimal::checked_add;
+/// use re_arrow2::array::PrimitiveArray;
+/// use re_arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
@@ -169,9 +169,9 @@ impl ArraySaturatingAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 /// ```
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::adaptive_add;
-/// use arrow2::array::PrimitiveArray;
-/// use arrow2::datatypes::DataType;
+/// use re_arrow2::compute::arithmetics::decimal::adaptive_add;
+/// use re_arrow2::array::PrimitiveArray;
+/// use re_arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(11111_11i128)]).to(DataType::Decimal(7, 2));
 /// let b = PrimitiveArray::from([Some(11111_111i128)]).to(DataType::Decimal(8, 3));
