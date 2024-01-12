@@ -9,8 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: true # needed to test IPC, which are located in a submodule
       - name: Install Rust
         run: rustup update stable
       - name: Setup parquet files
@@ -35,8 +33,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: true # needed to test IPC, which are located in a submodule
       - name: Install Rust
         run: rustup update stable
       - uses: Swatinem/rust-cache@v1
@@ -98,8 +94,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: true # needed to test IPC, which are located in a submodule
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly-2022-12-05
@@ -162,8 +156,6 @@ jobs:
           - arm-linux-androideabi
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: true
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly-2022-12-05

@@ -4,12 +4,6 @@ This crate follows the standard for developing a Rust library via `cargo`.
 The CI is our "ground truth" over the state of the library. Check out the different parts of
 the CI to understand how to test the different parts of this library locally.
 
-## Git clone with submodules
-The crate comes with additional submodules to aid with testing, to ensure you have them if you plan on testing, using `--recurse-submodules` will clone the submodules alongside the repository.
-
-```bash
-git clone --recurse-submodules https://github.com/jorgecarleitao/arrow2
-```
 
 ## Checks
 
@@ -22,7 +16,7 @@ cargo clippy --all --features=full --tests -- -D warnings
 
 ## Testing
 
-The simplest way to test the crate is to run 
+The simplest way to test the crate is to run
 
 ```bash
 cargo test --tests
@@ -62,14 +56,6 @@ python tests/it/io/orc/write.py
 deactivate
 ```
 
-If you receive warnings about other files not found (IPC), ensure you have all submodules:
-```bash
-# If you didn't clone with `git clone --recurse-submodules https://github.com/jorgecarleitao/arrow2`
-git submodule update --init --recursive
-
-# Update to the latest submodules
-git submodule update --recursive --remote
-```
 
 during development of particular parts of the crate, it is usually faster
 to reduce the feature set - the tests are gated to only the relevant tests
@@ -91,7 +77,7 @@ an issue, we favor having the PR on the changelog, since it includes a reference
 the author (credits).
 
 Summary:
-* pull requests with both backward-incompatible changes and new 
+* pull requests with both backward-incompatible changes and new
   features/enhancements MUST close at least one issue (the one
   documenting the backward-incompatible change)
 * Every other pull request MAY close one issue

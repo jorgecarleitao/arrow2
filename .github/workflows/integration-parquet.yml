@@ -8,8 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: true
       - name: Setup Rust toolchain
         run: |
           rustup toolchain install stable
