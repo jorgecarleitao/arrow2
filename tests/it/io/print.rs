@@ -161,7 +161,10 @@ fn write_timestamp_second_with_tz() {
     ];
     check_datetime!(
         i64,
-        DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("UTC".to_string()))),
+        DataType::Timestamp(
+            TimeUnit::Second,
+            Some(std::sync::Arc::new("UTC".to_string()))
+        ),
         11111111,
         expected
     );
@@ -327,7 +330,11 @@ fn write_struct() -> Result<()> {
 
     let validity = Some(Bitmap::from(&[true, false, true]));
 
-    let array = StructArray::new(DataType::Struct(std::sync::Arc::new(fields)), values, validity);
+    let array = StructArray::new(
+        DataType::Struct(std::sync::Arc::new(fields)),
+        values,
+        validity,
+    );
 
     let columns = Chunk::new(vec![&array as &dyn Array]);
 

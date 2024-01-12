@@ -29,7 +29,10 @@ fn some_values() -> (DataType, Vec<Box<dyn Array>>) {
         Field::new("key", DataType::Utf8, true),
         Field::new("val", DataType::Int32, true),
     ];
-    (DataType::Struct(std::sync::Arc::new(fields)), vec![strings, ints])
+    (
+        DataType::Struct(std::sync::Arc::new(fields)),
+        vec![strings, ints],
+    )
 }
 
 #[test]

@@ -426,7 +426,10 @@ fn deserialize_timestamp() -> Result<()> {
     let input = vec!["1996-12-19T16:34:57-02:00", "1996-12-19T16:34:58-02:00"];
     let input = input.join("\n");
 
-    let data_type = DataType::Timestamp(TimeUnit::Millisecond, Some(std::sync::Arc::new("-01:00".to_string())));
+    let data_type = DataType::Timestamp(
+        TimeUnit::Millisecond,
+        Some(std::sync::Arc::new("-01:00".to_string())),
+    );
 
     let expected = Int64Array::from([Some(851020497000), Some(851020498000)]).to(data_type.clone());
 

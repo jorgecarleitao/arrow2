@@ -6,42 +6,47 @@ use arrow2::types::months_days_ns;
 
 #[test]
 fn test_adding_timestamp() {
-    let timestamp =
-        PrimitiveArray::from([Some(100000i64), Some(200000i64), None, Some(300000i64)]).to(
-            DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("America/New_york".to_string()))),
-        );
+    let timestamp = PrimitiveArray::from([Some(100000i64), Some(200000i64), None, Some(300000i64)])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ));
 
     let duration = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)])
         .to(DataType::Duration(TimeUnit::Second));
 
     let result = add_duration(&timestamp, &duration);
-    let expected =
-        PrimitiveArray::from([Some(100010i64), Some(200020i64), None, Some(300030i64)]).to(
-            DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("America/New_york".to_string()))),
-        );
+    let expected = PrimitiveArray::from([Some(100010i64), Some(200020i64), None, Some(300030i64)])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ));
 
     assert_eq!(result, expected);
 
     let duration = PrimitiveScalar::from(Some(10i64)).to(DataType::Duration(TimeUnit::Second));
 
     let result = add_duration_scalar(&timestamp, &duration);
-    let expected =
-        PrimitiveArray::from([Some(100010i64), Some(200010i64), None, Some(300010i64)]).to(
-            DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("America/New_york".to_string()))),
-        );
+    let expected = PrimitiveArray::from([Some(100010i64), Some(200010i64), None, Some(300010i64)])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ));
     assert_eq!(result, expected);
 }
 
 #[test]
 fn test_adding_duration_different_scale() {
-    let timestamp =
-        PrimitiveArray::from([Some(100000i64), Some(200000i64), None, Some(300000i64)]).to(
-            DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("America/New_york".to_string()))),
-        );
-    let expected =
-        PrimitiveArray::from([Some(100010i64), Some(200020i64), None, Some(300030i64)]).to(
-            DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("America/New_york".to_string()))),
-        );
+    let timestamp = PrimitiveArray::from([Some(100000i64), Some(200000i64), None, Some(300000i64)])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ));
+    let expected = PrimitiveArray::from([Some(100010i64), Some(200020i64), None, Some(300030i64)])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ));
 
     // Testing duration in milliseconds
     let duration = PrimitiveArray::from([Some(10_000i64), Some(20_000i64), None, Some(30_000i64)])
@@ -69,20 +74,29 @@ fn test_adding_duration_different_scale() {
 #[test]
 fn test_adding_subtract_timestamps_scale() {
     let timestamp = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)]).to(
-        DataType::Timestamp(TimeUnit::Millisecond, Some(std::sync::Arc::new("America/New_york".to_string()))),
+        DataType::Timestamp(
+            TimeUnit::Millisecond,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ),
     );
     let duration = PrimitiveArray::from([Some(1i64), Some(2i64), None, Some(3i64)])
         .to(DataType::Duration(TimeUnit::Second));
 
     let expected = PrimitiveArray::from([Some(1_010i64), Some(2_020i64), None, Some(3_030i64)]).to(
-        DataType::Timestamp(TimeUnit::Millisecond, Some(std::sync::Arc::new("America/New_york".to_string()))),
+        DataType::Timestamp(
+            TimeUnit::Millisecond,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ),
     );
 
     let result = add_duration(&timestamp, &duration);
     assert_eq!(result, expected);
 
     let timestamp = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)]).to(
-        DataType::Timestamp(TimeUnit::Nanosecond, Some(std::sync::Arc::new("America/New_york".to_string()))),
+        DataType::Timestamp(
+            TimeUnit::Nanosecond,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ),
     );
     let duration = PrimitiveArray::from([Some(1i64), Some(2i64), None, Some(3i64)])
         .to(DataType::Duration(TimeUnit::Second));
@@ -104,33 +118,37 @@ fn test_adding_subtract_timestamps_scale() {
 
 #[test]
 fn test_subtract_timestamp() {
-    let timestamp =
-        PrimitiveArray::from([Some(100000i64), Some(200000i64), None, Some(300000i64)]).to(
-            DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("America/New_york".to_string()))),
-        );
+    let timestamp = PrimitiveArray::from([Some(100000i64), Some(200000i64), None, Some(300000i64)])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ));
 
     let duration = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)])
         .to(DataType::Duration(TimeUnit::Second));
 
     let result = subtract_duration(&timestamp, &duration);
-    let expected =
-        PrimitiveArray::from([Some(99990i64), Some(199980i64), None, Some(299970i64)]).to(
-            DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("America/New_york".to_string()))),
-        );
+    let expected = PrimitiveArray::from([Some(99990i64), Some(199980i64), None, Some(299970i64)])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ));
 
     assert_eq!(result, expected);
 }
 
 #[test]
 fn test_subtracting_duration_different_scale() {
-    let timestamp =
-        PrimitiveArray::from([Some(100000i64), Some(200000i64), None, Some(300000i64)]).to(
-            DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("America/New_york".to_string()))),
-        );
-    let expected =
-        PrimitiveArray::from([Some(99990i64), Some(199980i64), None, Some(299970i64)]).to(
-            DataType::Timestamp(TimeUnit::Second, Some(std::sync::Arc::new("America/New_york".to_string()))),
-        );
+    let timestamp = PrimitiveArray::from([Some(100000i64), Some(200000i64), None, Some(300000i64)])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ));
+    let expected = PrimitiveArray::from([Some(99990i64), Some(199980i64), None, Some(299970i64)])
+        .to(DataType::Timestamp(
+            TimeUnit::Second,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ));
 
     // Testing duration in milliseconds
     let duration = PrimitiveArray::from([Some(10_000i64), Some(20_000i64), None, Some(30_000i64)])
@@ -158,21 +176,28 @@ fn test_subtracting_duration_different_scale() {
 #[test]
 fn test_subtracting_subtract_timestamps_scale() {
     let timestamp = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)]).to(
-        DataType::Timestamp(TimeUnit::Millisecond, Some(std::sync::Arc::new("America/New_york".to_string()))),
+        DataType::Timestamp(
+            TimeUnit::Millisecond,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ),
     );
     let duration = PrimitiveArray::from([Some(1i64), Some(2i64), None, Some(3i64)])
         .to(DataType::Duration(TimeUnit::Second));
 
-    let expected =
-        PrimitiveArray::from([Some(-990i64), Some(-1_980i64), None, Some(-2_970i64)]).to(
-            DataType::Timestamp(TimeUnit::Millisecond, Some(std::sync::Arc::new("America/New_york".to_string()))),
-        );
+    let expected = PrimitiveArray::from([Some(-990i64), Some(-1_980i64), None, Some(-2_970i64)])
+        .to(DataType::Timestamp(
+            TimeUnit::Millisecond,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ));
 
     let result = subtract_duration(&timestamp, &duration);
     assert_eq!(result, expected);
 
     let timestamp = PrimitiveArray::from([Some(10i64), Some(20i64), None, Some(30i64)]).to(
-        DataType::Timestamp(TimeUnit::Nanosecond, Some(std::sync::Arc::new("America/New_york".to_string()))),
+        DataType::Timestamp(
+            TimeUnit::Nanosecond,
+            Some(std::sync::Arc::new("America/New_york".to_string())),
+        ),
     );
     let duration = PrimitiveArray::from([Some(1i64), Some(2i64), None, Some(3i64)])
         .to(DataType::Duration(TimeUnit::Second));

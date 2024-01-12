@@ -74,8 +74,10 @@ fn dense() -> Result<()> {
 
 #[test]
 fn complex_dense() -> Result<()> {
-    let fixed_size_type =
-        DataType::FixedSizeList(std::sync::Arc::new(Field::new("i", DataType::UInt16, true)), 3);
+    let fixed_size_type = DataType::FixedSizeList(
+        std::sync::Arc::new(Field::new("i", DataType::UInt16, true)),
+        3,
+    );
 
     let fields = vec![
         Field::new("a", DataType::Int32, true),
