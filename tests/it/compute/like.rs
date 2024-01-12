@@ -58,6 +58,10 @@ fn test_like_utf8_scalar() -> Result<()> {
     let result = like_utf8_scalar(&array, "A\\_row").unwrap();
     assert_eq!(result, BooleanArray::from_slice([true, false]));
 
+    let array = Utf8Array::<i32>::from_slice(["Arrow", "Arrow", "row your", "boat"]);
+    let result = like_utf8_scalar(&array, "%row%").unwrap();
+    assert_eq!(result, BooleanArray::from_slice([true, true, true, false]));
+
     Ok(())
 }
 

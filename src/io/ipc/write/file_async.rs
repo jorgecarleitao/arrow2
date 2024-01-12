@@ -11,7 +11,7 @@ use super::schema::serialize_schema;
 use super::{default_ipc_fields, schema_to_bytes, Record};
 use crate::datatypes::*;
 use crate::error::{Error, Result};
-use crate::io::ipc::{IpcField, ARROW_MAGIC};
+use crate::io::ipc::{IpcField, ARROW_MAGIC_V2};
 
 type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 
@@ -105,7 +105,7 @@ where
     }
 
     async fn start(mut writer: W, encoded: EncodedData) -> Result<WriteOutput<W>> {
-        writer.write_all(&ARROW_MAGIC[..]).await?;
+        writer.write_all(&ARROW_MAGIC_V2[..]).await?;
         writer.write_all(&[0, 0]).await?;
         let (meta, data) = write_message(&mut writer, encoded).await?;
 
@@ -149,7 +149,7 @@ where
         writer
             .write_all(&(footer.len() as i32).to_le_bytes())
             .await?;
-        writer.write_all(&ARROW_MAGIC).await?;
+        writer.write_all(&ARROW_MAGIC_V2).await?;
         writer.close().await?;
 
         Ok((0, None, vec![], None))

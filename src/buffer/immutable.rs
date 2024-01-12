@@ -96,6 +96,13 @@ impl<T> Buffer<T> {
         self.len() == 0
     }
 
+    /// Returns whether underlying data is sliced.
+    /// If sliced the [`Buffer`] is backed by
+    /// more data than the length of `Self`.
+    pub fn is_sliced(&self) -> bool {
+        self.data.len() != self.length
+    }
+
     /// Returns the byte slice stored in this buffer
     #[inline]
     pub fn as_slice(&self) -> &[T] {
@@ -236,6 +243,30 @@ impl<T> Buffer<T> {
     /// Get the weak count of underlying `Arc` data buffer.
     pub fn shared_count_weak(&self) -> usize {
         Arc::weak_count(&self.data)
+    }
+
+    /// Returns its internal representation
+    #[must_use]
+    pub fn into_inner(self) -> (Arc<Bytes<T>>, usize, usize) {
+        let Self {
+            data,
+            offset,
+            length,
+        } = self;
+        (data, offset, length)
+    }
+
+    /// Creates a `[Bitmap]` from its internal representation.
+    /// This is the inverted from `[Bitmap::into_inner]`
+    ///
+    /// # Safety
+    /// Callers must ensure all invariants of this struct are upheld.
+    pub unsafe fn from_inner_unchecked(data: Arc<Bytes<T>>, offset: usize, length: usize) -> Self {
+        Self {
+            data,
+            offset,
+            length,
+        }
     }
 }
 

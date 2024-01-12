@@ -11,7 +11,7 @@ use crate::array::*;
 use crate::chunk::Chunk;
 use crate::datatypes::{Field, Schema};
 use crate::error::{Error, Result};
-use crate::io::ipc::{IpcSchema, ARROW_MAGIC, CONTINUATION_MARKER};
+use crate::io::ipc::{IpcSchema, ARROW_MAGIC_V2, CONTINUATION_MARKER};
 
 use super::common::{apply_projection, prepare_projection, read_dictionary, read_record_batch};
 use super::file::{deserialize_footer, get_record_batch};
@@ -135,7 +135,7 @@ async fn read_footer_len<R: AsyncRead + AsyncSeek + Unpin>(reader: &mut R) -> Re
     reader.read_exact(&mut footer).await?;
     let footer_len = i32::from_le_bytes(footer[..4].try_into().unwrap());
 
-    if footer[4..] != ARROW_MAGIC {
+    if footer[4..] != ARROW_MAGIC_V2 {
         return Err(Error::from(OutOfSpecKind::InvalidFooter));
     }
     footer_len

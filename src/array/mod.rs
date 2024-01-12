@@ -73,9 +73,18 @@ pub trait Array: Send + Sync + dyn_clone::DynClone + 'static {
     /// Panics iff `i >= self.len()`.
     #[inline]
     fn is_null(&self, i: usize) -> bool {
+        assert!(i < self.len());
+        unsafe { self.is_null_unchecked(i) }
+    }
+
+    /// Returns whether slot `i` is null.
+    /// # Safety
+    /// The caller must ensure `i < self.len()`
+    #[inline]
+    unsafe fn is_null_unchecked(&self, i: usize) -> bool {
         self.validity()
             .as_ref()
-            .map(|x| !x.get_bit(i))
+            .map(|x| !x.get_bit_unchecked(i))
             .unwrap_or(false)
     }
 
@@ -528,8 +537,8 @@ macro_rules! impl_sliced {
         /// The caller must ensure that `offset + length <= self.len()`.
         #[inline]
         #[must_use]
-        pub fn sliced_unchecked(mut self, offset: usize, length: usize) -> Self {
-            unsafe { self.slice_unchecked(offset, length) };
+        pub unsafe fn sliced_unchecked(mut self, offset: usize, length: usize) -> Self {
+            self.slice_unchecked(offset, length);
             self
         }
     };
@@ -711,8 +720,11 @@ mod utf8;
 mod equal;
 mod ffi;
 mod fmt;
-pub mod growable;
+#[doc(hidden)]
+pub mod indexable;
 mod iterator;
+
+pub mod growable;
 pub mod ord;
 
 pub(crate) use iterator::ArrayAccessor;
@@ -728,7 +740,7 @@ pub use fixed_size_binary::{FixedSizeBinaryArray, MutableFixedSizeBinaryArray};
 pub use fixed_size_list::{FixedSizeListArray, MutableFixedSizeListArray};
 pub use list::{ListArray, ListValuesIter, MutableListArray};
 pub use map::MapArray;
-pub use null::NullArray;
+pub use null::{MutableNullArray, NullArray};
 pub use primitive::*;
 pub use struct_::{MutableStructArray, StructArray};
 pub use union::UnionArray;
@@ -749,6 +761,15 @@ pub trait TryExtend<A> {
 pub trait TryPush<A> {
     /// Tries to push a new element.
     fn try_push(&mut self, item: A) -> Result<()>;
+}
+
+/// A trait describing the ability of a struct to receive new items.
+pub trait PushUnchecked<A> {
+    /// Push a new element that holds the invariants of the struct.
+    /// # Safety
+    /// The items must uphold the invariants of the struct
+    /// Read the specific implementation of the trait to understand what these are.
+    unsafe fn push_unchecked(&mut self, item: A);
 }
 
 /// A trait describing the ability of a struct to extend from a reference of itself.

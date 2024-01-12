@@ -22,6 +22,7 @@ mod pages;
 mod primitive;
 mod row_group;
 mod schema;
+#[cfg(feature = "io_parquet_async")]
 mod sink;
 mod utf8;
 mod utils;
@@ -68,6 +69,8 @@ use crate::compute::aggregate::estimated_bytes_size;
 pub use file::FileWriter;
 pub use row_group::{row_group_iter, RowGroupIterator};
 pub use schema::to_parquet_type;
+#[cfg(feature = "io_parquet_async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_parquet_async")))]
 pub use sink::FileSink;
 
 pub use pages::array_to_columns;
@@ -676,6 +679,139 @@ fn array_to_page_nested(
         Float64 => {
             let array = array.as_any().downcast_ref().unwrap();
             primitive::nested_array_to_page::<f64, f64>(array, options, type_, nested)
+        }
+        Decimal(precision, _) => {
+            let type_ = type_;
+            let precision = *precision;
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<i128>>()
+                .unwrap();
+            if precision <= 9 {
+                let values = array
+                    .values()
+                    .iter()
+                    .map(|x| *x as i32)
+                    .collect::<Vec<_>>()
+                    .into();
+
+                let array =
+                    PrimitiveArray::<i32>::new(DataType::Int32, values, array.validity().cloned());
+                primitive::nested_array_to_page::<i32, i32>(&array, options, type_, nested)
+            } else if precision <= 18 {
+                let values = array
+                    .values()
+                    .iter()
+                    .map(|x| *x as i64)
+                    .collect::<Vec<_>>()
+                    .into();
+
+                let array =
+                    PrimitiveArray::<i64>::new(DataType::Int64, values, array.validity().cloned());
+                primitive::nested_array_to_page::<i64, i64>(&array, options, type_, nested)
+            } else {
+                let size = decimal_length_from_precision(precision);
+
+                let statistics = if options.write_statistics {
+                    let stats =
+                        fixed_len_bytes::build_statistics_decimal(array, type_.clone(), size);
+                    Some(stats)
+                } else {
+                    None
+                };
+
+                let mut values = Vec::<u8>::with_capacity(size * array.len());
+                array.values().iter().for_each(|x| {
+                    let bytes = &x.to_be_bytes()[16 - size..];
+                    values.extend_from_slice(bytes)
+                });
+                let array = FixedSizeBinaryArray::new(
+                    DataType::FixedSizeBinary(size),
+                    values.into(),
+                    array.validity().cloned(),
+                );
+                fixed_len_bytes::nested_array_to_page(&array, options, type_, statistics, nested)
+            }
+        }
+        Decimal256(precision, _) => {
+            let type_ = type_;
+            let precision = *precision;
+            let array = array
+                .as_any()
+                .downcast_ref::<PrimitiveArray<i256>>()
+                .unwrap();
+            if precision <= 9 {
+                let values = array
+                    .values()
+                    .iter()
+                    .map(|x| x.0.as_i32())
+                    .collect::<Vec<_>>()
+                    .into();
+
+                let array =
+                    PrimitiveArray::<i32>::new(DataType::Int32, values, array.validity().cloned());
+                primitive::nested_array_to_page::<i32, i32>(&array, options, type_, nested)
+            } else if precision <= 18 {
+                let values = array
+                    .values()
+                    .iter()
+                    .map(|x| x.0.as_i64())
+                    .collect::<Vec<_>>()
+                    .into();
+
+                let array =
+                    PrimitiveArray::<i64>::new(DataType::Int64, values, array.validity().cloned());
+                primitive::nested_array_to_page::<i64, i64>(&array, options, type_, nested)
+            } else if precision <= 38 {
+                let size = decimal_length_from_precision(precision);
+                let statistics = if options.write_statistics {
+                    let stats = fixed_len_bytes::build_statistics_decimal256_with_i128(
+                        array,
+                        type_.clone(),
+                        size,
+                    );
+                    Some(stats)
+                } else {
+                    None
+                };
+
+                let mut values = Vec::<u8>::with_capacity(size * array.len());
+                array.values().iter().for_each(|x| {
+                    let bytes = &x.0.low().to_be_bytes()[16 - size..];
+                    values.extend_from_slice(bytes)
+                });
+                let array = FixedSizeBinaryArray::new(
+                    DataType::FixedSizeBinary(size),
+                    values.into(),
+                    array.validity().cloned(),
+                );
+                fixed_len_bytes::nested_array_to_page(&array, options, type_, statistics, nested)
+            } else {
+                let size = 32;
+                let array = array
+                    .as_any()
+                    .downcast_ref::<PrimitiveArray<i256>>()
+                    .unwrap();
+                let statistics = if options.write_statistics {
+                    let stats =
+                        fixed_len_bytes::build_statistics_decimal256(array, type_.clone(), size);
+                    Some(stats)
+                } else {
+                    None
+                };
+                let mut values = Vec::<u8>::with_capacity(size * array.len());
+                array.values().iter().for_each(|x| {
+                    let bytes = &x.to_be_bytes();
+                    values.extend_from_slice(bytes)
+                });
+                let array = FixedSizeBinaryArray::new(
+                    DataType::FixedSizeBinary(size),
+                    values.into(),
+                    array.validity().cloned(),
+                );
+
+                fixed_len_bytes::nested_array_to_page(&array, options, type_, statistics, nested)
+            }
         }
         other => Err(Error::NotYetImplemented(format!(
             "Writing nested parquet pages for data type {other:?}"

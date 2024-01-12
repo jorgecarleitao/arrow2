@@ -147,7 +147,8 @@ fn deserialize(
                 .unwrap();
             Ok(primitive::deserialize_i32(&index.indexes, data_type).into())
         }
-        PhysicalType::Primitive(PrimitiveType::Int64) => {
+        PhysicalType::Primitive(PrimitiveType::UInt64)
+        | PhysicalType::Primitive(PrimitiveType::Int64) => {
             let index = indexes.pop_front().unwrap();
             match index.physical_type() {
                 ParquetPhysicalType::Int64 => {

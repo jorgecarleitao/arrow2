@@ -62,6 +62,14 @@ fn test_pyarrow_integration(
         "list_nested_i64",
         "list_utf8",
         "list_bool",
+        "list_decimal_9",
+        "list_decimal_18",
+        "list_decimal_26",
+        "list_decimal256_9",
+        "list_decimal256_18",
+        "list_decimal256_26",
+        "list_decimal256_39",
+        "list_decimal256_76",
         "list_nested_inner_required_required_i64",
         "list_nested_inner_required_i64",
         // pyarrow counts null struct items as nulls
@@ -323,8 +331,93 @@ fn v1_nested_large_binary() -> Result<()> {
 }
 
 #[test]
+fn v1_nested_decimal_9_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_9", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal_18_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_18", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal_26_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_26", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal_9_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_9", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal_18_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_18", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal_26_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal_26", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal256_9_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_9", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal256_18_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_18", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal256_26_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_26", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal256_39_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_39", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v1_nested_decimal256_76_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_76", 1, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal256_9_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_9", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal256_18_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_18", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal256_26_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_26", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal256_39_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_39", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_decimal256_76_nullable() -> Result<()> {
+    test_pyarrow_integration("list_decimal256_76", 2, "nested", false, false, None)
+}
+
+#[test]
 fn v2_nested_nested() -> Result<()> {
     test_pyarrow_integration("list_nested_i64", 2, "nested", false, false, None)
+}
+
+#[test]
+fn v2_nested_nested_decimal() -> Result<()> {
+    test_pyarrow_integration("list_nested_decimal", 2, "nested", false, false, None)
 }
 
 #[test]
@@ -768,5 +861,63 @@ fn invalid_utf8() -> Result<()> {
         error.to_string().contains("invalid utf-8"),
         "unexpected error: {error}"
     );
+    Ok(())
+}
+
+#[test]
+fn read_int96_timestamps() -> Result<()> {
+    use std::collections::BTreeMap;
+
+    let timestamp_data = &[
+        0x50, 0x41, 0x52, 0x31, 0x15, 0x04, 0x15, 0x48, 0x15, 0x3c, 0x4c, 0x15, 0x06, 0x15, 0x00,
+        0x12, 0x00, 0x00, 0x24, 0x00, 0x00, 0x0d, 0x01, 0x08, 0x9f, 0xd5, 0x1f, 0x0d, 0x0a, 0x44,
+        0x00, 0x00, 0x59, 0x68, 0x25, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14,
+        0xfb, 0x2a, 0x00, 0x15, 0x00, 0x15, 0x14, 0x15, 0x18, 0x2c, 0x15, 0x06, 0x15, 0x10, 0x15,
+        0x06, 0x15, 0x06, 0x1c, 0x00, 0x00, 0x00, 0x0a, 0x24, 0x02, 0x00, 0x00, 0x00, 0x06, 0x01,
+        0x02, 0x03, 0x24, 0x00, 0x26, 0x9e, 0x01, 0x1c, 0x15, 0x06, 0x19, 0x35, 0x10, 0x00, 0x06,
+        0x19, 0x18, 0x0a, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x73, 0x15, 0x02,
+        0x16, 0x06, 0x16, 0x9e, 0x01, 0x16, 0x96, 0x01, 0x26, 0x60, 0x26, 0x08, 0x29, 0x2c, 0x15,
+        0x04, 0x15, 0x00, 0x15, 0x02, 0x00, 0x15, 0x00, 0x15, 0x10, 0x15, 0x02, 0x00, 0x00, 0x00,
+        0x15, 0x04, 0x19, 0x2c, 0x35, 0x00, 0x18, 0x06, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x15,
+        0x02, 0x00, 0x15, 0x06, 0x25, 0x02, 0x18, 0x0a, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61,
+        0x6d, 0x70, 0x73, 0x00, 0x16, 0x06, 0x19, 0x1c, 0x19, 0x1c, 0x26, 0x9e, 0x01, 0x1c, 0x15,
+        0x06, 0x19, 0x35, 0x10, 0x00, 0x06, 0x19, 0x18, 0x0a, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74,
+        0x61, 0x6d, 0x70, 0x73, 0x15, 0x02, 0x16, 0x06, 0x16, 0x9e, 0x01, 0x16, 0x96, 0x01, 0x26,
+        0x60, 0x26, 0x08, 0x29, 0x2c, 0x15, 0x04, 0x15, 0x00, 0x15, 0x02, 0x00, 0x15, 0x00, 0x15,
+        0x10, 0x15, 0x02, 0x00, 0x00, 0x00, 0x16, 0x9e, 0x01, 0x16, 0x06, 0x26, 0x08, 0x16, 0x96,
+        0x01, 0x14, 0x00, 0x00, 0x28, 0x20, 0x70, 0x61, 0x72, 0x71, 0x75, 0x65, 0x74, 0x2d, 0x63,
+        0x70, 0x70, 0x2d, 0x61, 0x72, 0x72, 0x6f, 0x77, 0x20, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f,
+        0x6e, 0x20, 0x31, 0x32, 0x2e, 0x30, 0x2e, 0x30, 0x19, 0x1c, 0x1c, 0x00, 0x00, 0x00, 0x95,
+        0x00, 0x00, 0x00, 0x50, 0x41, 0x52, 0x31,
+    ];
+
+    let parse = |time_unit: TimeUnit| {
+        let mut reader = Cursor::new(timestamp_data);
+        let metadata = read_metadata(&mut reader)?;
+        let schema = arrow2::datatypes::Schema {
+            fields: vec![arrow2::datatypes::Field::new(
+                "timestamps",
+                arrow2::datatypes::DataType::Timestamp(time_unit, None),
+                false,
+            )],
+            metadata: BTreeMap::new(),
+        };
+        let reader = FileReader::new(reader, metadata.row_groups, schema, Some(5), None, None);
+        reader.collect::<Result<Vec<_>>>()
+    };
+
+    // This data contains int96 timestamps in the year 1000 and 3000, which are out of range for
+    // Timestamp(TimeUnit::Nanoseconds) and will cause a panic in dev builds/overflow in release builds
+    // However, the code should work for the Microsecond/Millisecond time units
+    for time_unit in [
+        arrow2::datatypes::TimeUnit::Microsecond,
+        arrow2::datatypes::TimeUnit::Millisecond,
+        arrow2::datatypes::TimeUnit::Second,
+    ] {
+        parse(time_unit).expect("Should not error");
+    }
+    std::panic::catch_unwind(|| parse(arrow2::datatypes::TimeUnit::Nanosecond))
+        .expect_err("Should be a panic error");
+
     Ok(())
 }

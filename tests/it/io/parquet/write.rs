@@ -405,6 +405,198 @@ fn list_struct_nullable() -> Result<()> {
 }
 
 #[test]
+fn list_decimal_9_nullable_v1() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal_9",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal_18_nullable_v1() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal_18",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal_26_nullable_v1() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal_26",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal_9_nullable_v2() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal_9",
+        "nested",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal_18_nullable_v2() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal_18",
+        "nested",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal_26_nullable_v2() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal_26",
+        "nested",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal256_9_nullable_v1() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal256_9",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal256_18_nullable_v1() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal256_18",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal256_26_nullable_v1() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal256_26",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal256_39_nullable_v1() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal256_39",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal256_76_nullable_v1() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal256_76",
+        "nested",
+        Version::V1,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal256_9_nullable_v2() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal256_9",
+        "nested",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal256_18_nullable_v2() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal256_18",
+        "nested",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal256_26_nullable_v2() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal256_26",
+        "nested",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal256_39_nullable_v2() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal256_39",
+        "nested",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
+fn list_decimal256_76_nullable_v2() -> Result<()> {
+    round_trip_opt_stats(
+        "list_decimal256_76",
+        "nested",
+        Version::V2,
+        CompressionOptions::Uncompressed,
+        vec![Encoding::Plain],
+        true,
+    )
+}
+
+#[test]
 fn v1_nested_struct_list_nullable() -> Result<()> {
     round_trip_opt_stats(
         "struct_list_nullable",

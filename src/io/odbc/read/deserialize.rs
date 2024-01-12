@@ -264,12 +264,12 @@ fn timestamp_ms(timestamp: &odbc_api::sys::Timestamp) -> i64 {
 
 fn timestamp_us(timestamp: &odbc_api::sys::Timestamp) -> i64 {
     timestamp_to_naive(timestamp)
-        .map(|x| x.timestamp_nanos() / 1000)
+        .map(|x| x.timestamp_nanos_opt().unwrap() / 1000)
         .unwrap_or(0)
 }
 
 fn timestamp_ns(timestamp: &odbc_api::sys::Timestamp) -> i64 {
     timestamp_to_naive(timestamp)
-        .map(|x| x.timestamp_nanos())
+        .map(|x| x.timestamp_nanos_opt().unwrap())
         .unwrap_or(0)
 }

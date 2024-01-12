@@ -39,12 +39,7 @@ pub fn infer_records_schema(json: &Value) -> Result<Schema> {
 
                 Ok(Field {
                     name: name.clone(),
-                    data_type: DataType::List(std::sync::Arc::new(Field {
-                        name: format!("{name}-records"),
-                        data_type,
-                        is_nullable: true,
-                        metadata: Metadata::default(),
-                    })),
+                    data_type,
                     is_nullable: true,
                     metadata: Metadata::default(),
                 })

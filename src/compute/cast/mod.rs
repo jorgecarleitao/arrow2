@@ -86,7 +86,13 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (FixedSizeList(list_from, _), List(list_to)) => {
             can_cast_types(&list_from.data_type, &list_to.data_type)
         }
+        (FixedSizeList(list_from, _), LargeList(list_to)) => {
+            can_cast_types(&list_from.data_type, &list_to.data_type)
+        }
         (List(list_from), FixedSizeList(list_to, _)) => {
+            can_cast_types(&list_from.data_type, &list_to.data_type)
+        }
+        (LargeList(list_from), FixedSizeList(list_to, _)) => {
             can_cast_types(&list_from.data_type, &list_to.data_type)
         }
         (List(list_from), List(list_to)) => {
@@ -98,6 +104,9 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (List(list_from), LargeList(list_to)) if list_from == list_to => true,
         (LargeList(list_from), List(list_to)) if list_from == list_to => true,
         (_, List(list_to)) => can_cast_types(from_type, &list_to.data_type),
+        (_, LargeList(list_to)) if from_type != &LargeBinary => {
+            can_cast_types(from_type, &list_to.data_type)
+        }
         (Dictionary(_, from_value_type, _), Dictionary(_, to_value_type, _)) => {
             can_cast_types(from_value_type, to_value_type)
         }
@@ -131,7 +140,14 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (Binary, to_type) => {
             is_numeric(to_type) || matches!(to_type, LargeBinary | Utf8 | LargeUtf8)
         }
-        (LargeBinary, to_type) => is_numeric(to_type) || matches!(to_type, Binary | LargeUtf8),
+        (LargeBinary, to_type) => {
+            is_numeric(to_type)
+                || match to_type {
+                    Binary | LargeUtf8 => true,
+                    LargeList(field) => matches!(field.data_type, UInt8),
+                    _ => false,
+                }
+        }
         (FixedSizeBinary(_), to_type) => matches!(to_type, Binary | LargeBinary),
         (Timestamp(_, _), Utf8) => true,
         (Timestamp(_, _), LargeUtf8) => true,
@@ -345,24 +361,24 @@ fn cast_large_to_list(array: &ListArray<i64>, to_type: &DataType) -> ListArray<i
     )
 }
 
-fn cast_fixed_size_list_to_list(
+fn cast_fixed_size_list_to_list<O: Offset>(
     fixed: &FixedSizeListArray,
     to_type: &DataType,
     options: CastOptions,
-) -> Result<ListArray<i32>> {
+) -> Result<ListArray<O>> {
     let new_values = cast(
         fixed.values().as_ref(),
-        ListArray::<i32>::get_child_type(to_type),
+        ListArray::<O>::get_child_type(to_type),
         options,
     )?;
 
     let offsets = (0..=fixed.len())
-        .map(|ix| (ix * fixed.size()) as i32)
+        .map(|ix| O::from_as_usize(ix * fixed.size()))
         .collect::<Vec<_>>();
     // Safety: offsets _are_ monotonically increasing
     let offsets = unsafe { Offsets::new_unchecked(offsets) };
 
-    Ok(ListArray::<i32>::new(
+    Ok(ListArray::<O>::new(
         to_type.clone(),
         offsets.into(),
         new_values,
@@ -370,24 +386,28 @@ fn cast_fixed_size_list_to_list(
     ))
 }
 
-fn cast_list_to_fixed_size_list(
-    list: &ListArray<i32>,
+fn cast_list_to_fixed_size_list<O: Offset>(
+    list: &ListArray<O>,
     inner: &Field,
     size: usize,
     options: CastOptions,
 ) -> Result<FixedSizeListArray> {
     let offsets = list.offsets().buffer().iter();
-    let expected = (0..list.len()).map(|ix| (ix * size) as i32);
+    let expected = (0..list.len()).map(|ix| O::from_as_usize(ix * size));
 
     match offsets
         .zip(expected)
         .find(|(actual, expected)| *actual != expected)
     {
-        Some(_) => Err(Error::NotYetImplemented(
+        Some(_) => Err(Error::InvalidArgumentError(
             "incompatible offsets in source list".to_string(),
         )),
         None => {
-            let new_values = cast(list.values().as_ref(), inner.data_type(), options)?;
+            let sliced_values = list.values().sliced(
+                list.offsets().first().to_usize(),
+                list.offsets().range().to_usize(),
+            );
+            let new_values = cast(sliced_values.as_ref(), inner.data_type(), options)?;
             Ok(FixedSizeListArray::new(
                 DataType::FixedSizeList(std::sync::Arc::new(inner.clone()), size),
                 new_values,
@@ -438,17 +458,32 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (_, Struct(_)) => Err(Error::NotYetImplemented(
             "Cannot cast to struct from other types".to_string(),
         )),
-        (List(_), FixedSizeList(inner, size)) => cast_list_to_fixed_size_list(
+        (List(_), FixedSizeList(inner, size)) => cast_list_to_fixed_size_list::<i32>(
             array.as_any().downcast_ref().unwrap(),
             inner.as_ref(),
             *size,
             options,
         )
         .map(|x| x.boxed()),
-        (FixedSizeList(_, _), List(_)) => {
-            cast_fixed_size_list_to_list(array.as_any().downcast_ref().unwrap(), to_type, options)
-                .map(|x| x.boxed())
-        }
+        (LargeList(_), FixedSizeList(inner, size)) => cast_list_to_fixed_size_list::<i64>(
+            array.as_any().downcast_ref().unwrap(),
+            inner.as_ref(),
+            *size,
+            options,
+        )
+        .map(|x| x.boxed()),
+        (FixedSizeList(_, _), List(_)) => cast_fixed_size_list_to_list::<i32>(
+            array.as_any().downcast_ref().unwrap(),
+            to_type,
+            options,
+        )
+        .map(|x| x.boxed()),
+        (FixedSizeList(_, _), LargeList(_)) => cast_fixed_size_list_to_list::<i64>(
+            array.as_any().downcast_ref().unwrap(),
+            to_type,
+            options,
+        )
+        .map(|x| x.boxed()),
         (List(_), List(_)) => {
             cast_list::<i32>(array.as_any().downcast_ref().unwrap(), to_type, options)
                 .map(|x| x.boxed())
@@ -473,6 +508,19 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             let offsets = unsafe { Offsets::new_unchecked(offsets) };
 
             let list_array = ListArray::<i32>::new(to_type.clone(), offsets.into(), values, None);
+
+            Ok(Box::new(list_array))
+        }
+
+        (_, LargeList(to)) if from_type != &LargeBinary => {
+            // cast primitive to list's primitive
+            let values = cast(array, &to.data_type, options)?;
+            // create offsets, where if array.len() = 2, we have [0,1,2]
+            let offsets = (0..=array.len() as i64).collect::<Vec<_>>();
+            // Safety: offsets _are_ monotonically increasing
+            let offsets = unsafe { Offsets::new_unchecked(offsets) };
+
+            let list_array = ListArray::<i64>::new(to_type.clone(), offsets.into(), values, None);
 
             Ok(Box::new(list_array))
         }
@@ -663,29 +711,35 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
             ))),
         },
 
-        (LargeBinary, _) => match to_type {
-            UInt8 => binary_to_primitive_dyn::<i64, u8>(array, to_type, options),
-            UInt16 => binary_to_primitive_dyn::<i64, u16>(array, to_type, options),
-            UInt32 => binary_to_primitive_dyn::<i64, u32>(array, to_type, options),
-            UInt64 => binary_to_primitive_dyn::<i64, u64>(array, to_type, options),
-            Int8 => binary_to_primitive_dyn::<i64, i8>(array, to_type, options),
-            Int16 => binary_to_primitive_dyn::<i64, i16>(array, to_type, options),
-            Int32 => binary_to_primitive_dyn::<i64, i32>(array, to_type, options),
-            Int64 => binary_to_primitive_dyn::<i64, i64>(array, to_type, options),
-            Float32 => binary_to_primitive_dyn::<i64, f32>(array, to_type, options),
-            Float64 => binary_to_primitive_dyn::<i64, f64>(array, to_type, options),
-            Binary => {
-                binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
-                    .map(|x| x.boxed())
+        (LargeBinary, _) => {
+            match to_type {
+                UInt8 => binary_to_primitive_dyn::<i64, u8>(array, to_type, options),
+                UInt16 => binary_to_primitive_dyn::<i64, u16>(array, to_type, options),
+                UInt32 => binary_to_primitive_dyn::<i64, u32>(array, to_type, options),
+                UInt64 => binary_to_primitive_dyn::<i64, u64>(array, to_type, options),
+                Int8 => binary_to_primitive_dyn::<i64, i8>(array, to_type, options),
+                Int16 => binary_to_primitive_dyn::<i64, i16>(array, to_type, options),
+                Int32 => binary_to_primitive_dyn::<i64, i32>(array, to_type, options),
+                Int64 => binary_to_primitive_dyn::<i64, i64>(array, to_type, options),
+                Float32 => binary_to_primitive_dyn::<i64, f32>(array, to_type, options),
+                Float64 => binary_to_primitive_dyn::<i64, f64>(array, to_type, options),
+                Binary => {
+                    binary_large_to_binary(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .map(|x| x.boxed())
+                }
+                LargeUtf8 => {
+                    binary_to_utf8::<i64>(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .map(|x| x.boxed())
+                }
+                LargeList(inner) if matches!(inner.data_type, DataType::UInt8) => Ok(
+                    binary_to_list::<i64>(array.as_any().downcast_ref().unwrap(), to_type.clone())
+                        .boxed(),
+                ),
+                _ => Err(Error::NotYetImplemented(format!(
+                    "Casting from {from_type:?} to {to_type:?} not supported",
+                ))),
             }
-            LargeUtf8 => {
-                binary_to_utf8::<i64>(array.as_any().downcast_ref().unwrap(), to_type.clone())
-                    .map(|x| x.boxed())
-            }
-            _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {from_type:?} to {to_type:?} not supported",
-            ))),
-        },
+        }
         (FixedSizeBinary(_), _) => match to_type {
             Binary => Ok(fixed_size_binary_binary::<i32>(
                 array.as_any().downcast_ref().unwrap(),

@@ -1,4 +1,5 @@
 use std::ffi::{CStr, CString};
+use std::ops::DerefMut;
 
 use crate::{array::Array, datatypes::Field, error::Error};
 
@@ -45,22 +46,29 @@ unsafe fn handle_error(iter: &mut ArrowArrayStream) -> Error {
 }
 
 /// Implements an iterator of [`Array`] consumed from the [C stream interface](https://arrow.apache.org/docs/format/CStreamInterface.html).
-pub struct ArrowArrayStreamReader {
-    iter: Box<ArrowArrayStream>,
+pub struct ArrowArrayStreamReader<Iter: DerefMut<Target = ArrowArrayStream>> {
+    iter: Iter,
     field: Field,
 }
 
-impl ArrowArrayStreamReader {
+impl<Iter: DerefMut<Target = ArrowArrayStream>> ArrowArrayStreamReader<Iter> {
     /// Returns a new [`ArrowArrayStreamReader`]
     /// # Error
-    /// Errors iff the [`ArrowArrayStream`] is out of specification
+    /// Errors iff the [`ArrowArrayStream`] is out of specification,
+    /// or was already released prior to calling this function.
     /// # Safety
     /// This method is intrinsically `unsafe` since it assumes that the `ArrowArrayStream`
     /// contains a valid Arrow C stream interface.
     /// In particular:
     /// * The `ArrowArrayStream` fulfills the invariants of the C stream interface
     /// * The schema `get_schema` produces fulfills the C data interface
-    pub unsafe fn try_new(mut iter: Box<ArrowArrayStream>) -> Result<Self, Error> {
+    pub unsafe fn try_new(mut iter: Iter) -> Result<Self, Error> {
+        if iter.release.is_none() {
+            return Err(Error::InvalidArgumentError(
+                "The C stream was already released".to_string(),
+            ));
+        };
+
         if iter.get_next.is_none() {
             return Err(Error::OutOfSpec(
                 "The C stream MUST contain a non-null get_next".to_string(),
@@ -132,7 +140,7 @@ unsafe extern "C" fn get_next(iter: *mut ArrowArrayStream, array: *mut ArrowArra
     if iter.is_null() {
         return 2001;
     }
-    let mut private = &mut *((*iter).private_data as *mut PrivateData);
+    let private = &mut *((*iter).private_data as *mut PrivateData);
 
     match private.iter.next() {
         Some(Ok(item)) => {

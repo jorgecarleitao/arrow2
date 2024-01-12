@@ -234,26 +234,70 @@ pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray 
     }
 }
 
-/// Returns whether any of the values in the array is `true`
-pub fn any(array: &BooleanArray) -> bool {
+/// Returns whether any of the values in the array are `true`.
+///
+/// The output is unknown (`None`) if the array contains any null values and
+/// no `true` values.
+///
+/// # Example
+///
+/// ```
+/// use arrow2::array::BooleanArray;
+/// use arrow2::compute::boolean_kleene::any;
+///
+/// let a = BooleanArray::from(&[Some(true), Some(false)]);
+/// let b = BooleanArray::from(&[Some(false), Some(false)]);
+/// let c = BooleanArray::from(&[None, Some(false)]);
+///
+/// assert_eq!(any(&a), Some(true));
+/// assert_eq!(any(&b), Some(false));
+/// assert_eq!(any(&c), None);
+/// ```
+pub fn any(array: &BooleanArray) -> Option<bool> {
     if array.is_empty() {
-        false
-    } else if array.validity().is_some() {
-        array.into_iter().any(|v| v == Some(true))
+        Some(false)
+    } else if array.null_count() > 0 {
+        if array.into_iter().any(|v| v == Some(true)) {
+            Some(true)
+        } else {
+            None
+        }
     } else {
         let vals = array.values();
-        vals.unset_bits() != vals.len()
+        Some(vals.unset_bits() != vals.len())
     }
 }
 
-/// Returns whether all values in the array are `true`
-pub fn all(array: &BooleanArray) -> bool {
+/// Returns whether all values in the array are `true`.
+///
+/// The output is unknown (`None`) if the array contains any null values and
+/// no `false` values.
+///
+/// # Example
+///
+/// ```
+/// use arrow2::array::BooleanArray;
+/// use arrow2::compute::boolean_kleene::all;
+///
+/// let a = BooleanArray::from(&[Some(true), Some(true)]);
+/// let b = BooleanArray::from(&[Some(false), Some(true)]);
+/// let c = BooleanArray::from(&[None, Some(true)]);
+///
+/// assert_eq!(all(&a), Some(true));
+/// assert_eq!(all(&b), Some(false));
+/// assert_eq!(all(&c), None);
+/// ```
+pub fn all(array: &BooleanArray) -> Option<bool> {
     if array.is_empty() {
-        true
+        Some(true)
     } else if array.null_count() > 0 {
-        false
+        if array.into_iter().any(|v| v == Some(false)) {
+            Some(false)
+        } else {
+            None
+        }
     } else {
         let vals = array.values();
-        vals.unset_bits() == 0
+        Some(vals.unset_bits() == 0)
     }
 }

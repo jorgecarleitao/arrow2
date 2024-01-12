@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::array::PushUnchecked;
 use crate::{
     array::{
         physical_binary::extend_validity, Array, MutableArray, TryExtend, TryExtendFromSelf,
@@ -102,6 +103,15 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
             validity.push(true)
         }
         Ok(())
+    }
+
+    #[inline]
+    /// Needs to be called when a valid value was extended to this array.
+    /// This is a relatively low level function, prefer `try_push` when you can.
+    pub fn push_valid(&mut self) {
+        if let Some(validity) = &mut self.validity {
+            validity.push(true)
+        }
     }
 
     #[inline]
@@ -218,6 +228,25 @@ where
             self.push_null();
         }
         Ok(())
+    }
+}
+
+impl<M, I, T> PushUnchecked<Option<I>> for MutableFixedSizeListArray<M>
+where
+    M: MutableArray + Extend<Option<T>>,
+    I: IntoIterator<Item = Option<T>>,
+{
+    /// # Safety
+    /// The caller must ensure that the `I` iterates exactly over `size`
+    /// items, where `size` is the fixed size width.
+    #[inline]
+    unsafe fn push_unchecked(&mut self, item: Option<I>) {
+        if let Some(items) = item {
+            self.values.extend(items);
+            self.push_valid();
+        } else {
+            self.push_null();
+        }
     }
 }
 

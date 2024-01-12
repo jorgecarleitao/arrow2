@@ -1,8 +1,11 @@
+mod nested;
+
 use parquet2::page::Page;
 
 use crate::{array::NullArray, datatypes::DataType};
 
 use super::super::{ArrayIter, Pages};
+pub(super) use nested::NestedIter;
 
 /// Converts [`Pages`] to an [`ArrayIter`]
 pub fn iter_to_arrays<'a, I>(

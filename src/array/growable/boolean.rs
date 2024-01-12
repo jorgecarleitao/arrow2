@@ -63,7 +63,11 @@ impl<'a> Growable<'a> for GrowableBoolean<'a> {
         let values = array.values();
 
         let (slice, offset, _) = values.as_slice();
-        self.values.extend_from_slice(slice, start + offset, len);
+        // safety: invariant offset + length <= slice.len()
+        unsafe {
+            self.values
+                .extend_from_slice_unchecked(slice, start + offset, len);
+        }
     }
 
     fn extend_validity(&mut self, additional: usize) {

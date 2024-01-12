@@ -29,6 +29,15 @@ fn int32() -> Result<()> {
 }
 
 #[test]
+fn null() -> Result<()> {
+    let array = NullArray::new(DataType::Null, 3);
+
+    let expected = r#"[null,null,null]"#;
+
+    test!(array, expected)
+}
+
+#[test]
 fn f32() -> Result<()> {
     let array = Float32Array::from([
         Some(1.5),
@@ -412,6 +421,61 @@ fn write_timestamp() -> Result<()> {
     );
 
     let expected = r#"["1970-01-01 00:00:10","2106-02-07 06:28:16","2242-03-16 12:56:32"]"#;
+
+    test!(array, expected)
+}
+
+#[test]
+fn write_timestamp_with_tz_secs() -> Result<()> {
+    let array = PrimitiveArray::new(
+        DataType::Timestamp(TimeUnit::Second, Some("UTC".to_owned())),
+        vec![10i64, 1 << 32, 1 << 33].into(),
+        None,
+    );
+
+    let expected =
+        r#"["1970-01-01T00:00:10+00:00","2106-02-07T06:28:16+00:00","2242-03-16T12:56:32+00:00"]"#;
+    test!(array, expected)
+}
+
+#[test]
+fn write_timestamp_with_tz_micros() -> Result<()> {
+    let array = PrimitiveArray::new(
+        DataType::Timestamp(TimeUnit::Microsecond, Some("+02:00".to_owned())),
+        vec![
+            10i64 * 1_000_000,
+            (1 << 32) * 1_000_000,
+            (1 << 33) * 1_000_000,
+            1_234_567_890_123_450,
+            1_234_567_890_120_000,
+        ]
+        .into(),
+        None,
+    );
+    // Note, default chrono DateTime string conversion strips off milli/micro/nanoseconds parts
+    // if they are zero
+    let expected = r#"["1970-01-01T02:00:10+02:00","2106-02-07T08:28:16+02:00","2242-03-16T14:56:32+02:00","2009-02-14T01:31:30.123450+02:00","2009-02-14T01:31:30.120+02:00"]"#;
+
+    test!(array, expected)
+}
+#[cfg(feature = "chrono-tz")]
+#[test]
+fn write_timestamp_with_chrono_tz_millis() -> Result<()> {
+    let array = PrimitiveArray::new(
+        DataType::Timestamp(TimeUnit::Millisecond, Some("Europe/Oslo".to_owned())),
+        vec![
+            10i64 * 1_000,
+            (1 << 32) * 1_000,
+            (1 << 33) * 1_000,
+            1_234_567_890_123,
+            1_239_874_560_120,
+        ]
+        .into(),
+        None,
+    );
+    // Note, default chrono DateTime string conversion strips off milli/micro/nanoseconds parts
+    // if they are zero
+    let expected = r#"["1970-01-01T01:00:10+01:00","2106-02-07T07:28:16+01:00","2242-03-16T13:56:32+01:00","2009-02-14T00:31:30.123+01:00","2009-04-16T11:36:00.120+02:00"]"#;
 
     test!(array, expected)
 }

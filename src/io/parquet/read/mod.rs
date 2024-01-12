@@ -10,19 +10,22 @@ pub mod statistics;
 
 use std::io::{Read, Seek};
 
+#[cfg(feature = "io_parquet_async")]
 use futures::{AsyncRead, AsyncSeek};
 
 // re-exports of parquet2's relevant APIs
+#[cfg(feature = "io_parquet_async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_parquet_async")))]
+pub use parquet2::read::{get_page_stream, read_metadata_async as _read_metadata_async};
 pub use parquet2::{
     error::Error as ParquetError,
     fallible_streaming_iterator,
     metadata::{ColumnChunkMetaData, ColumnDescriptor, RowGroupMetaData},
     page::{CompressedDataPage, DataPageHeader, Page},
     read::{
-        decompress, get_column_iterator, get_page_stream,
-        read_columns_indexes as _read_columns_indexes, read_metadata as _read_metadata,
-        read_metadata_async as _read_metadata_async, read_pages_locations, BasicDecompressor,
-        Decompressor, MutStreamingIterator, PageFilter, PageReader, ReadColumnIterator, State,
+        decompress, get_column_iterator, read_columns_indexes as _read_columns_indexes,
+        read_metadata as _read_metadata, read_pages_locations, BasicDecompressor, Decompressor,
+        MutStreamingIterator, PageFilter, PageReader, ReadColumnIterator, State,
     },
     schema::types::{
         GroupLogicalType, ParquetType, PhysicalType, PrimitiveConvertedType, PrimitiveLogicalType,
@@ -37,7 +40,7 @@ use crate::{array::Array, error::Result};
 use crate::types::{i256, NativeType};
 pub use deserialize::{
     column_iter_to_arrays, create_list, create_map, get_page_iterator, init_nested, n_columns,
-    InitNested, NestedArrayIter, NestedState, StructIterator,
+    nested_column_iter_to_arrays, InitNested, NestedArrayIter, NestedState, StructIterator,
 };
 pub use file::{FileReader, RowGroupReader};
 pub use row_group::*;
@@ -60,6 +63,8 @@ pub fn read_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetaData> {
 }
 
 /// Reads parquets' metadata asynchronously.
+#[cfg(feature = "io_parquet_async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io_parquet_async")))]
 pub async fn read_metadata_async<R: AsyncRead + AsyncSeek + Send + Unpin>(
     reader: &mut R,
 ) -> Result<FileMetaData> {

@@ -151,17 +151,17 @@ fn timestamp_to_datetime() {
     // negative milliseconds
     assert_eq!(
         temporal_conversions::timestamp_ms_to_datetime(ts / 1_000_000),
-        NaiveDateTime::parse_from_str("1969-07-05T01:02:03.987000000", fmt).unwrap()
+        NaiveDateTime::parse_from_str("1969-07-05T01:02:03.013000000", fmt).unwrap()
     );
     // negative microseconds
     assert_eq!(
         temporal_conversions::timestamp_us_to_datetime(ts / 1_000),
-        NaiveDateTime::parse_from_str("1969-07-05T01:02:03.987654000", fmt).unwrap()
+        NaiveDateTime::parse_from_str("1969-07-05T01:02:03.012346000", fmt).unwrap()
     );
     // negative nanoseconds
     assert_eq!(
         temporal_conversions::timestamp_ns_to_datetime(ts),
-        NaiveDateTime::parse_from_str("1969-07-05T01:02:03.987654321", fmt).unwrap()
+        NaiveDateTime::parse_from_str("1969-07-05T01:02:03.012345679", fmt).unwrap()
     );
 
     let fmt = "%Y-%m-%dT%H:%M:%S";

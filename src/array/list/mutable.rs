@@ -142,6 +142,23 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
         Self::new_from(values, data_type, capacity)
     }
 
+    /// Creates a new [`MutableListArray`] from a [`MutableArray`], [`Offsets`] and
+    /// [`MutableBitmap`].
+    pub fn new_from_mutable(
+        values: M,
+        offsets: Offsets<O>,
+        validity: Option<MutableBitmap>,
+    ) -> Self {
+        assert_eq!(values.len(), offsets.last().to_usize());
+        let data_type = ListArray::<O>::default_datatype(values.data_type().clone());
+        Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        }
+    }
+
     #[inline]
     /// Needs to be called when a valid value was extended to this array.
     /// This is a relatively low level function, prefer `try_push` when you can.
@@ -174,8 +191,7 @@ impl<O: Offset, M: MutableArray> MutableListArray<O, M> {
     /// - the new offsets are not in monotonic increasing order.
     /// - any new offset is not in bounds of the backing array.
     /// - the passed iterator has no upper bound.
-    #[allow(dead_code)]
-    pub(crate) fn try_extend_from_lengths<II>(&mut self, iterator: II) -> Result<()>
+    pub fn try_extend_from_lengths<II>(&mut self, iterator: II) -> Result<()>
     where
         II: TrustedLen<Item = Option<usize>> + Clone,
     {

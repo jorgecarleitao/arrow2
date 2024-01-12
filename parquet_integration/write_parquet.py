@@ -178,6 +178,18 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
         [""],
     ]
 
+    decimal_nullable = [[Decimal(n) if n is not None else None for n in sublist] if sublist is not None else None for sublist in items_nullable]
+    decimal_nested = [
+        [[Decimal(0), Decimal(1)]],
+        None,
+        [[Decimal(2), None], [Decimal(3)]],
+        [[Decimal(4), Decimal(5)], [Decimal(6)]],
+        [],
+        [[Decimal(7)], None, [Decimal(9)]],
+        [[], [None], None],
+        [[Decimal(10)]],
+    ]
+
     list_struct_nullable = [
         [{"a": "a"}, {"a": "b"}],
         None,
@@ -222,7 +234,16 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
         pa.field("list_bool", pa.list_(pa.bool_())),
         pa.field("list_utf8", pa.list_(pa.utf8())),
         pa.field("list_large_binary", pa.list_(pa.large_binary())),
+        pa.field("list_decimal_9", pa.list_(pa.decimal128(9, 0))),
+        pa.field("list_decimal_18", pa.list_(pa.decimal128(18, 0))),
+        pa.field("list_decimal_26", pa.list_(pa.decimal128(26, 0))),
+        pa.field("list_decimal256_9", pa.list_(pa.decimal256(9, 0))),
+        pa.field("list_decimal256_18", pa.list_(pa.decimal256(18, 0))),
+        pa.field("list_decimal256_26", pa.list_(pa.decimal256(26, 0))),
+        pa.field("list_decimal256_39", pa.list_(pa.decimal256(39, 0))),
+        pa.field("list_decimal256_76", pa.list_(pa.decimal256(76, 0))),
         pa.field("list_nested_i64", pa.list_(pa.list_(pa.int64()))),
+        pa.field("list_nested_decimal", pa.list_(pa.list_(pa.decimal128(9, 0)))),
         pa.field("list_nested_inner_required_i64", pa.list_(pa.list_(pa.int64()))),
         pa.field(
             "list_nested_inner_required_required_i64", pa.list_(pa.list_(pa.int64()))
@@ -251,7 +272,16 @@ def case_nested() -> Tuple[dict, pa.Schema, str]:
             "list_bool": boolean,
             "list_utf8": string,
             "list_large_binary": string,
+            "list_decimal_9": decimal_nullable,
+            "list_decimal_18": decimal_nullable,
+            "list_decimal_26": decimal_nullable,
+            "list_decimal256_9": decimal_nullable,
+            "list_decimal256_18": decimal_nullable,
+            "list_decimal256_26": decimal_nullable,
+            "list_decimal256_39": decimal_nullable,
+            "list_decimal256_76": decimal_nullable,
             "list_nested_i64": items_nested,
+            "list_nested_decimal": decimal_nested,
             "list_nested_inner_required_i64": items_required_nested,
             "list_nested_inner_required_required_i64": items_required_nested_2,
             "list_struct_nullable": list_struct_nullable,

@@ -80,7 +80,8 @@ pub mod append;
 pub mod read;
 pub mod write;
 
-const ARROW_MAGIC: [u8; 6] = [b'A', b'R', b'R', b'O', b'W', b'1'];
+const ARROW_MAGIC_V1: [u8; 4] = [b'F', b'E', b'A', b'1'];
+const ARROW_MAGIC_V2: [u8; 6] = [b'A', b'R', b'R', b'O', b'W', b'1'];
 pub(crate) const CONTINUATION_MARKER: [u8; 4] = [0xff; 4];
 
 /// Struct containing `dictionary_id` and nested `IpcField`, allowing users

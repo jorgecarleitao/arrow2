@@ -307,9 +307,9 @@ pub fn primitive_to_dictionary<T: NativeType + Eq + Hash, K: DictionaryKey>(
     from: &PrimitiveArray<T>,
 ) -> Result<DictionaryArray<K>> {
     let iter = from.iter().map(|x| x.copied());
-    let mut array = MutableDictionaryArray::<K, _>::from(MutablePrimitiveArray::<T>::from(
+    let mut array = MutableDictionaryArray::<K, _>::try_empty(MutablePrimitiveArray::<T>::from(
         from.data_type().clone(),
-    ));
+    ))?;
     array.try_extend(iter)?;
 
     Ok(array.into())
@@ -434,7 +434,7 @@ where
                 x.map(|x| {
                     let datetime = timestamp_ns_to_datetime(*x);
                     let offset = timezone.offset_from_utc_datetime(&datetime);
-                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                    chrono::DateTime::<T>::from_naive_utc_and_offset(datetime, offset).to_rfc3339()
                 })
             });
             Utf8Array::from_trusted_len_iter(iter)
@@ -444,7 +444,7 @@ where
                 x.map(|x| {
                     let datetime = timestamp_us_to_datetime(*x);
                     let offset = timezone.offset_from_utc_datetime(&datetime);
-                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                    chrono::DateTime::<T>::from_naive_utc_and_offset(datetime, offset).to_rfc3339()
                 })
             });
             Utf8Array::from_trusted_len_iter(iter)
@@ -454,7 +454,7 @@ where
                 x.map(|x| {
                     let datetime = timestamp_ms_to_datetime(*x);
                     let offset = timezone.offset_from_utc_datetime(&datetime);
-                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                    chrono::DateTime::<T>::from_naive_utc_and_offset(datetime, offset).to_rfc3339()
                 })
             });
             Utf8Array::from_trusted_len_iter(iter)
@@ -464,7 +464,7 @@ where
                 x.map(|x| {
                     let datetime = timestamp_s_to_datetime(*x);
                     let offset = timezone.offset_from_utc_datetime(&datetime);
-                    chrono::DateTime::<T>::from_utc(datetime, offset).to_rfc3339()
+                    chrono::DateTime::<T>::from_naive_utc_and_offset(datetime, offset).to_rfc3339()
                 })
             });
             Utf8Array::from_trusted_len_iter(iter)

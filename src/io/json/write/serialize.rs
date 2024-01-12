@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{Duration, NaiveDate, NaiveDateTime};
 use lexical_core::ToLexical;
 use std::io::Write;
 use streaming_iterator::StreamingIterator;
@@ -7,104 +7,136 @@ use crate::bitmap::utils::ZipValidity;
 use crate::datatypes::{IntegerType, TimeUnit};
 use crate::io::iterator::BufStreamingIterator;
 use crate::offset::Offset;
+#[cfg(feature = "chrono-tz")]
+use crate::temporal_conversions::parse_offset_tz;
 use crate::temporal_conversions::{
-    date32_to_date, date64_to_date, timestamp_ms_to_datetime, timestamp_ns_to_datetime,
-    timestamp_s_to_datetime, timestamp_us_to_datetime,
+    date32_to_date, date64_to_date, duration_ms_to_duration, duration_ns_to_duration,
+    duration_s_to_duration, duration_us_to_duration, parse_offset, timestamp_ms_to_datetime,
+    timestamp_ns_to_datetime, timestamp_s_to_datetime, timestamp_to_datetime,
+    timestamp_us_to_datetime,
 };
 use crate::util::lexical_to_bytes_mut;
 use crate::{array::*, datatypes::DataType, types::NativeType};
 
 use super::utf8;
 
+fn materialize_serializer<'a, I, F, T>(
+    f: F,
+    iterator: I,
+    offset: usize,
+    take: usize,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync>
+where
+    T: 'a,
+    I: Iterator<Item = T> + Send + Sync + 'a,
+    F: FnMut(T, &mut Vec<u8>) + Send + Sync + 'a,
+{
+    if offset > 0 || take < usize::MAX {
+        Box::new(BufStreamingIterator::new(
+            iterator.skip(offset).take(take),
+            f,
+            vec![],
+        ))
+    } else {
+        Box::new(BufStreamingIterator::new(iterator, f, vec![]))
+    }
+}
+
 fn boolean_serializer<'a>(
     array: &'a BooleanArray,
+    offset: usize,
+    take: usize,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        |x, buf| match x {
-            Some(true) => buf.extend_from_slice(b"true"),
-            Some(false) => buf.extend_from_slice(b"false"),
-            None => buf.extend_from_slice(b"null"),
-        },
-        vec![],
-    ))
+    let f = |x: Option<bool>, buf: &mut Vec<u8>| match x {
+        Some(true) => buf.extend_from_slice(b"true"),
+        Some(false) => buf.extend_from_slice(b"false"),
+        None => buf.extend_from_slice(b"null"),
+    };
+    materialize_serializer(f, array.iter(), offset, take)
+}
+
+fn null_serializer(
+    len: usize,
+    offset: usize,
+    take: usize,
+) -> Box<dyn StreamingIterator<Item = [u8]> + Send + Sync> {
+    let f = |_x: (), buf: &mut Vec<u8>| buf.extend_from_slice(b"null");
+    materialize_serializer(f, std::iter::repeat(()).take(len), offset, take)
 }
 
 fn primitive_serializer<'a, T: NativeType + ToLexical>(
     array: &'a PrimitiveArray<T>,
+    offset: usize,
+    take: usize,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        |x, buf| {
-            if let Some(x) = x {
-                lexical_to_bytes_mut(*x, buf)
-            } else {
-                buf.extend(b"null")
-            }
-        },
-        vec![],
-    ))
+    let f = |x: Option<&T>, buf: &mut Vec<u8>| {
+        if let Some(x) = x {
+            lexical_to_bytes_mut(*x, buf)
+        } else {
+            buf.extend(b"null")
+        }
+    };
+    materialize_serializer(f, array.iter(), offset, take)
 }
 
 fn float_serializer<'a, T>(
     array: &'a PrimitiveArray<T>,
+    offset: usize,
+    take: usize,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync>
 where
     T: num_traits::Float + NativeType + ToLexical,
 {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        |x, buf| {
-            if let Some(x) = x {
-                if T::is_nan(*x) || T::is_infinite(*x) {
-                    buf.extend(b"null")
-                } else {
-                    lexical_to_bytes_mut(*x, buf)
-                }
-            } else {
+    let f = |x: Option<&T>, buf: &mut Vec<u8>| {
+        if let Some(x) = x {
+            if T::is_nan(*x) || T::is_infinite(*x) {
                 buf.extend(b"null")
+            } else {
+                lexical_to_bytes_mut(*x, buf)
             }
-        },
-        vec![],
-    ))
+        } else {
+            buf.extend(b"null")
+        }
+    };
+
+    materialize_serializer(f, array.iter(), offset, take)
 }
 
 fn dictionary_utf8_serializer<'a, K: DictionaryKey, O: Offset>(
     array: &'a DictionaryArray<K>,
+    offset: usize,
+    take: usize,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
-    let iter = array.iter_typed::<Utf8Array<O>>().unwrap();
-
-    Box::new(BufStreamingIterator::new(
-        iter,
-        |x, buf| {
-            if let Some(x) = x {
-                utf8::write_str(buf, x).unwrap();
-            } else {
-                buf.extend_from_slice(b"null")
-            }
-        },
-        vec![],
-    ))
+    let iter = array.iter_typed::<Utf8Array<O>>().unwrap().skip(offset);
+    let f = |x: Option<&str>, buf: &mut Vec<u8>| {
+        if let Some(x) = x {
+            utf8::write_str(buf, x).unwrap();
+        } else {
+            buf.extend_from_slice(b"null")
+        }
+    };
+    materialize_serializer(f, iter, offset, take)
 }
 
 fn utf8_serializer<'a, O: Offset>(
     array: &'a Utf8Array<O>,
+    offset: usize,
+    take: usize,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        |x, buf| {
-            if let Some(x) = x {
-                utf8::write_str(buf, x).unwrap();
-            } else {
-                buf.extend_from_slice(b"null")
-            }
-        },
-        vec![],
-    ))
+    let f = |x: Option<&str>, buf: &mut Vec<u8>| {
+        if let Some(x) = x {
+            utf8::write_str(buf, x).unwrap();
+        } else {
+            buf.extend_from_slice(b"null")
+        }
+    };
+    materialize_serializer(f, array.iter(), offset, take)
 }
 
 fn struct_serializer<'a>(
     array: &'a StructArray,
+    offset: usize,
+    take: usize,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
     // {"a": [1, 2, 3], "b": [a, b, c], "c": {"a": [1, 2, 3]}}
     // [
@@ -117,7 +149,7 @@ fn struct_serializer<'a>(
         .values()
         .iter()
         .map(|x| x.as_ref())
-        .map(new_serializer)
+        .map(|arr| new_serializer(arr, offset, take))
         .collect::<Vec<_>>();
     let names = array.fields().iter().map(|f| f.name.as_str());
 
@@ -149,6 +181,8 @@ fn struct_serializer<'a>(
 
 fn list_serializer<'a, O: Offset>(
     array: &'a ListArray<O>,
+    offset: usize,
+    take: usize,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
     // [[1, 2], [3]]
     // [
@@ -156,35 +190,40 @@ fn list_serializer<'a, O: Offset>(
     //  [3]
     // ]
     //
-    let mut serializer = new_serializer(array.values().as_ref());
+    let offsets = array.offsets().as_slice();
+    let start = offsets[0].to_usize();
+    let end = offsets.last().unwrap().to_usize();
+    let mut serializer = new_serializer(array.values().as_ref(), start, end - start);
 
-    Box::new(BufStreamingIterator::new(
-        ZipValidity::new_with_validity(array.offsets().buffer().windows(2), array.validity()),
-        move |offset, buf| {
-            if let Some(offset) = offset {
-                let length = (offset[1] - offset[0]).to_usize();
-                buf.push(b'[');
-                let mut is_first_row = true;
-                for _ in 0..length {
-                    if !is_first_row {
-                        buf.push(b',');
-                    }
-                    is_first_row = false;
-                    buf.extend(serializer.next().unwrap());
+    let f = move |offset: Option<&[O]>, buf: &mut Vec<u8>| {
+        if let Some(offset) = offset {
+            let length = (offset[1] - offset[0]).to_usize();
+            buf.push(b'[');
+            let mut is_first_row = true;
+            for _ in 0..length {
+                if !is_first_row {
+                    buf.push(b',');
                 }
-                buf.push(b']');
-            } else {
-                buf.extend(b"null");
+                is_first_row = false;
+                buf.extend(serializer.next().unwrap());
             }
-        },
-        vec![],
-    ))
+            buf.push(b']');
+        } else {
+            buf.extend(b"null");
+        }
+    };
+
+    let iter =
+        ZipValidity::new_with_validity(array.offsets().buffer().windows(2), array.validity());
+    materialize_serializer(f, iter, offset, take)
 }
 
 fn fixed_size_list_serializer<'a>(
     array: &'a FixedSizeListArray,
+    offset: usize,
+    take: usize,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
-    let mut serializer = new_serializer(array.values().as_ref());
+    let mut serializer = new_serializer(array.values().as_ref(), offset, take);
 
     Box::new(BufStreamingIterator::new(
         ZipValidity::new(0..array.len(), array.validity().map(|x| x.iter())),
@@ -212,96 +251,229 @@ fn fixed_size_list_serializer<'a>(
 fn date_serializer<'a, T, F>(
     array: &'a PrimitiveArray<T>,
     convert: F,
+    offset: usize,
+    take: usize,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync>
 where
     T: NativeType,
     F: Fn(T) -> NaiveDate + 'static + Send + Sync,
 {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        move |x, buf| {
-            if let Some(x) = x {
-                let nd = convert(*x);
-                write!(buf, "\"{nd}\"").unwrap();
-            } else {
-                buf.extend_from_slice(b"null")
-            }
-        },
-        vec![],
-    ))
+    let f = move |x: Option<&T>, buf: &mut Vec<u8>| {
+        if let Some(x) = x {
+            let nd = convert(*x);
+            write!(buf, "\"{nd}\"").unwrap();
+        } else {
+            buf.extend_from_slice(b"null")
+        }
+    };
+
+    materialize_serializer(f, array.iter(), offset, take)
+}
+
+fn duration_serializer<'a, T, F>(
+    array: &'a PrimitiveArray<T>,
+    convert: F,
+    offset: usize,
+    take: usize,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync>
+where
+    T: NativeType,
+    F: Fn(T) -> Duration + 'static + Send + Sync,
+{
+    let f = move |x: Option<&T>, buf: &mut Vec<u8>| {
+        if let Some(x) = x {
+            let duration = convert(*x);
+            write!(buf, "\"{duration}\"").unwrap();
+        } else {
+            buf.extend_from_slice(b"null")
+        }
+    };
+
+    materialize_serializer(f, array.iter(), offset, take)
 }
 
 fn timestamp_serializer<'a, F>(
     array: &'a PrimitiveArray<i64>,
     convert: F,
+    offset: usize,
+    take: usize,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync>
 where
     F: Fn(i64) -> NaiveDateTime + 'static + Send + Sync,
 {
-    Box::new(BufStreamingIterator::new(
-        array.iter(),
-        move |x, buf| {
-            if let Some(x) = x {
-                let ndt = convert(*x);
-                write!(buf, "\"{ndt}\"").unwrap();
-            } else {
-                buf.extend_from_slice(b"null")
+    let f = move |x: Option<&i64>, buf: &mut Vec<u8>| {
+        if let Some(x) = x {
+            let ndt = convert(*x);
+            write!(buf, "\"{ndt}\"").unwrap();
+        } else {
+            buf.extend_from_slice(b"null")
+        }
+    };
+    materialize_serializer(f, array.iter(), offset, take)
+}
+
+fn timestamp_tz_serializer<'a>(
+    array: &'a PrimitiveArray<i64>,
+    time_unit: TimeUnit,
+    tz: &str,
+    offset: usize,
+    take: usize,
+) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
+    match parse_offset(tz) {
+        Ok(parsed_tz) => {
+            let f = move |x: Option<&i64>, buf: &mut Vec<u8>| {
+                if let Some(x) = x {
+                    let dt_str = timestamp_to_datetime(*x, time_unit, &parsed_tz).to_rfc3339();
+                    write!(buf, "\"{dt_str}\"").unwrap();
+                } else {
+                    buf.extend_from_slice(b"null")
+                }
+            };
+
+            materialize_serializer(f, array.iter(), offset, take)
+        }
+        #[cfg(feature = "chrono-tz")]
+        _ => match parse_offset_tz(tz) {
+            Ok(parsed_tz) => {
+                let f = move |x: Option<&i64>, buf: &mut Vec<u8>| {
+                    if let Some(x) = x {
+                        let dt_str = timestamp_to_datetime(*x, time_unit, &parsed_tz).to_rfc3339();
+                        write!(buf, "\"{dt_str}\"").unwrap();
+                    } else {
+                        buf.extend_from_slice(b"null")
+                    }
+                };
+
+                materialize_serializer(f, array.iter(), offset, take)
+            }
+            _ => {
+                panic!("Timezone {} is invalid or not supported", tz);
             }
         },
-        vec![],
-    ))
+        #[cfg(not(feature = "chrono-tz"))]
+        _ => {
+            panic!("Invalid Offset format (must be [-]00:00) or chrono-tz feature not active");
+        }
+    }
 }
 
 pub(crate) fn new_serializer<'a>(
     array: &'a dyn Array,
+    offset: usize,
+    take: usize,
 ) -> Box<dyn StreamingIterator<Item = [u8]> + 'a + Send + Sync> {
     match array.data_type().to_logical_type() {
-        DataType::Boolean => boolean_serializer(array.as_any().downcast_ref().unwrap()),
-        DataType::Int8 => primitive_serializer::<i8>(array.as_any().downcast_ref().unwrap()),
-        DataType::Int16 => primitive_serializer::<i16>(array.as_any().downcast_ref().unwrap()),
-        DataType::Int32 => primitive_serializer::<i32>(array.as_any().downcast_ref().unwrap()),
-        DataType::Int64 => primitive_serializer::<i64>(array.as_any().downcast_ref().unwrap()),
-        DataType::UInt8 => primitive_serializer::<u8>(array.as_any().downcast_ref().unwrap()),
-        DataType::UInt16 => primitive_serializer::<u16>(array.as_any().downcast_ref().unwrap()),
-        DataType::UInt32 => primitive_serializer::<u32>(array.as_any().downcast_ref().unwrap()),
-        DataType::UInt64 => primitive_serializer::<u64>(array.as_any().downcast_ref().unwrap()),
-        DataType::Float32 => float_serializer::<f32>(array.as_any().downcast_ref().unwrap()),
-        DataType::Float64 => float_serializer::<f64>(array.as_any().downcast_ref().unwrap()),
-        DataType::Utf8 => utf8_serializer::<i32>(array.as_any().downcast_ref().unwrap()),
-        DataType::LargeUtf8 => utf8_serializer::<i64>(array.as_any().downcast_ref().unwrap()),
-        DataType::Struct(_) => struct_serializer(array.as_any().downcast_ref().unwrap()),
-        DataType::FixedSizeList(_, _) => {
-            fixed_size_list_serializer(array.as_any().downcast_ref().unwrap())
+        DataType::Boolean => {
+            boolean_serializer(array.as_any().downcast_ref().unwrap(), offset, take)
         }
-        DataType::List(_) => list_serializer::<i32>(array.as_any().downcast_ref().unwrap()),
-        DataType::LargeList(_) => list_serializer::<i64>(array.as_any().downcast_ref().unwrap()),
+        DataType::Int8 => {
+            primitive_serializer::<i8>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Int16 => {
+            primitive_serializer::<i16>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Int32 => {
+            primitive_serializer::<i32>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Int64 => {
+            primitive_serializer::<i64>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::UInt8 => {
+            primitive_serializer::<u8>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::UInt16 => {
+            primitive_serializer::<u16>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::UInt32 => {
+            primitive_serializer::<u32>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::UInt64 => {
+            primitive_serializer::<u64>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Float32 => {
+            float_serializer::<f32>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Float64 => {
+            float_serializer::<f64>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Utf8 => {
+            utf8_serializer::<i32>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::LargeUtf8 => {
+            utf8_serializer::<i64>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::Struct(_) => {
+            struct_serializer(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::FixedSizeList(_, _) => {
+            fixed_size_list_serializer(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::List(_) => {
+            list_serializer::<i32>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
+        DataType::LargeList(_) => {
+            list_serializer::<i64>(array.as_any().downcast_ref().unwrap(), offset, take)
+        }
         other @ DataType::Dictionary(k, v, _) => match (k, &**v) {
             (IntegerType::UInt32, DataType::LargeUtf8) => {
                 let array = array
                     .as_any()
                     .downcast_ref::<DictionaryArray<u32>>()
                     .unwrap();
-                dictionary_utf8_serializer::<u32, i64>(array)
+                dictionary_utf8_serializer::<u32, i64>(array, offset, take)
             }
             _ => {
                 todo!("Writing {:?} to JSON", other)
             }
         },
-        DataType::Date32 => date_serializer(array.as_any().downcast_ref().unwrap(), date32_to_date),
-        DataType::Date64 => date_serializer(array.as_any().downcast_ref().unwrap(), date64_to_date),
-        DataType::Timestamp(tu, tz) => {
-            if tz.is_some() {
-                todo!("still have to implement timezone")
-            } else {
-                let convert = match tu {
-                    TimeUnit::Nanosecond => timestamp_ns_to_datetime,
-                    TimeUnit::Microsecond => timestamp_us_to_datetime,
-                    TimeUnit::Millisecond => timestamp_ms_to_datetime,
-                    TimeUnit::Second => timestamp_s_to_datetime,
-                };
-                timestamp_serializer(array.as_any().downcast_ref().unwrap(), convert)
-            }
+        DataType::Date32 => date_serializer(
+            array.as_any().downcast_ref().unwrap(),
+            date32_to_date,
+            offset,
+            take,
+        ),
+        DataType::Date64 => date_serializer(
+            array.as_any().downcast_ref().unwrap(),
+            date64_to_date,
+            offset,
+            take,
+        ),
+        DataType::Timestamp(tu, None) => {
+            let convert = match tu {
+                TimeUnit::Nanosecond => timestamp_ns_to_datetime,
+                TimeUnit::Microsecond => timestamp_us_to_datetime,
+                TimeUnit::Millisecond => timestamp_ms_to_datetime,
+                TimeUnit::Second => timestamp_s_to_datetime,
+            };
+            timestamp_serializer(
+                array.as_any().downcast_ref().unwrap(),
+                convert,
+                offset,
+                take,
+            )
         }
+        DataType::Timestamp(time_unit, Some(tz)) => timestamp_tz_serializer(
+            array.as_any().downcast_ref().unwrap(),
+            *time_unit,
+            tz,
+            offset,
+            take,
+        ),
+        DataType::Duration(tu) => {
+            let convert = match tu {
+                TimeUnit::Nanosecond => duration_ns_to_duration,
+                TimeUnit::Microsecond => duration_us_to_duration,
+                TimeUnit::Millisecond => duration_ms_to_duration,
+                TimeUnit::Second => duration_s_to_duration,
+            };
+            duration_serializer(
+                array.as_any().downcast_ref().unwrap(),
+                convert,
+                offset,
+                take,
+            )
+        }
+        DataType::Null => null_serializer(array.len(), offset, take),
         other => todo!("Writing {:?} to JSON", other),
     }
 }
@@ -328,7 +500,7 @@ fn serialize_item(buffer: &mut Vec<u8>, record: &[(&str, &[u8])], is_first_row: 
 /// # Implementation
 /// This operation is CPU-bounded
 pub(crate) fn serialize(array: &dyn Array, buffer: &mut Vec<u8>) {
-    let mut serializer = new_serializer(array);
+    let mut serializer = new_serializer(array, 0, usize::MAX);
 
     (0..array.len()).for_each(|i| {
         if i != 0 {

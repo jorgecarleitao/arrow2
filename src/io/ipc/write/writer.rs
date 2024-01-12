@@ -4,7 +4,7 @@ use arrow_format::ipc::planus::Builder;
 
 use super::{
     super::IpcField,
-    super::ARROW_MAGIC,
+    super::ARROW_MAGIC_V2,
     common::{DictionaryTracker, EncodedData, WriteOptions},
     common_sync::{write_continuation, write_message},
     default_ipc_fields, schema, schema_to_bytes,
@@ -114,7 +114,7 @@ impl<W: Write> FileWriter<W> {
             return Err(Error::oos("The IPC file can only be started once"));
         }
         // write magic to header
-        self.writer.write_all(&ARROW_MAGIC[..])?;
+        self.writer.write_all(&ARROW_MAGIC_V2[..])?;
         // create an 8-byte boundary after the header
         self.writer.write_all(&[0, 0])?;
         // write the schema, set the written bytes to the schema
@@ -205,7 +205,7 @@ impl<W: Write> FileWriter<W> {
         self.writer.write_all(footer_data)?;
         self.writer
             .write_all(&(footer_data.len() as i32).to_le_bytes())?;
-        self.writer.write_all(&ARROW_MAGIC)?;
+        self.writer.write_all(&ARROW_MAGIC_V2)?;
         self.writer.flush()?;
         self.state = State::Finished;
 

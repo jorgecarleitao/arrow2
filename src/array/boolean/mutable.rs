@@ -559,7 +559,11 @@ impl TryExtendFromSelf for MutableBooleanArray {
         extend_validity(self.len(), &mut self.validity, &other.validity);
 
         let slice = other.values.as_slice();
-        self.values.extend_from_slice(slice, 0, other.values.len());
+        // safety: invariant offset + length <= slice.len()
+        unsafe {
+            self.values
+                .extend_from_slice_unchecked(slice, 0, other.values.len());
+        }
         Ok(())
     }
 }

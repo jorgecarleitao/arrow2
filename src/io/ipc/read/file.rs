@@ -8,7 +8,7 @@ use crate::datatypes::Schema;
 use crate::error::{Error, Result};
 use crate::io::ipc::IpcSchema;
 
-use super::super::{ARROW_MAGIC, CONTINUATION_MARKER};
+use super::super::{ARROW_MAGIC_V1, ARROW_MAGIC_V2, CONTINUATION_MARKER};
 use super::common::*;
 use super::schema::fb_to_schema;
 use super::Dictionaries;
@@ -151,7 +151,7 @@ fn read_footer_len<R: Read + Seek>(reader: &mut R) -> Result<(u64, usize)> {
     reader.read_exact(&mut footer)?;
     let footer_len = i32::from_le_bytes(footer[..4].try_into().unwrap());
 
-    if footer[4..] != ARROW_MAGIC {
+    if footer[4..] != ARROW_MAGIC_V2 {
         return Err(Error::from(OutOfSpecKind::InvalidFooter));
     }
     let footer_len = footer_len
@@ -215,7 +215,10 @@ pub fn read_file_metadata<R: Read + Seek>(reader: &mut R) -> Result<FileMetadata
     let mut magic_buffer: [u8; 6] = [0; 6];
     let start = reader.stream_position()?;
     reader.read_exact(&mut magic_buffer)?;
-    if magic_buffer != ARROW_MAGIC {
+    if magic_buffer != ARROW_MAGIC_V2 {
+        if magic_buffer[..4] == ARROW_MAGIC_V1 {
+            return Err(Error::NotYetImplemented("feather v1 not supported".into()));
+        }
         return Err(Error::from(OutOfSpecKind::InvalidHeader));
     }
 

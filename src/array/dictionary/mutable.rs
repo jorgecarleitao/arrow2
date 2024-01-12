@@ -1,15 +1,15 @@
-use std::hash::{Hash, Hasher};
-use std::{collections::hash_map::DefaultHasher, sync::Arc};
+use std::hash::Hash;
+use std::sync::Arc;
 
-use hash_hasher::HashedMap;
-
+use crate::array::indexable::{AsIndexed, Indexable};
 use crate::{
     array::{primitive::MutablePrimitiveArray, Array, MutableArray, TryExtend, TryPush},
     bitmap::MutableBitmap,
     datatypes::DataType,
-    error::{Error, Result},
+    error::Result,
 };
 
+use super::value_map::ValueMap;
 use super::{DictionaryArray, DictionaryKey};
 
 /// A mutable, strong-typed version of [`DictionaryArray`].
@@ -30,37 +30,21 @@ use super::{DictionaryArray, DictionaryKey};
 #[derive(Debug)]
 pub struct MutableDictionaryArray<K: DictionaryKey, M: MutableArray> {
     data_type: DataType,
+    map: ValueMap<K, M>,
+    // invariant: `max(keys) < map.values().len()`
     keys: MutablePrimitiveArray<K>,
-    map: HashedMap<u64, K>,
-    // invariant: `keys.len() <= values.len()`
-    values: M,
 }
 
 impl<K: DictionaryKey, M: MutableArray> From<MutableDictionaryArray<K, M>> for DictionaryArray<K> {
-    fn from(mut other: MutableDictionaryArray<K, M>) -> Self {
+    fn from(other: MutableDictionaryArray<K, M>) -> Self {
         // Safety - the invariant of this struct ensures that this is up-held
         unsafe {
             DictionaryArray::<K>::try_new_unchecked(
                 other.data_type,
                 other.keys.into(),
-                other.values.as_box(),
+                other.map.into_values().as_box(),
             )
             .unwrap()
-        }
-    }
-}
-
-impl<K: DictionaryKey, M: MutableArray> From<M> for MutableDictionaryArray<K, M> {
-    fn from(values: M) -> Self {
-        Self {
-            data_type: DataType::Dictionary(
-                K::KEY_TYPE,
-                std::sync::Arc::new(values.data_type().clone()),
-                false,
-            ),
-            keys: MutablePrimitiveArray::<K>::new(),
-            map: HashedMap::default(),
-            values,
         }
     }
 }
@@ -68,17 +52,7 @@ impl<K: DictionaryKey, M: MutableArray> From<M> for MutableDictionaryArray<K, M>
 impl<K: DictionaryKey, M: MutableArray + Default> MutableDictionaryArray<K, M> {
     /// Creates an empty [`MutableDictionaryArray`].
     pub fn new() -> Self {
-        let values = M::default();
-        Self {
-            data_type: DataType::Dictionary(
-                K::KEY_TYPE,
-                std::sync::Arc::new(values.data_type().clone()),
-                false,
-            ),
-            keys: MutablePrimitiveArray::<K>::new(),
-            map: HashedMap::default(),
-            values,
-        }
+        Self::try_empty(M::default()).unwrap()
     }
 }
 
@@ -89,23 +63,51 @@ impl<K: DictionaryKey, M: MutableArray + Default> Default for MutableDictionaryA
 }
 
 impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
-    /// Returns whether the value should be pushed to the values or not
-    fn try_push_valid<T: Hash>(&mut self, value: &T) -> Result<bool> {
-        let mut hasher = DefaultHasher::new();
-        value.hash(&mut hasher);
-        let hash = hasher.finish();
-        match self.map.get(&hash) {
-            Some(key) => {
-                self.keys.push(Some(*key));
-                Ok(false)
-            }
-            None => {
-                let key = K::try_from(self.map.len()).map_err(|_| Error::Overflow)?;
-                self.map.insert(hash, key);
-                self.keys.push(Some(key));
-                Ok(true)
-            }
+    /// Creates an empty [`MutableDictionaryArray`] from a given empty values array.
+    /// # Errors
+    /// Errors if the array is non-empty.
+    pub fn try_empty(values: M) -> Result<Self> {
+        Ok(Self::from_value_map(ValueMap::<K, M>::try_empty(values)?))
+    }
+
+    /// Creates an empty [`MutableDictionaryArray`] preloaded with a given dictionary of values.
+    /// Indices associated with those values are automatically assigned based on the order of
+    /// the values.
+    /// # Errors
+    /// Errors if there's more values than the maximum value of `K` or if values are not unique.
+    pub fn from_values(values: M) -> Result<Self>
+    where
+        M: Indexable,
+        M::Type: Eq + Hash,
+    {
+        Ok(Self::from_value_map(ValueMap::<K, M>::from_values(values)?))
+    }
+
+    fn from_value_map(value_map: ValueMap<K, M>) -> Self {
+        let keys = MutablePrimitiveArray::<K>::new();
+        let data_type =
+            DataType::Dictionary(K::KEY_TYPE, Arc::new(value_map.data_type().clone()), false);
+        Self {
+            data_type,
+            map: value_map,
+            keys,
         }
+    }
+
+    /// Creates an empty [`MutableDictionaryArray`] retaining the same dictionary as the current
+    /// mutable dictionary array, but with no data. This may come useful when serializing the
+    /// array into multiple chunks, where there's a requirement that the dictionary is the same.
+    /// No copying is performed, the value map is moved over to the new array.
+    pub fn into_empty(self) -> Self {
+        Self::from_value_map(self.map)
+    }
+
+    /// Same as `into_empty` but clones the inner value map instead of taking full ownership.
+    pub fn to_empty(&self) -> Self
+    where
+        M: Clone,
+    {
+        Self::from_value_map(self.map.clone())
     }
 
     /// pushes a null value
@@ -113,14 +115,9 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
         self.keys.push(None)
     }
 
-    /// returns a mutable reference to the inner values.
-    fn mut_values(&mut self) -> &mut M {
-        &mut self.values
-    }
-
     /// returns a reference to the inner values.
     pub fn values(&self) -> &M {
-        &self.values
+        self.map.values()
     }
 
     /// converts itself into [`Arc<dyn Array>`]
@@ -142,13 +139,8 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
 
     /// Shrinks the capacity of the [`MutableDictionaryArray`] to fit its current length.
     pub fn shrink_to_fit(&mut self) {
-        self.values.shrink_to_fit();
+        self.map.shrink_to_fit();
         self.keys.shrink_to_fit();
-    }
-
-    /// Returns the dictionary map
-    pub fn map(&self) -> &HashedMap<u64, K> {
-        &self.map
     }
 
     /// Returns the dictionary keys
@@ -160,7 +152,7 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
         DictionaryArray::<K>::try_new(
             self.data_type.clone(),
             std::mem::take(&mut self.keys).into(),
-            self.values.as_box(),
+            self.map.take_into(),
         )
         .unwrap()
     }
@@ -208,17 +200,20 @@ impl<K: DictionaryKey, M: 'static + MutableArray> MutableArray for MutableDictio
     }
 }
 
-impl<K, M, T: Hash> TryExtend<Option<T>> for MutableDictionaryArray<K, M>
+impl<K, M, T> TryExtend<Option<T>> for MutableDictionaryArray<K, M>
 where
     K: DictionaryKey,
-    M: MutableArray + TryExtend<Option<T>>,
+    M: MutableArray + Indexable + TryExtend<Option<T>>,
+    T: AsIndexed<M>,
+    M::Type: Eq + Hash,
 {
     fn try_extend<II: IntoIterator<Item = Option<T>>>(&mut self, iter: II) -> Result<()> {
         for value in iter {
             if let Some(value) = value {
-                if self.try_push_valid(&value)? {
-                    self.mut_values().try_extend(std::iter::once(Some(value)))?;
-                }
+                let key = self
+                    .map
+                    .try_push_valid(value, |arr, v| arr.try_extend(std::iter::once(Some(v))))?;
+                self.keys.try_push(Some(key))?;
             } else {
                 self.push_null();
             }
@@ -230,19 +225,19 @@ where
 impl<K, M, T> TryPush<Option<T>> for MutableDictionaryArray<K, M>
 where
     K: DictionaryKey,
-    M: MutableArray + TryPush<Option<T>>,
-    T: Hash,
+    M: MutableArray + Indexable + TryPush<Option<T>>,
+    T: AsIndexed<M>,
+    M::Type: Eq + Hash,
 {
     fn try_push(&mut self, item: Option<T>) -> Result<()> {
         if let Some(value) = item {
-            if self.try_push_valid(&value)? {
-                self.values.try_push(Some(value))
-            } else {
-                Ok(())
-            }
+            let key = self
+                .map
+                .try_push_valid(value, |arr, v| arr.try_push(Some(v)))?;
+            self.keys.try_push(Some(key))?;
         } else {
             self.push_null();
-            Ok(())
         }
+        Ok(())
     }
 }

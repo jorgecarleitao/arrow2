@@ -45,7 +45,9 @@ fn read_json_records() -> Result<()> {
                 [2, 3],
                 [4, 5, 6]
             ],
-            "b": [1, 2, 3]
+            "b": [1, 2, 3],
+            "c": ["test"],
+            "d": [true]
         },
         {
             "a": [
@@ -55,7 +57,9 @@ fn read_json_records() -> Result<()> {
             ]
         },
         {
-            "b": [7, 8, 9]
+            "b": [7, 8, 9],
+            "c": ["string"],
+            "d": [false]
         }
     ]"#;
 
@@ -98,6 +102,30 @@ fn read_json_records() -> Result<()> {
     b.try_extend(b_iter).unwrap();
     let b_expected: ListArray<i32> = b.into();
 
+    let c_iter = vec![vec![Some("test")], vec![Some("string")]];
+
+    let c_iter = c_iter.into_iter().map(Some);
+    let mut c = MutableListArray::<i32, MutableUtf8Array<i32>>::new_with_field(
+        MutableUtf8Array::<i32>::new(),
+        "item",
+        true,
+    );
+
+    c.try_extend(c_iter).unwrap();
+    let c_expected: ListArray<i32> = c.into();
+
+    let d_iter = vec![vec![Some(true)], vec![Some(false)]];
+
+    let d_iter = d_iter.into_iter().map(Some);
+    let mut d = MutableListArray::<i32, MutableBooleanArray>::new_with_field(
+        MutableBooleanArray::new(),
+        "item",
+        true,
+    );
+
+    d.try_extend(d_iter).unwrap();
+    let d_expected: ListArray<i32> = d.into();
+
     let json = json_deserializer::parse(data)?;
 
     let schema = read::infer_records_schema(&json)?;
@@ -108,6 +136,10 @@ fn read_json_records() -> Result<()> {
             (&a_expected, arr.as_ref())
         } else if f.name == "b" {
             (&b_expected, arr.as_ref())
+        } else if f.name == "c" {
+            (&c_expected, arr.as_ref())
+        } else if f.name == "d" {
+            (&d_expected, arr.as_ref())
         } else {
             panic!("unexpected field found: {}", f.name);
         };
@@ -162,6 +194,35 @@ fn read_json_fixed_size_records() -> Result<()> {
 
         assert_eq!(expected.to_boxed().as_ref(), actual);
     }
+
+    Ok(())
+}
+
+#[test]
+fn read_json_records_with_schema() -> Result<()> {
+    let raw = b"[{\"matrix\":[0.0,2.0]},{\"matrix\":[0.0,0.0,2.1,3.0]}]";
+    let schema = Schema {
+        fields: vec![Field::new(
+            "matrix",
+            DataType::List(Box::new(Field::new("inner", DataType::Float32, false))),
+            false,
+        )],
+        metadata: Metadata::default(),
+    };
+
+    let json = json_deserializer::parse(raw)?;
+    let actual = read::deserialize_records(&json, &schema)?;
+    assert_eq!(
+        format!("{:?}", actual.arrays()[0]),
+        "ListArray[[0, 2], [0, 0, 2.1, 3]]"
+    );
+
+    let schema = read::infer_records_schema(&json)?;
+    let actual = read::deserialize_records(&json, &schema)?;
+    assert_eq!(
+        format!("{:?}", actual.arrays()[0]),
+        "ListArray[[0, 2], [0, 0, 2.1, 3]]"
+    );
 
     Ok(())
 }

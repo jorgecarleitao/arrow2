@@ -1,6 +1,7 @@
 //! Contains functionality to load an ArrayData from the C Data Interface
 use std::sync::Arc;
 
+use crate::bitmap::utils::count_zeros;
 use crate::buffer::BytesAllocator;
 use crate::{
     array::*,
@@ -208,17 +209,11 @@ unsafe fn get_buffer_ptr<T: NativeType>(
     let ptr = *buffers.add(index);
     if ptr.is_null() {
         return Err(Error::oos(format!(
-            "An array of type {data_type:?}
+            "An array of type {data_type:?} 
             must have a non-null buffer {index}"
         )));
     }
-    if ptr.align_offset(std::mem::align_of::<T>()) != 0 {
-        return Err(Error::oos(format!(
-            "An ArrowArray of type {data_type:?}
-            must have buffer {index} aligned to type {}",
-            std::any::type_name::<T>()
-        )));
-    }
+
     // note: we can't prove that this pointer is not mutably shared - part of the safety invariant
     Ok(ptr as *mut T)
 }
@@ -234,13 +229,27 @@ unsafe fn create_buffer<T: NativeType>(
     owner: InternalArrowArray,
     index: usize,
 ) -> Result<Buffer<T>> {
-    let ptr = get_buffer_ptr(array, data_type, index)?;
-
     let len = buffer_len(array, data_type, index)?;
-    let offset = buffer_offset(array, data_type, index);
-    let bytes = Bytes::from_foreign(ptr, len, BytesAllocator::InternalArrowArray(owner));
 
-    Ok(Buffer::from_bytes(bytes).sliced(offset, len - offset))
+    if len == 0 {
+        return Ok(Buffer::new());
+    }
+
+    let offset = buffer_offset(array, data_type, index);
+    let ptr: *mut T = get_buffer_ptr(array, data_type, index)?;
+
+    // We have to check alignment.
+    // This is the zero-copy path.
+    if ptr.align_offset(std::mem::align_of::<T>()) == 0 {
+        let bytes = Bytes::from_foreign(ptr, len, BytesAllocator::InternalArrowArray(owner));
+        Ok(Buffer::from_bytes(bytes).sliced(offset, len - offset))
+    }
+    // This is the path where alignment isn't correct.
+    // We copy the data to a new vec
+    else {
+        let buf = std::slice::from_raw_parts(ptr, len - offset).to_vec();
+        Ok(Buffer::from(buf))
+    }
 }
 
 /// returns the buffer `i` of `array` interpreted as a [`Bitmap`].
@@ -253,15 +262,28 @@ unsafe fn create_bitmap(
     data_type: &DataType,
     owner: InternalArrowArray,
     index: usize,
+    // if this is the validity bitmap
+    // we can use the null count directly
+    is_validity: bool,
 ) -> Result<Bitmap> {
+    let len: usize = array.length.try_into().expect("length to fit in `usize`");
+    if len == 0 {
+        return Ok(Bitmap::new());
+    }
     let ptr = get_buffer_ptr(array, data_type, index)?;
 
-    let len: usize = array.length.try_into().expect("length to fit in `usize`");
-    let offset: usize = array.offset.try_into().expect("Offset to fit in `usize`");
+    // Pointer of u8 has alignment 1, so we don't have to check alignment.
+
+    let offset: usize = array.offset.try_into().expect("offset to fit in `usize`");
     let bytes_len = bytes_for(offset + len);
     let bytes = Bytes::from_foreign(ptr, bytes_len, BytesAllocator::InternalArrowArray(owner));
 
-    Ok(Bitmap::from_bytes(bytes, offset + len).sliced(offset, len))
+    let null_count: usize = if is_validity {
+        array.null_count()
+    } else {
+        count_zeros(bytes.as_ref(), offset, len)
+    };
+    Bitmap::from_inner(Arc::new(bytes), offset, len, null_count)
 }
 
 fn buffer_offset(array: &ArrowArray, data_type: &DataType, i: usize) -> usize {
@@ -419,7 +441,7 @@ pub trait ArrowArrayRef: std::fmt::Debug {
         if self.array().null_count() == 0 {
             Ok(None)
         } else {
-            create_bitmap(self.array(), self.data_type(), self.owner(), 0).map(Some)
+            create_bitmap(self.array(), self.data_type(), self.owner(), 0, true).map(Some)
         }
     }
 
@@ -435,7 +457,7 @@ pub trait ArrowArrayRef: std::fmt::Debug {
     /// * the buffer at position `index` is valid for the declared length
     /// * the buffers' pointer is not mutable for the lifetime of `owner`
     unsafe fn bitmap(&self, index: usize) -> Result<Bitmap> {
-        create_bitmap(self.array(), self.data_type(), self.owner(), index)
+        create_bitmap(self.array(), self.data_type(), self.owner(), index, false)
     }
 
     /// # Safety

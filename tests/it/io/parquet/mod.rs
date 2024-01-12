@@ -15,12 +15,16 @@ use arrow2::{
     types::{days_ms, NativeType},
 };
 
+mod deserialize;
 #[cfg(feature = "io_json_integration")]
 mod integration;
 mod read;
 mod read_indexes;
 mod write;
 mod write_async;
+
+#[cfg(feature = "io_parquet_sample_test")]
+mod sample_tests;
 
 type ArrayStats = (Box<dyn Array>, Statistics);
 
@@ -65,10 +69,9 @@ pub fn read_column<R: Read + Seek>(mut reader: R, column: &str) -> Result<ArrayS
 
     let mut reader = p_read::FileReader::new(reader, metadata.row_groups, schema, None, None, None);
 
-    Ok((
-        reader.next().unwrap()?.into_arrays().pop().unwrap(),
-        statistics,
-    ))
+    let array = reader.next().unwrap()?.into_arrays().pop().unwrap();
+
+    Ok((array, statistics))
 }
 
 pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
@@ -141,26 +144,26 @@ pub fn pyarrow_nested_edge(column: &str) -> Box<dyn Array> {
 }
 
 pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
+    let i64_values = &[
+        Some(0),
+        Some(1),
+        Some(2),
+        None,
+        Some(3),
+        Some(4),
+        Some(5),
+        Some(6),
+        Some(7),
+        Some(8),
+        Some(9),
+        Some(10),
+    ];
     let offsets = vec![0, 2, 2, 5, 8, 8, 11, 11, 12].try_into().unwrap();
 
     let values = match column {
         "list_int64" => {
             // [[0, 1], None, [2, None, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
-            PrimitiveArray::<i64>::from(&[
-                Some(0),
-                Some(1),
-                Some(2),
-                None,
-                Some(3),
-                Some(4),
-                Some(5),
-                Some(6),
-                Some(7),
-                Some(8),
-                Some(9),
-                Some(10),
-            ])
-            .boxed()
+            PrimitiveArray::<i64>::from(i64_values).boxed()
         }
         "list_int64_required" | "list_int64_optional_required" | "list_int64_required_required" => {
             // [[0, 1], None, [2, 0, 3], [4, 5, 6], [], [7, 8, 9], None, [10]]
@@ -251,7 +254,69 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             Some(b"bbb".to_vec()),
             Some(b"".to_vec()),
         ])),
+        "list_decimal_9" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| x as i128))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(9, 0)))
+        }
+        "list_decimal_18" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| x as i128))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(18, 0)))
+        }
+        "list_decimal_26" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| x as i128))
+                .collect::<Vec<_>>();
+            Box::new(PrimitiveArray::<i128>::from(values).to(DataType::Decimal(26, 0)))
+        }
+        "list_decimal256_9" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| i256(x.as_i256())))
+                .collect::<Vec<_>>();
+            let array = PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(9, 0));
+            Box::new(array)
+        }
+        "list_decimal256_18" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| i256(x.as_i256())))
+                .collect::<Vec<_>>();
+            let array = PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(18, 0));
+            Box::new(array)
+        }
+        "list_decimal256_26" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| i256(x.as_i256())))
+                .collect::<Vec<_>>();
+            let array = PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(26, 0));
+            Box::new(array)
+        }
+        "list_decimal256_39" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| i256(x.as_i256())))
+                .collect::<Vec<_>>();
+            let array = PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(39, 0));
+            Box::new(array)
+        }
+        "list_decimal256_76" => {
+            let values = i64_values
+                .iter()
+                .map(|x| x.map(|x| i256(x.as_i256())))
+                .collect::<Vec<_>>();
+            let array = PrimitiveArray::<i256>::from(values).to(DataType::Decimal256(76, 0));
+            Box::new(array)
+        }
         "list_nested_i64"
+        | "list_nested_decimal"
         | "list_nested_inner_required_i64"
         | "list_nested_inner_required_required_i64" => Box::new(NullArray::new(DataType::Null, 1)),
         "struct_list_nullable" => pyarrow_nested_nullable("list_utf8"),
@@ -393,6 +458,48 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
             let array: ListArray<i32> = a.into();
             Box::new(array)
         }
+        "list_nested_decimal" => {
+            // [
+            //     [[Decimal(0), Decimal(1)]],
+            //     None,
+            //     [[Decimal(2), None], [Decimal(3)]],
+            //     [[Decimal(4), Decimal(5)], [Decimal(6)]],
+            //     [],
+            //     [[Decimal(7)], None, [Decimal(9)]],
+            //     [[], [None], None],
+            //     [[Decimal(10)]],
+            // ]
+
+            let data = [
+                Some(vec![Some(vec![Some(0), Some(1)])]),
+                None,
+                Some(vec![Some(vec![Some(2), None]), Some(vec![Some(3)])]),
+                Some(vec![Some(vec![Some(4), Some(5)]), Some(vec![Some(6)])]),
+                Some(vec![]),
+                Some(vec![Some(vec![Some(7)]), None, Some(vec![Some(9)])]),
+                Some(vec![Some(vec![]), Some(vec![None]), None]),
+                Some(vec![Some(vec![Some(10)])]),
+            ];
+
+            let inner_array = MutablePrimitiveArray::<i128>::from(DataType::Decimal(9, 0));
+            let middle_array = MutableListArray::<i32, MutablePrimitiveArray<i128>>::new_from(
+                inner_array.clone(),
+                ListArray::<i32>::default_datatype(inner_array.data_type().clone()),
+                0,
+            );
+            let mut outer_array = MutableListArray::<
+                i32,
+                MutableListArray<i32, MutablePrimitiveArray<i128>>,
+            >::new_from(
+                middle_array.clone(),
+                ListArray::<i32>::default_datatype(middle_array.data_type().clone()),
+                0,
+            );
+
+            outer_array.try_extend(data).unwrap();
+            let array: ListArray<i32> = outer_array.into();
+            Box::new(array)
+        }
         "list_nested_inner_required_i64" => {
             let data = [
                 Some(vec![Some(vec![Some(0), Some(1)])]),
@@ -440,6 +547,14 @@ pub fn pyarrow_nested_nullable(column: &str) -> Box<dyn Array> {
                 "list_bool" => Field::new("item", DataType::Boolean, true),
                 "list_utf8" => Field::new("item", DataType::Utf8, true),
                 "list_large_binary" => Field::new("item", DataType::LargeBinary, true),
+                "list_decimal_9" => Field::new("item", DataType::Decimal(9, 0), true),
+                "list_decimal_18" => Field::new("item", DataType::Decimal(18, 0), true),
+                "list_decimal_26" => Field::new("item", DataType::Decimal(26, 0), true),
+                "list_decimal256_9" => Field::new("item", DataType::Decimal256(9, 0), true),
+                "list_decimal256_18" => Field::new("item", DataType::Decimal256(18, 0), true),
+                "list_decimal256_26" => Field::new("item", DataType::Decimal256(26, 0), true),
+                "list_decimal256_39" => Field::new("item", DataType::Decimal256(39, 0), true),
+                "list_decimal256_76" => Field::new("item", DataType::Decimal256(76, 0), true),
                 "list_struct_nullable" => Field::new("item", values.data_type().clone(), true),
                 "list_struct_list_nullable" => Field::new("item", values.data_type().clone(), true),
                 other => unreachable!("{}", other),
@@ -889,6 +1004,138 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
             min_value: new_list(Box::new(BinaryArray::<i64>::from_slice([b""])), true).boxed(),
             max_value: new_list(Box::new(BinaryArray::<i64>::from_slice([b"ccc"])), true).boxed(),
         },
+        "list_decimal_9" => Statistics {
+            distinct_count: new_list(UInt64Array::from([None]).boxed(), true).boxed(),
+            null_count: new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed(),
+            min_value: new_list(
+                Box::new(Int128Array::from_slice([0]).to(DataType::Decimal(9, 0))),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                Box::new(Int128Array::from_slice([10]).to(DataType::Decimal(9, 0))),
+                true,
+            )
+            .boxed(),
+        },
+        "list_decimal_18" => Statistics {
+            distinct_count: new_list(UInt64Array::from([None]).boxed(), true).boxed(),
+            null_count: new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed(),
+            min_value: new_list(
+                Box::new(Int128Array::from_slice([0]).to(DataType::Decimal(18, 0))),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                Box::new(Int128Array::from_slice([10]).to(DataType::Decimal(18, 0))),
+                true,
+            )
+            .boxed(),
+        },
+        "list_decimal_26" => Statistics {
+            distinct_count: new_list(UInt64Array::from([None]).boxed(), true).boxed(),
+            null_count: new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed(),
+            min_value: new_list(
+                Box::new(Int128Array::from_slice([0]).to(DataType::Decimal(26, 0))),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                Box::new(Int128Array::from_slice([10]).to(DataType::Decimal(26, 0))),
+                true,
+            )
+            .boxed(),
+        },
+        "list_decimal256_9" => Statistics {
+            distinct_count: new_list(UInt64Array::from([None]).boxed(), true).boxed(),
+            null_count: new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed(),
+            min_value: new_list(
+                Box::new(
+                    Int256Array::from_slice([i256(0.as_i256())]).to(DataType::Decimal256(9, 0)),
+                ),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                Box::new(
+                    Int256Array::from_slice([i256(10.as_i256())]).to(DataType::Decimal256(9, 0)),
+                ),
+                true,
+            )
+            .boxed(),
+        },
+        "list_decimal256_18" => Statistics {
+            distinct_count: new_list(UInt64Array::from([None]).boxed(), true).boxed(),
+            null_count: new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed(),
+            min_value: new_list(
+                Box::new(
+                    Int256Array::from_slice([i256(0.as_i256())]).to(DataType::Decimal256(18, 0)),
+                ),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                Box::new(
+                    Int256Array::from_slice([i256(10.as_i256())]).to(DataType::Decimal256(18, 0)),
+                ),
+                true,
+            )
+            .boxed(),
+        },
+        "list_decimal256_26" => Statistics {
+            distinct_count: new_list(UInt64Array::from([None]).boxed(), true).boxed(),
+            null_count: new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed(),
+            min_value: new_list(
+                Box::new(
+                    Int256Array::from_slice([i256(0.as_i256())]).to(DataType::Decimal256(26, 0)),
+                ),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                Box::new(
+                    Int256Array::from_slice([i256(10.as_i256())]).to(DataType::Decimal256(26, 0)),
+                ),
+                true,
+            )
+            .boxed(),
+        },
+        "list_decimal256_39" => Statistics {
+            distinct_count: new_list(UInt64Array::from([None]).boxed(), true).boxed(),
+            null_count: new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed(),
+            min_value: new_list(
+                Box::new(
+                    Int256Array::from_slice([i256(0.as_i256())]).to(DataType::Decimal256(39, 0)),
+                ),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                Box::new(
+                    Int256Array::from_slice([i256(10.as_i256())]).to(DataType::Decimal256(39, 0)),
+                ),
+                true,
+            )
+            .boxed(),
+        },
+        "list_decimal256_76" => Statistics {
+            distinct_count: new_list(UInt64Array::from([None]).boxed(), true).boxed(),
+            null_count: new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed(),
+            min_value: new_list(
+                Box::new(
+                    Int256Array::from_slice([i256(0.as_i256())]).to(DataType::Decimal256(76, 0)),
+                ),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                Box::new(
+                    Int256Array::from_slice([i256(10.as_i256())]).to(DataType::Decimal256(76, 0)),
+                ),
+                true,
+            )
+            .boxed(),
+        },
         "list_int64" => Statistics {
             distinct_count: new_list(UInt64Array::from([None]).boxed(), true).boxed(),
             null_count: new_list(UInt64Array::from([Some(1)]).boxed(), true).boxed(),
@@ -917,6 +1164,36 @@ pub fn pyarrow_nested_nullable_statistics(column: &str) -> Statistics {
             .boxed(),
             max_value: new_list(
                 new_list(Box::new(Int64Array::from_slice([10])), true).boxed(),
+                true,
+            )
+            .boxed(),
+        },
+        "list_nested_decimal" => Statistics {
+            distinct_count: new_list(
+                new_list(UInt64Array::from([None]).boxed(), true).boxed(),
+                true,
+            )
+            .boxed(),
+            null_count: new_list(
+                new_list(Box::new(UInt64Array::from_slice([7])), true).boxed(),
+                true,
+            )
+            .boxed(),
+            min_value: new_list(
+                new_list(
+                    Box::new(Int128Array::from_slice([0]).to(DataType::Decimal(9, 0))),
+                    true,
+                )
+                .boxed(),
+                true,
+            )
+            .boxed(),
+            max_value: new_list(
+                new_list(
+                    Box::new(Int128Array::from_slice([10]).to(DataType::Decimal(9, 0))),
+                    true,
+                )
+                .boxed(),
                 true,
             )
             .boxed(),
