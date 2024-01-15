@@ -156,7 +156,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 default = []
 full = [
     "arrow",
-    "io_odbc",
+    # "io_odbc",
     "io_csv",
     "io_csv_async",
     "io_json",
@@ -167,8 +167,8 @@ full = [
     "io_ipc_compression",
     "io_json_integration",
     "io_print",
-    "io_parquet_async",
-    "io_parquet_compression",
+    # "io_parquet_async",
+    # "io_parquet_compression",
     "io_avro",
     "io_orc",
     "io_avro_compression",
@@ -207,7 +207,7 @@ io_parquet = [
     "streaming-iterator",
     "fallible-streaming-iterator",
 ]
-io_parquet_async = ["futures", "io_parquet", "parquet2/async"]
+io_parquet_async = ["futures", "io_parquet", "parquet2?/async"]
 
 io_parquet_compression = [
     "io_parquet_zstd",
@@ -221,15 +221,15 @@ io_parquet_compression = [
 io_parquet_sample_test = ["io_parquet_async"]
 
 # compression backends
-io_parquet_zstd = ["parquet2/zstd"]
-io_parquet_snappy = ["parquet2/snappy"]
-io_parquet_gzip = ["parquet2/gzip"]
-io_parquet_lz4_flex = ["parquet2/lz4_flex"]
-io_parquet_lz4 = ["parquet2/lz4"]
-io_parquet_brotli = ["parquet2/brotli"]
+io_parquet_zstd = ["parquet2?/zstd"]
+io_parquet_snappy = ["parquet2?/snappy"]
+io_parquet_gzip = ["parquet2?/gzip"]
+io_parquet_lz4_flex = ["parquet2?/lz4_flex"]
+io_parquet_lz4 = ["parquet2?/lz4"]
+io_parquet_brotli = ["parquet2?/brotli"]
 
 # parquet bloom filter functions
-io_parquet_bloom_filter = ["parquet2/bloom_filter"]
+io_parquet_bloom_filter = ["parquet2?/bloom_filter"]
 
 io_avro = ["avro-schema", "streaming-iterator"]
 io_avro_compression = ["avro-schema/compression"]
