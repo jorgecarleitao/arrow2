@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust
-        run: rustup update stable
+        run: rustup update 1.72.1
       - name: Setup parquet files
         run: |
           apt update && apt install python3-pip python3-venv -y -q
@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust
-        run: rustup update stable
+        run: rustup update 1.72.1
       - uses: Swatinem/rust-cache@v1
       - name: Run
         shell: bash
@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust
-        run: rustup update stable
+        run: rustup update 1.72.1
       - uses: Swatinem/rust-cache@v1
       - name: Install clippy
         run: rustup component add clippy
@@ -61,7 +61,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust
-        run: rustup update stable
+        run: rustup update 1.72.1
       - uses: Swatinem/rust-cache@v1
       - name: Install rustfmt
         run: rustup component add rustfmt
@@ -133,7 +133,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust
-        run: rustup update stable
+        run: rustup update 1.72.1
       - name: Setup all features
         run: cargo install cargo-all-features
       - uses: Swatinem/rust-cache@v1

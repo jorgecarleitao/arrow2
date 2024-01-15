@@ -10,8 +10,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup Rust toolchain
         run: |
-          rustup toolchain install stable
-          rustup default stable
+          rustup toolchain install 1.72.1
+          rustup default 1.72.1
           rustup component add rustfmt clippy
       - name: Cache Cargo
         uses: actions/cache@v2
