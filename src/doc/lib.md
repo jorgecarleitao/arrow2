@@ -15,7 +15,7 @@ use re_arrow2::array::*;
 use re_arrow2::datatypes::{Field, DataType, Schema};
 use re_arrow2::compute::arithmetics;
 use re_arrow2::error::Result;
-use re_arrow2::io::parquet::write::*;
+// use re_arrow2::io::parquet::write::*;
 use re_arrow2::chunk::Chunk;
 
 fn main() -> Result<()> {
@@ -36,32 +36,33 @@ fn main() -> Result<()> {
     // declare chunk
     let chunk = Chunk::new(vec![a.arced(), b.arced()]);
 
-    // write to parquet (probably the fastest implementation of writing to parquet out there)
+    // // write to parquet (probably the fastest implementation of writing to parquet out there)
 
-    let options = WriteOptions {
-        write_statistics: true,
-        compression: CompressionOptions::Snappy,
-        version: Version::V1,
-        data_pagesize_limit: None,
-    };
+    // let options = WriteOptions {
+    //     write_statistics: true,
+    //     compression: CompressionOptions::Snappy,
+    //     version: Version::V1,
+    //     data_pagesize_limit: None,
+    // };
 
-    let row_groups = RowGroupIterator::try_new(
-        vec![Ok(chunk)].into_iter(),
-        &schema,
-        options,
-        vec![vec![Encoding::Plain], vec![Encoding::Plain]],
-    )?;
+    // let row_groups = RowGroupIterator::try_new(
+    //     vec![Ok(chunk)].into_iter(),
+    //     &schema,
+    //     options,
+    //     vec![vec![Encoding::Plain], vec![Encoding::Plain]],
+    // )?;
 
-    // anything implementing `std::io::Write` works
-    let mut file = vec![];
+    // // anything implementing `std::io::Write` works
+    // let mut file = vec![];
 
-    let mut writer = FileWriter::try_new(file, schema, options)?;
+    // let mut writer = FileWriter::try_new(file, schema, options)?;
 
-    // Write the file.
-    for group in row_groups {
-        writer.write(group?)?;
-    }
-    let _ = writer.end(None)?;
+    // // Write the file.
+    // for group in row_groups {
+    //     writer.write(group?)?;
+    // }
+    // let _ = writer.end(None)?;
+
     Ok(())
 }
 ```
