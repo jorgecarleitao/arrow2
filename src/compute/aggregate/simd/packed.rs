@@ -1,4 +1,4 @@
-use std::simd::{SimdFloat as _, SimdInt as _, SimdOrd as _, SimdUint as _};
+use std::simd::prelude::*;
 
 use crate::types::simd::*;
 
@@ -35,31 +35,37 @@ macro_rules! simd_ord_int {
 
             #[inline]
             fn max_element(self) -> $type {
+                use std::simd::prelude::*;
                 self.reduce_max()
             }
 
             #[inline]
             fn min_element(self) -> $type {
+                use std::simd::prelude::*;
                 self.reduce_min()
             }
 
             #[inline]
             fn max_lane(self, x: Self) -> Self {
+                use std::simd::prelude::*;
                 self.simd_max(x)
             }
 
             #[inline]
             fn min_lane(self, x: Self) -> Self {
+                use std::simd::prelude::*;
                 self.simd_min(x)
             }
 
             #[inline]
             fn new_min() -> Self {
+                use std::simd::prelude::*;
                 Self::splat(Self::MAX)
             }
 
             #[inline]
             fn new_max() -> Self {
+                use std::simd::prelude::*;
                 Self::splat(Self::MIN)
             }
         }
