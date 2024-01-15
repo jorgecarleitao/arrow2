@@ -1,3 +1,5 @@
+#![allow(clippy::redundant_closure_call)]
+
 use crate::bitmap::utils::{BitChunkIterExact, BitChunksExact};
 use crate::datatypes::{DataType, PhysicalType, PrimitiveType};
 use crate::error::{Error, Result};
