@@ -1,4 +1,4 @@
-use arrow2::{array::*, compute::substring::*, error::Result, offset::Offset};
+use re_arrow2::{array::*, compute::substring::*, error::Result, offset::Offset};
 
 fn with_nulls_utf8<O: Offset>() -> Result<()> {
     let cases = vec![
@@ -298,8 +298,8 @@ fn without_nulls_large_binary() -> Result<()> {
 
 #[test]
 fn consistency() {
-    use arrow2::datatypes::DataType::*;
-    use arrow2::datatypes::TimeUnit;
+    use re_arrow2::datatypes::DataType::*;
+    use re_arrow2::datatypes::TimeUnit;
     let datatypes = vec![
         Null,
         Boolean,

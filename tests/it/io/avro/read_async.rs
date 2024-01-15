@@ -3,9 +3,9 @@ use avro_rs::Codec;
 use futures::pin_mut;
 use futures::StreamExt;
 
-use arrow2::error::Result;
-use arrow2::io::avro::avro_schema::read_async::{block_stream, read_metadata};
-use arrow2::io::avro::read;
+use re_arrow2::error::Result;
+use re_arrow2::io::avro::avro_schema::read_async::{block_stream, read_metadata};
+use re_arrow2::io::avro::read;
 
 use super::read::{schema, write_avro};
 

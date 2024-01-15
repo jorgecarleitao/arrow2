@@ -9,7 +9,7 @@
 The Arrow specification contains a set of logical types, an enumeration of the different
 semantical types defined in Arrow.
 
-In Arrow2, logical types are declared as variants of the `enum` `arrow2::datatypes::DataType`.
+In Arrow2, logical types are declared as variants of the `enum` `re_arrow2::datatypes::DataType`.
 For example, `DataType::Int32` represents a signed integer of 32 bits.
 
 Each `DataType` has an associated `enum PhysicalType` (many-to-one) representing the
@@ -29,7 +29,7 @@ nullable (`bool`), and optional metadata.
 
 ## `Schema` (table metadata)
 
-The most common use of `Field` is to declare a `arrow2::datatypes::Schema`, a sequence of `Field`s
+The most common use of `Field` is to declare a `re_arrow2::datatypes::Schema`, a sequence of `Field`s
 with optional metadata.
 
 `Schema` is essentially metadata of a "table": it has a sequence of named columns and their metadata (`Field`s) with optional metadata.

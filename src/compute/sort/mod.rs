@@ -230,8 +230,8 @@ fn sort_dict<I: Index, O: Offset>(
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::sort::can_sort;
-/// use arrow2::datatypes::{DataType};
+/// use re_arrow2::compute::sort::can_sort;
+/// use re_arrow2::datatypes::{DataType};
 ///
 /// let data_type = DataType::Int8;
 /// assert_eq!(can_sort(&data_type), true);
@@ -345,7 +345,7 @@ where
     let mut values = if options.nulls_first {
         null_indices.into_iter().chain(values).collect::<Vec<I>>()
     } else {
-        values.chain(null_indices.into_iter()).collect::<Vec<I>>()
+        values.chain(null_indices).collect::<Vec<I>>()
     };
 
     values.truncate(limit.unwrap_or(values.len()));

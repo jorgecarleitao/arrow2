@@ -127,9 +127,9 @@ pub fn take_arrays<I: IntoIterator<Item = MergeSlice>>(
 /// * the arrays have a [`crate::datatypes::DataType`] that has no order relationship
 /// # Example
 /// ```rust
-/// use arrow2::array::Int32Array;
-/// use arrow2::compute::merge_sort::{merge_sort, SortOptions};
-/// # use arrow2::error::Result;
+/// use re_arrow2::array::Int32Array;
+/// use re_arrow2::compute::merge_sort::{merge_sort, SortOptions};
+/// # use re_arrow2::error::Result;
 /// # fn main() -> Result<()> {
 /// let a = Int32Array::from_slice(&[2, 4, 6]);
 /// let b = Int32Array::from_slice(&[0, 1, 3]);
@@ -166,9 +166,9 @@ pub fn merge_sort(
 /// In other words, `pairs.i.0[j]` must be an array coming from a batch of equal len arrays.
 /// # Example
 /// ```rust
-/// use arrow2::array::Int32Array;
-/// use arrow2::compute::merge_sort::{slices, SortOptions};
-/// # use arrow2::error::Result;
+/// use re_arrow2::array::Int32Array;
+/// use re_arrow2::compute::merge_sort::{slices, SortOptions};
+/// # use re_arrow2::error::Result;
 /// # fn main() -> Result<()> {
 /// let a = Int32Array::from_slice(&[2, 4, 6]);
 /// let b = Int32Array::from_slice(&[0, 1, 3]);

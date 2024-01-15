@@ -2,7 +2,7 @@ use std::iter::FromIterator;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::bitmap::*;
+use re_arrow2::bitmap::*;
 
 fn add_benchmark(c: &mut Criterion) {
     (10..=20).step_by(2).for_each(|log2_size| {

@@ -1,11 +1,11 @@
 use stdext::function_name;
 
-use arrow2::array::{Array, BinaryArray, BooleanArray, Int32Array, Int64Array, Utf8Array};
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::{DataType, Field, TimeUnit};
-use arrow2::error::Result;
-use arrow2::io::odbc::api::{Connection, Cursor};
-use arrow2::io::odbc::read::{buffer_from_metadata, deserialize, infer_schema};
+use re_arrow2::array::{Array, BinaryArray, BooleanArray, Int32Array, Int64Array, Utf8Array};
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::{DataType, Field, TimeUnit};
+use re_arrow2::error::Result;
+use re_arrow2::io::odbc::api::{Connection, Cursor};
+use re_arrow2::io::odbc::read::{buffer_from_metadata, deserialize, infer_schema};
 
 use super::{setup_empty_table, ENV, MSSQL};
 

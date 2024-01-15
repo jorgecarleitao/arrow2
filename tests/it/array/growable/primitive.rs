@@ -1,4 +1,4 @@
-use arrow2::array::{
+use re_arrow2::array::{
     growable::{Growable, GrowablePrimitive},
     PrimitiveArray,
 };

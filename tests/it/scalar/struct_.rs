@@ -1,4 +1,4 @@
-use arrow2::{
+use re_arrow2::{
     datatypes::{DataType, Field},
     scalar::{BooleanScalar, Scalar, StructScalar},
 };

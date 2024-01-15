@@ -103,8 +103,8 @@ pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::take::can_take;
-/// use arrow2::datatypes::{DataType};
+/// use re_arrow2::compute::take::can_take;
+/// use re_arrow2::datatypes::{DataType};
 ///
 /// let data_type = DataType::Int8;
 /// assert_eq!(can_take(&data_type), true);

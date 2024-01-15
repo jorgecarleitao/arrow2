@@ -1,4 +1,4 @@
-use arrow2::{
+use re_arrow2::{
     array::Utf8Array, bitmap::Bitmap, buffer::Buffer, datatypes::DataType, offset::OffsetsBuffer,
 };
 

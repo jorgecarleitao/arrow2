@@ -1,13 +1,13 @@
-use arrow2::chunk::Chunk;
 use avro_rs::types::{Record, Value};
 use avro_rs::{Codec, Writer};
 use avro_rs::{Days, Decimal, Duration, Millis, Months, Schema as AvroSchema};
+use re_arrow2::chunk::Chunk;
 
-use arrow2::array::*;
-use arrow2::datatypes::*;
-use arrow2::error::Result;
-use arrow2::io::avro::avro_schema::read::read_metadata;
-use arrow2::io::avro::read;
+use re_arrow2::array::*;
+use re_arrow2::datatypes::*;
+use re_arrow2::error::Result;
+use re_arrow2::io::avro::avro_schema::read::read_metadata;
+use re_arrow2::io::avro::read;
 
 pub(super) fn schema() -> (AvroSchema, Schema) {
     let raw_schema = r#"

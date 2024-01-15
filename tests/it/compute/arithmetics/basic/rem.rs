@@ -1,6 +1,6 @@
-use arrow2::array::*;
-use arrow2::compute::arithmetics::basic::*;
-use arrow2::compute::arithmetics::{ArrayCheckedRem, ArrayRem};
+use re_arrow2::array::*;
+use re_arrow2::compute::arithmetics::basic::*;
+use re_arrow2::compute::arithmetics::{ArrayCheckedRem, ArrayRem};
 
 #[test]
 #[should_panic]

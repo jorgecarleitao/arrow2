@@ -9,7 +9,7 @@ Probably the simplest `Array` in this crate is the `PrimitiveArray<T>`. It can b
 constructed from a slice of option values,
 
 ```rust
-# use arrow2::array::{Array, PrimitiveArray};
+# use re_arrow2::array::{Array, PrimitiveArray};
 # fn main() {
 let array = PrimitiveArray::<i32>::from([Some(1), None, Some(123)]);
 assert_eq!(array.len(), 3)
@@ -19,7 +19,7 @@ assert_eq!(array.len(), 3)
 from a slice of values,
 
 ```rust
-# use arrow2::array::{Array, PrimitiveArray};
+# use re_arrow2::array::{Array, PrimitiveArray};
 # fn main() {
 let array = PrimitiveArray::<f32>::from_slice([1.0, 0.0, 123.0]);
 assert_eq!(array.len(), 3)
@@ -29,7 +29,7 @@ assert_eq!(array.len(), 3)
 or from an iterator
 
 ```rust
-# use arrow2::array::{Array, PrimitiveArray};
+# use re_arrow2::array::{Array, PrimitiveArray};
 # fn main() {
 let array: PrimitiveArray<u64> = [Some(1), None, Some(123)].iter().collect();
 assert_eq!(array.len(), 3)
@@ -52,8 +52,8 @@ The first allows interoperability with Arrow's ecosystem and efficient SIMD oper
 In the example
 
 ```rust
-# use arrow2::array::PrimitiveArray;
-# use arrow2::datatypes::DataType;
+# use re_arrow2::array::PrimitiveArray;
+# use re_arrow2::datatypes::DataType;
 # fn main() {
 let ints = PrimitiveArray::<i32>::from([Some(1), None]);
 let dates = PrimitiveArray::<i32>::from([Some(1), None]).to(DataType::Date32);
@@ -67,8 +67,8 @@ All physical types (e.g. `i32`) have a "natural" logical `DataType` (e.g. `DataT
 which is assigned when allocating arrays from iterators, slices, etc.
 
 ```rust
-# use arrow2::array::{Array, Int32Array, PrimitiveArray};
-# use arrow2::datatypes::DataType;
+# use re_arrow2::array::{Array, Int32Array, PrimitiveArray};
+# use re_arrow2::datatypes::DataType;
 # fn main() {
 let array = PrimitiveArray::<i32>::from_slice([1, 0, 123]);
 assert_eq!(array.data_type(), &DataType::Int32);
@@ -96,7 +96,7 @@ The following arrays are supported:
 to `&dyn Array`, which enables dynamic casting and run-time nesting.
 
 ```rust
-# use arrow2::array::{Array, PrimitiveArray};
+# use re_arrow2::array::{Array, PrimitiveArray};
 # fn main() {
 let a = PrimitiveArray::<i32>::from(&[Some(1), None]);
 let a: &dyn Array = &a;
@@ -110,8 +110,8 @@ Given a trait object `array: &dyn Array`, we know its physical type via
 to its concrete physical type:
 
 ```rust
-# use arrow2::array::{Array, PrimitiveArray};
-# use arrow2::datatypes::PhysicalType;
+# use re_arrow2::array::{Array, PrimitiveArray};
+# use re_arrow2::datatypes::PhysicalType;
 # fn main() {
 let array = PrimitiveArray::<i32>::from(&[Some(1), None]);
 let array = &array as &dyn Array;
@@ -144,8 +144,8 @@ where `_` represents each of the variants (e.g. `PrimitiveType::Int32 <-> i32`).
 In this context, a common idiom in using `Array` as a trait object is as follows:
 
 ```rust
-use arrow2::datatypes::{PhysicalType, PrimitiveType};
-use arrow2::array::{Array, PrimitiveArray};
+use re_arrow2::datatypes::{PhysicalType, PrimitiveType};
+use re_arrow2::array::{Array, PrimitiveArray};
 
 fn float_operator(array: &dyn Array) -> Result<Box<dyn Array>, String> {
     match array.data_type().to_physical_type() {
@@ -193,7 +193,7 @@ We've already seen how to create an array from an iterator. Most arrays also imp
 `IntoIterator`:
 
 ```rust
-# use arrow2::array::{Array, Int32Array};
+# use re_arrow2::array::{Array, Int32Array};
 # fn main() {
 let array = Int32Array::from(&[Some(1), None, Some(123)]);
 
@@ -219,7 +219,7 @@ validity and values, while the latter is suitable for SIMD and copies, as they r
 contiguous memory regions (buffers and bitmaps). We will see below how to leverage these APIs.
 
 This idea holds more generally in this crate's arrays: `values()` returns something that has
-a contiguous in-memory representation, while `iter()` returns items taking validity into account. 
+a contiguous in-memory representation, while `iter()` returns items taking validity into account.
 To get an iterator over contiguous values, use `array.values().iter()`.
 
 There is one last API that is worth mentioning, and that is `Bitmap::chunks`. When performing
@@ -236,8 +236,8 @@ it often enables SIMD. For example, an unary operation `op` on a `PrimitiveArray
 likely emits SIMD instructions on the following code:
 
 ```rust
-# use arrow2::buffer::Buffer;
-# use arrow2::{
+# use re_arrow2::buffer::Buffer;
+# use re_arrow2::{
 #     array::{Array, PrimitiveArray},
 #     types::NativeType,
 #     datatypes::DataType,
@@ -275,7 +275,7 @@ We support the mutation of arrays in-place via clone-on-write semantics.
 Essentially, all data is under an `Arc`, but it can be taken via `Arc::get_mut`
 and operated in place.
 
-Below is a complete example of how to operate on a `Box<dyn Array>` without 
+Below is a complete example of how to operate on a `Box<dyn Array>` without
 extra allocations.
 
 ```rust,ignore

@@ -12,8 +12,8 @@ use crate::{
 /// # Example
 ///
 /// ```rust
-/// use arrow2::array::BooleanArray;
-/// use arrow2::compute::boolean_kleene::or;
+/// use re_arrow2::array::BooleanArray;
+/// use re_arrow2::compute::boolean_kleene::or;
 ///
 /// let a = BooleanArray::from(&[Some(true), Some(false), None]);
 /// let b = BooleanArray::from(&[None, None, None]);
@@ -95,8 +95,8 @@ pub fn or(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
 /// # Example
 ///
 /// ```rust
-/// use arrow2::array::BooleanArray;
-/// use arrow2::compute::boolean_kleene::and;
+/// use re_arrow2::array::BooleanArray;
+/// use re_arrow2::compute::boolean_kleene::and;
 ///
 /// let a = BooleanArray::from(&[Some(true), Some(false), None]);
 /// let b = BooleanArray::from(&[None, None, None]);
@@ -175,9 +175,9 @@ pub fn and(lhs: &BooleanArray, rhs: &BooleanArray) -> BooleanArray {
 /// # Example
 ///
 /// ```rust
-/// use arrow2::array::BooleanArray;
-/// use arrow2::scalar::BooleanScalar;
-/// use arrow2::compute::boolean_kleene::or_scalar;
+/// use re_arrow2::array::BooleanArray;
+/// use re_arrow2::scalar::BooleanScalar;
+/// use re_arrow2::compute::boolean_kleene::or_scalar;
 ///
 /// let array = BooleanArray::from(&[Some(true), Some(false), None]);
 /// let scalar = BooleanScalar::new(Some(false));
@@ -207,9 +207,9 @@ pub fn or_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray {
 /// # Example
 ///
 /// ```rust
-/// use arrow2::array::BooleanArray;
-/// use arrow2::scalar::BooleanScalar;
-/// use arrow2::compute::boolean_kleene::and_scalar;
+/// use re_arrow2::array::BooleanArray;
+/// use re_arrow2::scalar::BooleanScalar;
+/// use re_arrow2::compute::boolean_kleene::and_scalar;
 ///
 /// let array = BooleanArray::from(&[Some(true), Some(false), None]);
 /// let scalar = BooleanScalar::new(None);
@@ -242,8 +242,8 @@ pub fn and_scalar(array: &BooleanArray, scalar: &BooleanScalar) -> BooleanArray 
 /// # Example
 ///
 /// ```
-/// use arrow2::array::BooleanArray;
-/// use arrow2::compute::boolean_kleene::any;
+/// use re_arrow2::array::BooleanArray;
+/// use re_arrow2::compute::boolean_kleene::any;
 ///
 /// let a = BooleanArray::from(&[Some(true), Some(false)]);
 /// let b = BooleanArray::from(&[Some(false), Some(false)]);
@@ -276,8 +276,8 @@ pub fn any(array: &BooleanArray) -> Option<bool> {
 /// # Example
 ///
 /// ```
-/// use arrow2::array::BooleanArray;
-/// use arrow2::compute::boolean_kleene::all;
+/// use re_arrow2::array::BooleanArray;
+/// use re_arrow2::compute::boolean_kleene::all;
 ///
 /// let a = BooleanArray::from(&[Some(true), Some(true)]);
 /// let b = BooleanArray::from(&[Some(false), Some(true)]);

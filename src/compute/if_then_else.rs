@@ -7,9 +7,9 @@ use crate::error::{Error, Result};
 /// Returns `None` if the predicate is `None`.
 /// # Example
 /// ```rust
-/// # use arrow2::error::Result;
-/// use arrow2::compute::if_then_else::if_then_else;
-/// use arrow2::array::{Int32Array, BooleanArray};
+/// # use re_arrow2::error::Result;
+/// use re_arrow2::compute::if_then_else::if_then_else;
+/// use re_arrow2::array::{Int32Array, BooleanArray};
 ///
 /// # fn main() -> Result<()> {
 /// let lhs = Int32Array::from_slice(&[1, 2, 3]);

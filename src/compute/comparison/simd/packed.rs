@@ -1,5 +1,5 @@
 use std::convert::TryInto;
-use std::simd::{SimdPartialEq, SimdPartialOrd, ToBitMask};
+use std::simd::prelude::*;
 
 use crate::types::simd::*;
 use crate::types::{days_ms, f16, i256, months_days_ns};
@@ -29,34 +29,40 @@ macro_rules! simd8 {
         impl Simd8PartialEq for $md {
             #[inline]
             fn eq(self, other: Self) -> u8 {
-                self.simd_eq(other).to_bitmask()
+                use std::simd::prelude::*;
+                self.simd_eq(other).to_bitmask().try_into().unwrap()
             }
 
             #[inline]
             fn neq(self, other: Self) -> u8 {
-                self.simd_ne(other).to_bitmask()
+                use std::simd::prelude::*;
+                self.simd_ne(other).to_bitmask().try_into().unwrap()
             }
         }
 
         impl Simd8PartialOrd for $md {
             #[inline]
             fn lt_eq(self, other: Self) -> u8 {
-                self.simd_le(other).to_bitmask()
+                use std::simd::prelude::*;
+                self.simd_le(other).to_bitmask().try_into().unwrap()
             }
 
             #[inline]
             fn lt(self, other: Self) -> u8 {
-                self.simd_lt(other).to_bitmask()
+                use std::simd::prelude::*;
+                self.simd_lt(other).to_bitmask().try_into().unwrap()
             }
 
             #[inline]
             fn gt_eq(self, other: Self) -> u8 {
-                self.simd_ge(other).to_bitmask()
+                use std::simd::prelude::*;
+                self.simd_ge(other).to_bitmask().try_into().unwrap()
             }
 
             #[inline]
             fn gt(self, other: Self) -> u8 {
-                self.simd_gt(other).to_bitmask()
+                use std::simd::prelude::*;
+                self.simd_gt(other).to_bitmask().try_into().unwrap()
             }
         }
     };

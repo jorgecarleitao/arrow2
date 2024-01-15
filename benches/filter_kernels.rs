@@ -16,11 +16,13 @@
 // under the License.
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::array::*;
-use arrow2::chunk::Chunk;
-use arrow2::compute::filter::{build_filter, filter, filter_chunk, Filter};
-use arrow2::datatypes::DataType;
-use arrow2::util::bench_util::{create_boolean_array, create_primitive_array, create_string_array};
+use re_arrow2::array::*;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::compute::filter::{build_filter, filter, filter_chunk, Filter};
+use re_arrow2::datatypes::DataType;
+use re_arrow2::util::bench_util::{
+    create_boolean_array, create_primitive_array, create_string_array,
+};
 
 fn bench_filter(data_array: &dyn Array, filter_array: &BooleanArray) {
     criterion::black_box(filter(data_array, filter_array).unwrap());

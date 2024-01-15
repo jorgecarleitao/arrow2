@@ -5,10 +5,10 @@ use futures::StreamExt;
 use tokio::fs::File;
 use tokio_util::compat::*;
 
-use arrow2::error::Result;
-use arrow2::io::avro::avro_schema::file::Block;
-use arrow2::io::avro::avro_schema::read_async::{block_stream, decompress_block, read_metadata};
-use arrow2::io::avro::read::{deserialize, infer_schema};
+use re_arrow2::error::Result;
+use re_arrow2::io::avro::avro_schema::file::Block;
+use re_arrow2::io::avro::avro_schema::read_async::{block_stream, decompress_block, read_metadata};
+use re_arrow2::io::avro::read::{deserialize, infer_schema};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {

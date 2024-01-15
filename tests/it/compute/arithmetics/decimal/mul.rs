@@ -1,9 +1,9 @@
 #![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 
-use arrow2::array::*;
-use arrow2::compute::arithmetics::decimal::{adaptive_mul, checked_mul, mul, saturating_mul};
-use arrow2::compute::arithmetics::{ArrayCheckedMul, ArrayMul, ArraySaturatingMul};
-use arrow2::datatypes::DataType;
+use re_arrow2::array::*;
+use re_arrow2::compute::arithmetics::decimal::{adaptive_mul, checked_mul, mul, saturating_mul};
+use re_arrow2::compute::arithmetics::{ArrayCheckedMul, ArrayMul, ArraySaturatingMul};
+use re_arrow2::datatypes::DataType;
 
 #[test]
 fn test_multiply_normal() {

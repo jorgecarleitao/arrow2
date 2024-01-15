@@ -11,12 +11,12 @@ Below is an example of some of the things you can do with it:
 ```rust
 use std::sync::Arc;
 
-use arrow2::array::*;
-use arrow2::datatypes::{Field, DataType, Schema};
-use arrow2::compute::arithmetics;
-use arrow2::error::Result;
-use arrow2::io::parquet::write::*;
-use arrow2::chunk::Chunk;
+use re_arrow2::array::*;
+use re_arrow2::datatypes::{Field, DataType, Schema};
+use re_arrow2::compute::arithmetics;
+use re_arrow2::error::Result;
+// use re_arrow2::io::parquet::write::*;
+use re_arrow2::chunk::Chunk;
 
 fn main() -> Result<()> {
     // declare arrays
@@ -36,32 +36,33 @@ fn main() -> Result<()> {
     // declare chunk
     let chunk = Chunk::new(vec![a.arced(), b.arced()]);
 
-    // write to parquet (probably the fastest implementation of writing to parquet out there)
+    // // write to parquet (probably the fastest implementation of writing to parquet out there)
 
-    let options = WriteOptions {
-        write_statistics: true,
-        compression: CompressionOptions::Snappy,
-        version: Version::V1,
-        data_pagesize_limit: None,
-    };
+    // let options = WriteOptions {
+    //     write_statistics: true,
+    //     compression: CompressionOptions::Snappy,
+    //     version: Version::V1,
+    //     data_pagesize_limit: None,
+    // };
 
-    let row_groups = RowGroupIterator::try_new(
-        vec![Ok(chunk)].into_iter(),
-        &schema,
-        options,
-        vec![vec![Encoding::Plain], vec![Encoding::Plain]],
-    )?;
+    // let row_groups = RowGroupIterator::try_new(
+    //     vec![Ok(chunk)].into_iter(),
+    //     &schema,
+    //     options,
+    //     vec![vec![Encoding::Plain], vec![Encoding::Plain]],
+    // )?;
 
-    // anything implementing `std::io::Write` works
-    let mut file = vec![];
+    // // anything implementing `std::io::Write` works
+    // let mut file = vec![];
 
-    let mut writer = FileWriter::try_new(file, schema, options)?;
+    // let mut writer = FileWriter::try_new(file, schema, options)?;
 
-    // Write the file.
-    for group in row_groups {
-        writer.write(group?)?;
-    }
-    let _ = writer.end(None)?;
+    // // Write the file.
+    // for group in row_groups {
+    //     writer.write(group?)?;
+    // }
+    // let _ = writer.end(None)?;
+
     Ok(())
 }
 ```
@@ -83,5 +84,5 @@ functionality, such as:
 * `compute` to operate on arrays (addition, sum, sort, etc.)
 
 The feature `simd` (not part of `full`) produces more explicit SIMD instructions
-via [`std::simd`](https://doc.rust-lang.org/nightly/std/simd/index.html), but requires the 
+via [`std::simd`](https://doc.rust-lang.org/nightly/std/simd/index.html), but requires the
 nightly channel.

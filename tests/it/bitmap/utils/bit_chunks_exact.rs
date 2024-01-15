@@ -1,4 +1,4 @@
-use arrow2::bitmap::utils::BitChunksExact;
+use re_arrow2::bitmap::utils::BitChunksExact;
 
 #[test]
 fn basics() {

@@ -1,15 +1,15 @@
 use std::io::Cursor;
 
-use arrow2::array::Array;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::Schema;
-use arrow2::error::Result;
-use arrow2::io::ipc::read;
-use arrow2::io::ipc::write::stream_async;
-use arrow2::io::ipc::write::stream_async::StreamSink;
-use arrow2::io::ipc::IpcField;
 use futures::io::Cursor as AsyncCursor;
 use futures::SinkExt;
+use re_arrow2::array::Array;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::Schema;
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::read;
+use re_arrow2::io::ipc::write::stream_async;
+use re_arrow2::io::ipc::write::stream_async::StreamSink;
+use re_arrow2::io::ipc::IpcField;
 
 use crate::io::ipc::common::read_arrow_stream;
 use crate::io::ipc::common::read_gzip_json;

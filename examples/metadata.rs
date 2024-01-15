@@ -1,4 +1,4 @@
-use arrow2::datatypes::{DataType, Field, Metadata, Schema};
+use re_arrow2::datatypes::{DataType, Field, Metadata, Schema};
 
 fn main() {
     // two data types (logical types)

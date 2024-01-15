@@ -1,6 +1,6 @@
 use proptest::prelude::*;
 
-use arrow2::bitmap::{and, or, xor, Bitmap};
+use re_arrow2::bitmap::{and, or, xor, Bitmap};
 
 use crate::bitmap::bitmap_strategy;
 

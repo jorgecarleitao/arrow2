@@ -1,6 +1,6 @@
-use arrow2::array::*;
-use arrow2::bitmap::{Bitmap, MutableBitmap};
-use arrow2::datatypes::DataType;
+use re_arrow2::array::*;
+use re_arrow2::bitmap::{Bitmap, MutableBitmap};
+use re_arrow2::datatypes::DataType;
 
 #[test]
 fn basic() {

@@ -1,8 +1,8 @@
 use std::fs::File;
 
-use arrow2::chunk::Chunk;
-use arrow2::error::Result;
-use arrow2::io::ipc::read::*;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::read::*;
 
 use super::super::common::read_gzip_json;
 

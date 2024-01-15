@@ -6,7 +6,7 @@ mod utils;
 
 use proptest::prelude::*;
 
-use arrow2::bitmap::Bitmap;
+use re_arrow2::bitmap::Bitmap;
 
 /// Returns a strategy of an arbitrary sliced [`Bitmap`] of size up to 1000
 pub(crate) fn bitmap_strategy() -> impl Strategy<Value = Bitmap> {

@@ -1,4 +1,4 @@
-use arrow2::{
+use re_arrow2::{
     array::{
         growable::{Growable, GrowableMap},
         Array, MapArray, PrimitiveArray, StructArray, Utf8Array,

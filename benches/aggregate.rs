@@ -1,8 +1,8 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::array::*;
-use arrow2::compute::aggregate::*;
-use arrow2::util::bench_util::*;
+use re_arrow2::array::*;
+use re_arrow2::compute::aggregate::*;
+use re_arrow2::util::bench_util::*;
 
 fn bench_sum(arr_a: &dyn Array) {
     sum(criterion::black_box(arr_a)).unwrap();

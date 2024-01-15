@@ -1,5 +1,5 @@
-use arrow2::io::parquet::write::*;
-use arrow2::{
+use re_arrow2::io::parquet::write::*;
+use re_arrow2::{
     chunk::Chunk,
     datatypes::{Field, Metadata, Schema},
     error::Result,

@@ -171,8 +171,8 @@ pub fn substring(array: &dyn Array, start: i64, length: &Option<u64>) -> Result<
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::substring::can_substring;
-/// use arrow2::datatypes::{DataType};
+/// use re_arrow2::compute::substring::can_substring;
+/// use re_arrow2::datatypes::{DataType};
 ///
 /// let data_type = DataType::Utf8;
 /// assert_eq!(can_substring(&data_type), true);

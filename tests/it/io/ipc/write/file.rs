@@ -1,12 +1,12 @@
 use std::io::Cursor;
 
-use arrow2::array::*;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::{Field, Schema};
-use arrow2::error::Result;
-use arrow2::io::ipc::read::{read_file_metadata, FileReader};
-use arrow2::io::ipc::{write::*, IpcField};
-use arrow2::types::{i256, months_days_ns};
+use re_arrow2::array::*;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::{Field, Schema};
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::read::{read_file_metadata, FileReader};
+use re_arrow2::io::ipc::{write::*, IpcField};
+use re_arrow2::types::{i256, months_days_ns};
 
 use crate::io::ipc::common::read_gzip_json;
 

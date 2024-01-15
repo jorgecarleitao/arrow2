@@ -23,8 +23,8 @@ use super::NativeArithmetics;
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::div;
-/// use arrow2::array::Int32Array;
+/// use re_arrow2::compute::arithmetics::basic::div;
+/// use re_arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[Some(10), Some(1), Some(6)]);
 /// let b = Int32Array::from(&[Some(5), None, Some(6)]);
@@ -55,8 +55,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::checked_div;
-/// use arrow2::array::Int8Array;
+/// use re_arrow2::compute::arithmetics::basic::checked_div;
+/// use re_arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8), Some(10i8)]);
 /// let b = Int8Array::from(&[Some(100i8), Some(0i8)]);
@@ -98,8 +98,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::div_scalar;
-/// use arrow2::array::Int32Array;
+/// use re_arrow2::compute::arithmetics::basic::div_scalar;
+/// use re_arrow2::array::Int32Array;
 ///
 /// let a = Int32Array::from(&[None, Some(6), None, Some(6)]);
 /// let result = div_scalar(&a, &2i32);
@@ -170,8 +170,8 @@ where
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::basic::checked_div_scalar;
-/// use arrow2::array::Int8Array;
+/// use re_arrow2::compute::arithmetics::basic::checked_div_scalar;
+/// use re_arrow2::array::Int8Array;
 ///
 /// let a = Int8Array::from(&[Some(-100i8)]);
 /// let result = checked_div_scalar(&a, &100i8);

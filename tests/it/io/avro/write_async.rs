@@ -1,10 +1,10 @@
-use arrow2::array::*;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::*;
-use arrow2::error::Result;
-use arrow2::io::avro::avro_schema::file::Compression;
-use arrow2::io::avro::avro_schema::write_async::{write_block, write_metadata};
-use arrow2::io::avro::write;
+use re_arrow2::array::*;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::*;
+use re_arrow2::error::Result;
+use re_arrow2::io::avro::avro_schema::file::Compression;
+use re_arrow2::io::avro::avro_schema::write_async::{write_block, write_metadata};
+use re_arrow2::io::avro::write;
 
 use super::read::read_avro;
 use super::write::{data, schema, serialize_to_block};

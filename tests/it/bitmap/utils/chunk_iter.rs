@@ -1,5 +1,5 @@
-use arrow2::bitmap::utils::BitChunks;
-use arrow2::types::BitChunkIter;
+use re_arrow2::bitmap::utils::BitChunks;
+use re_arrow2::types::BitChunkIter;
 
 #[test]
 fn basics() {

@@ -17,9 +17,9 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::array::*;
-use arrow2::compute::sort::{lexsort, sort, sort_to_indices, SortColumn, SortOptions};
-use arrow2::util::bench_util::*;
+use re_arrow2::array::*;
+use re_arrow2::compute::sort::{lexsort, sort, sort_to_indices, SortColumn, SortOptions};
+use re_arrow2::util::bench_util::*;
 
 fn bench_lexsort(arr_a: &dyn Array, array_b: &dyn Array) {
     let columns = vec![

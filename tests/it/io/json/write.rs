@@ -1,5 +1,5 @@
-use arrow2::datatypes::IntegerType;
-use arrow2::{
+use re_arrow2::datatypes::IntegerType;
+use re_arrow2::{
     array::*,
     bitmap::Bitmap,
     buffer::Buffer,

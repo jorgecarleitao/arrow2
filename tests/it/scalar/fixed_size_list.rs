@@ -1,4 +1,4 @@
-use arrow2::{
+use re_arrow2::{
     array::BooleanArray,
     datatypes::{DataType, Field},
     scalar::{FixedSizeListScalar, Scalar},

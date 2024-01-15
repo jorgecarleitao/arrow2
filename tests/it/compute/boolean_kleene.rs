@@ -1,6 +1,6 @@
-use arrow2::array::BooleanArray;
-use arrow2::compute::boolean_kleene::*;
-use arrow2::scalar::BooleanScalar;
+use re_arrow2::array::BooleanArray;
+use re_arrow2::compute::boolean_kleene::*;
+use re_arrow2::scalar::BooleanScalar;
 
 #[test]
 fn and_generic() {

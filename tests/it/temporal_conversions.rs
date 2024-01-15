@@ -1,7 +1,7 @@
-use arrow2::array::*;
-use arrow2::datatypes::TimeUnit;
-use arrow2::temporal_conversions;
-use arrow2::types::months_days_ns;
+use re_arrow2::array::*;
+use re_arrow2::datatypes::TimeUnit;
+use re_arrow2::temporal_conversions;
+use re_arrow2::types::months_days_ns;
 
 use chrono::NaiveDateTime;
 

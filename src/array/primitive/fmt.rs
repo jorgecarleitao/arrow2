@@ -15,7 +15,11 @@ macro_rules! dyn_primitive {
             .as_any()
             .downcast_ref::<PrimitiveArray<$ty>>()
             .unwrap();
-        Box::new(move |f, index| write!(f, "{}", $expr(array.value(index))))
+        Box::new(move |f, index| {
+            #[allow(clippy::redundant_closure_call)]
+            let value = $expr(array.value(index));
+            write!(f, "{}", value)
+        })
     }};
 }
 

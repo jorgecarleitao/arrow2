@@ -1,6 +1,6 @@
-use arrow2::array::*;
-use arrow2::datatypes::*;
-use arrow2::scalar::new_scalar;
+use re_arrow2::array::*;
+use re_arrow2::datatypes::*;
+use re_arrow2::scalar::new_scalar;
 
 #[test]
 fn test_simple_iter() {

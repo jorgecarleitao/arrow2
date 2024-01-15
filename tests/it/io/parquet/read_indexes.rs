@@ -1,9 +1,11 @@
 use std::io::Cursor;
 
-use arrow2::chunk::Chunk;
-use arrow2::error::Error;
-use arrow2::io::parquet::read::indexes;
-use arrow2::{array::*, datatypes::*, error::Result, io::parquet::read::*, io::parquet::write::*};
+use re_arrow2::chunk::Chunk;
+use re_arrow2::error::Error;
+use re_arrow2::io::parquet::read::indexes;
+use re_arrow2::{
+    array::*, datatypes::*, error::Result, io::parquet::read::*, io::parquet::write::*,
+};
 
 /// Returns 2 sets of pages with different the same number of rows distributed un-evenly
 fn pages(arrays: &[&dyn Array], encoding: Encoding) -> Result<(Vec<Page>, Vec<Page>, Schema)> {

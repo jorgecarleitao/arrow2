@@ -1,5 +1,5 @@
-use arrow2::array::*;
-use arrow2::compute::bitwise::*;
+use re_arrow2::array::*;
+use re_arrow2::compute::bitwise::*;
 
 #[test]
 fn test_xor() {

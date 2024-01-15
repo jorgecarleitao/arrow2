@@ -3,8 +3,8 @@
 mod read;
 mod write;
 
-use arrow2::io::odbc::api::{Connection, Environment, Error as OdbcError};
 use lazy_static::lazy_static;
+use re_arrow2::io::odbc::api::{Connection, Environment, Error as OdbcError};
 
 lazy_static! {
     /// This is an example for using doc comment attributes

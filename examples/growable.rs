@@ -1,5 +1,5 @@
-use arrow2::array::growable::{Growable, GrowablePrimitive};
-use arrow2::array::PrimitiveArray;
+use re_arrow2::array::growable::{Growable, GrowablePrimitive};
+use re_arrow2::array::PrimitiveArray;
 
 fn main() {
     // say we have two sorted arrays

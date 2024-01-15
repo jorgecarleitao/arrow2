@@ -1,10 +1,10 @@
 use std::io::Cursor;
 
-use arrow2::array::*;
-use arrow2::datatypes::{DataType, Field};
-use arrow2::error::{Error, Result};
-use arrow2::io::ndjson::read as ndjson_read;
-use arrow2::io::ndjson::read::FallibleStreamingIterator;
+use re_arrow2::array::*;
+use re_arrow2::datatypes::{DataType, Field};
+use re_arrow2::error::{Error, Result};
+use re_arrow2::io::ndjson::read as ndjson_read;
+use re_arrow2::io::ndjson::read::FallibleStreamingIterator;
 
 use super::*;
 

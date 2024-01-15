@@ -1,10 +1,10 @@
 mod lex_sort;
 mod row;
 
-use arrow2::array::*;
-use arrow2::compute::sort::*;
-use arrow2::datatypes::*;
-use arrow2::types::NativeType;
+use re_arrow2::array::*;
+use re_arrow2::compute::sort::*;
+use re_arrow2::datatypes::*;
+use re_arrow2::types::NativeType;
 
 fn to_indices_boolean_arrays(data: &[Option<bool>], options: SortOptions, expected_data: &[i32]) {
     let output = BooleanArray::from(data);
@@ -550,9 +550,9 @@ fn test_lex_sort_unaligned_rows() {
 
 #[test]
 fn consistency() {
-    use arrow2::array::new_null_array;
-    use arrow2::datatypes::DataType::*;
-    use arrow2::datatypes::TimeUnit;
+    use re_arrow2::array::new_null_array;
+    use re_arrow2::datatypes::DataType::*;
+    use re_arrow2::datatypes::TimeUnit;
 
     let datatypes = vec![
         Null,

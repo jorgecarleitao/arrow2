@@ -109,8 +109,8 @@ fn a_like_utf8<O: Offset, F: Fn(bool) -> bool>(
 /// * any of the patterns is not valid
 /// # Example
 /// ```
-/// use arrow2::array::{Utf8Array, BooleanArray};
-/// use arrow2::compute::like::like_utf8;
+/// use re_arrow2::array::{Utf8Array, BooleanArray};
+/// use re_arrow2::compute::like::like_utf8;
 ///
 /// let strings = Utf8Array::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "Arrow", "Ar"]);
 /// let patterns = Utf8Array::<i32>::from_slice(&["A%", "B%", "%r_ow", "A_", "A_"]);
@@ -190,8 +190,8 @@ fn a_like_utf8_scalar<O: Offset, F: Fn(bool) -> bool>(
 /// * any of the patterns is not valid
 /// # Example
 /// ```
-/// use arrow2::array::{Utf8Array, BooleanArray};
-/// use arrow2::compute::like::like_utf8_scalar;
+/// use re_arrow2::array::{Utf8Array, BooleanArray};
+/// use re_arrow2::compute::like::like_utf8_scalar;
 ///
 /// let array = Utf8Array::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "BA"]);
 ///
@@ -267,8 +267,8 @@ fn a_like_binary<O: Offset, F: Fn(bool) -> bool>(
 /// * any of the patterns is not valid
 /// # Example
 /// ```
-/// use arrow2::array::{BinaryArray, BooleanArray};
-/// use arrow2::compute::like::like_binary;
+/// use re_arrow2::array::{BinaryArray, BooleanArray};
+/// use re_arrow2::compute::like::like_binary;
 ///
 /// let strings = BinaryArray::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "Arrow", "Ar"]);
 /// let patterns = BinaryArray::<i32>::from_slice(&["A%", "B%", "%r_ow", "A_", "A_"]);
@@ -341,8 +341,8 @@ fn a_like_binary_scalar<O: Offset, F: Fn(bool) -> bool>(
 /// * any of the patterns is not valid
 /// # Example
 /// ```
-/// use arrow2::array::{BinaryArray, BooleanArray};
-/// use arrow2::compute::like::like_binary_scalar;
+/// use re_arrow2::array::{BinaryArray, BooleanArray};
+/// use re_arrow2::compute::like::like_binary_scalar;
 ///
 /// let array = BinaryArray::<i32>::from_slice(&["Arrow", "Arrow", "Arrow", "BA"]);
 ///

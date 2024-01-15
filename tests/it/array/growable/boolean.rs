@@ -1,5 +1,5 @@
-use arrow2::array::growable::{Growable, GrowableBoolean};
-use arrow2::array::BooleanArray;
+use re_arrow2::array::growable::{Growable, GrowableBoolean};
+use re_arrow2::array::BooleanArray;
 
 #[test]
 fn test_bool() {

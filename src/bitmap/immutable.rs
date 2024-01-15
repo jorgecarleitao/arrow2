@@ -15,7 +15,7 @@ use super::{
 ///
 /// # Examples
 /// ```
-/// use arrow2::bitmap::{Bitmap, MutableBitmap};
+/// use re_arrow2::bitmap::{Bitmap, MutableBitmap};
 ///
 /// let bitmap = Bitmap::from([true, false, true]);
 /// assert_eq!(bitmap.iter().collect::<Vec<_>>(), vec![true, false, true]);

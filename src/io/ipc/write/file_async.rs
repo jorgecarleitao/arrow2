@@ -24,11 +24,11 @@ type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 ///
 /// ```
 /// use futures::{SinkExt, TryStreamExt, io::Cursor};
-/// use arrow2::array::{Array, Int32Array};
-/// use arrow2::datatypes::{DataType, Field, Schema};
-/// use arrow2::chunk::Chunk;
-/// use arrow2::io::ipc::write::file_async::FileSink;
-/// use arrow2::io::ipc::read::file_async::{read_file_metadata_async, FileStream};
+/// use re_arrow2::array::{Array, Int32Array};
+/// use re_arrow2::datatypes::{DataType, Field, Schema};
+/// use re_arrow2::chunk::Chunk;
+/// use re_arrow2::io::ipc::write::file_async::FileSink;
+/// use re_arrow2::io::ipc::read::file_async::{read_file_metadata_async, FileStream};
 /// # futures::executor::block_on(async move {
 /// let schema = Schema::from(vec![
 ///     Field::new("values", DataType::Int32, true),
@@ -56,7 +56,7 @@ type WriteOutput<W> = (usize, Option<Block>, Vec<Block>, Option<W>);
 /// let metadata = read_file_metadata_async(&mut buffer).await?;
 /// let mut stream = FileStream::new(buffer, metadata, None, None);
 /// let chunks = stream.try_collect::<Vec<_>>().await?;
-/// # arrow2::error::Result::Ok(())
+/// # re_arrow2::error::Result::Ok(())
 /// # }).unwrap();
 /// ```
 pub struct FileSink<'a, W: AsyncWrite + Unpin + Send + 'a> {

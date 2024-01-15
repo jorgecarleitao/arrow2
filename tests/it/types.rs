@@ -1,4 +1,4 @@
-use arrow2::types::{days_ms, months_days_ns, BitChunkIter, BitChunkOnes, NativeType};
+use re_arrow2::types::{days_ms, months_days_ns, BitChunkIter, BitChunkOnes, NativeType};
 
 #[test]
 fn test_basic1() {

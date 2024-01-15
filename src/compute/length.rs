@@ -68,8 +68,8 @@ pub fn length(array: &dyn Array) -> Result<Box<dyn Array>> {
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::length::can_length;
-/// use arrow2::datatypes::{DataType};
+/// use re_arrow2::compute::length::can_length;
+/// use re_arrow2::datatypes::{DataType};
 ///
 /// let data_type = DataType::Utf8;
 /// assert_eq!(can_length(&data_type), true);

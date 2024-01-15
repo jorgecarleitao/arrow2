@@ -28,7 +28,7 @@ Let's see how these structures are used.
 Create a new `Buffer<u32>`:
 
 ```rust
-# use arrow2::buffer::Buffer;
+# use re_arrow2::buffer::Buffer;
 # fn main() {
 let x = vec![1u32, 2, 3];
 let x: Buffer<u32> = x.into();
@@ -45,8 +45,8 @@ the following physical types:
 * `i8-i128`
 * `u8-u64`
 * `f32` and `f64`
-* `arrow2::types::days_ms`
-* `arrow2::types::months_days_ns`
+* `re_arrow2::types::days_ms`
+* `re_arrow2::types::months_days_ns`
 
 This is because the arrow specification only supports the above Rust types; all other complex
 types supported by arrow are built on top of these types, which enables Arrow to be a highly
@@ -57,7 +57,7 @@ interoperable in-memory format.
 Arrow's in-memory arrangement of boolean values is different from `Vec<bool>`. Specifically,
 arrow uses individual bits to represent a boolean, as opposed to the usual byte
 that `bool` holds.
-Besides the 8x compression, this makes the validity particularly useful for 
+Besides the 8x compression, this makes the validity particularly useful for
 [AVX512](https://en.wikipedia.org/wiki/AVX-512) masks.
 One tradeoff is that an arrows' bitmap is not represented as a Rust slice, as Rust slices use
 pointer arithmetics, whose smallest unit is a byte.
@@ -66,7 +66,7 @@ Arrow2 has two containers for bitmaps: `Bitmap` (immutable and sharable)
 and `MutableBitmap` (mutable):
 
 ```rust
-use arrow2::bitmap::Bitmap;
+use re_arrow2::bitmap::Bitmap;
 # fn main() {
 let x = Bitmap::from(&[true, false]);
 let iter = x.iter().map(|x| !x);
@@ -77,7 +77,7 @@ assert_eq!(y.get_bit(1), true);
 ```
 
 ```rust
-use arrow2::bitmap::MutableBitmap;
+use re_arrow2::bitmap::MutableBitmap;
 # fn main() {
 let mut x = MutableBitmap::new();
 x.push(true);

@@ -1,15 +1,15 @@
 use std::fs::File;
 
-use arrow2::io::json_integration::ArrowJson;
 use clap::Parser;
+use re_arrow2::io::json_integration::ArrowJson;
 
-use arrow2::io::ipc::read;
-use arrow2::io::ipc::write;
-use arrow2::{
+use arrow_integration_testing::read_json_file;
+use re_arrow2::io::ipc::read;
+use re_arrow2::io::ipc::write;
+use re_arrow2::{
     error::{Error, Result},
     io::json_integration::write as json_write,
 };
-use arrow_integration_testing::read_json_file;
 
 #[derive(Debug, Clone, clap::ArgEnum)]
 #[clap(rename_all = "SCREAMING_SNAKE_CASE")]

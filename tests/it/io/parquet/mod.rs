@@ -1,8 +1,8 @@
 use ethnum::AsI256;
 use std::io::{Cursor, Read, Seek};
 
-use arrow2::types::i256;
-use arrow2::{
+use re_arrow2::types::i256;
+use re_arrow2::{
     array::*,
     bitmap::Bitmap,
     chunk::Chunk,

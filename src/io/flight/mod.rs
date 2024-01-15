@@ -30,7 +30,7 @@ pub fn serialize_batch(
     options: &WriteOptions,
 ) -> Result<(Vec<FlightData>, FlightData)> {
     if fields.len() != chunk.arrays().len() {
-        return Err(Error::InvalidArgumentError("The argument `fields` must be consistent with the columns' schema. Use e.g. &arrow2::io::flight::default_ipc_fields(&schema.fields)".to_string()));
+        return Err(Error::InvalidArgumentError("The argument `fields` must be consistent with the columns' schema. Use e.g. &re_arrow2::io::flight::default_ipc_fields(&schema.fields)".to_string()));
     }
 
     let mut dictionary_tracker = DictionaryTracker {

@@ -1,4 +1,4 @@
-use arrow2::bitmap::utils::BitmapIter;
+use re_arrow2::bitmap::utils::BitmapIter;
 
 #[test]
 fn basic() {

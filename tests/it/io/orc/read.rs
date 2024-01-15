@@ -1,6 +1,6 @@
-use arrow2::array::*;
-use arrow2::error::Error;
-use arrow2::io::orc::{format, read};
+use re_arrow2::array::*;
+use re_arrow2::error::Error;
+use re_arrow2::io::orc::{format, read};
 
 #[test]
 fn infer() -> Result<(), Error> {

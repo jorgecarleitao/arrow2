@@ -12,5 +12,5 @@ mod utf8;
 // check that `PartialEq` can be derived
 #[derive(PartialEq)]
 struct A {
-    array: Box<dyn arrow2::scalar::Scalar>,
+    array: Box<dyn re_arrow2::scalar::Scalar>,
 }

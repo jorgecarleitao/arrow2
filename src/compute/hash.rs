@@ -125,8 +125,8 @@ pub fn hash(array: &dyn Array) -> Result<PrimitiveArray<u64>> {
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::hash::can_hash;
-/// use arrow2::datatypes::{DataType};
+/// use re_arrow2::compute::hash::can_hash;
+/// use re_arrow2::datatypes::{DataType};
 ///
 /// let data_type = DataType::Int8;
 /// assert_eq!(can_hash(&data_type), true);

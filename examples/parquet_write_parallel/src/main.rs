@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 
 use rayon::prelude::*;
 
-use arrow2::{
+use re_arrow2::{
     array::*,
     chunk::Chunk as AChunk,
     datatypes::*,

@@ -1,7 +1,7 @@
-use arrow2::array::*;
-use arrow2::bitmap::Bitmap;
-use arrow2::compute::arithmetics::basic::*;
-use arrow2::compute::arithmetics::{
+use re_arrow2::array::*;
+use re_arrow2::bitmap::Bitmap;
+use re_arrow2::compute::arithmetics::basic::*;
+use re_arrow2::compute::arithmetics::{
     ArrayCheckedMul, ArrayMul, ArrayOverflowingMul, ArraySaturatingMul,
 };
 

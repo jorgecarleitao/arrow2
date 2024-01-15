@@ -1,4 +1,4 @@
-use arrow2::buffer::Buffer;
+use re_arrow2::buffer::Buffer;
 
 #[test]
 fn new() {

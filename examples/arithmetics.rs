@@ -1,8 +1,8 @@
-use arrow2::array::{Array, PrimitiveArray};
-use arrow2::compute::arithmetics::basic::*;
-use arrow2::compute::arithmetics::{add as dyn_add, can_add};
-use arrow2::compute::arity::{binary, unary};
-use arrow2::datatypes::DataType;
+use re_arrow2::array::{Array, PrimitiveArray};
+use re_arrow2::compute::arithmetics::basic::*;
+use re_arrow2::compute::arithmetics::{add as dyn_add, can_add};
+use re_arrow2::compute::arity::{binary, unary};
+use re_arrow2::datatypes::DataType;
 
 fn main() {
     // say we have two arrays

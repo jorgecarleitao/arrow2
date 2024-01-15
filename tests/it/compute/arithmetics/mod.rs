@@ -2,11 +2,11 @@ mod basic;
 mod decimal;
 mod time;
 
-use arrow2::array::*;
-use arrow2::compute::arithmetics::*;
-use arrow2::datatypes::DataType::*;
-use arrow2::datatypes::{IntervalUnit, TimeUnit};
-use arrow2::scalar::PrimitiveScalar;
+use re_arrow2::array::*;
+use re_arrow2::compute::arithmetics::*;
+use re_arrow2::datatypes::DataType::*;
+use re_arrow2::datatypes::{IntervalUnit, TimeUnit};
+use re_arrow2::scalar::PrimitiveScalar;
 
 #[test]
 fn test_add() {
@@ -62,7 +62,7 @@ fn consistency() {
         Interval(IntervalUnit::MonthDayNano),
     ];
 
-    let cases = datatypes.clone().into_iter().zip(datatypes.into_iter());
+    let cases = datatypes.clone().into_iter().zip(datatypes);
 
     cases.for_each(|(lhs, rhs)| {
         let lhs_a = new_empty_array(lhs.clone());

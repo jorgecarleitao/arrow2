@@ -1,10 +1,10 @@
 use std::io::Cursor;
 
-use arrow2::array::*;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::*;
-use arrow2::error::Result;
-use arrow2::io::csv::write::*;
+use re_arrow2::array::*;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::*;
+use re_arrow2::error::Result;
+use re_arrow2::io::csv::write::*;
 
 fn data() -> Chunk<Box<dyn Array>> {
     let c1 = Utf8Array::<i32>::from_slice(["a b", "c", "d"]);

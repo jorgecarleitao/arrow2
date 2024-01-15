@@ -1,4 +1,4 @@
-use arrow2::{
+use re_arrow2::{
     array::{Array, Int32Array},
     chunk::Chunk,
     error::Result,
