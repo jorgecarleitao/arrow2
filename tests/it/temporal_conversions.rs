@@ -1,8 +1,9 @@
+use std::sync::Arc;
+
 use re_arrow2::array::*;
 use re_arrow2::datatypes::TimeUnit;
 use re_arrow2::temporal_conversions;
 use re_arrow2::types::months_days_ns;
-use std::sync::Arc;
 
 use chrono::NaiveDateTime;
 
