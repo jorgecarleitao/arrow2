@@ -3,7 +3,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 
-use arrow2::{
+use re_arrow2::{
     array::{Array, Int32Array},
     chunk::Chunk,
     error::Result,

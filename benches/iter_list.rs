@@ -2,7 +2,7 @@ use std::iter::FromIterator;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::{
+use re_arrow2::{
     array::{ListArray, PrimitiveArray},
     bitmap::Bitmap,
     buffer::Buffer,

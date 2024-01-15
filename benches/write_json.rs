@@ -1,9 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::array::*;
-use arrow2::error::Error;
-use arrow2::io::json::write;
-use arrow2::util::bench_util::*;
+use re_arrow2::array::*;
+use re_arrow2::error::Error;
+use re_arrow2::io::json::write;
+use re_arrow2::util::bench_util::*;
 
 fn write_array(array: Box<dyn Array>) -> Result<(), Error> {
     let mut writer = vec![];

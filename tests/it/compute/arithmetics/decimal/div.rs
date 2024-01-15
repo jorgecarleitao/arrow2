@@ -1,12 +1,12 @@
 #![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 
-use arrow2::array::*;
-use arrow2::compute::arithmetics::decimal::{
+use re_arrow2::array::*;
+use re_arrow2::compute::arithmetics::decimal::{
     adaptive_div, checked_div, div, div_scalar, saturating_div,
 };
-use arrow2::compute::arithmetics::{ArrayCheckedDiv, ArrayDiv};
-use arrow2::datatypes::DataType;
-use arrow2::scalar::PrimitiveScalar;
+use re_arrow2::compute::arithmetics::{ArrayCheckedDiv, ArrayDiv};
+use re_arrow2::datatypes::DataType;
+use re_arrow2::scalar::PrimitiveScalar;
 
 #[test]
 fn test_divide_normal() {

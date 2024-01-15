@@ -1,7 +1,7 @@
 use ahash::AHashMap;
 use std::{fs::File, io::Read};
 
-use arrow2::{
+use re_arrow2::{
     array::Array, chunk::Chunk, datatypes::Schema, error::Result,
     io::ipc::read::read_stream_metadata, io::ipc::read::StreamReader, io::ipc::IpcField,
     io::json_integration::read, io::json_integration::ArrowJson,

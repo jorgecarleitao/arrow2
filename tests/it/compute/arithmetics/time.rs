@@ -1,8 +1,8 @@
-use arrow2::array::*;
-use arrow2::compute::arithmetics::time::*;
-use arrow2::datatypes::{DataType, TimeUnit};
-use arrow2::scalar::*;
-use arrow2::types::months_days_ns;
+use re_arrow2::array::*;
+use re_arrow2::compute::arithmetics::time::*;
+use re_arrow2::datatypes::{DataType, TimeUnit};
+use re_arrow2::scalar::*;
+use re_arrow2::types::months_days_ns;
 
 #[test]
 fn test_adding_timestamp() {

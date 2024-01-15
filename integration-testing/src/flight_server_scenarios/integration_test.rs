@@ -27,15 +27,15 @@ use arrow_format::flight::data::flight_descriptor::*;
 use arrow_format::flight::data::*;
 use arrow_format::flight::service::flight_service_server::*;
 
-use arrow2::array::Array;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::Schema;
-use arrow2::io::flight::{
+use re_arrow2::array::Array;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::Schema;
+use re_arrow2::io::flight::{
     deserialize_message, deserialize_schemas, serialize_batch, serialize_schema,
     serialize_schema_to_info,
 };
-use arrow2::io::ipc;
-use arrow2::io::ipc::read::Dictionaries;
+use re_arrow2::io::ipc;
+use re_arrow2::io::ipc::read::Dictionaries;
 
 use super::{Result, TonicStream};
 

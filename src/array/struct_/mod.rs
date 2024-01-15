@@ -20,8 +20,8 @@ pub use mutable::*;
 /// multiple [`Array`] with the same number of rows.
 /// # Example
 /// ```
-/// use arrow2::array::*;
-/// use arrow2::datatypes::*;
+/// use re_arrow2::array::*;
+/// use re_arrow2::datatypes::*;
 /// let boolean = BooleanArray::from_slice(&[false, false, true, true]).boxed();
 /// let int = Int32Array::from_slice(&[42, 28, 19, 31]).boxed();
 ///

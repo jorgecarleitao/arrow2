@@ -1,8 +1,8 @@
-use arrow2::array::{Array, Int64Array};
-use arrow2::error::Result;
-use arrow2::io::parquet::read;
 use futures::future::BoxFuture;
 use range_reader::{RangeOutput, RangedAsyncReader};
+use re_arrow2::array::{Array, Int64Array};
+use re_arrow2::error::Result;
+use re_arrow2::io::parquet::read;
 use s3::Bucket;
 
 #[tokio::main]

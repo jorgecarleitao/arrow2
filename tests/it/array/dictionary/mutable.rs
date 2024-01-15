@@ -3,9 +3,9 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use arrow2::array::indexable::{AsIndexed, Indexable};
-use arrow2::array::*;
-use arrow2::error::Result;
+use re_arrow2::array::indexable::{AsIndexed, Indexable};
+use re_arrow2::array::*;
+use re_arrow2::error::Result;
 
 #[test]
 fn primitive() -> Result<()> {

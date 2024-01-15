@@ -1,8 +1,8 @@
-use arrow2::util::bench_util::create_string_array;
 use criterion::{criterion_group, criterion_main, Criterion};
+use re_arrow2::util::bench_util::create_string_array;
 
-use arrow2::array::*;
-use arrow2::compute::like::like_utf8_scalar;
+use re_arrow2::array::*;
+use re_arrow2::compute::like::like_utf8_scalar;
 
 fn bench_like(array: &Utf8Array<i32>, pattern: &str) {
     criterion::black_box(like_utf8_scalar(array, pattern).unwrap());

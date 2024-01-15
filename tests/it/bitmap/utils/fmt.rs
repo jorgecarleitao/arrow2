@@ -1,4 +1,4 @@
-use arrow2::bitmap::utils::fmt;
+use re_arrow2::bitmap::utils::fmt;
 
 struct A<'a>(&'a [u8], usize, usize);
 

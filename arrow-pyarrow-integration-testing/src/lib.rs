@@ -10,7 +10,7 @@ use pyo3::ffi::Py_uintptr_t;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
-use arrow2::{array::Array, datatypes::Field, error::Error, ffi};
+use re_arrow2::{array::Array, datatypes::Field, error::Error, ffi};
 
 /// an error that bridges Error with a Python error
 #[derive(Debug)]
@@ -80,8 +80,8 @@ fn to_py_array(array: Box<dyn Array>, py: Python) -> PyResult<PyObject> {
     )));
     let array = Box::new(ffi::export_array_to_c(array));
 
-    let schema_ptr: *const arrow2::ffi::ArrowSchema = &*schema;
-    let array_ptr: *const arrow2::ffi::ArrowArray = &*array;
+    let schema_ptr: *const re_arrow2::ffi::ArrowSchema = &*schema;
+    let array_ptr: *const re_arrow2::ffi::ArrowArray = &*array;
 
     let pa = py.import("pyarrow")?;
 
@@ -110,7 +110,7 @@ fn to_rust_field(ob: PyObject, py: Python) -> PyResult<Field> {
 
 fn to_py_field(field: &Field, py: Python) -> PyResult<PyObject> {
     let schema = Box::new(ffi::export_field_to_c(field));
-    let schema_ptr: *const arrow2::ffi::ArrowSchema = &*schema;
+    let schema_ptr: *const re_arrow2::ffi::ArrowSchema = &*schema;
 
     let pa = py.import("pyarrow")?;
 

@@ -1,10 +1,10 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::array::*;
-use arrow2::chunk::Chunk;
-use arrow2::error::Result;
-use arrow2::io::csv::write;
-use arrow2::util::bench_util::*;
+use re_arrow2::array::*;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::error::Result;
+use re_arrow2::io::csv::write;
+use re_arrow2::util::bench_util::*;
 
 type ChunkBox = Chunk<Box<dyn Array>>;
 

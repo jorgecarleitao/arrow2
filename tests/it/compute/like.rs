@@ -1,6 +1,6 @@
-use arrow2::array::*;
-use arrow2::compute::like::*;
-use arrow2::error::Result;
+use re_arrow2::array::*;
+use re_arrow2::compute::like::*;
+use re_arrow2::error::Result;
 
 #[test]
 fn test_like_binary() -> Result<()> {

@@ -5,8 +5,8 @@ use tokio::fs::File;
 use tokio::io::BufReader;
 use tokio_util::compat::*;
 
-use arrow2::error::Result;
-use arrow2::io::parquet::read::{self, RowGroupDeserializer};
+use re_arrow2::error::Result;
+use re_arrow2::io::parquet::read::{self, RowGroupDeserializer};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {

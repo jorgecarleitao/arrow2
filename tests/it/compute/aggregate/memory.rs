@@ -1,4 +1,4 @@
-use arrow2::{
+use re_arrow2::{
     array::*,
     compute::aggregate::estimated_bytes_size,
     datatypes::{DataType, Field},

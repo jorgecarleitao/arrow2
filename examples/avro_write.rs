@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use arrow2::{
+use re_arrow2::{
     array::{Array, Int32Array},
     datatypes::{Field, Schema},
     error::Result,

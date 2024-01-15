@@ -30,8 +30,8 @@ use crate::{
 /// a negative value shifts the array to the left.
 /// # Examples
 /// ```
-/// use arrow2::array::Int32Array;
-/// use arrow2::compute::window::shift;
+/// use re_arrow2::array::Int32Array;
+/// use re_arrow2::compute::window::shift;
 ///
 /// let array = Int32Array::from(&[Some(1), None, Some(3)]);
 /// let result = shift(&array, -1).unwrap();

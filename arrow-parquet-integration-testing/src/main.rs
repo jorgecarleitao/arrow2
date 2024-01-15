@@ -1,9 +1,11 @@
 use std::fs::File;
 use std::io::Read;
 
-use arrow2::array::Array;
-use arrow2::io::ipc::IpcField;
-use arrow2::{
+use clap::Parser;
+use flate2::read::GzDecoder;
+use re_arrow2::array::Array;
+use re_arrow2::io::ipc::IpcField;
+use re_arrow2::{
     chunk::Chunk,
     datatypes::{DataType, Schema},
     error::Result,
@@ -17,8 +19,6 @@ use arrow2::{
     },
     AHashMap,
 };
-use clap::Parser;
-use flate2::read::GzDecoder;
 
 /// Read gzipped JSON file
 pub fn read_gzip_json(

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use arrow2::{
+use re_arrow2::{
     array::{
         Array, BinaryArray, BooleanArray, DictionaryArray, Float32Array, Int128Array, Int16Array,
         Int256Array, Int32Array, MutableDictionaryArray, MutablePrimitiveArray, MutableUtf8Array,

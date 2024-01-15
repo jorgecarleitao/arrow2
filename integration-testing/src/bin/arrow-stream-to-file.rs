@@ -17,9 +17,9 @@
 
 use std::io;
 
-use arrow2::error::Result;
-use arrow2::io::ipc::read;
-use arrow2::io::ipc::write;
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::read;
+use re_arrow2::io::ipc::write;
 
 fn main() -> Result<()> {
     let mut reader = io::stdin();

@@ -1,8 +1,8 @@
 use std::fs::File;
 
-use arrow2::array::{Array, Int32Array};
-use arrow2::error::Result;
-use arrow2::io::ndjson::write;
+use re_arrow2::array::{Array, Int32Array};
+use re_arrow2::error::Result;
+use re_arrow2::io::ndjson::write;
 
 fn write_path(path: &str, array: Box<dyn Array>) -> Result<()> {
     let writer = File::create(path)?;

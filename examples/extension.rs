@@ -1,11 +1,11 @@
 use std::io::{Cursor, Seek, Write};
 
-use arrow2::array::*;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::*;
-use arrow2::error::Result;
-use arrow2::io::ipc::read;
-use arrow2::io::ipc::write;
+use re_arrow2::array::*;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::*;
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::read;
+use re_arrow2::io::ipc::write;
 
 fn main() -> Result<()> {
     // declare an extension.

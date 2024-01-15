@@ -17,7 +17,7 @@ use super::{DictionaryArray, DictionaryKey};
 /// # Example
 /// Building a UTF8 dictionary with `i32` keys.
 /// ```
-/// # use arrow2::array::{MutableDictionaryArray, MutableUtf8Array, TryPush};
+/// # use re_arrow2::array::{MutableDictionaryArray, MutableUtf8Array, TryPush};
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let mut array: MutableDictionaryArray<i32, MutableUtf8Array<i32>> = MutableDictionaryArray::new();
 /// array.try_push(Some("A"))?;

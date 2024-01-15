@@ -1,6 +1,6 @@
 use proptest::prelude::*;
 
-use arrow2::bitmap::{binary_assign, unary_assign, Bitmap, MutableBitmap};
+use re_arrow2::bitmap::{binary_assign, unary_assign, Bitmap, MutableBitmap};
 
 use crate::bitmap::bitmap_strategy;
 

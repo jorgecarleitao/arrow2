@@ -1,8 +1,8 @@
-use arrow2::compute::aggregate::{
+use re_arrow2::compute::aggregate::{
     max_binary, max_boolean, max_primitive, max_string, min_binary, min_boolean, min_primitive,
     min_string,
 };
-use arrow2::{array::*, datatypes::DataType};
+use re_arrow2::{array::*, datatypes::DataType};
 
 #[test]
 fn test_primitive_array_min_max() {

@@ -1,4 +1,4 @@
-use arrow2::{
+use re_arrow2::{
     array::{Array, BinaryArray},
     bitmap::Bitmap,
     buffer::Buffer,
@@ -74,7 +74,7 @@ fn try_from_trusted_len_iter() {
     let iter = std::iter::repeat(b"hello".as_ref())
         .take(2)
         .map(Some)
-        .map(arrow2::error::Result::Ok);
+        .map(re_arrow2::error::Result::Ok);
     let a = BinaryArray::<i32>::try_from_trusted_len_iter(iter).unwrap();
     assert_eq!(a.len(), 2);
 }

@@ -1,6 +1,6 @@
-use arrow2::array::{Int32Array, ListArray, MutableListArray, MutablePrimitiveArray, TryExtend};
-use arrow2::bitmap::Bitmap;
-use arrow2::datatypes::DataType;
+use re_arrow2::array::{Int32Array, ListArray, MutableListArray, MutablePrimitiveArray, TryExtend};
+use re_arrow2::bitmap::Bitmap;
+use re_arrow2::datatypes::DataType;
 
 use super::test_equal;
 

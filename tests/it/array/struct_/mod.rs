@@ -1,9 +1,9 @@
 mod iterator;
 mod mutable;
 
-use arrow2::array::*;
-use arrow2::bitmap::Bitmap;
-use arrow2::datatypes::*;
+use re_arrow2::array::*;
+use re_arrow2::bitmap::Bitmap;
+use re_arrow2::datatypes::*;
 
 #[test]
 fn debug() {

@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use arrow2::array::*;
-use arrow2::compute::cast::{can_cast_types, cast, CastOptions};
-use arrow2::datatypes::DataType::LargeList;
-use arrow2::datatypes::*;
-use arrow2::types::{days_ms, months_days_ns, NativeType};
+use re_arrow2::array::*;
+use re_arrow2::compute::cast::{can_cast_types, cast, CastOptions};
+use re_arrow2::datatypes::DataType::LargeList;
+use re_arrow2::datatypes::*;
+use re_arrow2::types::{days_ms, months_days_ns, NativeType};
 
 #[test]
 fn i32_to_f64() {

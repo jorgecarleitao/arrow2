@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::compute::arity_assign::{binary, unary};
-use arrow2::{
+use re_arrow2::compute::arity_assign::{binary, unary};
+use re_arrow2::{
     compute::arithmetics::basic::{mul, mul_scalar},
     util::bench_util::*,
 };

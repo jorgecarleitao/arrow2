@@ -1,8 +1,8 @@
 use std::ops::Deref;
 
-use arrow2::array::{BinaryArray, MutableArray, MutableBinaryArray, TryExtendFromSelf};
-use arrow2::bitmap::Bitmap;
-use arrow2::error::Error;
+use re_arrow2::array::{BinaryArray, MutableArray, MutableBinaryArray, TryExtendFromSelf};
+use re_arrow2::bitmap::Bitmap;
+use re_arrow2::error::Error;
 
 #[test]
 fn new() {

@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::{
+use re_arrow2::{
     compute::concatenate::concatenate,
     util::bench_util::{create_boolean_array, create_primitive_array},
 };

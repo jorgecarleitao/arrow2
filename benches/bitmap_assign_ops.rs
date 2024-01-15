@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::bitmap::{binary_assign, unary_assign};
-use arrow2::bitmap::{Bitmap, MutableBitmap};
+use re_arrow2::bitmap::{binary_assign, unary_assign};
+use re_arrow2::bitmap::{Bitmap, MutableBitmap};
 
 fn add_benchmark(c: &mut Criterion) {
     (10..=20).step_by(2).for_each(|log2_size| {

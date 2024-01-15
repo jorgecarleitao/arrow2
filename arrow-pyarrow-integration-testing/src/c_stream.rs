@@ -3,9 +3,9 @@
 use pyo3::ffi::Py_uintptr_t;
 use pyo3::prelude::*;
 
-use arrow2::array::{Int32Array, StructArray};
-use arrow2::datatypes::DataType;
-use arrow2::ffi;
+use re_arrow2::array::{Int32Array, StructArray};
+use re_arrow2::datatypes::DataType;
+use re_arrow2::ffi;
 
 use super::*;
 

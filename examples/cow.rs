@@ -1,6 +1,6 @@
 // This example demos how to operate on arrays in-place.
-use arrow2::array::{Array, PrimitiveArray};
-use arrow2::compute::arity_assign;
+use re_arrow2::array::{Array, PrimitiveArray};
+use re_arrow2::compute::arity_assign;
 
 fn main() {
     // say we have have received an `Array`

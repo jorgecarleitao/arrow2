@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use arrow2::array::*;
-use arrow2::compute::temporal::*;
-use arrow2::datatypes::*;
+use re_arrow2::array::*;
+use re_arrow2::compute::temporal::*;
+use re_arrow2::datatypes::*;
 
 macro_rules! temporal_test {
     ($func:ident, $extract:ident, $data_types:path) => {
@@ -331,11 +331,11 @@ fn consistency_iso_week() {
     consistency_check(can_iso_week, iso_week);
 }
 
-fn consistency_check<O: arrow2::types::NativeType>(
+fn consistency_check<O: re_arrow2::types::NativeType>(
     can_extract: fn(&DataType) -> bool,
-    extract: fn(&dyn Array) -> arrow2::error::Result<PrimitiveArray<O>>,
+    extract: fn(&dyn Array) -> re_arrow2::error::Result<PrimitiveArray<O>>,
 ) {
-    use arrow2::datatypes::DataType::*;
+    use re_arrow2::datatypes::DataType::*;
 
     let datatypes = vec![
         Null,

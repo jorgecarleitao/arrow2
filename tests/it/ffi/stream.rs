@@ -1,6 +1,6 @@
-use arrow2::array::*;
-use arrow2::datatypes::Field;
-use arrow2::{error::Error, error::Result, ffi};
+use re_arrow2::array::*;
+use re_arrow2::datatypes::Field;
+use re_arrow2::{error::Error, error::Result, ffi};
 
 fn _test_round_trip(arrays: Vec<Box<dyn Array>>) -> Result<()> {
     let field = Field::new("a", arrays[0].data_type().clone(), true);

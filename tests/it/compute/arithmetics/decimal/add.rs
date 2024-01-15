@@ -1,9 +1,9 @@
 #![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 
-use arrow2::array::*;
-use arrow2::compute::arithmetics::decimal::{adaptive_add, add, checked_add, saturating_add};
-use arrow2::compute::arithmetics::{ArrayAdd, ArrayCheckedAdd, ArraySaturatingAdd};
-use arrow2::datatypes::DataType;
+use re_arrow2::array::*;
+use re_arrow2::compute::arithmetics::decimal::{adaptive_add, add, checked_add, saturating_add};
+use re_arrow2::compute::arithmetics::{ArrayAdd, ArrayCheckedAdd, ArraySaturatingAdd};
+use re_arrow2::datatypes::DataType;
 
 #[test]
 fn test_add_normal() {

@@ -20,9 +20,9 @@ use super::{adjusted_precision_scale, get_parameters, max_value, number_digits};
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::sub;
-/// use arrow2::array::PrimitiveArray;
-/// use arrow2::datatypes::DataType;
+/// use re_arrow2::compute::arithmetics::decimal::sub;
+/// use re_arrow2::array::PrimitiveArray;
+/// use re_arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(1i128), Some(1i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(1i128), Some(2i128), None, Some(2i128)]).to(DataType::Decimal(5, 2));
@@ -59,9 +59,9 @@ pub fn sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> PrimitiveA
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::saturating_sub;
-/// use arrow2::array::PrimitiveArray;
-/// use arrow2::datatypes::DataType;
+/// use re_arrow2::compute::arithmetics::decimal::saturating_sub;
+/// use re_arrow2::array::PrimitiveArray;
+/// use re_arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(-99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
@@ -125,9 +125,9 @@ impl ArraySaturatingSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::checked_sub;
-/// use arrow2::array::PrimitiveArray;
-/// use arrow2::datatypes::DataType;
+/// use re_arrow2::compute::arithmetics::decimal::checked_sub;
+/// use re_arrow2::array::PrimitiveArray;
+/// use re_arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(-99000i128), Some(11100i128), None, Some(22200i128)]).to(DataType::Decimal(5, 2));
 /// let b = PrimitiveArray::from([Some(01000i128), Some(22200i128), None, Some(11100i128)]).to(DataType::Decimal(5, 2));
@@ -168,9 +168,9 @@ pub fn checked_sub(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Pr
 /// ```
 /// # Examples
 /// ```
-/// use arrow2::compute::arithmetics::decimal::adaptive_sub;
-/// use arrow2::array::PrimitiveArray;
-/// use arrow2::datatypes::DataType;
+/// use re_arrow2::compute::arithmetics::decimal::adaptive_sub;
+/// use re_arrow2::array::PrimitiveArray;
+/// use re_arrow2::datatypes::DataType;
 ///
 /// let a = PrimitiveArray::from([Some(99_9999i128)]).to(DataType::Decimal(6, 4));
 /// let b = PrimitiveArray::from([Some(-00_0001i128)]).to(DataType::Decimal(6, 4));

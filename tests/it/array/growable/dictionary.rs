@@ -1,6 +1,6 @@
-use arrow2::array::growable::{Growable, GrowableDictionary};
-use arrow2::array::*;
-use arrow2::error::Result;
+use re_arrow2::array::growable::{Growable, GrowableDictionary};
+use re_arrow2::array::*;
+use re_arrow2::error::Result;
 
 #[test]
 fn test_single() -> Result<()> {

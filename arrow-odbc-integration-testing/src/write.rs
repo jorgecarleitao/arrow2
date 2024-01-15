@@ -1,10 +1,10 @@
 use stdext::function_name;
 
-use arrow2::array::{Array, BinaryArray, BooleanArray, Int32Array, Utf8Array};
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::{DataType, Field};
-use arrow2::error::Result;
-use arrow2::io::odbc::write::{buffer_from_description, infer_descriptions, serialize};
+use re_arrow2::array::{Array, BinaryArray, BooleanArray, Int32Array, Utf8Array};
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::{DataType, Field};
+use re_arrow2::error::Result;
+use re_arrow2::io::odbc::write::{buffer_from_description, infer_descriptions, serialize};
 
 use super::read::read;
 use super::{setup_empty_table, ENV, MSSQL};

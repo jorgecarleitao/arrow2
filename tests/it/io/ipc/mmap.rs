@@ -1,8 +1,8 @@
-use arrow2::array::*;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::{DataType, Field, Schema};
-use arrow2::error::Result;
-use arrow2::io::ipc::read::read_file_metadata;
+use re_arrow2::array::*;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::{DataType, Field, Schema};
+use re_arrow2::error::Result;
+use re_arrow2::io::ipc::read::read_file_metadata;
 use std::sync::Arc;
 
 use super::write::file::write;
@@ -16,9 +16,9 @@ fn round_trip(array: Box<dyn Array>) -> Result<()> {
     let metadata = read_file_metadata(&mut std::io::Cursor::new(data.as_ref()))?;
 
     let dictionaries =
-        unsafe { arrow2::mmap::mmap_dictionaries_unchecked(&metadata, data.clone())? };
+        unsafe { re_arrow2::mmap::mmap_dictionaries_unchecked(&metadata, data.clone())? };
 
-    let new_array = unsafe { arrow2::mmap::mmap_unchecked(&metadata, &dictionaries, data, 0)? };
+    let new_array = unsafe { re_arrow2::mmap::mmap_unchecked(&metadata, &dictionaries, data, 0)? };
     assert_eq!(new_array.into_arrays()[0], array);
     Ok(())
 }

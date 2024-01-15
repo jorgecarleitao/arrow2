@@ -32,7 +32,7 @@ pub trait ArcExt<T> {
     ///
     /// ```
     /// # use std::{ptr, sync::Arc};
-    /// # use arrow2::datatype::ArcExt;
+    /// # use re_arrow2::datatype::ArcExt;
     /// let inner = String::from("test");
     /// let ptr = inner.as_ptr();
     ///

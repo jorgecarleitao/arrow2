@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use arrow2::{
+use re_arrow2::{
     array::StructArray,
     datatypes::DataType,
     error::Result,

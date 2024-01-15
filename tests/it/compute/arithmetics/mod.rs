@@ -2,11 +2,11 @@ mod basic;
 mod decimal;
 mod time;
 
-use arrow2::array::*;
-use arrow2::compute::arithmetics::*;
-use arrow2::datatypes::DataType::*;
-use arrow2::datatypes::{IntervalUnit, TimeUnit};
-use arrow2::scalar::PrimitiveScalar;
+use re_arrow2::array::*;
+use re_arrow2::compute::arithmetics::*;
+use re_arrow2::datatypes::DataType::*;
+use re_arrow2::datatypes::{IntervalUnit, TimeUnit};
+use re_arrow2::scalar::PrimitiveScalar;
 
 #[test]
 fn test_add() {

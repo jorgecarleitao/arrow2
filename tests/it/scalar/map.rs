@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use arrow2::{
+use re_arrow2::{
     array::{BooleanArray, StructArray, Utf8Array},
     datatypes::{DataType, Field},
     scalar::{MapScalar, Scalar},

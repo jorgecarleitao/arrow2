@@ -1,9 +1,9 @@
-use arrow2::array::Array;
-use arrow2::datatypes::DataType;
 use criterion::{criterion_group, criterion_main, Criterion};
+use re_arrow2::array::Array;
+use re_arrow2::datatypes::DataType;
 
-use arrow2::io::json::{read, write};
-use arrow2::util::bench_util::*;
+use re_arrow2::io::json::{read, write};
+use re_arrow2::util::bench_util::*;
 
 fn prep(array: impl Array + 'static) -> (Vec<u8>, DataType) {
     let mut data = vec![];

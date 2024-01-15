@@ -2,11 +2,11 @@ mod read;
 
 use std::sync::Arc;
 
-use arrow2::array::*;
-use arrow2::bitmap::Bitmap;
-use arrow2::datatypes::*;
-use arrow2::error::Result;
-use arrow2::io::ndjson::write as ndjson_write;
+use re_arrow2::array::*;
+use re_arrow2::bitmap::Bitmap;
+use re_arrow2::datatypes::*;
+use re_arrow2::error::Result;
+use re_arrow2::io::ndjson::write as ndjson_write;
 
 use read::{infer, read_and_deserialize};
 

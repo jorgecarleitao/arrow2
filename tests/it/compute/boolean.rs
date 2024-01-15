@@ -1,6 +1,6 @@
-use arrow2::array::*;
-use arrow2::compute::boolean::*;
-use arrow2::scalar::BooleanScalar;
+use re_arrow2::array::*;
+use re_arrow2::compute::boolean::*;
+use re_arrow2::scalar::BooleanScalar;
 use std::iter::FromIterator;
 
 #[test]

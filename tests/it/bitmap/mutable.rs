@@ -1,4 +1,4 @@
-use arrow2::bitmap::{Bitmap, MutableBitmap};
+use re_arrow2::bitmap::{Bitmap, MutableBitmap};
 
 #[test]
 fn from_slice() {

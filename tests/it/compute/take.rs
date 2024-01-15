@@ -1,8 +1,8 @@
-use arrow2::compute::take::{can_take, take};
-use arrow2::datatypes::{DataType, Field, IntervalUnit};
-use arrow2::error::Result;
-use arrow2::{array::*, bitmap::MutableBitmap, types::NativeType};
-use arrow2::{bitmap::Bitmap, buffer::Buffer};
+use re_arrow2::compute::take::{can_take, take};
+use re_arrow2::datatypes::{DataType, Field, IntervalUnit};
+use re_arrow2::error::Result;
+use re_arrow2::{array::*, bitmap::MutableBitmap, types::NativeType};
+use re_arrow2::{bitmap::Bitmap, buffer::Buffer};
 
 fn test_take_primitive<T>(
     data: &[Option<T>],
@@ -102,9 +102,9 @@ fn test_struct_with_nulls() {
 
 #[test]
 fn consistency() {
-    use arrow2::array::new_null_array;
-    use arrow2::datatypes::DataType::*;
-    use arrow2::datatypes::TimeUnit;
+    use re_arrow2::array::new_null_array;
+    use re_arrow2::datatypes::DataType::*;
+    use re_arrow2::datatypes::TimeUnit;
 
     let datatypes = vec![
         Null,

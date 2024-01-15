@@ -1,6 +1,6 @@
-use arrow2::array::*;
-use arrow2::compute::if_then_else::if_then_else;
-use arrow2::error::Result;
+use re_arrow2::array::*;
+use re_arrow2::compute::if_then_else::if_then_else;
+use re_arrow2::error::Result;
 
 #[test]
 fn basics() -> Result<()> {

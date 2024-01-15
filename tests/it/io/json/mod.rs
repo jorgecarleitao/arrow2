@@ -1,11 +1,11 @@
 mod read;
 mod write;
 
-use arrow2::array::*;
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::Schema;
-use arrow2::error::Result;
-use arrow2::io::json::write as json_write;
+use re_arrow2::array::*;
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::Schema;
+use re_arrow2::error::Result;
+use re_arrow2::io::json::write as json_write;
 
 fn write_batch(array: Box<dyn Array>) -> Result<Vec<u8>> {
     let mut serializer = json_write::Serializer::new(vec![Ok(array)].into_iter(), vec![]);

@@ -6,7 +6,7 @@ use std::time::SystemTime;
 use log::trace;
 use rayon::prelude::*;
 
-use arrow2::{
+use re_arrow2::{
     array::Array,
     chunk::Chunk,
     error::Result,

@@ -2,9 +2,9 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::array::*;
-use arrow2::compute::take;
-use arrow2::util::bench_util::*;
+use re_arrow2::array::*;
+use re_arrow2::compute::take;
+use re_arrow2::util::bench_util::*;
 
 fn create_random_index(size: usize, null_density: f32) -> PrimitiveArray<i32> {
     let mut rng = StdRng::seed_from_u64(42);

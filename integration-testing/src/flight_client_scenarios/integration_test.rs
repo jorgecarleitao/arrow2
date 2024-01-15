@@ -17,7 +17,12 @@
 
 use crate::{read_json_file, ArrowFile};
 
-use arrow2::{
+use arrow_format::flight::data::{
+    flight_descriptor::DescriptorType, FlightData, FlightDescriptor, Location, Ticket,
+};
+use arrow_format::flight::service::flight_service_client::FlightServiceClient;
+use futures::{stream::BoxStream, StreamExt, TryStreamExt};
+use re_arrow2::{
     array::Array,
     chunk::Chunk,
     datatypes::*,
@@ -26,11 +31,6 @@ use arrow2::{
         ipc::{read::Dictionaries, write, IpcField, IpcSchema},
     },
 };
-use arrow_format::flight::data::{
-    flight_descriptor::DescriptorType, FlightData, FlightDescriptor, Location, Ticket,
-};
-use arrow_format::flight::service::flight_service_client::FlightServiceClient;
-use futures::{stream::BoxStream, StreamExt, TryStreamExt};
 use tonic::{Request, Streaming};
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;

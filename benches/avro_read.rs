@@ -3,11 +3,11 @@ use std::io::Cursor;
 use avro_rs::types::Record;
 use criterion::*;
 
-use arrow2::error::Result;
-use arrow2::io::avro::avro_schema::read::read_metadata;
-use arrow2::io::avro::read;
 use avro_rs::*;
 use avro_rs::{Codec, Schema as AvroSchema};
+use re_arrow2::error::Result;
+use re_arrow2::io::avro::avro_schema::read::read_metadata;
+use re_arrow2::io::avro::read;
 
 fn schema() -> AvroSchema {
     let raw_schema = r#"

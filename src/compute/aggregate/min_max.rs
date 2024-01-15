@@ -255,7 +255,7 @@ pub fn min_string<O: Offset>(array: &Utf8Array<O>) -> Option<&str> {
 /// Returns the minimum value in the boolean array.
 ///
 /// ```
-/// use arrow2::{
+/// use re_arrow2::{
 ///   array::BooleanArray,
 ///   compute::aggregate::min_boolean,
 /// };
@@ -283,7 +283,7 @@ pub fn min_boolean(array: &BooleanArray) -> Option<bool> {
 /// Returns the maximum value in the boolean array
 ///
 /// ```
-/// use arrow2::{
+/// use re_arrow2::{
 ///   array::BooleanArray,
 ///   compute::aggregate::max_boolean,
 /// };

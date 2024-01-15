@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use arrow2::bitmap::Bitmap;
+use re_arrow2::bitmap::Bitmap;
 
 fn bench_arrow2(lhs: &Bitmap, rhs: &Bitmap) {
     let r = lhs | rhs;

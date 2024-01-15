@@ -2,7 +2,7 @@ mod mutable;
 
 use std::sync::Arc;
 
-use arrow2::{array::*, datatypes::DataType};
+use re_arrow2::{array::*, datatypes::DataType};
 
 #[test]
 fn try_new_ok() {

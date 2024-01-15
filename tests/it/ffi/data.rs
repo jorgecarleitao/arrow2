@@ -1,7 +1,7 @@
-use arrow2::array::*;
-use arrow2::bitmap::Bitmap;
-use arrow2::datatypes::{DataType, Field, TimeUnit};
-use arrow2::{error::Result, ffi};
+use re_arrow2::array::*;
+use re_arrow2::bitmap::Bitmap;
+use re_arrow2::datatypes::{DataType, Field, TimeUnit};
+use re_arrow2::{error::Result, ffi};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 

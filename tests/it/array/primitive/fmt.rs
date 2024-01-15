@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use arrow2::{
+use re_arrow2::{
     array::*,
     datatypes::*,
     types::{days_ms, months_days_ns},

@@ -230,8 +230,8 @@ fn sort_dict<I: Index, O: Offset>(
 ///
 /// # Examples
 /// ```
-/// use arrow2::compute::sort::can_sort;
-/// use arrow2::datatypes::{DataType};
+/// use re_arrow2::compute::sort::can_sort;
+/// use re_arrow2::datatypes::{DataType};
 ///
 /// let data_type = DataType::Int8;
 /// assert_eq!(can_sort(&data_type), true);

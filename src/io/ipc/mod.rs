@@ -29,12 +29,12 @@
 //! # Examples
 //! Read and write to a file:
 //! ```
-//! use arrow2::io::ipc::{{read::{FileReader, read_file_metadata}}, {write::{FileWriter, WriteOptions}}};
+//! use re_arrow2::io::ipc::{{read::{FileReader, read_file_metadata}}, {write::{FileWriter, WriteOptions}}};
 //! # use std::fs::File;
-//! # use arrow2::datatypes::{Field, Schema, DataType};
-//! # use arrow2::array::{Int32Array, Array};
-//! # use arrow2::chunk::Chunk;
-//! # use arrow2::error::Error;
+//! # use re_arrow2::datatypes::{Field, Schema, DataType};
+//! # use re_arrow2::array::{Int32Array, Array};
+//! # use re_arrow2::chunk::Chunk;
+//! # use re_arrow2::error::Error;
 //! // Setup the writer
 //! let path = "example.arrow".to_string();
 //! let mut file = File::create(&path)?;

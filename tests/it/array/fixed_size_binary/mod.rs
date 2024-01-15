@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use arrow2::{array::FixedSizeBinaryArray, bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
+use re_arrow2::{array::FixedSizeBinaryArray, bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
 
 mod mutable;
 

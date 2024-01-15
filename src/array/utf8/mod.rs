@@ -42,9 +42,9 @@ impl<T: AsRef<str>> AsRef<[u8]> for StrAsBytes<T> {
 /// Cloning and slicing this struct is `O(1)`.
 /// # Example
 /// ```
-/// use arrow2::bitmap::Bitmap;
-/// use arrow2::buffer::Buffer;
-/// use arrow2::array::Utf8Array;
+/// use re_arrow2::bitmap::Bitmap;
+/// use re_arrow2::buffer::Buffer;
+/// use re_arrow2::array::Utf8Array;
 /// # fn main() {
 /// let array = Utf8Array::<i32>::from([Some("hi"), None, Some("there")]);
 /// assert_eq!(array.value(0), "hi");

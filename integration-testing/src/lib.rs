@@ -17,15 +17,15 @@
 
 //! Common code used in the integration test binaries
 
-use arrow2::array::Array;
-use arrow2::io::ipc::IpcField;
+use re_arrow2::array::Array;
+use re_arrow2::io::ipc::IpcField;
 use serde_json::Value;
 
-use arrow2::chunk::Chunk;
-use arrow2::AHashMap;
-use arrow2::datatypes::*;
-use arrow2::error::Result;
-use arrow2::io::json_integration::{read, ArrowJsonBatch, ArrowJsonDictionaryBatch};
+use re_arrow2::chunk::Chunk;
+use re_arrow2::datatypes::*;
+use re_arrow2::error::Result;
+use re_arrow2::io::json_integration::{read, ArrowJsonBatch, ArrowJsonDictionaryBatch};
+use re_arrow2::AHashMap;
 
 use std::fs::File;
 use std::io::BufReader;

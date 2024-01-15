@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::BufReader;
 
-use arrow2::error::Result;
-use arrow2::io::avro::avro_schema;
-use arrow2::io::avro::read;
+use re_arrow2::error::Result;
+use re_arrow2::io::avro::avro_schema;
+use re_arrow2::io::avro::read;
 
 fn main() -> Result<()> {
     use std::env;

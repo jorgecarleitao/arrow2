@@ -1,7 +1,7 @@
-use arrow2::array::*;
-use arrow2::compute::length::*;
-use arrow2::datatypes::*;
-use arrow2::offset::Offset;
+use re_arrow2::array::*;
+use re_arrow2::compute::length::*;
+use re_arrow2::datatypes::*;
+use re_arrow2::offset::Offset;
 
 fn length_test_string<O: Offset>() {
     vec![
@@ -43,7 +43,7 @@ fn utf8() {
 
 #[test]
 fn consistency() {
-    use arrow2::datatypes::DataType::*;
+    use re_arrow2::datatypes::DataType::*;
 
     let datatypes = vec![
         Null,

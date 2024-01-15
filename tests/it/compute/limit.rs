@@ -1,5 +1,5 @@
-use arrow2::array::*;
-use arrow2::compute::limit::limit;
+use re_arrow2::array::*;
+use re_arrow2::compute::limit::limit;
 
 #[test]
 fn limit_array() {

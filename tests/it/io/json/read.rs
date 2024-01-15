@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use arrow2::array::*;
-use arrow2::datatypes::*;
-use arrow2::error::Result;
-use arrow2::io::json::read;
+use re_arrow2::array::*;
+use re_arrow2::datatypes::*;
+use re_arrow2::error::Result;
+use re_arrow2::io::json::read;
 
 #[test]
 fn read_json() -> Result<()> {

@@ -1,7 +1,7 @@
-use arrow2::array::new_null_array;
-use arrow2::compute::hash::*;
-use arrow2::datatypes::DataType::*;
-use arrow2::datatypes::TimeUnit;
+use re_arrow2::array::new_null_array;
+use re_arrow2::compute::hash::*;
+use re_arrow2::datatypes::DataType::*;
+use re_arrow2::datatypes::TimeUnit;
 
 #[test]
 fn consistency() {
