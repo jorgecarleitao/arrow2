@@ -240,6 +240,16 @@ impl<O: Offset> Utf8Array<O> {
     impl_mut_validity!();
     impl_into_array!();
 
+    /// Returns an option of a mutable reference to the values of this [`Utf8Array`].
+    pub fn get_mut_values(&mut self) -> Option<&mut [u8]> {
+        self.values.get_mut_slice()
+    }
+
+    /// Returns an option of a mutable reference to the values of this [`Utf8Array`].
+    pub fn get_mut_offsets(&mut self) -> Option<&mut [O]> {
+        self.offsets.get_mut_slice()
+    }
+
     /// Returns its internal representation
     #[must_use]
     pub fn into_inner(self) -> (DataType, OffsetsBuffer<O>, Buffer<u8>, Option<Bitmap>) {

@@ -371,6 +371,16 @@ impl<O: Offset> OffsetsBuffer<O> {
             .map_left(Self)
     }
 
+    /// Returns a mutable reference to its slice, if possible.
+    ///
+    /// This operation returns [`Some`] iff this [`OffsetsBuffer`]:
+    /// * has not been cloned (i.e. [`Arc`]`::get_mut` yields [`Some`])
+    /// * has not been imported from the c data interface (FFI)
+    #[inline]
+    pub fn get_mut_slice(&mut self) -> Option<&mut [O]> {
+        self.0.get_mut_slice()
+    }
+
     /// Returns a reference to its internal [`Buffer`].
     #[inline]
     pub fn buffer(&self) -> &Buffer<O> {
