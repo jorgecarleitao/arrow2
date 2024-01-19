@@ -746,7 +746,8 @@ pub use fmt::{get_display, get_value_display};
 
 pub use binary::{BinaryArray, BinaryValueIter, MutableBinaryArray, MutableBinaryValuesArray};
 pub use binview::{
-    BinaryViewArray, BinaryViewArrayGeneric, MutableBinaryViewArray, Utf8ViewArray, ViewType,
+    BinaryViewArray, BinaryViewArrayGeneric, MutableBinaryViewArray, MutablePlBinary,
+    MutablePlString, Utf8ViewArray, ViewType,
 };
 pub use boolean::{BooleanArray, MutableBooleanArray};
 pub use dictionary::{DictionaryArray, DictionaryKey, MutableDictionaryArray};

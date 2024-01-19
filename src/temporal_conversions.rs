@@ -7,7 +7,7 @@ use chrono::{
 
 use crate::error::Result;
 use crate::{
-    array::{PrimitiveArray, Utf8Array},
+    array::{PrimitiveArray, Utf8ViewArray},
     error::Error,
     offset::Offset,
 };
@@ -258,7 +258,10 @@ pub fn timestamp_ns_to_datetime_opt(v: i64) -> Option<NaiveDateTime> {
 
 /// Converts a timestamp in `time_unit` and `timezone` into [`chrono::DateTime`].
 #[inline]
-pub fn timestamp_to_naive_datetime(timestamp: i64, time_unit: TimeUnit) -> chrono::NaiveDateTime {
+pub(crate) fn timestamp_to_naive_datetime(
+    timestamp: i64,
+    time_unit: TimeUnit,
+) -> chrono::NaiveDateTime {
     match time_unit {
         TimeUnit::Second => timestamp_s_to_datetime(timestamp),
         TimeUnit::Millisecond => timestamp_ms_to_datetime(timestamp),
@@ -395,8 +398,8 @@ pub fn utf8_to_naive_timestamp_scalar(value: &str, fmt: &str, tu: &TimeUnit) -> 
         .ok()
 }
 
-fn utf8_to_timestamp_ns_impl<O: Offset, T: chrono::TimeZone>(
-    array: &Utf8Array<O>,
+fn utf8view_to_timestamp_impl<T: chrono::TimeZone>(
+    array: &Utf8ViewArray,
     fmt: &str,
     timezone: String,
     tz: T,
@@ -420,20 +423,24 @@ pub fn parse_offset_tz(timezone: &str) -> Result<chrono_tz::Tz> {
 
 #[cfg(feature = "chrono-tz")]
 #[cfg_attr(docsrs, doc(cfg(feature = "chrono-tz")))]
-fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
-    array: &Utf8Array<O>,
+fn chrono_tz_utf_to_timestamp(
+    array: &Utf8ViewArray,
     fmt: &str,
-    timezone: String,
+    time_zone: String,
+    time_unit: TimeUnit,
 ) -> Result<PrimitiveArray<i64>> {
-    let tz = parse_offset_tz(&timezone)?;
-    Ok(utf8_to_timestamp_ns_impl(array, fmt, timezone, tz))
+    let tz = parse_offset_tz(&time_zone)?;
+    Ok(utf8view_to_timestamp_impl(
+        array, fmt, time_zone, tz,
+    ))
 }
 
 #[cfg(not(feature = "chrono-tz"))]
-fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
-    _: &Utf8Array<O>,
+fn chrono_tz_utf_to_timestamp(
+    _: &Utf8ViewArray,
     _: &str,
     timezone: String,
+    time_unit: TimeUnit,
 ) -> Result<PrimitiveArray<i64>> {
     Err(Error::InvalidArgumentError(format!(
         "timezone \"{timezone}\" cannot be parsed (feature chrono-tz is not active)",
@@ -448,17 +455,20 @@ fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
 /// The feature `"chrono-tz"` enables IANA and zoneinfo formats for `timezone`.
 /// # Error
 /// This function errors iff `timezone` is not parsable to an offset.
-pub fn utf8_to_timestamp_ns<O: Offset>(
-    array: &Utf8Array<O>,
+pub(crate) fn utf8view_to_timestamp(
+    array: &Utf8ViewArray,
     fmt: &str,
     timezone: String,
 ) -> Result<PrimitiveArray<i64>> {
     let tz = parse_offset(timezone.as_str());
+    let time_unit = TimeUnit::Second;
 
     if let Ok(tz) = tz {
-        Ok(utf8_to_timestamp_ns_impl(array, fmt, timezone, tz))
+        Ok(utf8view_to_timestamp_impl(
+            array, fmt, timezone, tz,
+        ))
     } else {
-        chrono_tz_utf_to_timestamp_ns(array, fmt, timezone)
+        chrono_tz_utf_to_timestamp(array, fmt, timezone, time_unit)
     }
 }
 
@@ -466,8 +476,8 @@ pub fn utf8_to_timestamp_ns<O: Offset>(
 /// [`PrimitiveArray<i64>`] with type `Timestamp(Nanosecond, None)`.
 /// Timezones are ignored.
 /// Null elements remain null; non-parsable elements are set to null.
-pub fn utf8_to_naive_timestamp_ns<O: Offset>(
-    array: &Utf8Array<O>,
+pub(crate) fn utf8view_to_naive_timestamp(
+    array: &Utf8ViewArray,
     fmt: &str,
 ) -> PrimitiveArray<i64> {
     let iter = array

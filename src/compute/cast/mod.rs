@@ -9,6 +9,10 @@ mod primitive_to;
 mod utf8_to;
 
 pub use binary_to::*;
+#[cfg(feature = "dtype-decimal")]
+pub use binview_to::binview_to_decimal;
+use binview_to::binview_to_primitive_dyn;
+pub use binview_to::utf8view_to_utf8;
 pub use boolean_to::*;
 pub use decimal_to::*;
 pub use dictionary_to::*;
@@ -21,6 +25,10 @@ use crate::{
     error::{Error, Result},
     offset::{Offset, Offsets},
 };
+use crate::compute::cast::binview_to::{
+    utf8view_to_date32_dyn, utf8view_to_naive_timestamp_dyn, view_to_binary,
+};
+use crate::temporal_conversions::utf8view_to_timestamp;
 
 /// options defining how Cast kernels behave
 #[derive(Clone, Copy, Debug, Default)]
@@ -32,6 +40,15 @@ pub struct CastOptions {
     /// default to false
     /// whether to cast to an integer at the best-effort
     pub partial: bool,
+}
+
+impl CastOptions {
+    pub fn unchecked() -> Self {
+        Self {
+            wrapped: true,
+            partial: false,
+        }
+    }
 }
 
 impl CastOptions {
@@ -418,6 +435,14 @@ fn cast_list_to_fixed_size_list<O: Offset>(
     }
 }
 
+pub fn cast_default(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
+    cast(array, to_type, Default::default())
+}
+
+pub fn cast_unchecked(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn Array>> {
+    cast(array, to_type, CastOptions::unchecked())
+}
+
 /// Cast `array` to the provided data type and return a new [`Array`] with
 /// type `to_type`, if possible.
 ///
@@ -488,7 +513,36 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         (List(_), List(_)) => {
             cast_list::<i32>(array.as_any().downcast_ref().unwrap(), to_type, options)
                 .map(|x| x.boxed())
-        }
+        },
+        (BinaryView, _) => match to_type {
+            Utf8View => array
+                .as_any()
+                .downcast_ref::<BinaryViewArray>()
+                .unwrap()
+                .to_utf8view()
+                .map(|arr| arr.boxed()),
+            LargeBinary => Ok(binview_to::view_to_binary::<i64>(
+                array.as_any().downcast_ref().unwrap(),
+            )
+            .boxed()),
+            UInt8 => binview_to_primitive_dyn::<u8>(array, to_type, options),
+            UInt16 => binview_to_primitive_dyn::<u16>(array, to_type, options),
+            UInt32 => binview_to_primitive_dyn::<u32>(array, to_type, options),
+            UInt64 => binview_to_primitive_dyn::<u64>(array, to_type, options),
+            Int8 => binview_to_primitive_dyn::<i8>(array, to_type, options),
+            Int16 => binview_to_primitive_dyn::<i16>(array, to_type, options),
+            Int32 => binview_to_primitive_dyn::<i32>(array, to_type, options),
+            Int64 => binview_to_primitive_dyn::<i64>(array, to_type, options),
+            Float32 => binview_to_primitive_dyn::<f32>(array, to_type, options),
+            Float64 => binview_to_primitive_dyn::<f64>(array, to_type, options),
+            LargeList(inner) if matches!(inner.data_type, DataType::UInt8) => {
+                let bin_array = view_to_binary::<i64>(array.as_any().downcast_ref().unwrap());
+                Ok(binary_to_list(&bin_array, to_type.clone()).boxed())
+            },
+            _ => Err(Error::NotYetImplemented(format!(
+                "Unsupported casting from {from_type:?} to {to_type:?}"
+            ))),
+        },
         (LargeList(_), LargeList(_)) => {
             cast_list::<i64>(array.as_any().downcast_ref().unwrap(), to_type, options)
                 .map(|x| x.boxed())
@@ -525,6 +579,39 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
 
             Ok(Box::new(list_array))
         }
+
+        (Utf8View, _) => {
+            let arr = array.as_any().downcast_ref::<Utf8ViewArray>().unwrap();
+
+            match to_type {
+                BinaryView => Ok(arr.to_binview().boxed()),
+                LargeUtf8 => Ok(binview_to::utf8view_to_utf8::<i64>(arr).boxed()),
+                UInt8
+                | UInt16
+                | UInt32
+                | UInt64
+                | Int8
+                | Int16
+                | Int32
+                | Int64
+                | Float32
+                | Float64
+                | Decimal(_, _) => cast(&arr.to_binview(), to_type, options),
+                Timestamp(time_unit, None) => {
+                    utf8view_to_naive_timestamp_dyn(array, time_unit.to_owned())
+                },
+                Timestamp(time_unit, Some(time_zone)) => utf8view_to_timestamp(
+                    array.as_any().downcast_ref().unwrap(),
+                    RFC3339,
+                    time_zone.clone(),
+                )
+                .map(|arr| arr.boxed()),
+                Date32 => utf8view_to_date32_dyn(array),
+                _ => Err(Error::NotYetImplemented(format!(
+                    "Unsupported casting from {from_type:?} to {to_type:?}"
+                ))),
+            }
+        },
 
         (Dictionary(index_type, ..), _) => match_integer_type!(index_type, |$T| {
             dictionary_cast_dyn::<$T>(array, to_type, options)
@@ -566,35 +653,17 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
-        (Utf8View, _) => match to_type {
-            BinaryView => Ok(array
-                .as_any()
-                .downcast_ref::<Utf8ViewArray>()
-                .unwrap()
-                .to_binview()
-                .boxed()),
-            LargeUtf8 => Ok(binview_to::utf8view_to_utf8::<i64>(
-                array.as_any().downcast_ref().unwrap(),
+        (_, BinaryView) => from_to_binview(array, from_type, to_type).map(|arr| arr.boxed()),
+        (_, Utf8View) => match from_type {
+            LargeUtf8 => Ok(utf8_to_utf8view(
+                array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap(),
             )
             .boxed()),
-            _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {from_type:?} to {to_type:?} not supported",
-            ))),
-        },
-        (BinaryView, _) => match to_type {
-            BinaryView => array
-                .as_any()
-                .downcast_ref::<BinaryViewArray>()
-                .unwrap()
-                .to_utf8view()
-                .map(|arr| arr.boxed()),
-            LargeBinary => Ok(binview_to::view_to_binary::<i64>(
-                array.as_any().downcast_ref().unwrap(),
-            )
-            .boxed()),
-            _ => Err(Error::NotYetImplemented(format!(
-                "Casting from {from_type:?} to {to_type:?} not supported",
-            ))),
+            Utf8 => Ok(
+                utf8_to_utf8view(array.as_any().downcast_ref::<Utf8Array<i32>>().unwrap()).boxed(),
+            ),
+            _ => from_to_binview(array, from_type, to_type)
+                .map(|arr| unsafe { arr.to_utf8view_unchecked() }.boxed()),
         },
         (Utf8, _) => match to_type {
             UInt8 => utf8_to_primitive_dyn::<i32, u8>(array, to_type, options),
@@ -719,16 +788,6 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
         },
 
         (Binary, _) => match to_type {
-            UInt8 => binary_to_primitive_dyn::<i32, u8>(array, to_type, options),
-            UInt16 => binary_to_primitive_dyn::<i32, u16>(array, to_type, options),
-            UInt32 => binary_to_primitive_dyn::<i32, u32>(array, to_type, options),
-            UInt64 => binary_to_primitive_dyn::<i32, u64>(array, to_type, options),
-            Int8 => binary_to_primitive_dyn::<i32, i8>(array, to_type, options),
-            Int16 => binary_to_primitive_dyn::<i32, i16>(array, to_type, options),
-            Int32 => binary_to_primitive_dyn::<i32, i32>(array, to_type, options),
-            Int64 => binary_to_primitive_dyn::<i32, i64>(array, to_type, options),
-            Float32 => binary_to_primitive_dyn::<i32, f32>(array, to_type, options),
-            Float64 => binary_to_primitive_dyn::<i32, f64>(array, to_type, options),
             LargeBinary => Ok(Box::new(binary_to_large_binary(
                 array.as_any().downcast_ref().unwrap(),
                 to_type.clone(),
@@ -1041,4 +1100,31 @@ fn cast_to_dictionary<K: DictionaryKey>(
             "Unsupported output type for dictionary packing: {dict_value_type:?}"
         ))),
     }
+}
+
+fn from_to_binview(
+    array: &dyn Array,
+    from_type: &DataType,
+    to_type: &DataType,
+) -> Result<BinaryViewArray> {
+    use DataType::*;
+    let binview = match from_type {
+        UInt8 => primitive_to_binview_dyn::<u8>(array),
+        UInt16 => primitive_to_binview_dyn::<u16>(array),
+        UInt32 => primitive_to_binview_dyn::<u32>(array),
+        UInt64 => primitive_to_binview_dyn::<u64>(array),
+        Int8 => primitive_to_binview_dyn::<i8>(array),
+        Int16 => primitive_to_binview_dyn::<i16>(array),
+        Int32 => primitive_to_binview_dyn::<i32>(array),
+        Int64 => primitive_to_binview_dyn::<i64>(array),
+        Float32 => primitive_to_binview_dyn::<f32>(array),
+        Float64 => primitive_to_binview_dyn::<f64>(array),
+        Binary => binary_to_binview::<i32>(array.as_any().downcast_ref().unwrap()),
+        FixedSizeBinary(_) => fixed_size_binary_to_binview(array.as_any().downcast_ref().unwrap()),
+        LargeBinary => binary_to_binview::<i64>(array.as_any().downcast_ref().unwrap()),
+        _ => Err(Error::NotYetImplemented(format!(
+            "Unsupported casting from {from_type:?} to {to_type:?}"
+        ))),
+    };
+    Ok(binview)
 }

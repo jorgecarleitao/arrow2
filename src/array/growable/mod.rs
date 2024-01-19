@@ -31,6 +31,7 @@ mod dictionary;
 pub use dictionary::GrowableDictionary;
 
 mod binview;
+pub use binview::GrowableBinaryViewArray;
 mod utils;
 
 /// Describes a struct that can be extended from slices of other pre-existing [`Array`]s.

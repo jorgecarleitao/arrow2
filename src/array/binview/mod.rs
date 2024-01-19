@@ -21,18 +21,24 @@ mod private {
     impl Sealed for str {}
     impl Sealed for [u8] {}
 }
+pub use iterator::BinaryViewValueIter;
 pub use mutable::MutableBinaryViewArray;
 use private::Sealed;
 
-use crate::array::binview::iterator::BinaryViewValueIter;
 use crate::array::binview::view::{
-    validate_binary_view, validate_utf8_only_view, validate_utf8_view,
+    validate_binary_view, validate_utf8_only, validate_utf8_view,
 };
 use crate::bitmap::utils::{BitmapIter, ZipValidity};
 use crate::error::{Error, Result};
 
 pub type BinaryViewArray = BinaryViewArrayGeneric<[u8]>;
 pub type Utf8ViewArray = BinaryViewArrayGeneric<str>;
+
+pub type MutablePlString = MutableBinaryViewArray<str>;
+pub type MutablePlBinary = MutableBinaryViewArray<[u8]>;
+
+static BIN_VIEW_TYPE: DataType = DataType::BinaryView;
+static UTF8_VIEW_TYPE: DataType = DataType::Utf8View;
 
 pub trait ViewType: Sealed + 'static + PartialEq + AsRef<Self> {
     const IS_UTF8: bool;
@@ -47,6 +53,8 @@ pub trait ViewType: Sealed + 'static + PartialEq + AsRef<Self> {
 
     #[allow(clippy::wrong_self_convention)]
     fn into_owned(&self) -> Self::Owned;
+
+    fn dtype() -> &'static DataType;
 }
 
 impl ViewType for str {
@@ -66,6 +74,9 @@ impl ViewType for str {
 
     fn into_owned(&self) -> Self::Owned {
         self.to_string()
+    }
+    fn dtype() -> &'static DataType {
+        &UTF8_VIEW_TYPE
     }
 }
 
@@ -87,6 +98,10 @@ impl ViewType for [u8] {
     fn into_owned(&self) -> Self::Owned {
         self.to_vec()
     }
+
+    fn dtype() -> &'static DataType {
+        &BIN_VIEW_TYPE
+    }
 }
 
 pub struct BinaryViewArrayGeneric<T: ViewType + ?Sized> {
@@ -101,6 +116,12 @@ pub struct BinaryViewArrayGeneric<T: ViewType + ?Sized> {
     total_bytes_len: usize,
     /// Total bytes in the buffer (excluding remaining capacity)
     total_buffer_len: usize,
+}
+
+impl<T: ViewType + ?Sized> PartialEq for BinaryViewArrayGeneric<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.into_iter().zip(other).all(|(l, r)| l == r)
+    }
 }
 
 impl<T: ViewType + ?Sized> Clone for BinaryViewArrayGeneric<T> {
@@ -260,7 +281,7 @@ impl<T: ViewType + ?Sized> BinaryViewArrayGeneric<T> {
         // data: 12 bytes
 
         let bytes = if len <= 12 {
-            let ptr = self.views.storage_ptr() as *const u8;
+            let ptr = self.views.as_ptr() as *const u8;
             std::slice::from_raw_parts(ptr.add(i * 16 + 4), len as usize)
         } else {
             let buffer_idx = (v >> 64) as u32;
@@ -283,14 +304,24 @@ impl<T: ViewType + ?Sized> BinaryViewArrayGeneric<T> {
         BinaryViewValueIter::new(self)
     }
 
+    pub fn len_iter(&self) -> impl Iterator<Item = u32> + '_ {
+        self.views.iter().map(|v| *v as u32)
+    }
+
     impl_sliced!();
     impl_mut_validity!();
     impl_into_array!();
 
-    pub fn from<S: AsRef<T>, P: AsRef<[Option<S>]>>(slice: P) -> Self {
+    pub fn from_slice<S: AsRef<T>, P: AsRef<[Option<S>]>>(slice: P) -> Self {
         let mutable = MutableBinaryViewArray::from_iterator(
             slice.as_ref().iter().map(|opt_v| opt_v.as_ref()),
         );
+        mutable.into()
+    }
+
+    pub fn from_slice_values<S: AsRef<T>, P: AsRef<[S]>>(slice: P) -> Self {
+        let mutable =
+            MutableBinaryViewArray::from_values_iter(slice.as_ref().iter().map(|v| v.as_ref()));
         mutable.into()
     }
 
@@ -308,12 +339,40 @@ impl<T: ViewType + ?Sized> BinaryViewArrayGeneric<T> {
     pub fn len(&self) -> usize {
         self.views.len()
     }
+
+    /// Garbage collect
+    pub fn gc(self) -> Self {
+        if self.buffers.is_empty() {
+            return self;
+        }
+        let mut mutable = MutableBinaryViewArray::with_capacity(self.len());
+        let buffers = self.raw_buffers.as_ref();
+
+        for view in self.views.as_ref() {
+            unsafe { mutable.push_view(*view, buffers) }
+        }
+        mutable.freeze().with_validity(self.validity)
+    }
+
+    pub fn maybe_gc(self) -> Self {
+        if self.total_buffer_len == 0 {
+            return self;
+        }
+        // Subtract the maximum amount of inlined strings.
+        let min_in_buffer = self.total_bytes_len.saturating_sub(self.len() * 12);
+        let frac = (min_in_buffer as f64) / ((self.total_buffer_len() + 1) as f64);
+
+        if frac < 0.25 {
+            return self.gc();
+        }
+        self
+    }
 }
 
 impl BinaryViewArray {
     /// Validate the underlying bytes on UTF-8.
     pub fn validate_utf8(&self) -> Result<()> {
-        validate_utf8_only_view(&self.views, &self.buffers)
+        validate_utf8_only(&self.views, &self.buffers)
     }
 
     /// Convert [`BinaryViewArray`] to [`Utf8ViewArray`].
@@ -369,7 +428,7 @@ impl<T: ViewType + ?Sized> Array for BinaryViewArrayGeneric<T> {
     }
 
     fn data_type(&self) -> &DataType {
-        &self.data_type
+        T::dtype()
     }
 
     fn validity(&self) -> Option<&Bitmap> {
@@ -385,12 +444,14 @@ impl<T: ViewType + ?Sized> Array for BinaryViewArrayGeneric<T> {
     }
 
     unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
+        debug_assert!(offset + length <= self.len());
         self.validity = self
             .validity
             .take()
             .map(|bitmap| bitmap.sliced_unchecked(offset, length))
             .filter(|bitmap| bitmap.unset_bits() > 0);
         self.views.slice_unchecked(offset, length);
+        self.total_bytes_len = self.len_iter().map(|v| v as usize).sum::<usize>();
     }
 
     fn with_validity(&self, validity: Option<Bitmap>) -> Box<dyn Array> {
