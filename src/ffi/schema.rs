@@ -261,6 +261,8 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
         "tDn" => DataType::Duration(TimeUnit::Nanosecond),
         "tiM" => DataType::Interval(IntervalUnit::YearMonth),
         "tiD" => DataType::Interval(IntervalUnit::DayTime),
+        "vu" => DataType::Utf8View,
+        "vz" => DataType::BinaryView,
         "+l" => {
             let child = schema.child(0);
             DataType::List(Box::new(to_field(child)?))
