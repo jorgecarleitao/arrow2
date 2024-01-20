@@ -313,7 +313,9 @@ impl<T: ViewType + ?Sized> MutableBinaryViewArray<T> {
 
 impl MutableBinaryViewArray<[u8]> {
     pub fn validate_utf8(&mut self) -> Result<()> {
-        validate_utf8_only(&self.views, &self.completed_buffers)
+        self.finish_in_progress();
+        // views are correct
+        unsafe { validate_utf8_only(&self.views, &self.completed_buffers) }
     }
 }
 
