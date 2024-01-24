@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use crate::array::{Array, DictionaryKey, FixedSizeListArray, ListArray, StructArray};
+use crate::array::{Array, DictionaryKey, FixedSizeListArray, ListArray, StructArray, View};
 use crate::datatypes::DataType;
 use crate::error::Error;
 use crate::offset::Offset;
@@ -62,12 +62,12 @@ fn get_bytes<'a>(
     data: &'a [u8],
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
-) -> PolarsResult<&'a [u8]> {
+) -> Result<&'a [u8], Error> {
     let (offset, length) = get_buffer_bounds(buffers)?;
 
     // verify that they are in-bounds
     data.get(block_offset + offset..block_offset + offset + length)
-        .ok_or_else(|| polars_err!(ComputeError: "buffer out of bounds"))
+        .ok_or_else(|| Error::OutOfSpec("buffer out of bounds".to_string()))
 }
 
 fn get_validity<'a>(
@@ -88,6 +88,18 @@ fn get_validity<'a>(
     } else {
         None
     })
+}
+fn get_num_rows_and_null_count(node: &Node) -> Result<(usize, usize), Error> {
+    let num_rows: usize = node
+        .length()
+        .try_into()
+        .map_err(|_| Error::OutOfSpec("Negative footer length".to_string()))?;
+
+    let null_count: usize = node
+        .null_count()
+        .try_into()
+        .map_err(|_|  Error::OutOfSpec("Negative footer length".to_string()))?;
+    Ok((num_rows, null_count))
 }
 
 fn mmap_binary<O: Offset, T: AsRef<[u8]>>(
@@ -133,17 +145,17 @@ fn mmap_binview<T: AsRef<[u8]>>(
     block_offset: usize,
     buffers: &mut VecDeque<IpcBuffer>,
     variadic_buffer_counts: &mut VecDeque<usize>,
-) -> PolarsResult<ArrowArray> {
+) -> Result<ArrowArray, Error> {
     let (num_rows, null_count) = get_num_rows_and_null_count(node)?;
     let data_ref = data.as_ref().as_ref();
 
     let validity = get_validity(data_ref, block_offset, buffers, null_count)?.map(|x| x.as_ptr());
 
-    let views = get_buffer::<u128>(data_ref, block_offset, buffers, num_rows)?;
+    let views = get_buffer::<View>(data_ref, block_offset, buffers, num_rows)?;
 
     let n_variadic = variadic_buffer_counts
         .pop_front()
-        .ok_or_else(|| polars_err!(ComputeError: "expected variadic_buffer_count"))?;
+        .ok_or_else(|| Error::OutOfSpec("expected variadic_buffer_count".to_string()))?;
 
     let mut buffer_ptrs = Vec::with_capacity(n_variadic + 2);
     buffer_ptrs.push(validity);

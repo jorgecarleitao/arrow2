@@ -7,6 +7,9 @@ use crate::ffi::InternalArrowArray;
 use std::ops::Deref;
 
 pub(crate) enum BytesAllocator {
+    // Dead code lint is a false positive.
+    // remove once fixed in rustc
+    #[allow(dead_code)]
     InternalArrowArray(InternalArrowArray),
 
     #[cfg(feature = "arrow")]

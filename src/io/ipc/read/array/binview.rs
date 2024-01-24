@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 
 use super::super::read_basic::*;
 use super::*;
-use crate::array::{ArrayRef, BinaryViewArrayGeneric, ViewType};
+use crate::array::{ArrayRef, BinaryViewArrayGeneric, View, ViewType};
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 
@@ -37,7 +37,7 @@ pub fn read_binview<T: ViewType + ?Sized, R: Read + Seek>(
     )?;
 
     let length = try_get_array_length(field_node, limit)?;
-    let views: Buffer<u128> = read_buffer(
+    let views: Buffer<View> = read_buffer(
         buffers,
         length,
         reader,
