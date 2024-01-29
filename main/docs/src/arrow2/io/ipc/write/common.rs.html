@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/ipc/write/common.rs`."><title>common.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/ipc/write/common.rs`."><title>common.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -491,7 +493,7 @@
         | FixedSizeBinary =&gt; <span class="prelude-val">Ok</span>(()),
         Dictionary(key_type) =&gt; <span class="macro">match_integer_type!</span>(key_type, |<span class="macro-nonterminal">$T</span>| {
             <span class="kw">let </span>dict_id = field.dictionary_id
-                .ok_or_else(|| Error::InvalidArgumentError(<span class="string">&quot;Dictionaries must have an associated id&quot;</span>.to_string()))<span class="question-mark">?</span>;
+                .ok_or_else(|| Error::InvalidArgumentError(<span class="string">"Dictionaries must have an associated id"</span>.to_string()))<span class="question-mark">?</span>;
 
             <span class="kw">let </span>emit = dictionary_tracker.insert(dict_id, array)<span class="question-mark">?</span>;
 
@@ -519,7 +521,7 @@
             <span class="kw">let </span>fields = field.fields.as_slice();
             <span class="kw">if </span>array.fields().len() != fields.len() {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgumentError(
-                    <span class="string">&quot;The number of fields in a struct must equal the number of children in IpcField&quot;</span>.to_string(),
+                    <span class="string">"The number of fields in a struct must equal the number of children in IpcField"</span>.to_string(),
                 ));
             }
             fields
@@ -589,7 +591,7 @@
             <span class="kw">let </span>fields = <span class="kw-2">&amp;</span>field.fields[..]; <span class="comment">// todo: error instead
             </span><span class="kw">if </span>values.len() != fields.len() {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgumentError(
-                    <span class="string">&quot;The number of fields in a union must equal the number of children in IpcField&quot;
+                    <span class="string">"The number of fields in a union must equal the number of children in IpcField"
                         </span>.to_string(),
                 ));
             }
@@ -680,7 +682,7 @@
 }
 
 <span class="doccomment">/// Write [`Chunk`] into two sets of bytes, one for the header (ipc::Schema::Message) and the
-/// other for the batch&#39;s data
+/// other for the batch's data
 </span><span class="kw">fn </span>chunk_to_bytes_amortized(
     chunk: <span class="kw-2">&amp;</span>Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;,
     options: <span class="kw-2">&amp;</span>WriteOptions,
@@ -780,7 +782,7 @@
 
 <span class="doccomment">/// Keeps track of dictionaries that have been written, to avoid emitting the same dictionary
 /// multiple times. Can optionally error if an update to an existing dictionary is attempted, which
-/// isn&#39;t allowed in the `FileWriter`.
+/// isn't allowed in the `FileWriter`.
 </span><span class="kw">pub struct </span>DictionaryTracker {
     <span class="kw">pub </span>dictionaries: Dictionaries,
     <span class="kw">pub </span>cannot_replace: bool,
@@ -790,7 +792,7 @@
     <span class="doccomment">/// Keep track of the dictionary with the given ID and values. Behavior:
     ///
     /// * If this ID has been written already and has the same data, return `Ok(false)` to indicate
-    ///   that the dictionary was not actually inserted (because it&#39;s already been seen).
+    ///   that the dictionary was not actually inserted (because it's already been seen).
     /// * If this ID has been written already but with different data, and this tracker is
     ///   configured to return an error, return an error.
     /// * If the tracker has not been configured to error on replacement or this dictionary
@@ -817,9 +819,9 @@
                 </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
             } <span class="kw">else if </span><span class="self">self</span>.cannot_replace {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgumentError(
-                    <span class="string">&quot;Dictionary replacement detected when writing IPC file format. \
+                    <span class="string">"Dictionary replacement detected when writing IPC file format. \
                      Arrow IPC files only support a single dictionary for a given field \
-                     across all batches.&quot;
+                     across all batches."
                         </span>.to_string(),
                 ));
             }
@@ -847,12 +849,12 @@
 
 <span class="doccomment">/// An array [`Chunk`] with optional accompanying IPC fields.
 </span><span class="attr">#[derive(Debug, Clone, PartialEq)]
-</span><span class="kw">pub struct </span>Record&lt;<span class="lifetime">&#39;a</span>&gt; {
-    columns: Cow&lt;<span class="lifetime">&#39;a</span>, Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;&gt;,
-    fields: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;a</span>, [IpcField]&gt;&gt;,
+</span><span class="kw">pub struct </span>Record&lt;<span class="lifetime">'a</span>&gt; {
+    columns: Cow&lt;<span class="lifetime">'a</span>, Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;&gt;,
+    fields: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'a</span>, [IpcField]&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Record&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Record&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// Get the IPC fields for this record.
     </span><span class="kw">pub fn </span>fields(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[IpcField]&gt; {
         <span class="self">self</span>.fields.as_deref()
@@ -864,7 +866,7 @@
     }
 }
 
-<span class="kw">impl </span>From&lt;Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;&gt; <span class="kw">for </span>Record&lt;<span class="lifetime">&#39;static</span>&gt; {
+<span class="kw">impl </span>From&lt;Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;&gt; <span class="kw">for </span>Record&lt;<span class="lifetime">'static</span>&gt; {
     <span class="kw">fn </span>from(columns: Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             columns: Cow::Owned(columns),
@@ -873,9 +875,9 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, F&gt; From&lt;(Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;, <span class="prelude-ty">Option</span>&lt;F&gt;)&gt; <span class="kw">for </span>Record&lt;<span class="lifetime">&#39;a</span>&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, F&gt; From&lt;(Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;, <span class="prelude-ty">Option</span>&lt;F&gt;)&gt; <span class="kw">for </span>Record&lt;<span class="lifetime">'a</span>&gt;
 <span class="kw">where
-    </span>F: Into&lt;Cow&lt;<span class="lifetime">&#39;a</span>, [IpcField]&gt;&gt;,
+    </span>F: Into&lt;Cow&lt;<span class="lifetime">'a</span>, [IpcField]&gt;&gt;,
 {
     <span class="kw">fn </span>from((columns, fields): (Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;, <span class="prelude-ty">Option</span>&lt;F&gt;)) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
@@ -885,11 +887,11 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, F&gt; From&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;, <span class="prelude-ty">Option</span>&lt;F&gt;)&gt; <span class="kw">for </span>Record&lt;<span class="lifetime">&#39;a</span>&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, F&gt; From&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;, <span class="prelude-ty">Option</span>&lt;F&gt;)&gt; <span class="kw">for </span>Record&lt;<span class="lifetime">'a</span>&gt;
 <span class="kw">where
-    </span>F: Into&lt;Cow&lt;<span class="lifetime">&#39;a</span>, [IpcField]&gt;&gt;,
+    </span>F: Into&lt;Cow&lt;<span class="lifetime">'a</span>, [IpcField]&gt;&gt;,
 {
-    <span class="kw">fn </span>from((columns, fields): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;, <span class="prelude-ty">Option</span>&lt;F&gt;)) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>from((columns, fields): (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Chunk&lt;Box&lt;<span class="kw">dyn </span>Array&gt;&gt;, <span class="prelude-ty">Option</span>&lt;F&gt;)) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             columns: Cow::Borrowed(columns),
             fields: fields.map(|f| f.into()),

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/csv/write/serialize.rs`."><title>serialize.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/csv/write/serialize.rs`."><title>serialize.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -539,25 +541,25 @@
             time32_format: <span class="prelude-val">None</span>,
             time64_format: <span class="prelude-val">None</span>,
             timestamp_format: <span class="prelude-val">None</span>,
-            delimiter: <span class="string">b&#39;,&#39;</span>,
-            quote: <span class="string">b&#39;&quot;&#39;</span>,
+            delimiter: <span class="string">b','</span>,
+            quote: <span class="string">b'"'</span>,
         }
     }
 }
 
 <span class="doccomment">/// Utility to write to `&amp;mut Vec&lt;u8&gt;` buffer
-</span><span class="kw">struct </span>StringWrap&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw">pub </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>Vec&lt;u8&gt;);
+</span><span class="kw">struct </span>StringWrap&lt;<span class="lifetime">'a</span>&gt;(<span class="kw">pub </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>Vec&lt;u8&gt;);
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Write <span class="kw">for </span>StringWrap&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Write <span class="kw">for </span>StringWrap&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>write_str(<span class="kw-2">&amp;mut </span><span class="self">self</span>, s: <span class="kw-2">&amp;</span>str) -&gt; std::fmt::Result {
         <span class="self">self</span>.<span class="number">0</span>.extend_from_slice(s.as_bytes());
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="kw">fn </span>primitive_write&lt;<span class="lifetime">&#39;a</span>, T: NativeType + ToLexical&gt;(
-    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PrimitiveArray&lt;T&gt;,
-) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">fn </span>primitive_write&lt;<span class="lifetime">'a</span>, T: NativeType + ToLexical&gt;(
+    array: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>PrimitiveArray&lt;T&gt;,
+) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">'a</span>&gt; {
     Box::new(BufStreamingIterator::new(
         array.iter(),
         |x, buf| {
@@ -588,7 +590,7 @@
                 <span class="kw">move </span>|x, buf| {
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
                         <span class="kw">let </span>dt = (<span class="macro-nonterminal">$</span><span class="kw">fn</span>)(<span class="kw-2">*</span><span class="macro-nonterminal">x</span>).format(format);
-                        <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">&quot;{}&quot;</span>, dt);
+                        <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">"{}"</span>, dt);
                     }
                 },
                 <span class="macro">vec!</span>[],
@@ -599,7 +601,7 @@
                 <span class="kw">move </span>|x, buf| {
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
                         <span class="kw">let </span>dt = (<span class="macro-nonterminal">$</span><span class="kw">fn</span>)(<span class="kw-2">*</span><span class="macro-nonterminal">x</span>);
-                        <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">&quot;{}&quot;</span>, dt);
+                        <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">"{}"</span>, dt);
                     }
                 },
                 <span class="macro">vec!</span>[],
@@ -608,11 +610,11 @@
     }};
 }
 
-<span class="kw">fn </span>timestamp_with_tz_default&lt;<span class="lifetime">&#39;a</span>&gt;(
-    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PrimitiveArray&lt;i64&gt;,
+<span class="kw">fn </span>timestamp_with_tz_default&lt;<span class="lifetime">'a</span>&gt;(
+    array: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>PrimitiveArray&lt;i64&gt;,
     time_unit: TimeUnit,
     tz: <span class="kw-2">&amp;</span>str,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a</span>&gt;&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">'a</span>&gt;&gt; {
     <span class="kw">let </span>timezone = temporal_conversions::parse_offset(tz);
     <span class="prelude-val">Ok</span>(<span class="kw">match </span>timezone {
         <span class="prelude-val">Ok</span>(timezone) =&gt; Box::new(BufStreamingIterator::new(
@@ -620,12 +622,12 @@
             <span class="kw">move </span>|x, buf| {
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
                     <span class="kw">let </span>dt = temporal_conversions::timestamp_to_datetime(<span class="kw-2">*</span>x, time_unit, <span class="kw-2">&amp;</span>timezone);
-                    <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">&quot;{dt}&quot;</span>);
+                    <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">"{dt}"</span>);
                 }
             },
             <span class="macro">vec!</span>[],
         )),
-        <span class="attr">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
+        <span class="attr">#[cfg(feature = <span class="string">"chrono-tz"</span>)]
         </span><span class="kw">_ </span>=&gt; {
             <span class="kw">let </span>timezone = temporal_conversions::parse_offset_tz(tz)<span class="question-mark">?</span>;
             Box::new(BufStreamingIterator::new(
@@ -634,28 +636,28 @@
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
                         <span class="kw">let </span>dt =
                             temporal_conversions::timestamp_to_datetime(<span class="kw-2">*</span>x, time_unit, <span class="kw-2">&amp;</span>timezone);
-                        <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">&quot;{dt}&quot;</span>);
+                        <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">"{dt}"</span>);
                     }
                 },
                 <span class="macro">vec!</span>[],
             ))
         }
-        <span class="attr">#[cfg(not(feature = <span class="string">&quot;chrono-tz&quot;</span>))]
+        <span class="attr">#[cfg(not(feature = <span class="string">"chrono-tz"</span>))]
         </span><span class="kw">_ </span>=&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::Error::InvalidArgumentError(
-                <span class="string">&quot;Invalid Offset format (must be [-]00:00) or chrono-tz feature not active&quot;
+                <span class="string">"Invalid Offset format (must be [-]00:00) or chrono-tz feature not active"
                     </span>.to_string(),
             ))
         }
     })
 }
 
-<span class="kw">fn </span>timestamp_with_tz_with_format&lt;<span class="lifetime">&#39;a</span>&gt;(
-    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PrimitiveArray&lt;i64&gt;,
+<span class="kw">fn </span>timestamp_with_tz_with_format&lt;<span class="lifetime">'a</span>&gt;(
+    array: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>PrimitiveArray&lt;i64&gt;,
     time_unit: TimeUnit,
     tz: <span class="kw-2">&amp;</span>str,
-    format: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a</span>&gt;&gt; {
+    format: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">'a</span>&gt;&gt; {
     <span class="kw">let </span>timezone = temporal_conversions::parse_offset(tz);
     <span class="prelude-val">Ok</span>(<span class="kw">match </span>timezone {
         <span class="prelude-val">Ok</span>(timezone) =&gt; Box::new(BufStreamingIterator::new(
@@ -664,12 +666,12 @@
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
                     <span class="kw">let </span>dt = temporal_conversions::timestamp_to_datetime(<span class="kw-2">*</span>x, time_unit, <span class="kw-2">&amp;</span>timezone)
                         .format(format);
-                    <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">&quot;{dt}&quot;</span>);
+                    <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">"{dt}"</span>);
                 }
             },
             <span class="macro">vec!</span>[],
         )),
-        <span class="attr">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
+        <span class="attr">#[cfg(feature = <span class="string">"chrono-tz"</span>)]
         </span><span class="kw">_ </span>=&gt; {
             <span class="kw">let </span>timezone = temporal_conversions::parse_offset_tz(tz)<span class="question-mark">?</span>;
             Box::new(BufStreamingIterator::new(
@@ -679,28 +681,28 @@
                         <span class="kw">let </span>dt =
                             temporal_conversions::timestamp_to_datetime(<span class="kw-2">*</span>x, time_unit, <span class="kw-2">&amp;</span>timezone)
                                 .format(format);
-                        <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">&quot;{dt}&quot;</span>);
+                        <span class="kw">let _ </span>= <span class="macro">write!</span>(StringWrap(buf), <span class="string">"{dt}"</span>);
                     }
                 },
                 <span class="macro">vec!</span>[],
             ))
         }
-        <span class="attr">#[cfg(not(feature = <span class="string">&quot;chrono-tz&quot;</span>))]
+        <span class="attr">#[cfg(not(feature = <span class="string">"chrono-tz"</span>))]
         </span><span class="kw">_ </span>=&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::Error::InvalidArgumentError(
-                <span class="string">&quot;Invalid Offset format (must be [-]00:00) or chrono-tz feature not active&quot;
+                <span class="string">"Invalid Offset format (must be [-]00:00) or chrono-tz feature not active"
                     </span>.to_string(),
             ))
         }
     })
 }
 
-<span class="kw">fn </span>timestamp_with_tz&lt;<span class="lifetime">&#39;a</span>&gt;(
-    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PrimitiveArray&lt;i64&gt;,
+<span class="kw">fn </span>timestamp_with_tz&lt;<span class="lifetime">'a</span>&gt;(
+    array: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>PrimitiveArray&lt;i64&gt;,
     time_unit: TimeUnit,
     tz: <span class="kw-2">&amp;</span>str,
-    format: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a</span>&gt;&gt; {
+    format: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">'a</span>&gt;&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(format) = format {
         timestamp_with_tz_with_format(array, time_unit, tz, format)
     } <span class="kw">else </span>{
@@ -708,10 +710,10 @@
     }
 }
 
-<span class="kw">fn </span>new_utf8_serializer&lt;<span class="lifetime">&#39;a</span>, O: Offset&gt;(
-    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Utf8Array&lt;O&gt;,
-    options: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SerializeOptions,
-) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">fn </span>new_utf8_serializer&lt;<span class="lifetime">'a</span>, O: Offset&gt;(
+    array: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Utf8Array&lt;O&gt;,
+    options: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SerializeOptions,
+) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">'a</span>&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>local_buf = <span class="macro">vec!</span>[<span class="number">0u8</span>; <span class="number">64</span>];
     <span class="kw">let </span><span class="kw-2">mut </span>ser_writer = csv_core::WriterBuilder::new()
         .quote(options.quote)
@@ -729,7 +731,7 @@
                 <span class="comment">// Empty strings are quoted.
                 // This will ensure a csv parser will not read them as missing
                 // in a delimited field
-                </span><span class="prelude-val">Some</span>(<span class="string">&quot;&quot;</span>) =&gt; buf.extend_from_slice(<span class="string">b&quot;\&quot;\&quot;&quot;</span>),
+                </span><span class="prelude-val">Some</span>(<span class="string">""</span>) =&gt; buf.extend_from_slice(<span class="string">b"\"\""</span>),
                 <span class="prelude-val">Some</span>(s) =&gt; {
                     <span class="kw">if </span>s.len() * <span class="number">3 </span>&gt; local_buf.len() {
                         resize(<span class="kw-2">&amp;mut </span>local_buf, s.len() * <span class="number">3</span>)
@@ -769,10 +771,10 @@
 /// * naive timestamps (timestamps without timezone information)
 /// # Error
 /// This function errors if any of the logical types in `batch` is not supported.
-</span><span class="kw">pub fn </span>new_serializer&lt;<span class="lifetime">&#39;a</span>&gt;(
-    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Array,
-    options: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SerializeOptions,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a</span>&gt;&gt; {
+</span><span class="kw">pub fn </span>new_serializer&lt;<span class="lifetime">'a</span>&gt;(
+    array: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Array,
+    options: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SerializeOptions,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">'a</span>&gt;&gt; {
     <span class="prelude-val">Ok</span>(<span class="kw">match </span>array.data_type() {
         DataType::Boolean =&gt; {
             <span class="kw">let </span>array = array.as_any().downcast_ref::&lt;BooleanArray&gt;().unwrap();
@@ -781,9 +783,9 @@
                 |x, buf| {
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = x {
                         <span class="kw">if </span>x {
-                            buf.extend_from_slice(<span class="string">b&quot;true&quot;</span>);
+                            buf.extend_from_slice(<span class="string">b"true"</span>);
                         } <span class="kw">else </span>{
-                            buf.extend_from_slice(<span class="string">b&quot;false&quot;</span>);
+                            buf.extend_from_slice(<span class="string">b"false"</span>);
                         }
                     }
                 },
@@ -952,19 +954,19 @@
                 <span class="kw">_ </span>=&gt; <span class="macro">todo!</span>(),
             },
             <span class="kw">_ </span>=&gt; {
-                <span class="macro">panic!</span>(<span class="string">&quot;only dictionary with string values are supported by csv writer&quot;</span>)
+                <span class="macro">panic!</span>(<span class="string">"only dictionary with string values are supported by csv writer"</span>)
             }
         },
-        dt =&gt; <span class="macro">panic!</span>(<span class="string">&quot;data type: {dt:?} not supported by csv writer&quot;</span>),
+        dt =&gt; <span class="macro">panic!</span>(<span class="string">"data type: {dt:?} not supported by csv writer"</span>),
     })
 }
 
 <span class="doccomment">/// Helper for serializing a dictonary array. The generic parameters are:
 /// - `K` for the type of the keys of the dictionary
 /// - `O` for the type of the offsets in the Utf8Array: {i32, i64}
-</span><span class="kw">fn </span>serialize_utf8_dict&lt;<span class="lifetime">&#39;a</span>, K: DictionaryKey, O: Offset&gt;(
-    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Any,
-) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">fn </span>serialize_utf8_dict&lt;<span class="lifetime">'a</span>, K: DictionaryKey, O: Offset&gt;(
+    array: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Any,
+) -&gt; Box&lt;<span class="kw">dyn </span>StreamingIterator&lt;Item = [u8]&gt; + <span class="lifetime">'a</span>&gt; {
     <span class="kw">let </span>array = array.downcast_ref::&lt;DictionaryArray&lt;K&gt;&gt;().unwrap();
     <span class="kw">let </span>values = array
         .values()

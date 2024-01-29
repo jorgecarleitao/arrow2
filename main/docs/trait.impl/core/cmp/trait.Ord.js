@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"arrow2":[["impl&lt;'a&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html\" title=\"trait core::cmp::Ord\">Ord</a> for <a class=\"struct\" href=\"arrow2/compute/sort/row/struct.Row.html\" title=\"struct arrow2::compute::sort::row::Row\">Row</a>&lt;'a&gt;"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html\" title=\"trait core::cmp::Ord\">Ord</a> for <a class=\"struct\" href=\"arrow2/types/struct.i256.html\" title=\"struct arrow2::types::i256\">i256</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

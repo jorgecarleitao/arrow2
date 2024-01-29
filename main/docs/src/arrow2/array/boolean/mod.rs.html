@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/boolean/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/boolean/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -398,7 +400,7 @@
 
 <span class="kw">use </span><span class="kw">super</span>::Array;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"arrow"</span>)]
 </span><span class="kw">mod </span>data;
 <span class="kw">mod </span>ffi;
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>fmt;
@@ -409,12 +411,12 @@
 <span class="kw">pub use </span>iterator::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>mutable::<span class="kw-2">*</span>;
 
-<span class="doccomment">/// A [`BooleanArray`] is Arrow&#39;s semantically equivalent of an immutable `Vec&lt;Option&lt;bool&gt;&gt;`.
+<span class="doccomment">/// A [`BooleanArray`] is Arrow's semantically equivalent of an immutable `Vec&lt;Option&lt;bool&gt;&gt;`.
 /// It implements [`Array`].
 ///
 /// One way to think about a [`BooleanArray`] is `(DataType, Arc&lt;Vec&lt;u8&gt;&gt;, Option&lt;Arc&lt;Vec&lt;u8&gt;&gt;&gt;)`
 /// where:
-/// * the first item is the array&#39;s logical type
+/// * the first item is the array's logical type
 /// * the second is the immutable values
 /// * the third is the immutable validity (whether a value is null or not as a bitmap).
 ///
@@ -445,8 +447,8 @@
     <span class="doccomment">/// The canonical method to create a [`BooleanArray`] out of low-end APIs.
     /// # Errors
     /// This function errors iff:
-    /// * The validity is not `None` and its length is different from `values`&#39;s length
-    /// * The `data_type`&#39;s [`PhysicalType`] is not equal to [`PhysicalType::Boolean`].
+    /// * The validity is not `None` and its length is different from `values`'s length
+    /// * The `data_type`'s [`PhysicalType`] is not equal to [`PhysicalType::Boolean`].
     </span><span class="kw">pub fn </span>try_new(
         data_type: DataType,
         values: Bitmap,
@@ -457,13 +459,13 @@
             .map_or(<span class="bool-val">false</span>, |validity| validity.len() != values.len())
         {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-                <span class="string">&quot;validity mask length must match the number of values&quot;</span>,
+                <span class="string">"validity mask length must match the number of values"</span>,
             ));
         }
 
         <span class="kw">if </span>data_type.to_physical_type() != PhysicalType::Boolean {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-                <span class="string">&quot;BooleanArray can only be initialized with a DataType whose physical type is Boolean&quot;</span>,
+                <span class="string">"BooleanArray can only be initialized with a DataType whose physical type is Boolean"</span>,
             ));
         }
 
@@ -510,7 +512,7 @@
         <span class="self">self</span>.validity.as_ref()
     }
 
-    <span class="doccomment">/// Returns the arrays&#39; [`DataType`].
+    <span class="doccomment">/// Returns the arrays' [`DataType`].
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
@@ -554,7 +556,7 @@
     </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
         <span class="macro">assert!</span>(
             offset + length &lt;= <span class="self">self</span>.len(),
-            <span class="string">&quot;the offset of the new Buffer cannot exceed the existing length&quot;
+            <span class="string">"the offset of the new Buffer cannot exceed the existing length"
         </span>);
         <span class="kw">unsafe </span>{ <span class="self">self</span>.slice_unchecked(offset, length) }
     }
@@ -594,7 +596,7 @@
         <span class="macro">assert_eq!</span>(
             values.len(),
             <span class="self">self</span>.len(),
-            <span class="string">&quot;values length must be equal to this arrays length&quot;
+            <span class="string">"values length must be equal to this arrays length"
         </span>);
         <span class="self">self</span>.values = values;
     }

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/compute/like.rs`."><title>like.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/compute/like.rs`."><title>like.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -363,7 +365,7 @@
 <a href="#363" id="363">363</a>
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
-</pre></div><pre class="rust"><code><span class="doccomment">//! Contains &quot;like&quot; operators such as [`like_utf8`] and [`like_utf8_scalar`].
+</pre></div><pre class="rust"><code><span class="doccomment">//! Contains "like" operators such as [`like_utf8`] and [`like_utf8_scalar`].
 
 </span><span class="kw">use </span>ahash::AHashMap;
 <span class="kw">use </span>regex::bytes::Regex <span class="kw">as </span>BytesRegex;
@@ -380,7 +382,7 @@
 
 <span class="attr">#[inline]
 </span><span class="kw">fn </span>is_like_pattern(c: char) -&gt; bool {
-    c == <span class="string">&#39;%&#39; </span>|| c == <span class="string">&#39;_&#39;
+    c == <span class="string">'%' </span>|| c == <span class="string">'_'
 </span>}
 
 <span class="doccomment">/// Transforms a like `pattern` to a regex compatible pattern. To achieve that, it does:
@@ -393,7 +395,7 @@
     <span class="kw">let </span>text = String::from(pattern);
     <span class="kw">let </span><span class="kw-2">mut </span>chars_iter = text.chars().peekable();
     <span class="kw">while let </span><span class="prelude-val">Some</span>(c) = chars_iter.next() {
-        <span class="kw">if </span>c == <span class="string">&#39;\\&#39; </span>{
+        <span class="kw">if </span>c == <span class="string">'\\' </span>{
             <span class="kw">let </span>next = chars_iter.peek();
             <span class="kw">match </span>next {
                 <span class="prelude-val">Some</span>(next) <span class="kw">if </span>is_like_pattern(<span class="kw-2">*</span>next) =&gt; {
@@ -402,17 +404,17 @@
                     </span>chars_iter.next();
                 }
                 <span class="kw">_ </span>=&gt; {
-                    result.push(<span class="string">&#39;\\&#39;</span>);
-                    result.push(<span class="string">&#39;\\&#39;</span>);
+                    result.push(<span class="string">'\\'</span>);
+                    result.push(<span class="string">'\\'</span>);
                 }
             }
         } <span class="kw">else if </span>regex_syntax::is_meta_character(c) {
-            result.push(<span class="string">&#39;\\&#39;</span>);
+            result.push(<span class="string">'\\'</span>);
             result.push(c);
-        } <span class="kw">else if </span>c == <span class="string">&#39;%&#39; </span>{
-            result.push_str(<span class="string">&quot;.*&quot;</span>);
-        } <span class="kw">else if </span>c == <span class="string">&#39;_&#39; </span>{
-            result.push(<span class="string">&#39;.&#39;</span>);
+        } <span class="kw">else if </span>c == <span class="string">'%' </span>{
+            result.push_str(<span class="string">".*"</span>);
+        } <span class="kw">else if </span>c == <span class="string">'_' </span>{
+            result.push(<span class="string">'.'</span>);
         } <span class="kw">else </span>{
             result.push(c);
         }
@@ -428,7 +430,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;BooleanArray&gt; {
     <span class="kw">if </span>lhs.len() != rhs.len() {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgumentError(
-            <span class="string">&quot;Cannot perform comparison operation on arrays of different length&quot;</span>.to_string(),
+            <span class="string">"Cannot perform comparison operation on arrays of different length"</span>.to_string(),
         ));
     }
 
@@ -444,9 +446,9 @@
                         pattern
                     } <span class="kw">else </span>{
                         <span class="kw">let </span>re_pattern = replace_pattern(pattern);
-                        <span class="kw">let </span>re = Regex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;^{re_pattern}$&quot;</span>)).map_err(|e| {
+                        <span class="kw">let </span>re = Regex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"^{re_pattern}$"</span>)).map_err(|e| {
                             Error::InvalidArgumentError(<span class="macro">format!</span>(
-                                <span class="string">&quot;Unable to build regex from LIKE pattern: {e}&quot;
+                                <span class="string">"Unable to build regex from LIKE pattern: {e}"
                             </span>))
                         })<span class="question-mark">?</span>;
                         map.insert(pattern, re);
@@ -477,8 +479,8 @@
 /// use arrow2::array::{Utf8Array, BooleanArray};
 /// use arrow2::compute::like::like_utf8;
 ///
-/// let strings = Utf8Array::&lt;i32&gt;::from_slice(&amp;[&quot;Arrow&quot;, &quot;Arrow&quot;, &quot;Arrow&quot;, &quot;Arrow&quot;, &quot;Ar&quot;]);
-/// let patterns = Utf8Array::&lt;i32&gt;::from_slice(&amp;[&quot;A%&quot;, &quot;B%&quot;, &quot;%r_ow&quot;, &quot;A_&quot;, &quot;A_&quot;]);
+/// let strings = Utf8Array::&lt;i32&gt;::from_slice(&amp;["Arrow", "Arrow", "Arrow", "Arrow", "Ar"]);
+/// let patterns = Utf8Array::&lt;i32&gt;::from_slice(&amp;["A%", "B%", "%r_ow", "A_", "A_"]);
 ///
 /// let result = like_utf8(&amp;strings, &amp;patterns).unwrap();
 /// assert_eq!(result, BooleanArray::from_slice(&amp;[true, false, true, false, true]));
@@ -506,20 +508,20 @@
 
     <span class="kw">let </span>values = <span class="kw">if </span>!rhs.contains(is_like_pattern) {
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x == rhs)))
-    } <span class="kw">else if </span>rhs.ends_with(<span class="string">&#39;%&#39;</span>)
-        &amp;&amp; !rhs.ends_with(<span class="string">&quot;\\%&quot;</span>)
+    } <span class="kw">else if </span>rhs.ends_with(<span class="string">'%'</span>)
+        &amp;&amp; !rhs.ends_with(<span class="string">"\\%"</span>)
         &amp;&amp; !rhs[..rhs.len() - <span class="number">1</span>].contains(is_like_pattern)
     {
         <span class="comment">// fast path, can use starts_with
         </span><span class="kw">let </span>starts_with = <span class="kw-2">&amp;</span>rhs[..rhs.len() - <span class="number">1</span>];
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.starts_with(starts_with))))
-    } <span class="kw">else if </span>rhs.starts_with(<span class="string">&#39;%&#39;</span>) &amp;&amp; !rhs[<span class="number">1</span>..].contains(is_like_pattern) {
+    } <span class="kw">else if </span>rhs.starts_with(<span class="string">'%'</span>) &amp;&amp; !rhs[<span class="number">1</span>..].contains(is_like_pattern) {
         <span class="comment">// fast path, can use ends_with
         </span><span class="kw">let </span>ends_with = <span class="kw-2">&amp;</span>rhs[<span class="number">1</span>..];
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.ends_with(ends_with))))
-    } <span class="kw">else if </span>rhs.starts_with(<span class="string">&#39;%&#39;</span>)
-        &amp;&amp; rhs.ends_with(<span class="string">&#39;%&#39;</span>)
-        &amp;&amp; !rhs.ends_with(<span class="string">&quot;\\%&quot;</span>)
+    } <span class="kw">else if </span>rhs.starts_with(<span class="string">'%'</span>)
+        &amp;&amp; rhs.ends_with(<span class="string">'%'</span>)
+        &amp;&amp; !rhs.ends_with(<span class="string">"\\%"</span>)
         &amp;&amp; !rhs[<span class="number">1</span>..rhs.len() - <span class="number">1</span>].contains(is_like_pattern)
     {
         <span class="kw">let </span>needle = <span class="kw-2">&amp;</span>rhs[<span class="number">1</span>..rhs.len() - <span class="number">1</span>];
@@ -530,8 +532,8 @@
         )
     } <span class="kw">else </span>{
         <span class="kw">let </span>re_pattern = replace_pattern(rhs);
-        <span class="kw">let </span>re = Regex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;^{re_pattern}$&quot;</span>)).map_err(|e| {
-            Error::InvalidArgumentError(<span class="macro">format!</span>(<span class="string">&quot;Unable to build regex from LIKE pattern: {e}&quot;</span>))
+        <span class="kw">let </span>re = Regex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"^{re_pattern}$"</span>)).map_err(|e| {
+            Error::InvalidArgumentError(<span class="macro">format!</span>(<span class="string">"Unable to build regex from LIKE pattern: {e}"</span>))
         })<span class="question-mark">?</span>;
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(re.is_match(x))))
     };
@@ -558,9 +560,9 @@
 /// use arrow2::array::{Utf8Array, BooleanArray};
 /// use arrow2::compute::like::like_utf8_scalar;
 ///
-/// let array = Utf8Array::&lt;i32&gt;::from_slice(&amp;[&quot;Arrow&quot;, &quot;Arrow&quot;, &quot;Arrow&quot;, &quot;BA&quot;]);
+/// let array = Utf8Array::&lt;i32&gt;::from_slice(&amp;["Arrow", "Arrow", "Arrow", "BA"]);
 ///
-/// let result = like_utf8_scalar(&amp;array, &amp;&quot;A%&quot;).unwrap();
+/// let result = like_utf8_scalar(&amp;array, &amp;"A%").unwrap();
 /// assert_eq!(result, BooleanArray::from_slice(&amp;[true, true, true, false]));
 /// ```
 </span><span class="kw">pub fn </span>like_utf8_scalar&lt;O: Offset&gt;(lhs: <span class="kw-2">&amp;</span>Utf8Array&lt;O&gt;, rhs: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;BooleanArray&gt; {
@@ -585,7 +587,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;BooleanArray&gt; {
     <span class="kw">if </span>lhs.len() != rhs.len() {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgumentError(
-            <span class="string">&quot;Cannot perform comparison operation on arrays of different length&quot;</span>.to_string(),
+            <span class="string">"Cannot perform comparison operation on arrays of different length"</span>.to_string(),
         ));
     }
 
@@ -602,9 +604,9 @@
                     } <span class="kw">else </span>{
                         <span class="kw">let </span>re_pattern = simdutf8::basic::from_utf8(pattern).unwrap();
                         <span class="kw">let </span>re_pattern = replace_pattern(re_pattern);
-                        <span class="kw">let </span>re = BytesRegex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;^{re_pattern}$&quot;</span>)).map_err(|e| {
+                        <span class="kw">let </span>re = BytesRegex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"^{re_pattern}$"</span>)).map_err(|e| {
                             Error::InvalidArgumentError(<span class="macro">format!</span>(
-                                <span class="string">&quot;Unable to build regex from LIKE pattern: {e}&quot;
+                                <span class="string">"Unable to build regex from LIKE pattern: {e}"
                             </span>))
                         })<span class="question-mark">?</span>;
                         map.insert(pattern, re);
@@ -635,8 +637,8 @@
 /// use arrow2::array::{BinaryArray, BooleanArray};
 /// use arrow2::compute::like::like_binary;
 ///
-/// let strings = BinaryArray::&lt;i32&gt;::from_slice(&amp;[&quot;Arrow&quot;, &quot;Arrow&quot;, &quot;Arrow&quot;, &quot;Arrow&quot;, &quot;Ar&quot;]);
-/// let patterns = BinaryArray::&lt;i32&gt;::from_slice(&amp;[&quot;A%&quot;, &quot;B%&quot;, &quot;%r_ow&quot;, &quot;A_&quot;, &quot;A_&quot;]);
+/// let strings = BinaryArray::&lt;i32&gt;::from_slice(&amp;["Arrow", "Arrow", "Arrow", "Arrow", "Ar"]);
+/// let patterns = BinaryArray::&lt;i32&gt;::from_slice(&amp;["A%", "B%", "%r_ow", "A_", "A_"]);
 ///
 /// let result = like_binary(&amp;strings, &amp;patterns).unwrap();
 /// assert_eq!(result, BooleanArray::from_slice(&amp;[true, false, true, false, true]));
@@ -663,26 +665,26 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;BooleanArray&gt; {
     <span class="kw">let </span>validity = lhs.validity();
     <span class="kw">let </span>pattern = simdutf8::basic::from_utf8(rhs).map_err(|e| {
-        Error::InvalidArgumentError(<span class="macro">format!</span>(<span class="string">&quot;Unable to convert the LIKE pattern to string: {e}&quot;</span>))
+        Error::InvalidArgumentError(<span class="macro">format!</span>(<span class="string">"Unable to convert the LIKE pattern to string: {e}"</span>))
     })<span class="question-mark">?</span>;
 
     <span class="kw">let </span>values = <span class="kw">if </span>!pattern.contains(is_like_pattern) {
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x == rhs)))
-    } <span class="kw">else if </span>pattern.ends_with(<span class="string">&#39;%&#39;</span>)
-        &amp;&amp; !pattern.ends_with(<span class="string">&quot;\\%&quot;</span>)
+    } <span class="kw">else if </span>pattern.ends_with(<span class="string">'%'</span>)
+        &amp;&amp; !pattern.ends_with(<span class="string">"\\%"</span>)
         &amp;&amp; !pattern[..pattern.len() - <span class="number">1</span>].contains(is_like_pattern)
     {
         <span class="comment">// fast path, can use starts_with
         </span><span class="kw">let </span>starts_with = <span class="kw-2">&amp;</span>rhs[..rhs.len() - <span class="number">1</span>];
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.starts_with(starts_with))))
-    } <span class="kw">else if </span>pattern.starts_with(<span class="string">&#39;%&#39;</span>) &amp;&amp; !pattern[<span class="number">1</span>..].contains(is_like_pattern) {
+    } <span class="kw">else if </span>pattern.starts_with(<span class="string">'%'</span>) &amp;&amp; !pattern[<span class="number">1</span>..].contains(is_like_pattern) {
         <span class="comment">// fast path, can use ends_with
         </span><span class="kw">let </span>ends_with = <span class="kw-2">&amp;</span>rhs[<span class="number">1</span>..];
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(x.ends_with(ends_with))))
     } <span class="kw">else </span>{
         <span class="kw">let </span>re_pattern = replace_pattern(pattern);
-        <span class="kw">let </span>re = BytesRegex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;^{re_pattern}$&quot;</span>)).map_err(|e| {
-            Error::InvalidArgumentError(<span class="macro">format!</span>(<span class="string">&quot;Unable to build regex from LIKE pattern: {e}&quot;</span>))
+        <span class="kw">let </span>re = BytesRegex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"^{re_pattern}$"</span>)).map_err(|e| {
+            Error::InvalidArgumentError(<span class="macro">format!</span>(<span class="string">"Unable to build regex from LIKE pattern: {e}"</span>))
         })<span class="question-mark">?</span>;
         Bitmap::from_trusted_len_iter(lhs.values_iter().map(|x| op(re.is_match(x))))
     };
@@ -709,9 +711,9 @@
 /// use arrow2::array::{BinaryArray, BooleanArray};
 /// use arrow2::compute::like::like_binary_scalar;
 ///
-/// let array = BinaryArray::&lt;i32&gt;::from_slice(&amp;[&quot;Arrow&quot;, &quot;Arrow&quot;, &quot;Arrow&quot;, &quot;BA&quot;]);
+/// let array = BinaryArray::&lt;i32&gt;::from_slice(&amp;["Arrow", "Arrow", "Arrow", "BA"]);
 ///
-/// let result = like_binary_scalar(&amp;array, b&quot;A%&quot;).unwrap();
+/// let result = like_binary_scalar(&amp;array, b"A%").unwrap();
 /// assert_eq!(result, BooleanArray::from_slice(&amp;[true, true, true, false]));
 /// ```
 </span><span class="kw">pub fn </span>like_binary_scalar&lt;O: Offset&gt;(lhs: <span class="kw-2">&amp;</span>BinaryArray&lt;O&gt;, rhs: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;BooleanArray&gt; {

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/union/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/array/union/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -388,13 +390,13 @@
 
 <span class="kw">use super</span>::{new_empty_array, new_null_array, Array};
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"arrow"</span>)]
 </span><span class="kw">mod </span>data;
 <span class="kw">mod </span>ffi;
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>fmt;
 <span class="kw">mod </span>iterator;
 
-<span class="kw">type </span>UnionComponents&lt;<span class="lifetime">&#39;a</span>&gt; = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Field], <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[i32]&gt;, UnionMode);
+<span class="kw">type </span>UnionComponents&lt;<span class="lifetime">'a</span>&gt; = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Field], <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[i32]&gt;, UnionMode);
 
 <span class="doccomment">/// [`UnionArray`] represents an array whose each slot can contain different values.
 ///
@@ -424,10 +426,10 @@
     <span class="doccomment">/// Returns a new [`UnionArray`].
     /// # Errors
     /// This function errors iff:
-    /// * `data_type`&#39;s physical type is not [`crate::datatypes::PhysicalType::Union`].
-    /// * the fields&#39;s len is different from the `data_type`&#39;s children&#39;s length
+    /// * `data_type`'s physical type is not [`crate::datatypes::PhysicalType::Union`].
+    /// * the fields's len is different from the `data_type`'s children's length
     /// * The number of `fields` is larger than `i8::MAX`
-    /// * any of the values&#39;s data type is different from its corresponding children&#39; data type
+    /// * any of the values's data type is different from its corresponding children' data type
     </span><span class="kw">pub fn </span>try_new(
         data_type: DataType,
         types: Buffer&lt;i8&gt;,
@@ -438,13 +440,13 @@
 
         <span class="kw">if </span>f.len() != fields.len() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-                <span class="string">&quot;The number of `fields` must equal the number of children fields in DataType::Union&quot;</span>,
+                <span class="string">"The number of `fields` must equal the number of children fields in DataType::Union"</span>,
             ));
         };
         <span class="kw">let </span>number_of_fields: i8 = fields
             .len()
             .try_into()
-            .map_err(|<span class="kw">_</span>| Error::oos(<span class="string">&quot;The number of `fields` cannot be larger than i8::MAX&quot;</span>))<span class="question-mark">?</span>;
+            .map_err(|<span class="kw">_</span>| Error::oos(<span class="string">"The number of `fields` cannot be larger than i8::MAX"</span>))<span class="question-mark">?</span>;
 
         f
             .iter().map(|a| a.data_type())
@@ -453,8 +455,8 @@
             .try_for_each(|(index, (data_type, child))| {
                 <span class="kw">if </span>data_type != child {
                     <span class="prelude-val">Err</span>(Error::oos(<span class="macro">format!</span>(
-                        <span class="string">&quot;The children DataTypes of a UnionArray must equal the children data types. 
-                         However, the field {index} has data type {data_type:?} but the value has data type {child:?}&quot;
+                        <span class="string">"The children DataTypes of a UnionArray must equal the children data types. 
+                         However, the field {index} has data type {data_type:?} but the value has data type {child:?}"
                     </span>)))
                 } <span class="kw">else </span>{
                     <span class="prelude-val">Ok</span>(())
@@ -464,13 +466,13 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(offsets) = <span class="kw-2">&amp;</span>offsets {
             <span class="kw">if </span>offsets.len() != types.len() {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-                    <span class="string">&quot;In a UnionArray, the offsets&#39; length must be equal to the number of types&quot;</span>,
+                    <span class="string">"In a UnionArray, the offsets' length must be equal to the number of types"</span>,
                 ));
             }
         }
         <span class="kw">if </span>offsets.is_none() != mode.is_sparse() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-                <span class="string">&quot;In a sparse UnionArray, the offsets must be set (and vice-versa)&quot;</span>,
+                <span class="string">"In a sparse UnionArray, the offsets must be set (and vice-versa)"</span>,
             ));
         }
 
@@ -478,7 +480,7 @@
         </span><span class="kw">let </span>map = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>ids) = ids.as_ref() {
             <span class="kw">if </span>ids.len() != fields.len() {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-                    <span class="string">&quot;In a union, when the ids are set, their length must be equal to the number of fields&quot;</span>,
+                    <span class="string">"In a union, when the ids are set, their length must be equal to the number of fields"</span>,
                 ));
             }
 
@@ -491,7 +493,7 @@
             <span class="kw">for </span>(pos, <span class="kw-2">&amp;</span>id) <span class="kw">in </span>ids.iter().enumerate() {
                 <span class="kw">if </span>!(<span class="number">0</span>..=<span class="number">127</span>).contains(<span class="kw-2">&amp;</span>id) {
                     <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-                        <span class="string">&quot;In a union, when the ids are set, every id must belong to [0, 128[&quot;</span>,
+                        <span class="string">"In a union, when the ids are set, every id must belong to [0, 128["</span>,
                     ));
                 }
                 hash[id <span class="kw">as </span>usize] = pos;
@@ -499,11 +501,11 @@
 
             types.iter().try_for_each(|<span class="kw-2">&amp;</span>type_| {
                 <span class="kw">if </span>type_ &lt; <span class="number">0 </span>{
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;In a union, when the ids are set, every type must be &gt;= 0&quot;</span>));
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">"In a union, when the ids are set, every type must be &gt;= 0"</span>));
                 }
                 <span class="kw">let </span>id = hash[type_ <span class="kw">as </span>usize];
                 <span class="kw">if </span>id &gt;= fields.len() {
-                    <span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;In a union, when the ids are set, each id must be smaller than the number of fields.&quot;</span>))
+                    <span class="prelude-val">Err</span>(Error::oos(<span class="string">"In a union, when the ids are set, each id must be smaller than the number of fields."</span>))
                 } <span class="kw">else </span>{
                     <span class="prelude-val">Ok</span>(())
                 }
@@ -520,7 +522,7 @@
             }
             <span class="kw">if </span>!is_valid {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-                    <span class="string">&quot;Every type in `types` must be larger than 0 and smaller than the number of fields.&quot;</span>,
+                    <span class="string">"Every type in `types` must be larger than 0 and smaller than the number of fields."</span>,
                 ));
             }
 
@@ -540,9 +542,9 @@
     <span class="doccomment">/// Returns a new [`UnionArray`].
     /// # Panics
     /// This function panics iff:
-    /// * `data_type`&#39;s physical type is not [`crate::datatypes::PhysicalType::Union`].
-    /// * the fields&#39;s len is different from the `data_type`&#39;s children&#39;s length
-    /// * any of the values&#39;s data type is different from its corresponding children&#39; data type
+    /// * `data_type`'s physical type is not [`crate::datatypes::PhysicalType::Union`].
+    /// * the fields's len is different from the `data_type`'s children's length
+    /// * any of the values's data type is different from its corresponding children' data type
     </span><span class="kw">pub fn </span>new(
         data_type: DataType,
         types: Buffer&lt;i8&gt;,
@@ -571,7 +573,7 @@
 
             <span class="self">Self</span>::new(data_type, types, fields, offsets)
         } <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Union struct must be created with the corresponding Union DataType&quot;</span>)
+            <span class="macro">panic!</span>(<span class="string">"Union struct must be created with the corresponding Union DataType"</span>)
         }
     }
 
@@ -598,7 +600,7 @@
                 offset: <span class="number">0</span>,
             }
         } <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Union struct must be created with the corresponding Union DataType&quot;</span>)
+            <span class="macro">panic!</span>(<span class="string">"Union struct must be created with the corresponding Union DataType"</span>)
         }
     }
 }
@@ -613,7 +615,7 @@
     </span><span class="kw">pub fn </span>slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, length: usize) {
         <span class="macro">assert!</span>(
             offset + length &lt;= <span class="self">self</span>.len(),
-            <span class="string">&quot;the offset of the new array cannot exceed the existing length&quot;
+            <span class="string">"the offset of the new array cannot exceed the existing length"
         </span>);
         <span class="kw">unsafe </span>{ <span class="self">self</span>.slice_unchecked(offset, length) }
     }
@@ -724,7 +726,7 @@
     </span>}
 
     <span class="kw">fn </span>with_validity(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;Bitmap&gt;) -&gt; Box&lt;<span class="kw">dyn </span>Array&gt; {
-        <span class="macro">panic!</span>(<span class="string">&quot;cannot set validity of a union array&quot;</span>)
+        <span class="macro">panic!</span>(<span class="string">"cannot set validity of a union array"</span>)
     }
 }
 
@@ -735,7 +737,7 @@
                 <span class="prelude-val">Ok</span>((fields, ids.as_ref().map(|x| x.as_ref()), <span class="kw-2">*</span>mode))
             }
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::oos(
-                <span class="string">&quot;The UnionArray requires a logical type of DataType::Union&quot;</span>,
+                <span class="string">"The UnionArray requires a logical type of DataType::Union"</span>,
             )),
         }
     }
@@ -746,14 +748,14 @@
 
     <span class="doccomment">/// Returns all fields from [`DataType::Union`].
     /// # Panic
-    /// Panics iff `data_type`&#39;s logical type is not [`DataType::Union`].
+    /// Panics iff `data_type`'s logical type is not [`DataType::Union`].
     </span><span class="kw">pub fn </span>get_fields(data_type: <span class="kw-2">&amp;</span>DataType) -&gt; <span class="kw-2">&amp;</span>[Field] {
         <span class="self">Self</span>::get_all(data_type).<span class="number">0
     </span>}
 
     <span class="doccomment">/// Returns whether the [`DataType::Union`] is sparse or not.
     /// # Panic
-    /// Panics iff `data_type`&#39;s logical type is not [`DataType::Union`].
+    /// Panics iff `data_type`'s logical type is not [`DataType::Union`].
     </span><span class="kw">pub fn </span>is_sparse(data_type: <span class="kw-2">&amp;</span>DataType) -&gt; bool {
         <span class="self">Self</span>::get_all(data_type).<span class="number">2</span>.is_sparse()
     }

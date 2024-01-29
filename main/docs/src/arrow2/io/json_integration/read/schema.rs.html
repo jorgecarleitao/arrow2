@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/json_integration/read/schema.rs`."><title>schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/json_integration/read/schema.rs`."><title>schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -493,17 +495,17 @@
 
 <span class="kw">fn </span>to_time_unit(item: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Value&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;TimeUnit&gt; {
     <span class="kw">match </span>item {
-        <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;SECOND&quot; </span>=&gt; <span class="prelude-val">Ok</span>(TimeUnit::Second),
-        <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;MILLISECOND&quot; </span>=&gt; <span class="prelude-val">Ok</span>(TimeUnit::Millisecond),
-        <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;MICROSECOND&quot; </span>=&gt; <span class="prelude-val">Ok</span>(TimeUnit::Microsecond),
-        <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;NANOSECOND&quot; </span>=&gt; <span class="prelude-val">Ok</span>(TimeUnit::Nanosecond),
-        <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;time unit missing or invalid&quot;</span>.to_string())),
+        <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"SECOND" </span>=&gt; <span class="prelude-val">Ok</span>(TimeUnit::Second),
+        <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"MILLISECOND" </span>=&gt; <span class="prelude-val">Ok</span>(TimeUnit::Millisecond),
+        <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"MICROSECOND" </span>=&gt; <span class="prelude-val">Ok</span>(TimeUnit::Microsecond),
+        <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"NANOSECOND" </span>=&gt; <span class="prelude-val">Ok</span>(TimeUnit::Nanosecond),
+        <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">"time unit missing or invalid"</span>.to_string())),
     }
 }
 
 <span class="kw">fn </span>to_int(item: <span class="kw-2">&amp;</span>Value) -&gt; <span class="prelude-ty">Result</span>&lt;IntegerType&gt; {
-    <span class="prelude-val">Ok</span>(<span class="kw">match </span>item.get(<span class="string">&quot;isSigned&quot;</span>) {
-        <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Value::Bool(<span class="bool-val">true</span>)) =&gt; <span class="kw">match </span>item.get(<span class="string">&quot;bitWidth&quot;</span>) {
+    <span class="prelude-val">Ok</span>(<span class="kw">match </span>item.get(<span class="string">"isSigned"</span>) {
+        <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Value::Bool(<span class="bool-val">true</span>)) =&gt; <span class="kw">match </span>item.get(<span class="string">"bitWidth"</span>) {
             <span class="prelude-val">Some</span>(Value::Number(n)) =&gt; <span class="kw">match </span>n.as_u64() {
                 <span class="prelude-val">Some</span>(<span class="number">8</span>) =&gt; IntegerType::Int8,
                 <span class="prelude-val">Some</span>(<span class="number">16</span>) =&gt; IntegerType::Int16,
@@ -511,17 +513,17 @@
                 <span class="prelude-val">Some</span>(<span class="number">64</span>) =&gt; IntegerType::Int64,
                 <span class="kw">_ </span>=&gt; {
                     <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                        <span class="string">&quot;int bitWidth missing or invalid&quot;</span>.to_string(),
+                        <span class="string">"int bitWidth missing or invalid"</span>.to_string(),
                     ))
                 }
             },
             <span class="kw">_ </span>=&gt; {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                    <span class="string">&quot;int bitWidth missing or invalid&quot;</span>.to_string(),
+                    <span class="string">"int bitWidth missing or invalid"</span>.to_string(),
                 ))
             }
         },
-        <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Value::Bool(<span class="bool-val">false</span>)) =&gt; <span class="kw">match </span>item.get(<span class="string">&quot;bitWidth&quot;</span>) {
+        <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Value::Bool(<span class="bool-val">false</span>)) =&gt; <span class="kw">match </span>item.get(<span class="string">"bitWidth"</span>) {
             <span class="prelude-val">Some</span>(Value::Number(n)) =&gt; <span class="kw">match </span>n.as_u64() {
                 <span class="prelude-val">Some</span>(<span class="number">8</span>) =&gt; IntegerType::UInt8,
                 <span class="prelude-val">Some</span>(<span class="number">16</span>) =&gt; IntegerType::UInt16,
@@ -529,19 +531,19 @@
                 <span class="prelude-val">Some</span>(<span class="number">64</span>) =&gt; IntegerType::UInt64,
                 <span class="kw">_ </span>=&gt; {
                     <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                        <span class="string">&quot;int bitWidth missing or invalid&quot;</span>.to_string(),
+                        <span class="string">"int bitWidth missing or invalid"</span>.to_string(),
                     ))
                 }
             },
             <span class="kw">_ </span>=&gt; {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                    <span class="string">&quot;int bitWidth missing or invalid&quot;</span>.to_string(),
+                    <span class="string">"int bitWidth missing or invalid"</span>.to_string(),
                 ))
             }
         },
         <span class="kw">_ </span>=&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                <span class="string">&quot;int signed missing or invalid&quot;</span>.to_string(),
+                <span class="string">"int signed missing or invalid"</span>.to_string(),
             ))
         }
     })
@@ -556,7 +558,7 @@
                     .map(deserialize_field)
                     .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;&gt;()
             } <span class="kw">else </span>{
-                <span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;children must be an array&quot;</span>.to_string()))
+                <span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">"children must be an array"</span>.to_string()))
             }
         })
         .unwrap_or_else(|| <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[]))
@@ -571,28 +573,28 @@
                     <span class="prelude-val">Some</span>(map) =&gt; {
                         <span class="kw">if </span>map.len() != <span class="number">2 </span>{
                             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                                <span class="string">&quot;Field &#39;metadata&#39; must have exact two entries for each key-value map&quot;</span>.to_string(),
+                                <span class="string">"Field 'metadata' must have exact two entries for each key-value map"</span>.to_string(),
                             ));
                         }
-                        <span class="kw">if let </span>(<span class="prelude-val">Some</span>(k), <span class="prelude-val">Some</span>(v)) = (map.get(<span class="string">&quot;key&quot;</span>), map.get(<span class="string">&quot;value&quot;</span>)) {
+                        <span class="kw">if let </span>(<span class="prelude-val">Some</span>(k), <span class="prelude-val">Some</span>(v)) = (map.get(<span class="string">"key"</span>), map.get(<span class="string">"value"</span>)) {
                             <span class="kw">if let </span>(<span class="prelude-val">Some</span>(k_str), <span class="prelude-val">Some</span>(v_str)) = (k.as_str(), v.as_str()) {
                                 res.insert(k_str.to_string().clone(), v_str.to_string().clone());
                             } <span class="kw">else </span>{
                                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                                    <span class="string">&quot;Field &#39;metadata&#39; must have map value of string type&quot;
+                                    <span class="string">"Field 'metadata' must have map value of string type"
                                         </span>.to_string(),
                                 ));
                             }
                         } <span class="kw">else </span>{
                             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                                <span class="string">&quot;Field &#39;metadata&#39; lacks map keys named \&quot;key\&quot; or \&quot;value\&quot;&quot;
+                                <span class="string">"Field 'metadata' lacks map keys named \"key\" or \"value\""
                                     </span>.to_string(),
                             ));
                         }
                     }
                     <span class="kw">_ </span>=&gt; {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                            <span class="string">&quot;Field &#39;metadata&#39; contains non-object key-value pair&quot;</span>.to_string(),
+                            <span class="string">"Field 'metadata' contains non-object key-value pair"</span>.to_string(),
                         ));
                     }
                 }
@@ -606,62 +608,62 @@
                     res.insert(k.clone(), str_value.to_string().clone());
                 } <span class="kw">else </span>{
                     <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="macro">format!</span>(
-                        <span class="string">&quot;Field &#39;metadata&#39; contains non-string value for key {k}&quot;
+                        <span class="string">"Field 'metadata' contains non-string value for key {k}"
                     </span>)));
                 }
             }
             <span class="prelude-val">Ok</span>(res)
         }
         <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::OutOfSpec(
-            <span class="string">&quot;Invalid json value type for field&quot;</span>.to_string(),
+            <span class="string">"Invalid json value type for field"</span>.to_string(),
         )),
     }
 }
 
 <span class="kw">fn </span>to_data_type(item: <span class="kw-2">&amp;</span>Value, <span class="kw-2">mut </span>children: Vec&lt;Field&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;DataType&gt; {
     <span class="kw">let </span>type_ = item
-        .get(<span class="string">&quot;name&quot;</span>)
-        .ok_or_else(|| Error::OutOfSpec(<span class="string">&quot;type missing&quot;</span>.to_string()))<span class="question-mark">?</span>;
+        .get(<span class="string">"name"</span>)
+        .ok_or_else(|| Error::OutOfSpec(<span class="string">"type missing"</span>.to_string()))<span class="question-mark">?</span>;
 
     <span class="kw">let </span>type_ = <span class="kw">if let </span>Value::String(name) = type_ {
         name.as_str()
     } <span class="kw">else </span>{
-        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;type is not a string&quot;</span>.to_string()));
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">"type is not a string"</span>.to_string()));
     };
 
     <span class="kw">use </span>DataType::<span class="kw-2">*</span>;
     <span class="prelude-val">Ok</span>(<span class="kw">match </span>type_ {
-        <span class="string">&quot;null&quot; </span>=&gt; Null,
-        <span class="string">&quot;bool&quot; </span>=&gt; Boolean,
-        <span class="string">&quot;binary&quot; </span>=&gt; Binary,
-        <span class="string">&quot;largebinary&quot; </span>=&gt; LargeBinary,
-        <span class="string">&quot;fixedsizebinary&quot; </span>=&gt; {
-            <span class="comment">// return a list with any type as its child isn&#39;t defined in the map
-            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Number(size)) = item.get(<span class="string">&quot;byteWidth&quot;</span>) {
+        <span class="string">"null" </span>=&gt; Null,
+        <span class="string">"bool" </span>=&gt; Boolean,
+        <span class="string">"binary" </span>=&gt; Binary,
+        <span class="string">"largebinary" </span>=&gt; LargeBinary,
+        <span class="string">"fixedsizebinary" </span>=&gt; {
+            <span class="comment">// return a list with any type as its child isn't defined in the map
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Number(size)) = item.get(<span class="string">"byteWidth"</span>) {
                 DataType::FixedSizeBinary(size.as_i64().unwrap() <span class="kw">as </span>usize)
             } <span class="kw">else </span>{
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                    <span class="string">&quot;Expecting a byteWidth for fixedsizebinary&quot;</span>.to_string(),
+                    <span class="string">"Expecting a byteWidth for fixedsizebinary"</span>.to_string(),
                 ));
             }
         }
-        <span class="string">&quot;utf8&quot; </span>=&gt; Utf8,
-        <span class="string">&quot;largeutf8&quot; </span>=&gt; LargeUtf8,
-        <span class="string">&quot;decimal&quot; </span>=&gt; {
-            <span class="comment">// return a list with any type as its child isn&#39;t defined in the map
+        <span class="string">"utf8" </span>=&gt; Utf8,
+        <span class="string">"largeutf8" </span>=&gt; LargeUtf8,
+        <span class="string">"decimal" </span>=&gt; {
+            <span class="comment">// return a list with any type as its child isn't defined in the map
             </span><span class="kw">let </span>precision = item
-                .get(<span class="string">&quot;precision&quot;</span>)
-                .ok_or_else(|| Error::OutOfSpec(<span class="string">&quot;Expecting a precision for decimal&quot;</span>.to_string()))<span class="question-mark">?
+                .get(<span class="string">"precision"</span>)
+                .ok_or_else(|| Error::OutOfSpec(<span class="string">"Expecting a precision for decimal"</span>.to_string()))<span class="question-mark">?
                 </span>.as_u64()
                 .unwrap() <span class="kw">as </span>usize;
 
             <span class="kw">let </span>scale = item
-                .get(<span class="string">&quot;scale&quot;</span>)
-                .ok_or_else(|| Error::OutOfSpec(<span class="string">&quot;Expecting a scale for decimal&quot;</span>.to_string()))<span class="question-mark">?
+                .get(<span class="string">"scale"</span>)
+                .ok_or_else(|| Error::OutOfSpec(<span class="string">"Expecting a scale for decimal"</span>.to_string()))<span class="question-mark">?
                 </span>.as_u64()
                 .unwrap() <span class="kw">as </span>usize;
 
-            <span class="kw">let </span>bit_width = <span class="kw">match </span>item.get(<span class="string">&quot;bitWidth&quot;</span>) {
+            <span class="kw">let </span>bit_width = <span class="kw">match </span>item.get(<span class="string">"bitWidth"</span>) {
                 <span class="prelude-val">Some</span>(s) =&gt; s.as_u64().unwrap() <span class="kw">as </span>usize,
                 <span class="prelude-val">None </span>=&gt; <span class="number">128</span>,
             };
@@ -672,96 +674,96 @@
                 <span class="kw">_ </span>=&gt; <span class="macro">todo!</span>(),
             }
         }
-        <span class="string">&quot;floatingpoint&quot; </span>=&gt; <span class="kw">match </span>item.get(<span class="string">&quot;precision&quot;</span>) {
-            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;HALF&quot; </span>=&gt; DataType::Float16,
-            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;SINGLE&quot; </span>=&gt; DataType::Float32,
-            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;DOUBLE&quot; </span>=&gt; DataType::Float64,
+        <span class="string">"floatingpoint" </span>=&gt; <span class="kw">match </span>item.get(<span class="string">"precision"</span>) {
+            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"HALF" </span>=&gt; DataType::Float16,
+            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"SINGLE" </span>=&gt; DataType::Float32,
+            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"DOUBLE" </span>=&gt; DataType::Float64,
             <span class="kw">_ </span>=&gt; {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                    <span class="string">&quot;floatingpoint precision missing or invalid&quot;</span>.to_string(),
+                    <span class="string">"floatingpoint precision missing or invalid"</span>.to_string(),
                 ))
             }
         },
-        <span class="string">&quot;timestamp&quot; </span>=&gt; {
-            <span class="kw">let </span>unit = to_time_unit(item.get(<span class="string">&quot;unit&quot;</span>))<span class="question-mark">?</span>;
-            <span class="kw">let </span>tz = <span class="kw">match </span>item.get(<span class="string">&quot;timezone&quot;</span>) {
+        <span class="string">"timestamp" </span>=&gt; {
+            <span class="kw">let </span>unit = to_time_unit(item.get(<span class="string">"unit"</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>tz = <span class="kw">match </span>item.get(<span class="string">"timezone"</span>) {
                 <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
                 <span class="prelude-val">Some</span>(Value::String(tz)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(tz.clone())),
-                <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;timezone must be a string&quot;</span>.to_string())),
+                <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">"timezone must be a string"</span>.to_string())),
             }<span class="question-mark">?</span>;
             DataType::Timestamp(unit, tz)
         }
-        <span class="string">&quot;date&quot; </span>=&gt; <span class="kw">match </span>item.get(<span class="string">&quot;unit&quot;</span>) {
-            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;DAY&quot; </span>=&gt; DataType::Date32,
-            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;MILLISECOND&quot; </span>=&gt; DataType::Date64,
-            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;date unit missing or invalid&quot;</span>.to_string())),
+        <span class="string">"date" </span>=&gt; <span class="kw">match </span>item.get(<span class="string">"unit"</span>) {
+            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"DAY" </span>=&gt; DataType::Date32,
+            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"MILLISECOND" </span>=&gt; DataType::Date64,
+            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">"date unit missing or invalid"</span>.to_string())),
         },
-        <span class="string">&quot;time&quot; </span>=&gt; {
-            <span class="kw">let </span>unit = to_time_unit(item.get(<span class="string">&quot;unit&quot;</span>))<span class="question-mark">?</span>;
-            <span class="kw">match </span>item.get(<span class="string">&quot;bitWidth&quot;</span>) {
+        <span class="string">"time" </span>=&gt; {
+            <span class="kw">let </span>unit = to_time_unit(item.get(<span class="string">"unit"</span>))<span class="question-mark">?</span>;
+            <span class="kw">match </span>item.get(<span class="string">"bitWidth"</span>) {
                 <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="number">32 </span>=&gt; DataType::Time32(unit),
                 <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="number">64 </span>=&gt; DataType::Time64(unit),
                 <span class="kw">_ </span>=&gt; {
                     <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                        <span class="string">&quot;time bitWidth missing or invalid&quot;</span>.to_string(),
+                        <span class="string">"time bitWidth missing or invalid"</span>.to_string(),
                     ))
                 }
             }
         }
-        <span class="string">&quot;duration&quot; </span>=&gt; {
-            <span class="kw">let </span>unit = to_time_unit(item.get(<span class="string">&quot;unit&quot;</span>))<span class="question-mark">?</span>;
+        <span class="string">"duration" </span>=&gt; {
+            <span class="kw">let </span>unit = to_time_unit(item.get(<span class="string">"unit"</span>))<span class="question-mark">?</span>;
             DataType::Duration(unit)
         }
-        <span class="string">&quot;interval&quot; </span>=&gt; <span class="kw">match </span>item.get(<span class="string">&quot;unit&quot;</span>) {
-            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;DAY_TIME&quot; </span>=&gt; DataType::Interval(IntervalUnit::DayTime),
-            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;YEAR_MONTH&quot; </span>=&gt; DataType::Interval(IntervalUnit::YearMonth),
-            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">&quot;MONTH_DAY_NANO&quot; </span>=&gt; DataType::Interval(IntervalUnit::MonthDayNano),
+        <span class="string">"interval" </span>=&gt; <span class="kw">match </span>item.get(<span class="string">"unit"</span>) {
+            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"DAY_TIME" </span>=&gt; DataType::Interval(IntervalUnit::DayTime),
+            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"YEAR_MONTH" </span>=&gt; DataType::Interval(IntervalUnit::YearMonth),
+            <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p == <span class="string">"MONTH_DAY_NANO" </span>=&gt; DataType::Interval(IntervalUnit::MonthDayNano),
             <span class="kw">_ </span>=&gt; {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                    <span class="string">&quot;interval unit missing or invalid&quot;</span>.to_string(),
+                    <span class="string">"interval unit missing or invalid"</span>.to_string(),
                 ))
             }
         },
-        <span class="string">&quot;int&quot; </span>=&gt; to_int(item).map(|x| x.into())<span class="question-mark">?</span>,
-        <span class="string">&quot;list&quot; </span>=&gt; DataType::List(Box::new(children.pop().unwrap())),
-        <span class="string">&quot;largelist&quot; </span>=&gt; DataType::LargeList(Box::new(children.pop().unwrap())),
-        <span class="string">&quot;fixedsizelist&quot; </span>=&gt; {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Number(size)) = item.get(<span class="string">&quot;listSize&quot;</span>) {
+        <span class="string">"int" </span>=&gt; to_int(item).map(|x| x.into())<span class="question-mark">?</span>,
+        <span class="string">"list" </span>=&gt; DataType::List(Box::new(children.pop().unwrap())),
+        <span class="string">"largelist" </span>=&gt; DataType::LargeList(Box::new(children.pop().unwrap())),
+        <span class="string">"fixedsizelist" </span>=&gt; {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Number(size)) = item.get(<span class="string">"listSize"</span>) {
                 DataType::FixedSizeList(
                     Box::new(children.pop().unwrap()),
                     size.as_i64().unwrap() <span class="kw">as </span>usize,
                 )
             } <span class="kw">else </span>{
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                    <span class="string">&quot;Expecting a listSize for fixedsizelist&quot;</span>.to_string(),
+                    <span class="string">"Expecting a listSize for fixedsizelist"</span>.to_string(),
                 ));
             }
         }
-        <span class="string">&quot;struct&quot; </span>=&gt; DataType::Struct(children),
-        <span class="string">&quot;union&quot; </span>=&gt; {
-            <span class="kw">let </span>mode = <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::String(mode)) = item.get(<span class="string">&quot;mode&quot;</span>) {
-                UnionMode::sparse(mode == <span class="string">&quot;SPARSE&quot;</span>)
+        <span class="string">"struct" </span>=&gt; DataType::Struct(children),
+        <span class="string">"union" </span>=&gt; {
+            <span class="kw">let </span>mode = <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::String(mode)) = item.get(<span class="string">"mode"</span>) {
+                UnionMode::sparse(mode == <span class="string">"SPARSE"</span>)
             } <span class="kw">else </span>{
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;union requires mode&quot;</span>.to_string()));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">"union requires mode"</span>.to_string()));
             };
-            <span class="kw">let </span>ids = <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Array(ids)) = item.get(<span class="string">&quot;typeIds&quot;</span>) {
+            <span class="kw">let </span>ids = <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Array(ids)) = item.get(<span class="string">"typeIds"</span>) {
                 <span class="prelude-val">Some</span>(ids.iter().map(|x| x.as_i64().unwrap() <span class="kw">as </span>i32).collect())
             } <span class="kw">else </span>{
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;union requires ids&quot;</span>.to_string()));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">"union requires ids"</span>.to_string()));
             };
             DataType::Union(children, ids, mode)
         }
-        <span class="string">&quot;map&quot; </span>=&gt; {
-            <span class="kw">let </span>sorted_keys = <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Bool(sorted_keys)) = item.get(<span class="string">&quot;keysSorted&quot;</span>) {
+        <span class="string">"map" </span>=&gt; {
+            <span class="kw">let </span>sorted_keys = <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Bool(sorted_keys)) = item.get(<span class="string">"keysSorted"</span>) {
                 <span class="kw-2">*</span>sorted_keys
             } <span class="kw">else </span>{
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;sorted keys not defined&quot;</span>.to_string()));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">"sorted keys not defined"</span>.to_string()));
             };
             DataType::Map(Box::new(children.pop().unwrap()), sorted_keys)
         }
         other =&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
-                <span class="string">&quot;invalid json value type \&quot;{other}\&quot;&quot;
+                <span class="string">"invalid json value type \"{other}\""
             </span>)))
         }
     })
@@ -772,12 +774,12 @@
         map
     } <span class="kw">else </span>{
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-            <span class="string">&quot;Invalid json value type for field&quot;</span>.to_string(),
+            <span class="string">"Invalid json value type for field"</span>.to_string(),
         ));
     };
 
     <span class="kw">let </span>fields = map
-        .get(<span class="string">&quot;children&quot;</span>)
+        .get(<span class="string">"children"</span>)
         .map(|x| {
             <span class="kw">if let </span>Value::Array(values) = x {
                 values
@@ -785,16 +787,16 @@
                     .map(deserialize_ipc_field)
                     .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;&gt;()
             } <span class="kw">else </span>{
-                <span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;children must be an array&quot;</span>.to_string()))
+                <span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">"children must be an array"</span>.to_string()))
             }
         })
         .unwrap_or_else(|| <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[]))<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>dictionary_id = <span class="kw">if let </span><span class="prelude-val">Some</span>(dictionary) = map.get(<span class="string">&quot;dictionary&quot;</span>) {
-        <span class="kw">match </span>dictionary.get(<span class="string">&quot;id&quot;</span>) {
+    <span class="kw">let </span>dictionary_id = <span class="kw">if let </span><span class="prelude-val">Some</span>(dictionary) = map.get(<span class="string">"dictionary"</span>) {
+        <span class="kw">match </span>dictionary.get(<span class="string">"id"</span>) {
             <span class="prelude-val">Some</span>(Value::Number(n)) =&gt; <span class="prelude-val">Some</span>(n.as_i64().unwrap()),
             <span class="kw">_ </span>=&gt; {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">&quot;Field missing &#39;id&#39; attribute&quot;</span>.to_string()));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(<span class="string">"Field missing 'id' attribute"</span>.to_string()));
             }
         }
     } <span class="kw">else </span>{
@@ -811,28 +813,28 @@
         map
     } <span class="kw">else </span>{
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-            <span class="string">&quot;Invalid json value type for field&quot;</span>.to_string(),
+            <span class="string">"Invalid json value type for field"</span>.to_string(),
         ));
     };
 
-    <span class="kw">let </span>name = <span class="kw">match </span>map.get(<span class="string">&quot;name&quot;</span>) {
+    <span class="kw">let </span>name = <span class="kw">match </span>map.get(<span class="string">"name"</span>) {
         <span class="prelude-val">Some</span>(Value::String(name)) =&gt; name.to_string(),
         <span class="kw">_ </span>=&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                <span class="string">&quot;Field missing &#39;name&#39; attribute&quot;</span>.to_string(),
+                <span class="string">"Field missing 'name' attribute"</span>.to_string(),
             ));
         }
     };
-    <span class="kw">let </span>is_nullable = <span class="kw">match </span>map.get(<span class="string">&quot;nullable&quot;</span>) {
+    <span class="kw">let </span>is_nullable = <span class="kw">match </span>map.get(<span class="string">"nullable"</span>) {
         <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Value::Bool(b)) =&gt; b,
         <span class="kw">_ </span>=&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                <span class="string">&quot;Field missing &#39;nullable&#39; attribute&quot;</span>.to_string(),
+                <span class="string">"Field missing 'nullable' attribute"</span>.to_string(),
             ));
         }
     };
 
-    <span class="kw">let </span>metadata = <span class="kw">if let </span><span class="prelude-val">Some</span>(metadata) = map.get(<span class="string">&quot;metadata&quot;</span>) {
+    <span class="kw">let </span>metadata = <span class="kw">if let </span><span class="prelude-val">Some</span>(metadata) = map.get(<span class="string">"metadata"</span>) {
         read_metadata(metadata)<span class="question-mark">?
     </span>} <span class="kw">else </span>{
         Metadata::default()
@@ -841,10 +843,10 @@
     <span class="kw">let </span>extension = get_extension(<span class="kw-2">&amp;</span>metadata);
 
     <span class="kw">let </span>type_ = map
-        .get(<span class="string">&quot;type&quot;</span>)
-        .ok_or_else(|| Error::OutOfSpec(<span class="string">&quot;type missing&quot;</span>.to_string()))<span class="question-mark">?</span>;
+        .get(<span class="string">"type"</span>)
+        .ok_or_else(|| Error::OutOfSpec(<span class="string">"type missing"</span>.to_string()))<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>children = deserialize_fields(map.get(<span class="string">&quot;children&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let </span>children = deserialize_fields(map.get(<span class="string">"children"</span>))<span class="question-mark">?</span>;
     <span class="kw">let </span>data_type = to_data_type(type_, children)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>data_type = <span class="kw">if let </span><span class="prelude-val">Some</span>((name, metadata)) = extension {
@@ -853,20 +855,20 @@
         data_type
     };
 
-    <span class="kw">let </span>data_type = <span class="kw">if let </span><span class="prelude-val">Some</span>(dictionary) = map.get(<span class="string">&quot;dictionary&quot;</span>) {
-        <span class="kw">let </span>index_type = <span class="kw">match </span>dictionary.get(<span class="string">&quot;indexType&quot;</span>) {
+    <span class="kw">let </span>data_type = <span class="kw">if let </span><span class="prelude-val">Some</span>(dictionary) = map.get(<span class="string">"dictionary"</span>) {
+        <span class="kw">let </span>index_type = <span class="kw">match </span>dictionary.get(<span class="string">"indexType"</span>) {
             <span class="prelude-val">Some</span>(t) =&gt; to_int(t)<span class="question-mark">?</span>,
             <span class="kw">_ </span>=&gt; {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                    <span class="string">&quot;Field missing &#39;indexType&#39; attribute&quot;</span>.to_string(),
+                    <span class="string">"Field missing 'indexType' attribute"</span>.to_string(),
                 ));
             }
         };
-        <span class="kw">let </span>is_ordered = <span class="kw">match </span>dictionary.get(<span class="string">&quot;isOrdered&quot;</span>) {
+        <span class="kw">let </span>is_ordered = <span class="kw">match </span>dictionary.get(<span class="string">"isOrdered"</span>) {
             <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Value::Bool(n)) =&gt; n,
             <span class="kw">_ </span>=&gt; {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-                    <span class="string">&quot;Field missing &#39;isOrdered&#39; attribute&quot;</span>.to_string(),
+                    <span class="string">"Field missing 'isOrdered' attribute"</span>.to_string(),
                 ));
             }
         };
@@ -907,13 +909,13 @@
                     <span class="prelude-val">Ok</span>((k.to_string(), v.to_string()))
                 } <span class="kw">else </span>{
                     <span class="prelude-val">Err</span>(Error::OutOfSpec(
-                        <span class="string">&quot;metadata `value` field must be a string&quot;</span>.to_string(),
+                        <span class="string">"metadata `value` field must be a string"</span>.to_string(),
                     ))
                 }
             })
             .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>&gt;&gt;(),
         <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::OutOfSpec(
-            <span class="string">&quot;`metadata` field must be an object&quot;</span>.to_string(),
+            <span class="string">"`metadata` field must be an object"</span>.to_string(),
         )),
     }
 }
@@ -924,33 +926,33 @@
         schema
     } <span class="kw">else </span>{
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-            <span class="string">&quot;Invalid json value type for schema&quot;</span>.to_string(),
+            <span class="string">"Invalid json value type for schema"</span>.to_string(),
         ));
     };
 
-    <span class="kw">let </span>fields = <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Array(fields)) = schema.get(<span class="string">&quot;fields&quot;</span>) {
+    <span class="kw">let </span>fields = <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Array(fields)) = schema.get(<span class="string">"fields"</span>) {
         fields
             .iter()
             .map(deserialize_field)
             .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>&gt;&gt;()<span class="question-mark">?
     </span>} <span class="kw">else </span>{
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-            <span class="string">&quot;Schema fields should be an array&quot;</span>.to_string(),
+            <span class="string">"Schema fields should be an array"</span>.to_string(),
         ));
     };
 
-    <span class="kw">let </span>ipc_fields = <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Array(fields)) = schema.get(<span class="string">&quot;fields&quot;</span>) {
+    <span class="kw">let </span>ipc_fields = <span class="kw">if let </span><span class="prelude-val">Some</span>(Value::Array(fields)) = schema.get(<span class="string">"fields"</span>) {
         fields
             .iter()
             .map(deserialize_ipc_field)
             .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>&gt;&gt;()<span class="question-mark">?
     </span>} <span class="kw">else </span>{
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfSpec(
-            <span class="string">&quot;Schema fields should be an array&quot;</span>.to_string(),
+            <span class="string">"Schema fields should be an array"</span>.to_string(),
         ));
     };
 
-    <span class="kw">let </span>metadata = <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = schema.get(<span class="string">&quot;metadata&quot;</span>) {
+    <span class="kw">let </span>metadata = <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = schema.get(<span class="string">"metadata"</span>) {
         from_metadata(value)<span class="question-mark">?
     </span>} <span class="kw">else </span>{
         Metadata::default()

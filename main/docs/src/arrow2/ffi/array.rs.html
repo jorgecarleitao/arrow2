@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/ffi/array.rs`."><title>array.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/ffi/array.rs`."><title>array.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -635,7 +637,7 @@
 }
 
 <span class="comment">// callback used to drop [ArrowArray] when it is exported
-</span><span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>c_release_array(array: <span class="kw-2">*mut </span>ArrowArray) {
+</span><span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn </span>c_release_array(array: <span class="kw-2">*mut </span>ArrowArray) {
     <span class="kw">if </span>array.is_null() {
         <span class="kw">return</span>;
     }
@@ -754,7 +756,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">*mut </span>T&gt; {
     <span class="kw">if </span>array.buffers.is_null() {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="macro">format!</span>(
-            <span class="string">&quot;An ArrowArray of type {data_type:?} must have non-null buffers&quot;
+            <span class="string">"An ArrowArray of type {data_type:?} must have non-null buffers"
         </span>)));
     }
 
@@ -764,8 +766,8 @@
         != <span class="number">0
     </span>{
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="macro">format!</span>(
-            <span class="string">&quot;An ArrowArray of type {data_type:?}
-            must have buffer {index} aligned to type {}&quot;</span>,
+            <span class="string">"An ArrowArray of type {data_type:?}
+            must have buffer {index} aligned to type {}"</span>,
             std::any::type_name::&lt;<span class="kw-2">*mut *const </span>u8&gt;()
         )));
     }
@@ -773,20 +775,20 @@
 
     <span class="kw">if </span>index &gt;= array.n_buffers <span class="kw">as </span>usize {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="macro">format!</span>(
-            <span class="string">&quot;An ArrowArray of type {data_type:?} 
-             must have buffer {index}.&quot;
+            <span class="string">"An ArrowArray of type {data_type:?} 
+             must have buffer {index}."
         </span>)));
     }
 
     <span class="kw">let </span>ptr = <span class="kw-2">*</span>buffers.add(index);
     <span class="kw">if </span>ptr.is_null() {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="macro">format!</span>(
-            <span class="string">&quot;An array of type {data_type:?} 
-            must have a non-null buffer {index}&quot;
+            <span class="string">"An array of type {data_type:?} 
+            must have a non-null buffer {index}"
         </span>)));
     }
 
-    <span class="comment">// note: we can&#39;t prove that this pointer is not mutably shared - part of the safety invariant
+    <span class="comment">// note: we can't prove that this pointer is not mutably shared - part of the safety invariant
     </span><span class="prelude-val">Ok</span>(ptr <span class="kw">as </span><span class="kw-2">*mut </span>T)
 }
 
@@ -794,7 +796,7 @@
 /// # Safety
 /// This function is safe iff:
 /// * the buffers up to position `index` are valid for the declared length
-/// * the buffers&#39; pointers are not mutably shared for the lifetime of `owner`
+/// * the buffers' pointers are not mutably shared for the lifetime of `owner`
 </span><span class="kw">unsafe fn </span>create_buffer&lt;T: NativeType&gt;(
     array: <span class="kw-2">&amp;</span>ArrowArray,
     data_type: <span class="kw-2">&amp;</span>DataType,
@@ -816,7 +818,7 @@
         <span class="kw">let </span>bytes = Bytes::from_foreign(ptr, len, BytesAllocator::InternalArrowArray(owner));
         <span class="prelude-val">Ok</span>(Buffer::from_bytes(bytes).sliced(offset, len - offset))
     }
-    <span class="comment">// This is the path where alignment isn&#39;t correct.
+    <span class="comment">// This is the path where alignment isn't correct.
     // We copy the data to a new vec
     </span><span class="kw">else </span>{
         <span class="kw">let </span>buf = std::slice::from_raw_parts(ptr, len - offset).to_vec();
@@ -828,7 +830,7 @@
 /// # Safety
 /// This function is safe iff:
 /// * the buffer at position `index` is valid for the declared length
-/// * the buffers&#39; pointer is not mutable for the lifetime of `owner`
+/// * the buffers' pointer is not mutable for the lifetime of `owner`
 </span><span class="kw">unsafe fn </span>create_bitmap(
     array: <span class="kw-2">&amp;</span>ArrowArray,
     data_type: <span class="kw-2">&amp;</span>DataType,
@@ -838,15 +840,15 @@
     // we can use the null count directly
     </span>is_validity: bool,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Bitmap&gt; {
-    <span class="kw">let </span>len: usize = array.length.try_into().expect(<span class="string">&quot;length to fit in `usize`&quot;</span>);
+    <span class="kw">let </span>len: usize = array.length.try_into().expect(<span class="string">"length to fit in `usize`"</span>);
     <span class="kw">if </span>len == <span class="number">0 </span>{
         <span class="kw">return </span><span class="prelude-val">Ok</span>(Bitmap::new());
     }
     <span class="kw">let </span>ptr = get_buffer_ptr(array, data_type, index)<span class="question-mark">?</span>;
 
-    <span class="comment">// Pointer of u8 has alignment 1, so we don&#39;t have to check alignment.
+    <span class="comment">// Pointer of u8 has alignment 1, so we don't have to check alignment.
 
-    </span><span class="kw">let </span>offset: usize = array.offset.try_into().expect(<span class="string">&quot;offset to fit in `usize`&quot;</span>);
+    </span><span class="kw">let </span>offset: usize = array.offset.try_into().expect(<span class="string">"offset to fit in `usize`"</span>);
     <span class="kw">let </span>bytes_len = bytes_for(offset + len);
     <span class="kw">let </span>bytes = Bytes::from_foreign(ptr, bytes_len, BytesAllocator::InternalArrowArray(owner));
 
@@ -864,13 +866,13 @@
         (LargeUtf8, <span class="number">2</span>) | (LargeBinary, <span class="number">2</span>) | (Utf8, <span class="number">2</span>) | (Binary, <span class="number">2</span>) =&gt; <span class="number">0</span>,
         (FixedSizeBinary, <span class="number">1</span>) =&gt; {
             <span class="kw">if let </span>DataType::FixedSizeBinary(size) = data_type.to_logical_type() {
-                <span class="kw">let </span>offset: usize = array.offset.try_into().expect(<span class="string">&quot;Offset to fit in `usize`&quot;</span>);
+                <span class="kw">let </span>offset: usize = array.offset.try_into().expect(<span class="string">"Offset to fit in `usize`"</span>);
                 offset * <span class="kw-2">*</span>size
             } <span class="kw">else </span>{
                 <span class="macro">unreachable!</span>()
             }
         }
-        <span class="kw">_ </span>=&gt; array.offset.try_into().expect(<span class="string">&quot;Offset to fit in `usize`&quot;</span>),
+        <span class="kw">_ </span>=&gt; array.offset.try_into().expect(<span class="string">"Offset to fit in `usize`"</span>),
     }
 }
 
@@ -938,20 +940,20 @@
     data_type: <span class="kw-2">&amp;</span>DataType,
     parent: InternalArrowArray,
     index: usize,
-) -&gt; <span class="prelude-ty">Result</span>&lt;ArrowArrayChild&lt;<span class="lifetime">&#39;static</span>&gt;&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;ArrowArrayChild&lt;<span class="lifetime">'static</span>&gt;&gt; {
     <span class="kw">let </span>data_type = get_child(data_type, index)<span class="question-mark">?</span>;
 
     <span class="comment">// catch what we can
     </span><span class="kw">if </span>array.children.is_null() {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="macro">format!</span>(
-            <span class="string">&quot;An ArrowArray of type {data_type:?} must have non-null children&quot;
+            <span class="string">"An ArrowArray of type {data_type:?} must have non-null children"
         </span>)));
     }
 
     <span class="kw">if </span>index &gt;= array.n_children <span class="kw">as </span>usize {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="macro">format!</span>(
-            <span class="string">&quot;An ArrowArray of type {data_type:?} 
-             must have child {index}.&quot;
+            <span class="string">"An ArrowArray of type {data_type:?} 
+             must have child {index}."
         </span>)));
     }
 
@@ -961,8 +963,8 @@
     <span class="comment">// catch what we can
     </span><span class="kw">if </span>arr_ptr.is_null() {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="macro">format!</span>(
-            <span class="string">&quot;An array of type {data_type:?}
-            must have a non-null child {index}&quot;
+            <span class="string">"An array of type {data_type:?}
+            must have a non-null child {index}"
         </span>)));
     }
 
@@ -979,14 +981,14 @@
     array: <span class="kw-2">&amp;</span>ArrowArray,
     data_type: <span class="kw-2">&amp;</span>DataType,
     parent: InternalArrowArray,
-) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;ArrowArrayChild&lt;<span class="lifetime">&#39;static</span>&gt;&gt;&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;ArrowArrayChild&lt;<span class="lifetime">'static</span>&gt;&gt;&gt; {
     <span class="kw">if let </span>DataType::Dictionary(<span class="kw">_</span>, values, <span class="kw">_</span>) = data_type {
         <span class="kw">let </span>data_type = values.as_ref().clone();
         <span class="comment">// catch what we can
         </span><span class="kw">if </span>array.dictionary.is_null() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="macro">format!</span>(
-                <span class="string">&quot;An array of type {data_type:?}
-                must have a non-null dictionary&quot;
+                <span class="string">"An array of type {data_type:?}
+                must have a non-null dictionary"
             </span>)));
         }
 
@@ -1005,7 +1007,7 @@
 
     <span class="doccomment">/// returns the null bit buffer.
     /// Rust implementation uses a buffer that is not part of the array of buffers.
-    /// The C Data interface&#39;s null buffer is part of the array of buffers.
+    /// The C Data interface's null buffer is part of the array of buffers.
     /// # Safety
     /// The caller must guarantee that the buffer `index` corresponds to a bitmap.
     /// This function assumes that the bitmap created from FFI is valid; this is impossible to prove.
@@ -1027,7 +1029,7 @@
     <span class="doccomment">/// # Safety
     /// This function is safe iff:
     /// * the buffer at position `index` is valid for the declared length
-    /// * the buffers&#39; pointer is not mutable for the lifetime of `owner`
+    /// * the buffers' pointer is not mutable for the lifetime of `owner`
     </span><span class="kw">unsafe fn </span>bitmap(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; <span class="prelude-ty">Result</span>&lt;Bitmap&gt; {
         create_bitmap(<span class="self">self</span>.array(), <span class="self">self</span>.data_type(), <span class="self">self</span>.owner(), index, <span class="bool-val">false</span>)
     }
@@ -1108,13 +1110,13 @@
 }
 
 <span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>ArrowArrayChild&lt;<span class="lifetime">&#39;a</span>&gt; {
-    array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ArrowArray,
+</span><span class="kw">pub struct </span>ArrowArrayChild&lt;<span class="lifetime">'a</span>&gt; {
+    array: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ArrowArray,
     data_type: DataType,
     parent: InternalArrowArray,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; ArrowArrayRef <span class="kw">for </span>ArrowArrayChild&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ArrowArrayRef <span class="kw">for </span>ArrowArrayChild&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// the data_type as declared in the schema
     </span><span class="kw">fn </span>data_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DataType {
         <span class="kw-2">&amp;</span><span class="self">self</span>.data_type
@@ -1133,8 +1135,8 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; ArrowArrayChild&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">fn </span>new(array: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ArrowArray, data_type: DataType, parent: InternalArrowArray) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ArrowArrayChild&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>new(array: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ArrowArray, data_type: DataType, parent: InternalArrowArray) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             array,
             data_type,

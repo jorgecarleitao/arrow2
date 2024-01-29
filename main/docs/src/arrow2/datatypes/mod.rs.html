@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/datatypes/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/datatypes/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -527,10 +529,10 @@
 <span class="kw">use </span>std::collections::BTreeMap;
 <span class="kw">use </span>std::sync::Arc;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;serde_types&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"serde_types"</span>)]
 </span><span class="kw">use </span>serde_derive::{Deserialize, Serialize};
 
-<span class="doccomment">/// typedef for [BTreeMap&lt;String, String&gt;] denoting [`Field`]&#39;s and [`Schema`]&#39;s metadata.
+<span class="doccomment">/// typedef for [BTreeMap&lt;String, String&gt;] denoting [`Field`]'s and [`Schema`]'s metadata.
 </span><span class="kw">pub type </span>Metadata = BTreeMap&lt;String, String&gt;;
 <span class="doccomment">/// typedef fpr [Option&lt;(String, Option&lt;String&gt;)&gt;] descr
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>Extension = <span class="prelude-ty">Option</span>&lt;(String, <span class="prelude-ty">Option</span>&lt;String&gt;)&gt;;
@@ -544,7 +546,7 @@
 /// The [`DataType::Extension`] is special in that it augments a [`DataType`] with metadata to support custom types.
 /// Use `to_logical_type` to desugar such type and return its correspoding logical type.
 </span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">"serde_types"</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>DataType {
     <span class="doccomment">/// Null type
     </span>Null,
@@ -580,8 +582,8 @@
     ///
     /// The time zone is a string indicating the name of a time zone, one of:
     ///
-    /// * As used in the Olson time zone database (the &quot;tz database&quot; or
-    ///   &quot;tzdata&quot;), such as &quot;America/New_York&quot;
+    /// * As used in the Olson time zone database (the "tz database" or
+    ///   "tzdata"), such as "America/New_York"
     /// * An absolute time zone offset of the form +XX:XX or -XX:XX, such as +07:30
     /// When the timezone is not specified, the timestamp is considered to have no timezone
     /// and is represented _as is_
@@ -600,7 +602,7 @@
     </span>Time64(TimeUnit),
     <span class="doccomment">/// Measure of elapsed time. This elapsed time is a physical duration (i.e. 1s as defined in S.I.)
     </span>Duration(TimeUnit),
-    <span class="doccomment">/// A &quot;calendar&quot; interval modeling elapsed time that takes into account calendar shifts.
+    <span class="doccomment">/// A "calendar" interval modeling elapsed time that takes into account calendar shifts.
     /// For example an interval of 1 day may represent more than 24 hours.
     </span>Interval(IntervalUnit),
     <span class="doccomment">/// Opaque binary data of variable length whose offsets are represented as [`i32`].
@@ -636,7 +638,7 @@
     ///
     /// In a field with Map type, the field has a child Struct field, which then
     /// has two children: key type and the second the value type. The names of the
-    /// child fields may be respectively &quot;entries&quot;, &quot;key&quot;, and &quot;value&quot;, but this is
+    /// child fields may be respectively "entries", "key", and "value", but this is
     /// not enforced.
     ///
     /// Map
@@ -645,10 +647,10 @@
     ///     - child[0] key: K
     ///     - child[1] value: V
     /// ```
-    /// Neither the &quot;entries&quot; field nor the &quot;key&quot; field may be nullable.
+    /// Neither the "entries" field nor the "key" field may be nullable.
     ///
     /// The metadata is structured so that Arrow systems without special handling
-    /// for Map can make Map an alias for List. The &quot;layout&quot; attribute for the Map
+    /// for Map can make Map an alias for List. The "layout" attribute for the Map
     /// field must have the same contents as a List.
     </span>Map(Box&lt;Field&gt;, bool),
     <span class="doccomment">/// A dictionary encoded array (`key_type`, `value_type`), where
@@ -675,7 +677,7 @@
     </span>Extension(String, Box&lt;DataType&gt;, <span class="prelude-ty">Option</span>&lt;String&gt;),
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"arrow"</span>)]
 </span><span class="kw">impl </span>From&lt;DataType&gt; <span class="kw">for </span>arrow_schema::DataType {
     <span class="kw">fn </span>from(value: DataType) -&gt; <span class="self">Self </span>{
         <span class="kw">use </span>arrow_schema::Field <span class="kw">as </span>ArrowField;
@@ -735,7 +737,7 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"arrow"</span>)]
 </span><span class="kw">impl </span>From&lt;arrow_schema::DataType&gt; <span class="kw">for </span>DataType {
     <span class="kw">fn </span>from(value: arrow_schema::DataType) -&gt; <span class="self">Self </span>{
         <span class="kw">use </span>arrow_schema::DataType;
@@ -787,20 +789,20 @@
                     DataType::UInt16 =&gt; IntegerType::UInt16,
                     DataType::UInt32 =&gt; IntegerType::UInt32,
                     DataType::UInt64 =&gt; IntegerType::UInt64,
-                    d =&gt; <span class="macro">panic!</span>(<span class="string">&quot;illegal dictionary key type: {d}&quot;</span>),
+                    d =&gt; <span class="macro">panic!</span>(<span class="string">"illegal dictionary key type: {d}"</span>),
                 };
                 <span class="self">Self</span>::Dictionary(key, Box::new((<span class="kw-2">*</span>value).into()), <span class="bool-val">false</span>)
             }
             DataType::Decimal128(precision, scale) =&gt; <span class="self">Self</span>::Decimal(precision <span class="kw">as _</span>, scale <span class="kw">as _</span>),
             DataType::Decimal256(precision, scale) =&gt; <span class="self">Self</span>::Decimal256(precision <span class="kw">as _</span>, scale <span class="kw">as _</span>),
-            DataType::RunEndEncoded(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Run-end encoding not supported by arrow2&quot;</span>),
+            DataType::RunEndEncoded(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">panic!</span>(<span class="string">"Run-end encoding not supported by arrow2"</span>),
         }
     }
 }
 
 <span class="doccomment">/// Mode of [`DataType::Union`]
 </span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">"serde_types"</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>UnionMode {
     <span class="doccomment">/// Dense union
     </span>Dense,
@@ -808,7 +810,7 @@
     </span>Sparse,
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"arrow"</span>)]
 </span><span class="kw">impl </span>From&lt;UnionMode&gt; <span class="kw">for </span>arrow_schema::UnionMode {
     <span class="kw">fn </span>from(value: UnionMode) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>value {
@@ -818,7 +820,7 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"arrow"</span>)]
 </span><span class="kw">impl </span>From&lt;arrow_schema::UnionMode&gt; <span class="kw">for </span>UnionMode {
     <span class="kw">fn </span>from(value: arrow_schema::UnionMode) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>value {
@@ -852,7 +854,7 @@
 
 <span class="doccomment">/// The time units defined in Arrow.
 </span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">"serde_types"</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>TimeUnit {
     <span class="doccomment">/// Time in seconds.
     </span>Second,
@@ -864,7 +866,7 @@
     </span>Nanosecond,
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"arrow"</span>)]
 </span><span class="kw">impl </span>From&lt;TimeUnit&gt; <span class="kw">for </span>arrow_schema::TimeUnit {
     <span class="kw">fn </span>from(value: TimeUnit) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>value {
@@ -876,7 +878,7 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"arrow"</span>)]
 </span><span class="kw">impl </span>From&lt;arrow_schema::TimeUnit&gt; <span class="kw">for </span>TimeUnit {
     <span class="kw">fn </span>from(value: arrow_schema::TimeUnit) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>value {
@@ -890,7 +892,7 @@
 
 <span class="doccomment">/// Interval units defined in Arrow
 </span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = <span class="string">&quot;serde_types&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">"serde_types"</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>IntervalUnit {
     <span class="doccomment">/// The number of elapsed whole months.
     </span>YearMonth,
@@ -901,7 +903,7 @@
     </span>MonthDayNano,
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"arrow"</span>)]
 </span><span class="kw">impl </span>From&lt;IntervalUnit&gt; <span class="kw">for </span>arrow_schema::IntervalUnit {
     <span class="kw">fn </span>from(value: IntervalUnit) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>value {
@@ -912,7 +914,7 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;arrow&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"arrow"</span>)]
 </span><span class="kw">impl </span>From&lt;arrow_schema::IntervalUnit&gt; <span class="kw">for </span>IntervalUnit {
     <span class="kw">fn </span>from(value: arrow_schema::IntervalUnit) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>value {
@@ -1021,8 +1023,8 @@
 
 <span class="doccomment">/// support get extension for metadata
 </span><span class="kw">pub fn </span>get_extension(metadata: <span class="kw-2">&amp;</span>Metadata) -&gt; Extension {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = metadata.get(<span class="string">&quot;ARROW:extension:name&quot;</span>) {
-        <span class="kw">let </span>metadata = metadata.get(<span class="string">&quot;ARROW:extension:metadata&quot;</span>).cloned();
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = metadata.get(<span class="string">"ARROW:extension:name"</span>) {
+        <span class="kw">let </span>metadata = metadata.get(<span class="string">"ARROW:extension:metadata"</span>).cloned();
         <span class="prelude-val">Some</span>((name.clone(), metadata))
     } <span class="kw">else </span>{
         <span class="prelude-val">None

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/json_integration/write/schema.rs`."><title>schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/json_integration/write/schema.rs`."><title>schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -185,89 +187,89 @@
 
 <span class="kw">fn </span>serialize_data_type(data_type: <span class="kw-2">&amp;</span>DataType) -&gt; Value {
     <span class="kw">match </span>data_type {
-        DataType::Null =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;null&quot;</span>}),
-        DataType::Boolean =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;bool&quot;</span>}),
-        DataType::Int8 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;int&quot;</span>, <span class="string">&quot;bitWidth&quot;</span>: <span class="number">8</span>, <span class="string">&quot;isSigned&quot;</span>: <span class="bool-val">true</span>}),
-        DataType::Int16 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;int&quot;</span>, <span class="string">&quot;bitWidth&quot;</span>: <span class="number">16</span>, <span class="string">&quot;isSigned&quot;</span>: <span class="bool-val">true</span>}),
-        DataType::Int32 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;int&quot;</span>, <span class="string">&quot;bitWidth&quot;</span>: <span class="number">32</span>, <span class="string">&quot;isSigned&quot;</span>: <span class="bool-val">true</span>}),
-        DataType::Int64 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;int&quot;</span>, <span class="string">&quot;bitWidth&quot;</span>: <span class="number">64</span>, <span class="string">&quot;isSigned&quot;</span>: <span class="bool-val">true</span>}),
-        DataType::UInt8 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;int&quot;</span>, <span class="string">&quot;bitWidth&quot;</span>: <span class="number">8</span>, <span class="string">&quot;isSigned&quot;</span>: <span class="bool-val">false</span>}),
-        DataType::UInt16 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;int&quot;</span>, <span class="string">&quot;bitWidth&quot;</span>: <span class="number">16</span>, <span class="string">&quot;isSigned&quot;</span>: <span class="bool-val">false</span>}),
-        DataType::UInt32 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;int&quot;</span>, <span class="string">&quot;bitWidth&quot;</span>: <span class="number">32</span>, <span class="string">&quot;isSigned&quot;</span>: <span class="bool-val">false</span>}),
-        DataType::UInt64 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;int&quot;</span>, <span class="string">&quot;bitWidth&quot;</span>: <span class="number">64</span>, <span class="string">&quot;isSigned&quot;</span>: <span class="bool-val">false</span>}),
-        DataType::Float16 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;floatingpoint&quot;</span>, <span class="string">&quot;precision&quot;</span>: <span class="string">&quot;HALF&quot;</span>}),
-        DataType::Float32 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;floatingpoint&quot;</span>, <span class="string">&quot;precision&quot;</span>: <span class="string">&quot;SINGLE&quot;</span>}),
-        DataType::Float64 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;floatingpoint&quot;</span>, <span class="string">&quot;precision&quot;</span>: <span class="string">&quot;DOUBLE&quot;</span>}),
-        DataType::Utf8 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;utf8&quot;</span>}),
-        DataType::LargeUtf8 =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;largeutf8&quot;</span>}),
-        DataType::Binary =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;binary&quot;</span>}),
-        DataType::LargeBinary =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;largebinary&quot;</span>}),
+        DataType::Null =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"null"</span>}),
+        DataType::Boolean =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"bool"</span>}),
+        DataType::Int8 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"int"</span>, <span class="string">"bitWidth"</span>: <span class="number">8</span>, <span class="string">"isSigned"</span>: <span class="bool-val">true</span>}),
+        DataType::Int16 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"int"</span>, <span class="string">"bitWidth"</span>: <span class="number">16</span>, <span class="string">"isSigned"</span>: <span class="bool-val">true</span>}),
+        DataType::Int32 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"int"</span>, <span class="string">"bitWidth"</span>: <span class="number">32</span>, <span class="string">"isSigned"</span>: <span class="bool-val">true</span>}),
+        DataType::Int64 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"int"</span>, <span class="string">"bitWidth"</span>: <span class="number">64</span>, <span class="string">"isSigned"</span>: <span class="bool-val">true</span>}),
+        DataType::UInt8 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"int"</span>, <span class="string">"bitWidth"</span>: <span class="number">8</span>, <span class="string">"isSigned"</span>: <span class="bool-val">false</span>}),
+        DataType::UInt16 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"int"</span>, <span class="string">"bitWidth"</span>: <span class="number">16</span>, <span class="string">"isSigned"</span>: <span class="bool-val">false</span>}),
+        DataType::UInt32 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"int"</span>, <span class="string">"bitWidth"</span>: <span class="number">32</span>, <span class="string">"isSigned"</span>: <span class="bool-val">false</span>}),
+        DataType::UInt64 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"int"</span>, <span class="string">"bitWidth"</span>: <span class="number">64</span>, <span class="string">"isSigned"</span>: <span class="bool-val">false</span>}),
+        DataType::Float16 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"floatingpoint"</span>, <span class="string">"precision"</span>: <span class="string">"HALF"</span>}),
+        DataType::Float32 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"floatingpoint"</span>, <span class="string">"precision"</span>: <span class="string">"SINGLE"</span>}),
+        DataType::Float64 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"floatingpoint"</span>, <span class="string">"precision"</span>: <span class="string">"DOUBLE"</span>}),
+        DataType::Utf8 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"utf8"</span>}),
+        DataType::LargeUtf8 =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"largeutf8"</span>}),
+        DataType::Binary =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"binary"</span>}),
+        DataType::LargeBinary =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"largebinary"</span>}),
         DataType::FixedSizeBinary(byte_width) =&gt; {
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;fixedsizebinary&quot;</span>, <span class="string">&quot;byteWidth&quot;</span>: byte_width})
+            <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"fixedsizebinary"</span>, <span class="string">"byteWidth"</span>: byte_width})
         }
-        DataType::Struct(<span class="kw">_</span>) =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;struct&quot;</span>}),
-        DataType::Union(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;union&quot;</span>}),
-        DataType::Map(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;map&quot;</span>}),
-        DataType::List(<span class="kw">_</span>) =&gt; <span class="macro">json!</span>({ <span class="string">&quot;name&quot;</span>: <span class="string">&quot;list&quot;</span>}),
-        DataType::LargeList(<span class="kw">_</span>) =&gt; <span class="macro">json!</span>({ <span class="string">&quot;name&quot;</span>: <span class="string">&quot;largelist&quot;</span>}),
+        DataType::Struct(<span class="kw">_</span>) =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"struct"</span>}),
+        DataType::Union(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"union"</span>}),
+        DataType::Map(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"map"</span>}),
+        DataType::List(<span class="kw">_</span>) =&gt; <span class="macro">json!</span>({ <span class="string">"name"</span>: <span class="string">"list"</span>}),
+        DataType::LargeList(<span class="kw">_</span>) =&gt; <span class="macro">json!</span>({ <span class="string">"name"</span>: <span class="string">"largelist"</span>}),
         DataType::FixedSizeList(<span class="kw">_</span>, length) =&gt; {
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>:<span class="string">&quot;fixedsizelist&quot;</span>, <span class="string">&quot;listSize&quot;</span>: length})
+            <span class="macro">json!</span>({<span class="string">"name"</span>:<span class="string">"fixedsizelist"</span>, <span class="string">"listSize"</span>: length})
         }
         DataType::Time32(unit) =&gt; {
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;time&quot;</span>, <span class="string">&quot;bitWidth&quot;</span>: <span class="number">32</span>, <span class="string">&quot;unit&quot;</span>: <span class="kw">match </span>unit {
-                TimeUnit::Second =&gt; <span class="string">&quot;SECOND&quot;</span>,
-                TimeUnit::Millisecond =&gt; <span class="string">&quot;MILLISECOND&quot;</span>,
-                TimeUnit::Microsecond =&gt; <span class="string">&quot;MICROSECOND&quot;</span>,
-                TimeUnit::Nanosecond =&gt; <span class="string">&quot;NANOSECOND&quot;</span>,
+            <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"time"</span>, <span class="string">"bitWidth"</span>: <span class="number">32</span>, <span class="string">"unit"</span>: <span class="kw">match </span>unit {
+                TimeUnit::Second =&gt; <span class="string">"SECOND"</span>,
+                TimeUnit::Millisecond =&gt; <span class="string">"MILLISECOND"</span>,
+                TimeUnit::Microsecond =&gt; <span class="string">"MICROSECOND"</span>,
+                TimeUnit::Nanosecond =&gt; <span class="string">"NANOSECOND"</span>,
             }})
         }
         DataType::Time64(unit) =&gt; {
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;time&quot;</span>, <span class="string">&quot;bitWidth&quot;</span>: <span class="number">64</span>, <span class="string">&quot;unit&quot;</span>: <span class="kw">match </span>unit {
-                TimeUnit::Second =&gt; <span class="string">&quot;SECOND&quot;</span>,
-                TimeUnit::Millisecond =&gt; <span class="string">&quot;MILLISECOND&quot;</span>,
-                TimeUnit::Microsecond =&gt; <span class="string">&quot;MICROSECOND&quot;</span>,
-                TimeUnit::Nanosecond =&gt; <span class="string">&quot;NANOSECOND&quot;</span>,
+            <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"time"</span>, <span class="string">"bitWidth"</span>: <span class="number">64</span>, <span class="string">"unit"</span>: <span class="kw">match </span>unit {
+                TimeUnit::Second =&gt; <span class="string">"SECOND"</span>,
+                TimeUnit::Millisecond =&gt; <span class="string">"MILLISECOND"</span>,
+                TimeUnit::Microsecond =&gt; <span class="string">"MICROSECOND"</span>,
+                TimeUnit::Nanosecond =&gt; <span class="string">"NANOSECOND"</span>,
             }})
         }
         DataType::Date32 =&gt; {
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;date&quot;</span>, <span class="string">&quot;unit&quot;</span>: <span class="string">&quot;DAY&quot;</span>})
+            <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"date"</span>, <span class="string">"unit"</span>: <span class="string">"DAY"</span>})
         }
         DataType::Date64 =&gt; {
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;date&quot;</span>, <span class="string">&quot;unit&quot;</span>: <span class="string">&quot;MILLISECOND&quot;</span>})
+            <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"date"</span>, <span class="string">"unit"</span>: <span class="string">"MILLISECOND"</span>})
         }
         DataType::Timestamp(unit, <span class="prelude-val">None</span>) =&gt; {
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;timestamp&quot;</span>, <span class="string">&quot;unit&quot;</span>: <span class="kw">match </span>unit {
-                TimeUnit::Second =&gt; <span class="string">&quot;SECOND&quot;</span>,
-                TimeUnit::Millisecond =&gt; <span class="string">&quot;MILLISECOND&quot;</span>,
-                TimeUnit::Microsecond =&gt; <span class="string">&quot;MICROSECOND&quot;</span>,
-                TimeUnit::Nanosecond =&gt; <span class="string">&quot;NANOSECOND&quot;</span>,
+            <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"timestamp"</span>, <span class="string">"unit"</span>: <span class="kw">match </span>unit {
+                TimeUnit::Second =&gt; <span class="string">"SECOND"</span>,
+                TimeUnit::Millisecond =&gt; <span class="string">"MILLISECOND"</span>,
+                TimeUnit::Microsecond =&gt; <span class="string">"MICROSECOND"</span>,
+                TimeUnit::Nanosecond =&gt; <span class="string">"NANOSECOND"</span>,
             }})
         }
         DataType::Timestamp(unit, <span class="prelude-val">Some</span>(tz)) =&gt; {
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;timestamp&quot;</span>, <span class="string">&quot;unit&quot;</span>: <span class="kw">match </span>unit {
-                TimeUnit::Second =&gt; <span class="string">&quot;SECOND&quot;</span>,
-                TimeUnit::Millisecond =&gt; <span class="string">&quot;MILLISECOND&quot;</span>,
-                TimeUnit::Microsecond =&gt; <span class="string">&quot;MICROSECOND&quot;</span>,
-                TimeUnit::Nanosecond =&gt; <span class="string">&quot;NANOSECOND&quot;</span>,
-            }, <span class="string">&quot;timezone&quot;</span>: tz})
+            <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"timestamp"</span>, <span class="string">"unit"</span>: <span class="kw">match </span>unit {
+                TimeUnit::Second =&gt; <span class="string">"SECOND"</span>,
+                TimeUnit::Millisecond =&gt; <span class="string">"MILLISECOND"</span>,
+                TimeUnit::Microsecond =&gt; <span class="string">"MICROSECOND"</span>,
+                TimeUnit::Nanosecond =&gt; <span class="string">"NANOSECOND"</span>,
+            }, <span class="string">"timezone"</span>: tz})
         }
-        DataType::Interval(unit) =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;interval&quot;</span>, <span class="string">&quot;unit&quot;</span>: <span class="kw">match </span>unit {
-            IntervalUnit::YearMonth =&gt; <span class="string">&quot;YEAR_MONTH&quot;</span>,
-            IntervalUnit::DayTime =&gt; <span class="string">&quot;DAY_TIME&quot;</span>,
-            IntervalUnit::MonthDayNano =&gt; <span class="string">&quot;MONTH_DAY_NANO&quot;</span>,
+        DataType::Interval(unit) =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"interval"</span>, <span class="string">"unit"</span>: <span class="kw">match </span>unit {
+            IntervalUnit::YearMonth =&gt; <span class="string">"YEAR_MONTH"</span>,
+            IntervalUnit::DayTime =&gt; <span class="string">"DAY_TIME"</span>,
+            IntervalUnit::MonthDayNano =&gt; <span class="string">"MONTH_DAY_NANO"</span>,
         }}),
-        DataType::Duration(unit) =&gt; <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;duration&quot;</span>, <span class="string">&quot;unit&quot;</span>: <span class="kw">match </span>unit {
-            TimeUnit::Second =&gt; <span class="string">&quot;SECOND&quot;</span>,
-            TimeUnit::Millisecond =&gt; <span class="string">&quot;MILLISECOND&quot;</span>,
-            TimeUnit::Microsecond =&gt; <span class="string">&quot;MICROSECOND&quot;</span>,
-            TimeUnit::Nanosecond =&gt; <span class="string">&quot;NANOSECOND&quot;</span>,
+        DataType::Duration(unit) =&gt; <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"duration"</span>, <span class="string">"unit"</span>: <span class="kw">match </span>unit {
+            TimeUnit::Second =&gt; <span class="string">"SECOND"</span>,
+            TimeUnit::Millisecond =&gt; <span class="string">"MILLISECOND"</span>,
+            TimeUnit::Microsecond =&gt; <span class="string">"MICROSECOND"</span>,
+            TimeUnit::Nanosecond =&gt; <span class="string">"NANOSECOND"</span>,
         }}),
-        DataType::Dictionary(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">json!</span>({ <span class="string">&quot;name&quot;</span>: <span class="string">&quot;dictionary&quot;</span>}),
+        DataType::Dictionary(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">json!</span>({ <span class="string">"name"</span>: <span class="string">"dictionary"</span>}),
         DataType::Decimal(precision, scale) =&gt; {
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;decimal&quot;</span>, <span class="string">&quot;precision&quot;</span>: precision, <span class="string">&quot;scale&quot;</span>: scale})
+            <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"decimal"</span>, <span class="string">"precision"</span>: precision, <span class="string">"scale"</span>: scale})
         }
         DataType::Decimal256(precision, scale) =&gt; {
-            <span class="macro">json!</span>({<span class="string">&quot;name&quot;</span>: <span class="string">&quot;decimal&quot;</span>, <span class="string">&quot;precision&quot;</span>: precision, <span class="string">&quot;scale&quot;</span>: scale, <span class="string">&quot;bit_width&quot;</span>: <span class="number">256</span>})
+            <span class="macro">json!</span>({<span class="string">"name"</span>: <span class="string">"decimal"</span>, <span class="string">"precision"</span>: precision, <span class="string">"scale"</span>: scale, <span class="string">"bit_width"</span>: <span class="number">256</span>})
         }
         DataType::Extension(<span class="kw">_</span>, inner_data_type, <span class="kw">_</span>) =&gt; serialize_data_type(inner_data_type),
     }
@@ -295,7 +297,7 @@
         <span class="prelude-val">Some</span>(ArrowJsonFieldDictionary {
             id: ipc_field.dictionary_id.unwrap(),
             index_type: IntegerType {
-                name: <span class="string">&quot;&quot;</span>.to_string(),
+                name: <span class="string">""</span>.to_string(),
                 bit_width: <span class="kw">match </span>key_type {
                     Int8 | UInt8 =&gt; <span class="number">8</span>,
                     Int16 | UInt16 =&gt; <span class="number">16</span>,

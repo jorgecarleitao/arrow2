@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/ipc/read/schema.rs`."><title>schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/ipc/read/schema.rs`."><title>schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -472,7 +474,7 @@
     <span class="kw">let </span>field = Field {
         name: ipc_field
             .name()<span class="question-mark">?
-            </span>.ok_or_else(|| Error::oos(<span class="string">&quot;Every field in IPC must have a name&quot;</span>))<span class="question-mark">?
+            </span>.ok_or_else(|| Error::oos(<span class="string">"Every field in IPC must have a name"</span>))<span class="question-mark">?
             </span>.to_string(),
         data_type,
         is_nullable: ipc_field.nullable()<span class="question-mark">?</span>,
@@ -507,7 +509,7 @@
         (<span class="number">32</span>, <span class="bool-val">false</span>) =&gt; IntegerType::UInt32,
         (<span class="number">64</span>, <span class="bool-val">true</span>) =&gt; IntegerType::Int64,
         (<span class="number">64</span>, <span class="bool-val">false</span>) =&gt; IntegerType::UInt64,
-        <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;IPC: indexType can only be 8, 16, 32 or 64.&quot;</span>)),
+        <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">"IPC: indexType can only be 8, 16, 32 or 64."</span>)),
     })
 }
 
@@ -531,7 +533,7 @@
         (<span class="number">64</span>, TimeUnit::Nanosecond) =&gt; DataType::Time64(TimeUnit::Nanosecond),
         (bits, precision) =&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::nyi(<span class="macro">format!</span>(
-                <span class="string">&quot;Time type with bit width of {bits} and unit of {precision:?}&quot;
+                <span class="string">"Time type with bit width of {bits} and unit of {precision:?}"
             </span>)))
         }
     };
@@ -553,9 +555,9 @@
 
     <span class="kw">let </span>fields = field
         .children()<span class="question-mark">?
-        </span>.ok_or_else(|| Error::oos(<span class="string">&quot;IPC: Union must contain children&quot;</span>))<span class="question-mark">?</span>;
+        </span>.ok_or_else(|| Error::oos(<span class="string">"IPC: Union must contain children"</span>))<span class="question-mark">?</span>;
     <span class="kw">if </span>fields.is_empty() {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;IPC: Union must contain at least one child&quot;</span>));
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">"IPC: Union must contain at least one child"</span>));
     }
 
     <span class="kw">let </span>(fields, ipc_fields) = try_unzip_vec(fields.iter().map(|field| {
@@ -574,10 +576,10 @@
 
     <span class="kw">let </span>children = field
         .children()<span class="question-mark">?
-        </span>.ok_or_else(|| Error::oos(<span class="string">&quot;IPC: Map must contain children&quot;</span>))<span class="question-mark">?</span>;
+        </span>.ok_or_else(|| Error::oos(<span class="string">"IPC: Map must contain children"</span>))<span class="question-mark">?</span>;
     <span class="kw">let </span>inner = children
         .get(<span class="number">0</span>)
-        .ok_or_else(|| Error::oos(<span class="string">&quot;IPC: Map must contain one child&quot;</span>))<span class="question-mark">??</span>;
+        .ok_or_else(|| Error::oos(<span class="string">"IPC: Map must contain one child"</span>))<span class="question-mark">??</span>;
     <span class="kw">let </span>(field, ipc_field) = deserialize_field(inner)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>data_type = DataType::Map(Box::new(field), is_sorted);
@@ -593,9 +595,9 @@
 <span class="kw">fn </span>deserialize_struct(field: FieldRef) -&gt; <span class="prelude-ty">Result</span>&lt;(DataType, IpcField)&gt; {
     <span class="kw">let </span>fields = field
         .children()<span class="question-mark">?
-        </span>.ok_or_else(|| Error::oos(<span class="string">&quot;IPC: Struct must contain children&quot;</span>))<span class="question-mark">?</span>;
+        </span>.ok_or_else(|| Error::oos(<span class="string">"IPC: Struct must contain children"</span>))<span class="question-mark">?</span>;
     <span class="kw">if </span>fields.is_empty() {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">&quot;IPC: Struct must contain at least one child&quot;</span>));
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(<span class="string">"IPC: Struct must contain at least one child"</span>));
     }
     <span class="kw">let </span>(fields, ipc_fields) = try_unzip_vec(fields.iter().map(|field| {
         <span class="kw">let </span>(field, fields) = deserialize_field(field<span class="question-mark">?</span>)<span class="question-mark">?</span>;
@@ -611,10 +613,10 @@
 <span class="kw">fn </span>deserialize_list(field: FieldRef) -&gt; <span class="prelude-ty">Result</span>&lt;(DataType, IpcField)&gt; {
     <span class="kw">let </span>children = field
         .children()<span class="question-mark">?
-        </span>.ok_or_else(|| Error::oos(<span class="string">&quot;IPC: List must contain children&quot;</span>))<span class="question-mark">?</span>;
+        </span>.ok_or_else(|| Error::oos(<span class="string">"IPC: List must contain children"</span>))<span class="question-mark">?</span>;
     <span class="kw">let </span>inner = children
         .get(<span class="number">0</span>)
-        .ok_or_else(|| Error::oos(<span class="string">&quot;IPC: List must contain one child&quot;</span>))<span class="question-mark">??</span>;
+        .ok_or_else(|| Error::oos(<span class="string">"IPC: List must contain one child"</span>))<span class="question-mark">??</span>;
     <span class="kw">let </span>(field, ipc_field) = deserialize_field(inner)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>((
@@ -629,10 +631,10 @@
 <span class="kw">fn </span>deserialize_large_list(field: FieldRef) -&gt; <span class="prelude-ty">Result</span>&lt;(DataType, IpcField)&gt; {
     <span class="kw">let </span>children = field
         .children()<span class="question-mark">?
-        </span>.ok_or_else(|| Error::oos(<span class="string">&quot;IPC: List must contain children&quot;</span>))<span class="question-mark">?</span>;
+        </span>.ok_or_else(|| Error::oos(<span class="string">"IPC: List must contain children"</span>))<span class="question-mark">?</span>;
     <span class="kw">let </span>inner = children
         .get(<span class="number">0</span>)
-        .ok_or_else(|| Error::oos(<span class="string">&quot;IPC: List must contain one child&quot;</span>))<span class="question-mark">??</span>;
+        .ok_or_else(|| Error::oos(<span class="string">"IPC: List must contain one child"</span>))<span class="question-mark">??</span>;
     <span class="kw">let </span>(field, ipc_field) = deserialize_field(inner)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>((
@@ -650,10 +652,10 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(DataType, IpcField)&gt; {
     <span class="kw">let </span>children = field
         .children()<span class="question-mark">?
-        </span>.ok_or_else(|| Error::oos(<span class="string">&quot;IPC: FixedSizeList must contain children&quot;</span>))<span class="question-mark">?</span>;
+        </span>.ok_or_else(|| Error::oos(<span class="string">"IPC: FixedSizeList must contain children"</span>))<span class="question-mark">?</span>;
     <span class="kw">let </span>inner = children
         .get(<span class="number">0</span>)
-        .ok_or_else(|| Error::oos(<span class="string">&quot;IPC: FixedSizeList must contain one child&quot;</span>))<span class="question-mark">??</span>;
+        .ok_or_else(|| Error::oos(<span class="string">"IPC: FixedSizeList must contain one child"</span>))<span class="question-mark">??</span>;
     <span class="kw">let </span>(field, ipc_field) = deserialize_field(inner)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>size = list
@@ -680,7 +682,7 @@
         <span class="kw">if </span>may_be_dictionary {
             <span class="kw">let </span>int = dictionary
                 .index_type()<span class="question-mark">?
-                </span>.ok_or_else(|| Error::oos(<span class="string">&quot;indexType is mandatory in Dictionary.&quot;</span>))<span class="question-mark">?</span>;
+                </span>.ok_or_else(|| Error::oos(<span class="string">"indexType is mandatory in Dictionary."</span>))<span class="question-mark">?</span>;
             <span class="kw">let </span>index_type = deserialize_integer(int)<span class="question-mark">?</span>;
             <span class="kw">let </span>(inner, <span class="kw-2">mut </span>ipc_field) = get_data_type(field, extension, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
             ipc_field.dictionary_id = <span class="prelude-val">Some</span>(dictionary.id()<span class="question-mark">?</span>);
@@ -702,7 +704,7 @@
 
     <span class="kw">let </span>type_ = field
         .type_()<span class="question-mark">?
-        </span>.ok_or_else(|| Error::oos(<span class="string">&quot;IPC: field type is mandatory&quot;</span>))<span class="question-mark">?</span>;
+        </span>.ok_or_else(|| Error::oos(<span class="string">"IPC: field type is mandatory"</span>))<span class="question-mark">?</span>;
 
     <span class="kw">use </span>arrow_format::ipc::TypeRef::<span class="kw-2">*</span>;
     <span class="prelude-val">Ok</span>(<span class="kw">match </span>type_ {
@@ -794,14 +796,14 @@
 <span class="doccomment">/// Deserialize an flatbuffers-encoded Schema message into [`Schema`] and [`IpcSchema`].
 </span><span class="kw">pub fn </span>deserialize_schema(message: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(Schema, IpcSchema)&gt; {
     <span class="kw">let </span>message = arrow_format::ipc::MessageRef::read_as_root(message)
-        .map_err(|err| Error::oos(<span class="macro">format!</span>(<span class="string">&quot;Unable deserialize message: {err:?}&quot;</span>)))<span class="question-mark">?</span>;
+        .map_err(|err| Error::oos(<span class="macro">format!</span>(<span class="string">"Unable deserialize message: {err:?}"</span>)))<span class="question-mark">?</span>;
 
     <span class="kw">let </span>schema = <span class="kw">match </span>message
         .header()<span class="question-mark">?
-        </span>.ok_or_else(|| Error::oos(<span class="string">&quot;Unable to convert header to a schema&quot;</span>.to_string()))<span class="question-mark">?
+        </span>.ok_or_else(|| Error::oos(<span class="string">"Unable to convert header to a schema"</span>.to_string()))<span class="question-mark">?
     </span>{
         arrow_format::ipc::MessageHeaderRef::Schema(schema) =&gt; <span class="prelude-val">Ok</span>(schema),
-        <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::nyi(<span class="string">&quot;The message is expected to be a Schema message&quot;</span>)),
+        <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::nyi(<span class="string">"The message is expected to be a Schema message"</span>)),
     }<span class="question-mark">?</span>;
 
     fb_to_schema(schema)
@@ -847,17 +849,17 @@
 
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>deserialize_stream_metadata(meta: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;StreamMetadata&gt; {
     <span class="kw">let </span>message = arrow_format::ipc::MessageRef::read_as_root(meta)
-        .map_err(|err| Error::OutOfSpec(<span class="macro">format!</span>(<span class="string">&quot;Unable to get root as message: {err:?}&quot;</span>)))<span class="question-mark">?</span>;
+        .map_err(|err| Error::OutOfSpec(<span class="macro">format!</span>(<span class="string">"Unable to get root as message: {err:?}"</span>)))<span class="question-mark">?</span>;
     <span class="kw">let </span>version = message.version()<span class="question-mark">?</span>;
     <span class="comment">// message header is a Schema, so read it
     </span><span class="kw">let </span>header = message
         .header()<span class="question-mark">?
-        </span>.ok_or_else(|| Error::oos(<span class="string">&quot;Unable to read the first IPC message&quot;</span>))<span class="question-mark">?</span>;
+        </span>.ok_or_else(|| Error::oos(<span class="string">"Unable to read the first IPC message"</span>))<span class="question-mark">?</span>;
     <span class="kw">let </span>schema = <span class="kw">if let </span>arrow_format::ipc::MessageHeaderRef::Schema(schema) = header {
         schema
     } <span class="kw">else </span>{
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::oos(
-            <span class="string">&quot;The first IPC message of the stream must be a schema&quot;</span>,
+            <span class="string">"The first IPC message of the stream must be a schema"</span>,
         ));
     };
     <span class="kw">let </span>(schema, ipc_schema) = fb_to_schema(schema)<span class="question-mark">?</span>;

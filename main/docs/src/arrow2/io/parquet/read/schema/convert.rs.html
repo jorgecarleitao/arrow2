@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/read/schema/convert.rs`."><title>convert.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/read/schema/convert.rs`."><title>convert.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1147,7 +1149,7 @@
             IntegerType::UInt8 =&gt; DataType::UInt8,
             IntegerType::UInt16 =&gt; DataType::UInt16,
             IntegerType::UInt32 =&gt; DataType::UInt32,
-            <span class="comment">// The above are the only possible annotations for parquet&#39;s int32. Anything else
+            <span class="comment">// The above are the only possible annotations for parquet's int32. Anything else
             // is a deviation to the parquet specification and we ignore
             </span><span class="kw">_ </span>=&gt; DataType::Int32,
         },
@@ -1155,7 +1157,7 @@
         (<span class="prelude-val">Some</span>(Date), <span class="kw">_</span>) =&gt; DataType::Date32,
         (<span class="prelude-val">Some</span>(Time { unit, .. }), <span class="kw">_</span>) =&gt; <span class="kw">match </span>unit {
             ParquetTimeUnit::Milliseconds =&gt; DataType::Time32(TimeUnit::Millisecond),
-            <span class="comment">// MILLIS is the only possible annotation for parquet&#39;s int32. Anything else
+            <span class="comment">// MILLIS is the only possible annotation for parquet's int32. Anything else
             // is a deviation to the parquet specification and we ignore
             </span><span class="kw">_ </span>=&gt; DataType::Int32,
         },
@@ -1197,7 +1199,7 @@
             <span class="kw">let </span>timezone = <span class="kw">if </span>is_adjusted_to_utc {
                 <span class="comment">// https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
                 // A TIMESTAMP with isAdjustedToUTC=true is defined as [...] elapsed since the Unix epoch
-                </span><span class="prelude-val">Some</span>(<span class="string">&quot;+00:00&quot;</span>.to_string())
+                </span><span class="prelude-val">Some</span>(<span class="string">"+00:00"</span>.to_string())
             } <span class="kw">else </span>{
                 <span class="comment">// PARQUET:
                 // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
@@ -1205,8 +1207,8 @@
                 // timestamps should always be displayed the same way, regardless of the local time zone in effect
                 // ARROW:
                 // https://github.com/apache/parquet-format/blob/master/LogicalTypes.md
-                // If the time zone is null or equal to an empty string, the data is &quot;time
-                // zone naive&quot; and shall be displayed *as is* to the user, not localized
+                // If the time zone is null or equal to an empty string, the data is "time
+                // zone naive" and shall be displayed *as is* to the user, not localized
                 // to the locale of the user.
                 </span><span class="prelude-val">None
             </span>};
@@ -1225,7 +1227,7 @@
             ParquetTimeUnit::Microseconds =&gt; DataType::Time64(TimeUnit::Microsecond),
             ParquetTimeUnit::Nanoseconds =&gt; DataType::Time64(TimeUnit::Nanosecond),
             <span class="comment">// MILLIS is only possible for int32. Appearing in int64 is a deviation
-            // to parquet&#39;s spec, which we ignore
+            // to parquet's spec, which we ignore
             </span><span class="kw">_ </span>=&gt; DataType::Int64,
         },
         (<span class="prelude-val">Some</span>(Decimal(precision, scale)), <span class="kw">_</span>) =&gt; DataType::Decimal(precision, scale),
@@ -1436,8 +1438,8 @@
         ParquetType::PrimitiveType(primitive) =&gt; <span class="prelude-val">Some</span>(to_primitive_type_inner(primitive, options)),
         ParquetType::GroupType { fields, .. } =&gt; {
             <span class="kw">if </span>fields.len() == <span class="number">1
-                </span>&amp;&amp; item.name() != <span class="string">&quot;array&quot;
-                </span>&amp;&amp; item.name() != <span class="macro">format!</span>(<span class="string">&quot;{parent_name}_tuple&quot;</span>)
+                </span>&amp;&amp; item.name() != <span class="string">"array"
+                </span>&amp;&amp; item.name() != <span class="macro">format!</span>(<span class="string">"{parent_name}_tuple"</span>)
             {
                 <span class="comment">// extract the repetition field
                 </span><span class="kw">let </span>nested_item = fields.first().unwrap();
@@ -1448,14 +1450,14 @@
         }
     }<span class="question-mark">?</span>;
 
-    <span class="comment">// Check that the name of the list child is &quot;list&quot;, in which case we
-    // get the child nullability and name (normally &quot;element&quot;) from the nested
+    <span class="comment">// Check that the name of the list child is "list", in which case we
+    // get the child nullability and name (normally "element") from the nested
     // group type.
-    // Without this step, the child incorrectly inherits the parent&#39;s optionality
+    // Without this step, the child incorrectly inherits the parent's optionality
     </span><span class="kw">let </span>(list_item_name, item_is_optional) = <span class="kw">match </span>item {
         ParquetType::GroupType {
             field_info, fields, ..
-        } <span class="kw">if </span>field_info.name == <span class="string">&quot;list&quot; </span>&amp;&amp; fields.len() == <span class="number">1 </span>=&gt; {
+        } <span class="kw">if </span>field_info.name == <span class="string">"list" </span>&amp;&amp; fields.len() == <span class="number">1 </span>=&gt; {
             <span class="kw">let </span>field = fields.first().unwrap();
             (
                 <span class="kw-2">&amp;</span>field.get_field_info().name,
@@ -1523,7 +1525,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_flat_primitives() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">let </span>message = <span class="string">&quot;
+        <span class="kw">let </span>message = <span class="string">"
         message test_schema {
             REQUIRED BOOLEAN boolean;
             REQUIRED INT32   int8  (INT_8);
@@ -1537,19 +1539,19 @@
             OPTIONAL BINARY  string (UTF8);
             OPTIONAL BINARY  string_2 (STRING);
         }
-        &quot;</span>;
+        "</span>;
         <span class="kw">let </span>expected = <span class="kw-2">&amp;</span>[
-            Field::new(<span class="string">&quot;boolean&quot;</span>, DataType::Boolean, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int8&quot;</span>, DataType::Int8, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int16&quot;</span>, DataType::Int16, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;uint8&quot;</span>, DataType::UInt8, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;uint16&quot;</span>, DataType::UInt16, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int32&quot;</span>, DataType::Int32, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int64&quot;</span>, DataType::Int64, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;double&quot;</span>, DataType::Float64, <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;float&quot;</span>, DataType::Float32, <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;string&quot;</span>, DataType::Utf8, <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;string_2&quot;</span>, DataType::Utf8, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"boolean"</span>, DataType::Boolean, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int8"</span>, DataType::Int8, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int16"</span>, DataType::Int16, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"uint8"</span>, DataType::UInt8, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"uint16"</span>, DataType::UInt16, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int32"</span>, DataType::Int32, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int64"</span>, DataType::Int64, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"double"</span>, DataType::Float64, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"float"</span>, DataType::Float32, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"string"</span>, DataType::Utf8, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"string_2"</span>, DataType::Utf8, <span class="bool-val">true</span>),
         ];
 
         <span class="kw">let </span>parquet_schema = SchemaDescriptor::try_from_message(message)<span class="question-mark">?</span>;
@@ -1561,19 +1563,19 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_byte_array_fields() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">let </span>message = <span class="string">&quot;
+        <span class="kw">let </span>message = <span class="string">"
         message test_schema {
             REQUIRED BYTE_ARRAY binary;
             REQUIRED FIXED_LEN_BYTE_ARRAY (20) fixed_binary;
             REQUIRED FIXED_LEN_BYTE_ARRAY (7) decimal_128 (Decimal(16, 2)) ;
             REQUIRED FIXED_LEN_BYTE_ARRAY (32) decimal_256 (Decimal(44, 2)) ;
         }
-        &quot;</span>;
+        "</span>;
         <span class="kw">let </span>expected = <span class="macro">vec!</span>[
-            Field::new(<span class="string">&quot;binary&quot;</span>, DataType::Binary, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;fixed_binary&quot;</span>, DataType::FixedSizeBinary(<span class="number">20</span>), <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;decimal_128&quot;</span>, DataType::Decimal(<span class="number">16</span>, <span class="number">2</span>), <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;decimal_256&quot;</span>, DataType::Decimal256(<span class="number">44</span>, <span class="number">2</span>), <span class="bool-val">false</span>),
+            Field::new(<span class="string">"binary"</span>, DataType::Binary, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"fixed_binary"</span>, DataType::FixedSizeBinary(<span class="number">20</span>), <span class="bool-val">false</span>),
+            Field::new(<span class="string">"decimal_128"</span>, DataType::Decimal(<span class="number">16</span>, <span class="number">2</span>), <span class="bool-val">false</span>),
+            Field::new(<span class="string">"decimal_256"</span>, DataType::Decimal256(<span class="number">44</span>, <span class="number">2</span>), <span class="bool-val">false</span>),
         ];
 
         <span class="kw">let </span>parquet_schema = SchemaDescriptor::try_from_message(message)<span class="question-mark">?</span>;
@@ -1585,15 +1587,15 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_duplicate_fields() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">let </span>message = <span class="string">&quot;
+        <span class="kw">let </span>message = <span class="string">"
         message test_schema {
             REQUIRED BOOLEAN boolean;
             REQUIRED INT32 int8 (INT_8);
         }
-        &quot;</span>;
+        "</span>;
         <span class="kw">let </span>expected = <span class="kw-2">&amp;</span>[
-            Field::new(<span class="string">&quot;boolean&quot;</span>, DataType::Boolean, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int8&quot;</span>, DataType::Int8, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"boolean"</span>, DataType::Boolean, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int8"</span>, DataType::Int8, <span class="bool-val">false</span>),
         ];
 
         <span class="kw">let </span>parquet_schema = SchemaDescriptor::try_from_message(message)<span class="question-mark">?</span>;
@@ -1608,7 +1610,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>arrow_fields = Vec::new();
 
         <span class="comment">// LIST encoding example taken from parquet-format/LogicalTypes.md
-        </span><span class="kw">let </span>message_type = <span class="string">&quot;
+        </span><span class="kw">let </span>message_type = <span class="string">"
         message test_schema {
           REQUIRED GROUP my_list (LIST) {
             REPEATED GROUP list {
@@ -1656,7 +1658,7 @@
           }
           REPEATED INT32 name;
         }
-        &quot;</span>;
+        "</span>;
 
         <span class="comment">// // List&lt;String&gt; (list non-null, elements nullable)
         // required group my_list (LIST) {
@@ -1666,8 +1668,8 @@
         // }
         </span>{
             arrow_fields.push(Field::new(
-                <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Utf8, <span class="bool-val">true</span>))),
+                <span class="string">"my_list"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, DataType::Utf8, <span class="bool-val">true</span>))),
                 <span class="bool-val">false</span>,
             ));
         }
@@ -1680,8 +1682,8 @@
         // }
         </span>{
             arrow_fields.push(Field::new(
-                <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>))),
+                <span class="string">"my_list"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, DataType::Utf8, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1700,10 +1702,10 @@
         // }
         </span>{
             <span class="kw">let </span>arrow_inner_list =
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Int32, <span class="bool-val">false</span>)));
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, DataType::Int32, <span class="bool-val">false</span>)));
             arrow_fields.push(Field::new(
-                <span class="string">&quot;array_of_arrays&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, arrow_inner_list, <span class="bool-val">false</span>))),
+                <span class="string">"array_of_arrays"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, arrow_inner_list, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1716,8 +1718,8 @@
         // }
         </span>{
             arrow_fields.push(Field::new(
-                <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>))),
+                <span class="string">"my_list"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, DataType::Utf8, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1728,8 +1730,8 @@
         // }
         </span>{
             arrow_fields.push(Field::new(
-                <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Int32, <span class="bool-val">false</span>))),
+                <span class="string">"my_list"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, DataType::Int32, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1743,12 +1745,12 @@
         // }
         </span>{
             <span class="kw">let </span>arrow_struct = DataType::Struct(<span class="macro">vec!</span>[
-                Field::new(<span class="string">&quot;str&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>),
-                Field::new(<span class="string">&quot;num&quot;</span>, DataType::Int32, <span class="bool-val">false</span>),
+                Field::new(<span class="string">"str"</span>, DataType::Utf8, <span class="bool-val">false</span>),
+                Field::new(<span class="string">"num"</span>, DataType::Int32, <span class="bool-val">false</span>),
             ]);
             arrow_fields.push(Field::new(
-                <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, arrow_struct, <span class="bool-val">false</span>))),
+                <span class="string">"my_list"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, arrow_struct, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1761,10 +1763,10 @@
         // }
         // Special case: group is named array
         </span>{
-            <span class="kw">let </span>arrow_struct = DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">&quot;str&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>)]);
+            <span class="kw">let </span>arrow_struct = DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">"str"</span>, DataType::Utf8, <span class="bool-val">false</span>)]);
             arrow_fields.push(Field::new(
-                <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;array&quot;</span>, arrow_struct, <span class="bool-val">false</span>))),
+                <span class="string">"my_list"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"array"</span>, arrow_struct, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1777,10 +1779,10 @@
         // }
         // Special case: group named ends in _tuple
         </span>{
-            <span class="kw">let </span>arrow_struct = DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">&quot;str&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>)]);
+            <span class="kw">let </span>arrow_struct = DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">"str"</span>, DataType::Utf8, <span class="bool-val">false</span>)]);
             arrow_fields.push(Field::new(
-                <span class="string">&quot;my_list&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;my_list_tuple&quot;</span>, arrow_struct, <span class="bool-val">false</span>))),
+                <span class="string">"my_list"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"my_list_tuple"</span>, arrow_struct, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1789,8 +1791,8 @@
         //   repeated value_type name
         </span>{
             arrow_fields.push(Field::new(
-                <span class="string">&quot;name&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;name&quot;</span>, DataType::Int32, <span class="bool-val">false</span>))),
+                <span class="string">"name"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"name"</span>, DataType::Int32, <span class="bool-val">false</span>))),
                 <span class="bool-val">false</span>,
             ));
         }
@@ -1806,7 +1808,7 @@
     </span><span class="kw">fn </span>test_parquet_list_with_struct() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>arrow_fields = Vec::new();
 
-        <span class="kw">let </span>message_type = <span class="string">&quot;
+        <span class="kw">let </span>message_type = <span class="string">"
             message eventlog {
               REQUIRED group events (LIST) {
                 REPEATED group array {
@@ -1815,21 +1817,21 @@
                 }
               }
             }
-        &quot;</span>;
+        "</span>;
 
         {
             <span class="kw">let </span>struct_fields = <span class="macro">vec!</span>[
-                Field::new(<span class="string">&quot;event_name&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>),
+                Field::new(<span class="string">"event_name"</span>, DataType::Utf8, <span class="bool-val">false</span>),
                 Field::new(
-                    <span class="string">&quot;event_time&quot;</span>,
-                    DataType::Timestamp(TimeUnit::Millisecond, <span class="prelude-val">Some</span>(<span class="string">&quot;+00:00&quot;</span>.into())),
+                    <span class="string">"event_time"</span>,
+                    DataType::Timestamp(TimeUnit::Millisecond, <span class="prelude-val">Some</span>(<span class="string">"+00:00"</span>.into())),
                     <span class="bool-val">false</span>,
                 ),
             ];
             arrow_fields.push(Field::new(
-                <span class="string">&quot;events&quot;</span>,
+                <span class="string">"events"</span>,
                 DataType::List(Box::new(Field::new(
-                    <span class="string">&quot;array&quot;</span>,
+                    <span class="string">"array"</span>,
                     DataType::Struct(struct_fields),
                     <span class="bool-val">false</span>,
                 ))),
@@ -1848,7 +1850,7 @@
     </span><span class="kw">fn </span>test_parquet_list_nullable() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>arrow_fields = Vec::new();
 
-        <span class="kw">let </span>message_type = <span class="string">&quot;
+        <span class="kw">let </span>message_type = <span class="string">"
         message test_schema {
           REQUIRED GROUP my_list1 (LIST) {
             REPEATED GROUP list {
@@ -1866,7 +1868,7 @@
             }
           }
         }
-        &quot;</span>;
+        "</span>;
 
         <span class="comment">// // List&lt;String&gt; (list non-null, elements nullable)
         // required group my_list1 (LIST) {
@@ -1876,8 +1878,8 @@
         // }
         </span>{
             arrow_fields.push(Field::new(
-                <span class="string">&quot;my_list1&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Utf8, <span class="bool-val">true</span>))),
+                <span class="string">"my_list1"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, DataType::Utf8, <span class="bool-val">true</span>))),
                 <span class="bool-val">false</span>,
             ));
         }
@@ -1890,8 +1892,8 @@
         // }
         </span>{
             arrow_fields.push(Field::new(
-                <span class="string">&quot;my_list2&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>))),
+                <span class="string">"my_list2"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, DataType::Utf8, <span class="bool-val">false</span>))),
                 <span class="bool-val">true</span>,
             ));
         }
@@ -1904,8 +1906,8 @@
         // }
         </span>{
             arrow_fields.push(Field::new(
-                <span class="string">&quot;my_list3&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>))),
+                <span class="string">"my_list3"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, DataType::Utf8, <span class="bool-val">false</span>))),
                 <span class="bool-val">false</span>,
             ));
         }
@@ -1922,17 +1924,17 @@
         <span class="kw">let </span><span class="kw-2">mut </span>arrow_fields = Vec::new();
         {
             <span class="kw">let </span>group1_fields = <span class="macro">vec!</span>[
-                Field::new(<span class="string">&quot;leaf1&quot;</span>, DataType::Boolean, <span class="bool-val">false</span>),
-                Field::new(<span class="string">&quot;leaf2&quot;</span>, DataType::Int32, <span class="bool-val">false</span>),
+                Field::new(<span class="string">"leaf1"</span>, DataType::Boolean, <span class="bool-val">false</span>),
+                Field::new(<span class="string">"leaf2"</span>, DataType::Int32, <span class="bool-val">false</span>),
             ];
-            <span class="kw">let </span>group1_struct = Field::new(<span class="string">&quot;group1&quot;</span>, DataType::Struct(group1_fields), <span class="bool-val">false</span>);
+            <span class="kw">let </span>group1_struct = Field::new(<span class="string">"group1"</span>, DataType::Struct(group1_fields), <span class="bool-val">false</span>);
             arrow_fields.push(group1_struct);
 
-            <span class="kw">let </span>leaf3_field = Field::new(<span class="string">&quot;leaf3&quot;</span>, DataType::Int64, <span class="bool-val">false</span>);
+            <span class="kw">let </span>leaf3_field = Field::new(<span class="string">"leaf3"</span>, DataType::Int64, <span class="bool-val">false</span>);
             arrow_fields.push(leaf3_field);
         }
 
-        <span class="kw">let </span>message_type = <span class="string">&quot;
+        <span class="kw">let </span>message_type = <span class="string">"
         message test_schema {
           REQUIRED GROUP group1 {
             REQUIRED BOOLEAN leaf1;
@@ -1940,7 +1942,7 @@
           }
           REQUIRED INT64 leaf3;
         }
-        &quot;</span>;
+        "</span>;
 
         <span class="kw">let </span>parquet_schema = SchemaDescriptor::try_from_message(message_type)<span class="question-mark">?</span>;
         <span class="kw">let </span>fields = parquet_to_arrow_schema(parquet_schema.fields());
@@ -1953,24 +1955,24 @@
     </span><span class="kw">fn </span>test_repeated_nested_schema() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>arrow_fields = Vec::new();
         {
-            arrow_fields.push(Field::new(<span class="string">&quot;leaf1&quot;</span>, DataType::Int32, <span class="bool-val">true</span>));
+            arrow_fields.push(Field::new(<span class="string">"leaf1"</span>, DataType::Int32, <span class="bool-val">true</span>));
 
             <span class="kw">let </span>inner_group_list = Field::new(
-                <span class="string">&quot;innerGroup&quot;</span>,
+                <span class="string">"innerGroup"</span>,
                 DataType::List(Box::new(Field::new(
-                    <span class="string">&quot;innerGroup&quot;</span>,
-                    DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">&quot;leaf3&quot;</span>, DataType::Int32, <span class="bool-val">true</span>)]),
+                    <span class="string">"innerGroup"</span>,
+                    DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">"leaf3"</span>, DataType::Int32, <span class="bool-val">true</span>)]),
                     <span class="bool-val">false</span>,
                 ))),
                 <span class="bool-val">false</span>,
             );
 
             <span class="kw">let </span>outer_group_list = Field::new(
-                <span class="string">&quot;outerGroup&quot;</span>,
+                <span class="string">"outerGroup"</span>,
                 DataType::List(Box::new(Field::new(
-                    <span class="string">&quot;outerGroup&quot;</span>,
+                    <span class="string">"outerGroup"</span>,
                     DataType::Struct(<span class="macro">vec!</span>[
-                        Field::new(<span class="string">&quot;leaf2&quot;</span>, DataType::Int32, <span class="bool-val">true</span>),
+                        Field::new(<span class="string">"leaf2"</span>, DataType::Int32, <span class="bool-val">true</span>),
                         inner_group_list,
                     ]),
                     <span class="bool-val">false</span>,
@@ -1980,7 +1982,7 @@
             arrow_fields.push(outer_group_list);
         }
 
-        <span class="kw">let </span>message_type = <span class="string">&quot;
+        <span class="kw">let </span>message_type = <span class="string">"
         message test_schema {
           OPTIONAL INT32 leaf1;
           REPEATED GROUP outerGroup {
@@ -1990,7 +1992,7 @@
             }
           }
         }
-        &quot;</span>;
+        "</span>;
 
         <span class="kw">let </span>parquet_schema = SchemaDescriptor::try_from_message(message_type)<span class="question-mark">?</span>;
         <span class="kw">let </span>fields = parquet_to_arrow_schema(parquet_schema.fields());
@@ -2001,7 +2003,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_column_desc_to_field() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">let </span>message_type = <span class="string">&quot;
+        <span class="kw">let </span>message_type = <span class="string">"
         message test_schema {
             REQUIRED BOOLEAN boolean;
             REQUIRED INT32   int8  (INT_8);
@@ -2022,40 +2024,40 @@
             REQUIRED INT64   ts_micro (TIMESTAMP_MICROS);
             REQUIRED INT64   ts_nano (TIMESTAMP(NANOS,true));
         }
-        &quot;</span>;
+        "</span>;
         <span class="kw">let </span>arrow_fields = <span class="macro">vec!</span>[
-            Field::new(<span class="string">&quot;boolean&quot;</span>, DataType::Boolean, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int8&quot;</span>, DataType::Int8, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;uint8&quot;</span>, DataType::UInt8, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int16&quot;</span>, DataType::Int16, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;uint16&quot;</span>, DataType::UInt16, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int32&quot;</span>, DataType::Int32, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int64&quot;</span>, DataType::Int64, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;double&quot;</span>, DataType::Float64, <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;float&quot;</span>, DataType::Float32, <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;string&quot;</span>, DataType::Utf8, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"boolean"</span>, DataType::Boolean, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int8"</span>, DataType::Int8, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"uint8"</span>, DataType::UInt8, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int16"</span>, DataType::Int16, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"uint16"</span>, DataType::UInt16, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int32"</span>, DataType::Int32, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int64"</span>, DataType::Int64, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"double"</span>, DataType::Float64, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"float"</span>, DataType::Float32, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"string"</span>, DataType::Utf8, <span class="bool-val">true</span>),
             Field::new(
-                <span class="string">&quot;bools&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;bools&quot;</span>, DataType::Boolean, <span class="bool-val">false</span>))),
+                <span class="string">"bools"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"bools"</span>, DataType::Boolean, <span class="bool-val">false</span>))),
                 <span class="bool-val">false</span>,
             ),
-            Field::new(<span class="string">&quot;date&quot;</span>, DataType::Date32, <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;time_milli&quot;</span>, DataType::Time32(TimeUnit::Millisecond), <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;time_micro&quot;</span>, DataType::Time64(TimeUnit::Microsecond), <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;time_nano&quot;</span>, DataType::Time64(TimeUnit::Nanosecond), <span class="bool-val">true</span>),
+            Field::new(<span class="string">"date"</span>, DataType::Date32, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"time_milli"</span>, DataType::Time32(TimeUnit::Millisecond), <span class="bool-val">true</span>),
+            Field::new(<span class="string">"time_micro"</span>, DataType::Time64(TimeUnit::Microsecond), <span class="bool-val">true</span>),
+            Field::new(<span class="string">"time_nano"</span>, DataType::Time64(TimeUnit::Nanosecond), <span class="bool-val">true</span>),
             Field::new(
-                <span class="string">&quot;ts_milli&quot;</span>,
+                <span class="string">"ts_milli"</span>,
                 DataType::Timestamp(TimeUnit::Millisecond, <span class="prelude-val">None</span>),
                 <span class="bool-val">true</span>,
             ),
             Field::new(
-                <span class="string">&quot;ts_micro&quot;</span>,
+                <span class="string">"ts_micro"</span>,
                 DataType::Timestamp(TimeUnit::Microsecond, <span class="prelude-val">None</span>),
                 <span class="bool-val">false</span>,
             ),
             Field::new(
-                <span class="string">&quot;ts_nano&quot;</span>,
-                DataType::Timestamp(TimeUnit::Nanosecond, <span class="prelude-val">Some</span>(<span class="string">&quot;+00:00&quot;</span>.to_string())),
+                <span class="string">"ts_nano"</span>,
+                DataType::Timestamp(TimeUnit::Nanosecond, <span class="prelude-val">Some</span>(<span class="string">"+00:00"</span>.to_string())),
                 <span class="bool-val">false</span>,
             ),
         ];
@@ -2069,7 +2071,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_field_to_column_desc() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">let </span>message_type = <span class="string">&quot;
+        <span class="kw">let </span>message_type = <span class="string">"
         message arrow_schema {
             REQUIRED BOOLEAN boolean;
             REQUIRED INT32   int8  (INT_8);
@@ -2105,54 +2107,54 @@
             }
             REQUIRED BINARY  dictionary_strings (STRING);
         }
-        &quot;</span>;
+        "</span>;
 
         <span class="kw">let </span>arrow_fields = <span class="macro">vec!</span>[
-            Field::new(<span class="string">&quot;boolean&quot;</span>, DataType::Boolean, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int8&quot;</span>, DataType::Int8, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int16&quot;</span>, DataType::Int16, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int32&quot;</span>, DataType::Int32, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;int64&quot;</span>, DataType::Int64, <span class="bool-val">false</span>),
-            Field::new(<span class="string">&quot;double&quot;</span>, DataType::Float64, <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;float&quot;</span>, DataType::Float32, <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;string&quot;</span>, DataType::Utf8, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"boolean"</span>, DataType::Boolean, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int8"</span>, DataType::Int8, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int16"</span>, DataType::Int16, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int32"</span>, DataType::Int32, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"int64"</span>, DataType::Int64, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"double"</span>, DataType::Float64, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"float"</span>, DataType::Float32, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"string"</span>, DataType::Utf8, <span class="bool-val">true</span>),
             Field::new(
-                <span class="string">&quot;bools&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Boolean, <span class="bool-val">true</span>))),
+                <span class="string">"bools"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, DataType::Boolean, <span class="bool-val">true</span>))),
                 <span class="bool-val">true</span>,
             ),
             Field::new(
-                <span class="string">&quot;bools_non_null&quot;</span>,
-                DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Boolean, <span class="bool-val">false</span>))),
+                <span class="string">"bools_non_null"</span>,
+                DataType::List(Box::new(Field::new(<span class="string">"element"</span>, DataType::Boolean, <span class="bool-val">false</span>))),
                 <span class="bool-val">false</span>,
             ),
-            Field::new(<span class="string">&quot;date&quot;</span>, DataType::Date32, <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;time_milli&quot;</span>, DataType::Time32(TimeUnit::Millisecond), <span class="bool-val">true</span>),
-            Field::new(<span class="string">&quot;time_micro&quot;</span>, DataType::Time64(TimeUnit::Microsecond), <span class="bool-val">true</span>),
+            Field::new(<span class="string">"date"</span>, DataType::Date32, <span class="bool-val">true</span>),
+            Field::new(<span class="string">"time_milli"</span>, DataType::Time32(TimeUnit::Millisecond), <span class="bool-val">true</span>),
+            Field::new(<span class="string">"time_micro"</span>, DataType::Time64(TimeUnit::Microsecond), <span class="bool-val">true</span>),
             Field::new(
-                <span class="string">&quot;ts_milli&quot;</span>,
+                <span class="string">"ts_milli"</span>,
                 DataType::Timestamp(TimeUnit::Millisecond, <span class="prelude-val">None</span>),
                 <span class="bool-val">true</span>,
             ),
             Field::new(
-                <span class="string">&quot;ts_micro&quot;</span>,
+                <span class="string">"ts_micro"</span>,
                 DataType::Timestamp(TimeUnit::Microsecond, <span class="prelude-val">None</span>),
                 <span class="bool-val">false</span>,
             ),
             Field::new(
-                <span class="string">&quot;struct&quot;</span>,
+                <span class="string">"struct"</span>,
                 DataType::Struct(<span class="macro">vec!</span>[
-                    Field::new(<span class="string">&quot;bools&quot;</span>, DataType::Boolean, <span class="bool-val">false</span>),
-                    Field::new(<span class="string">&quot;uint32&quot;</span>, DataType::UInt32, <span class="bool-val">false</span>),
+                    Field::new(<span class="string">"bools"</span>, DataType::Boolean, <span class="bool-val">false</span>),
+                    Field::new(<span class="string">"uint32"</span>, DataType::UInt32, <span class="bool-val">false</span>),
                     Field::new(
-                        <span class="string">&quot;int32&quot;</span>,
-                        DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, DataType::Int32, <span class="bool-val">true</span>))),
+                        <span class="string">"int32"</span>,
+                        DataType::List(Box::new(Field::new(<span class="string">"element"</span>, DataType::Int32, <span class="bool-val">true</span>))),
                         <span class="bool-val">false</span>,
                     ),
                 ]),
                 <span class="bool-val">false</span>,
             ),
-            Field::new(<span class="string">&quot;dictionary_strings&quot;</span>, DataType::Utf8, <span class="bool-val">false</span>),
+            Field::new(<span class="string">"dictionary_strings"</span>, DataType::Utf8, <span class="bool-val">false</span>),
         ];
 
         <span class="kw">let </span>parquet_schema = SchemaDescriptor::try_from_message(message_type)<span class="question-mark">?</span>;
@@ -2170,7 +2172,7 @@
             TimeUnit::Millisecond,
             TimeUnit::Nanosecond,
         ] {
-            <span class="kw">let </span>message_type = <span class="string">&quot;
+            <span class="kw">let </span>message_type = <span class="string">"
             message arrow_schema {
                 REQUIRED INT96   int96_field;
                 OPTIONAL GROUP   int96_list (LIST) {
@@ -2182,18 +2184,18 @@
                     REQUIRED INT96 int96_field;
                 }
             }
-            &quot;</span>;
+            "</span>;
             <span class="kw">let </span>coerced_to = DataType::Timestamp(tu, <span class="prelude-val">None</span>);
             <span class="kw">let </span>arrow_fields = <span class="macro">vec!</span>[
-                Field::new(<span class="string">&quot;int96_field&quot;</span>, coerced_to.clone(), <span class="bool-val">false</span>),
+                Field::new(<span class="string">"int96_field"</span>, coerced_to.clone(), <span class="bool-val">false</span>),
                 Field::new(
-                    <span class="string">&quot;int96_list&quot;</span>,
-                    DataType::List(Box::new(Field::new(<span class="string">&quot;element&quot;</span>, coerced_to.clone(), <span class="bool-val">true</span>))),
+                    <span class="string">"int96_list"</span>,
+                    DataType::List(Box::new(Field::new(<span class="string">"element"</span>, coerced_to.clone(), <span class="bool-val">true</span>))),
                     <span class="bool-val">true</span>,
                 ),
                 Field::new(
-                    <span class="string">&quot;int96_struct&quot;</span>,
-                    DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">&quot;int96_field&quot;</span>, coerced_to.clone(), <span class="bool-val">false</span>)]),
+                    <span class="string">"int96_struct"</span>,
+                    DataType::Struct(<span class="macro">vec!</span>[Field::new(<span class="string">"int96_field"</span>, coerced_to.clone(), <span class="bool-val">false</span>)]),
                     <span class="bool-val">false</span>,
                 ),
             ];

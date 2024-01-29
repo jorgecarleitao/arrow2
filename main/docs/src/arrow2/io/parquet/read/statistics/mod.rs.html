@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/read/statistics/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/read/statistics/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -578,7 +580,7 @@
 <a href="#578" id="578">578</a>
 <a href="#579" id="579">579</a>
 <a href="#580" id="580">580</a>
-</pre></div><pre class="rust"><code><span class="doccomment">//! APIs exposing `parquet2`&#39;s statistics as arrow&#39;s statistics.
+</pre></div><pre class="rust"><code><span class="doccomment">//! APIs exposing `parquet2`'s statistics as arrow's statistics.
 </span><span class="kw">use </span>ethnum::I256;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::sync::Arc;
@@ -780,7 +782,7 @@
         }
         other =&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
-                <span class="string">&quot;Deserializing parquet stats from {other:?} is still not implemented&quot;
+                <span class="string">"Deserializing parquet stats from {other:?} is still not implemented"
             </span>)))
         }
     })
@@ -1032,22 +1034,22 @@
         UInt8 =&gt; primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>u8)),
         UInt16 =&gt; primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>u16)),
         UInt32 =&gt; <span class="kw">match </span>physical_type {
-            <span class="comment">// some implementations of parquet write arrow&#39;s u32 into i64.
+            <span class="comment">// some implementations of parquet write arrow's u32 into i64.
             </span>ParquetPhysicalType::Int64 =&gt; primitive::push(from, min, max, |x: i64| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>u32)),
             ParquetPhysicalType::Int32 =&gt; primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>u32)),
             other =&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
-                <span class="string">&quot;Can&#39;t decode UInt32 type from parquet type {other:?}&quot;
+                <span class="string">"Can't decode UInt32 type from parquet type {other:?}"
             </span>))),
         },
         Int32 =&gt; primitive::push::&lt;i32, i32, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>),
         Date64 =&gt; <span class="kw">match </span>physical_type {
             ParquetPhysicalType::Int64 =&gt; primitive::push::&lt;i64, i64, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>),
-            <span class="comment">// some implementations of parquet write arrow&#39;s date64 into i32.
+            <span class="comment">// some implementations of parquet write arrow's date64 into i32.
             </span>ParquetPhysicalType::Int32 =&gt; {
                 primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>i64 * <span class="number">86400000</span>))
             }
             other =&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(<span class="macro">format!</span>(
-                <span class="string">&quot;Can&#39;t decode Date64 type from parquet type {other:?}&quot;
+                <span class="string">"Can't decode Date64 type from parquet type {other:?}"
             </span>))),
         },
         Int64 | Time64(<span class="kw">_</span>) | Duration(<span class="kw">_</span>) =&gt; primitive::push::&lt;i64, i64, <span class="kw">_</span>&gt;(from, min, max, <span class="prelude-val">Ok</span>),
@@ -1096,7 +1098,7 @@
             ParquetPhysicalType::Int32 =&gt; primitive::push(from, min, max, |x: i32| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>i128)),
             ParquetPhysicalType::Int64 =&gt; primitive::push(from, min, max, |x: i64| <span class="prelude-val">Ok</span>(x <span class="kw">as </span>i128)),
             ParquetPhysicalType::FixedLenByteArray(n) <span class="kw">if </span><span class="kw-2">*</span>n &gt; <span class="number">16 </span>=&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(
-                <span class="macro">format!</span>(<span class="string">&quot;Can&#39;t decode Decimal128 type from Fixed Size Byte Array of len {n:?}&quot;</span>),
+                <span class="macro">format!</span>(<span class="string">"Can't decode Decimal128 type from Fixed Size Byte Array of len {n:?}"</span>),
             )),
             ParquetPhysicalType::FixedLenByteArray(n) =&gt; fixlen::push_i128(from, <span class="kw-2">*</span>n, min, max),
             <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
@@ -1112,7 +1114,7 @@
                 fixlen::push_i256_with_i128(from, <span class="kw-2">*</span>n, min, max)
             }
             ParquetPhysicalType::FixedLenByteArray(n) <span class="kw">if </span><span class="kw-2">*</span>n &gt; <span class="number">32 </span>=&gt; <span class="prelude-val">Err</span>(Error::NotYetImplemented(
-                <span class="macro">format!</span>(<span class="string">&quot;Can&#39;t decode Decimal256 type from Fixed Size Byte Array of len {n:?}&quot;</span>),
+                <span class="macro">format!</span>(<span class="string">"Can't decode Decimal256 type from Fixed Size Byte Array of len {n:?}"</span>),
             )),
             ParquetPhysicalType::FixedLenByteArray(<span class="kw">_</span>) =&gt; fixlen::push_i256(from, min, max),
             <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
@@ -1123,12 +1125,12 @@
         LargeUtf8 =&gt; utf8::push::&lt;i64&gt;(from, min, max),
         FixedSizeBinary(<span class="kw">_</span>) =&gt; fixlen::push(from, min, max),
         Null =&gt; null::push(min, max),
-        other =&gt; <span class="macro">todo!</span>(<span class="string">&quot;{:?}&quot;</span>, other),
+        other =&gt; <span class="macro">todo!</span>(<span class="string">"{:?}"</span>, other),
     }
 }
 
 <span class="doccomment">/// Deserializes the statistics in the column chunks from all `row_groups`
-/// into [`Statistics`] associated from `field`&#39;s name.
+/// into [`Statistics`] associated from `field`'s name.
 ///
 /// # Errors
 /// This function errors if the deserialization of the statistics fails (e.g. invalid utf8)

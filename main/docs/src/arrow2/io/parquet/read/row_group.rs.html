@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/read/row_group.rs`."><title>row_group.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/io/parquet/read/row_group.rs`."><title>row_group.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -350,7 +352,7 @@
 <a href="#350" id="350">350</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::io::{Read, Seek};
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;io_parquet_async&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"io_parquet_async"</span>)]
 </span><span class="kw">use </span>futures::{
     future::{try_join_all, BoxFuture},
     AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt,
@@ -380,7 +382,7 @@
 </span><span class="kw">pub struct </span>RowGroupDeserializer {
     num_rows: usize,
     remaining_rows: usize,
-    column_chunks: Vec&lt;ArrayIter&lt;<span class="lifetime">&#39;static</span>&gt;&gt;,
+    column_chunks: Vec&lt;ArrayIter&lt;<span class="lifetime">'static</span>&gt;&gt;,
 }
 
 <span class="kw">impl </span>RowGroupDeserializer {
@@ -390,7 +392,7 @@
     /// This function panics iff any of the `column_chunks`
     /// do not return an array with an equal length.
     </span><span class="kw">pub fn </span>new(
-        column_chunks: Vec&lt;ArrayIter&lt;<span class="lifetime">&#39;static</span>&gt;&gt;,
+        column_chunks: Vec&lt;ArrayIter&lt;<span class="lifetime">'static</span>&gt;&gt;,
         num_rows: usize,
         limit: <span class="prelude-ty">Option</span>&lt;usize&gt;,
     ) -&gt; <span class="self">Self </span>{
@@ -433,10 +435,10 @@
 
 <span class="doccomment">/// Returns all [`ColumnChunkMetaData`] associated to `field_name`.
 /// For non-nested parquet types, this returns a single column
-</span><span class="kw">pub fn </span>get_field_columns&lt;<span class="lifetime">&#39;a</span>&gt;(
-    columns: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[ColumnChunkMetaData],
+</span><span class="kw">pub fn </span>get_field_columns&lt;<span class="lifetime">'a</span>&gt;(
+    columns: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[ColumnChunkMetaData],
     field_name: <span class="kw-2">&amp;</span>str,
-) -&gt; Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ColumnChunkMetaData&gt; {
+) -&gt; Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>ColumnChunkMetaData&gt; {
     columns
         .iter()
         .filter(|x| x.descriptor().path_in_schema[<span class="number">0</span>] == field_name)
@@ -445,11 +447,11 @@
 
 <span class="doccomment">/// Returns all [`ColumnChunkMetaData`] associated to `field_name`.
 /// For non-nested parquet types, this returns a single column
-</span><span class="kw">pub fn </span>get_field_pages&lt;<span class="lifetime">&#39;a</span>, T&gt;(
-    columns: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[ColumnChunkMetaData],
-    items: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[T],
+</span><span class="kw">pub fn </span>get_field_pages&lt;<span class="lifetime">'a</span>, T&gt;(
+    columns: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[ColumnChunkMetaData],
+    items: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[T],
     field_name: <span class="kw-2">&amp;</span>str,
-) -&gt; Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T&gt; {
+) -&gt; Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>T&gt; {
     columns
         .iter()
         .zip(items)
@@ -462,21 +464,21 @@
 /// # Implementation
 /// This operation is IO-bounded `O(C)` where C is the number of columns associated to
 /// the field (one for non-nested types)
-</span><span class="kw">pub fn </span>read_columns&lt;<span class="lifetime">&#39;a</span>, R: Read + Seek&gt;(
+</span><span class="kw">pub fn </span>read_columns&lt;<span class="lifetime">'a</span>, R: Read + Seek&gt;(
     reader: <span class="kw-2">&amp;mut </span>R,
-    columns: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[ColumnChunkMetaData],
+    columns: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[ColumnChunkMetaData],
     field_name: <span class="kw-2">&amp;</span>str,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ColumnChunkMetaData, Vec&lt;u8&gt;)&gt;&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>ColumnChunkMetaData, Vec&lt;u8&gt;)&gt;&gt; {
     get_field_columns(columns, field_name)
         .into_iter()
         .map(|meta| _read_single_column(reader, meta))
         .collect()
 }
 
-<span class="kw">fn </span>_read_single_column&lt;<span class="lifetime">&#39;a</span>, R&gt;(
+<span class="kw">fn </span>_read_single_column&lt;<span class="lifetime">'a</span>, R&gt;(
     reader: <span class="kw-2">&amp;mut </span>R,
-    meta: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ColumnChunkMetaData,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ColumnChunkMetaData, Vec&lt;u8&gt;)&gt;
+    meta: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ColumnChunkMetaData,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>ColumnChunkMetaData, Vec&lt;u8&gt;)&gt;
 <span class="kw">where
     </span>R: Read + Seek,
 {
@@ -489,14 +491,14 @@
     <span class="prelude-val">Ok</span>((meta, chunk))
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;io_parquet_async&quot;</span>)]
-</span><span class="kw">async fn </span>_read_single_column_async&lt;<span class="lifetime">&#39;b</span>, R, F&gt;(
+<span class="attr">#[cfg(feature = <span class="string">"io_parquet_async"</span>)]
+</span><span class="kw">async fn </span>_read_single_column_async&lt;<span class="lifetime">'b</span>, R, F&gt;(
     reader_factory: F,
     meta: <span class="kw-2">&amp;</span>ColumnChunkMetaData,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="kw-2">&amp;</span>ColumnChunkMetaData, Vec&lt;u8&gt;)&gt;
 <span class="kw">where
     </span>R: AsyncRead + AsyncSeek + Send + Unpin,
-    F: Fn() -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, std::io::Result&lt;R&gt;&gt;,
+    F: Fn() -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, std::io::Result&lt;R&gt;&gt;,
 {
     <span class="kw">let </span><span class="kw-2">mut </span>reader = reader_factory().<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>(start, length) = meta.byte_range();
@@ -515,18 +517,18 @@
 ///
 /// It does so asynchronously via a single `join_all` over all the necessary columns for
 /// `field_name`.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;io_parquet_async&quot;</span>)]
-#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_parquet_async&quot;</span>)))]
+</span><span class="attr">#[cfg(feature = <span class="string">"io_parquet_async"</span>)]
+#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">"io_parquet_async"</span>)))]
 </span><span class="kw">pub async fn </span>read_columns_async&lt;
-    <span class="lifetime">&#39;a</span>,
-    <span class="lifetime">&#39;b</span>,
+    <span class="lifetime">'a</span>,
+    <span class="lifetime">'b</span>,
     R: AsyncRead + AsyncSeek + Send + Unpin,
-    F: Fn() -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, std::io::Result&lt;R&gt;&gt; + Clone,
+    F: Fn() -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, std::io::Result&lt;R&gt;&gt; + Clone,
 &gt;(
     reader_factory: F,
-    columns: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[ColumnChunkMetaData],
+    columns: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[ColumnChunkMetaData],
     field_name: <span class="kw-2">&amp;</span>str,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ColumnChunkMetaData, Vec&lt;u8&gt;)&gt;&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>ColumnChunkMetaData, Vec&lt;u8&gt;)&gt;&gt; {
     <span class="kw">let </span>futures = get_field_columns(columns, field_name)
         .into_iter()
         .map(|meta| <span class="kw">async </span>{ _read_single_column_async(reader_factory.clone(), meta).<span class="kw">await </span>});
@@ -542,13 +544,13 @@
 
 <span class="doccomment">/// Converts a vector of columns associated with the parquet field whose name is [`Field`]
 /// to an iterator of [`Array`], [`ArrayIter`] of chunk size `chunk_size`.
-</span><span class="kw">pub fn </span>to_deserializer&lt;<span class="lifetime">&#39;a</span>&gt;(
+</span><span class="kw">pub fn </span>to_deserializer&lt;<span class="lifetime">'a</span>&gt;(
     columns: Vec&lt;(<span class="kw-2">&amp;</span>ColumnChunkMetaData, Vec&lt;u8&gt;)&gt;,
     field: Field,
     num_rows: usize,
     chunk_size: <span class="prelude-ty">Option</span>&lt;usize&gt;,
     pages: <span class="prelude-ty">Option</span>&lt;Vec&lt;Vec&lt;FilteredPage&gt;&gt;&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;ArrayIter&lt;<span class="lifetime">&#39;a</span>&gt;&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;ArrayIter&lt;<span class="lifetime">'a</span>&gt;&gt; {
     <span class="kw">let </span>chunk_size = chunk_size.map(|c| c.min(num_rows));
 
     <span class="kw">let </span>(columns, types) = <span class="kw">if let </span><span class="prelude-val">Some</span>(pages) = pages {
@@ -605,7 +607,7 @@
 }
 
 <span class="doccomment">/// Returns a vector of iterators of [`Array`] ([`ArrayIter`]) corresponding to the top
-/// level parquet fields whose name matches `fields`&#39;s names.
+/// level parquet fields whose name matches `fields`'s names.
 ///
 /// # Implementation
 /// This operation is IO-bounded `O(C)` where C is the number of columns in the row group -
@@ -614,14 +616,14 @@
 /// This operation is single-threaded. For readers with stronger invariants
 /// (e.g. implement [`Clone`]) you can use [`read_columns`] to read multiple columns at once
 /// and convert them to [`ArrayIter`] via [`to_deserializer`].
-</span><span class="kw">pub fn </span>read_columns_many&lt;<span class="lifetime">&#39;a</span>, R: Read + Seek&gt;(
+</span><span class="kw">pub fn </span>read_columns_many&lt;<span class="lifetime">'a</span>, R: Read + Seek&gt;(
     reader: <span class="kw-2">&amp;mut </span>R,
     row_group: <span class="kw-2">&amp;</span>RowGroupMetaData,
     fields: Vec&lt;Field&gt;,
     chunk_size: <span class="prelude-ty">Option</span>&lt;usize&gt;,
     limit: <span class="prelude-ty">Option</span>&lt;usize&gt;,
     pages: <span class="prelude-ty">Option</span>&lt;Vec&lt;Vec&lt;Vec&lt;FilteredPage&gt;&gt;&gt;&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ArrayIter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ArrayIter&lt;<span class="lifetime">'a</span>&gt;&gt;&gt; {
     <span class="kw">let </span>num_rows = row_group.num_rows();
     <span class="kw">let </span>num_rows = limit.map(|limit| limit.min(num_rows)).unwrap_or(num_rows);
 
@@ -651,19 +653,19 @@
 }
 
 <span class="doccomment">/// Returns a vector of iterators of [`Array`] corresponding to the top level parquet fields whose
-/// name matches `fields`&#39;s names.
+/// name matches `fields`'s names.
 ///
 /// # Implementation
 /// This operation is IO-bounded `O(C)` where C is the number of columns in the row group -
 /// it reads all the columns to memory from the row group associated to the requested fields.
 /// It does so asynchronously via `join_all`
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;io_parquet_async&quot;</span>)]
-#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;io_parquet_async&quot;</span>)))]
+</span><span class="attr">#[cfg(feature = <span class="string">"io_parquet_async"</span>)]
+#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">"io_parquet_async"</span>)))]
 </span><span class="kw">pub async fn </span>read_columns_many_async&lt;
-    <span class="lifetime">&#39;a</span>,
-    <span class="lifetime">&#39;b</span>,
+    <span class="lifetime">'a</span>,
+    <span class="lifetime">'b</span>,
     R: AsyncRead + AsyncSeek + Send + Unpin,
-    F: Fn() -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, std::io::Result&lt;R&gt;&gt; + Clone,
+    F: Fn() -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, std::io::Result&lt;R&gt;&gt; + Clone,
 &gt;(
     reader_factory: F,
     row_group: <span class="kw-2">&amp;</span>RowGroupMetaData,
@@ -671,7 +673,7 @@
     chunk_size: <span class="prelude-ty">Option</span>&lt;usize&gt;,
     limit: <span class="prelude-ty">Option</span>&lt;usize&gt;,
     pages: <span class="prelude-ty">Option</span>&lt;Vec&lt;Vec&lt;Vec&lt;FilteredPage&gt;&gt;&gt;&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ArrayIter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ArrayIter&lt;<span class="lifetime">'a</span>&gt;&gt;&gt; {
     <span class="kw">let </span>num_rows = row_group.num_rows();
     <span class="kw">let </span>num_rows = limit.map(|limit| limit.min(num_rows)).unwrap_or(num_rows);
 

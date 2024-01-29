@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/temporal_conversions.rs`."><title>temporal_conversions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (aa1a71e9e 2023-10-26)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/temporal_conversions.rs`."><title>temporal_conversions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="arrow2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (635124704 2024-01-27)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../arrow2/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -582,7 +584,7 @@
 <span class="doccomment">/// converts a `i32` representing a `date32` to [`NaiveDateTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>date32_to_datetime(v: i32) -&gt; NaiveDateTime {
-    date32_to_datetime_opt(v).expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+    date32_to_datetime_opt(v).expect(<span class="string">"invalid or out-of-range datetime"</span>)
 }
 
 <span class="doccomment">/// converts a `i32` representing a `date32` to [`NaiveDateTime`]
@@ -594,7 +596,7 @@
 <span class="doccomment">/// converts a `i32` representing a `date32` to [`NaiveDate`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>date32_to_date(days: i32) -&gt; NaiveDate {
-    date32_to_date_opt(days).expect(<span class="string">&quot;out-of-range date&quot;</span>)
+    date32_to_date_opt(days).expect(<span class="string">"out-of-range date"</span>)
 }
 
 <span class="doccomment">/// converts a `i32` representing a `date32` to [`NaiveDate`]
@@ -612,7 +614,7 @@
         <span class="comment">// discard extracted seconds and convert milliseconds to nanoseconds
         </span>(v % MILLISECONDS * MICROSECONDS) <span class="kw">as </span>u32,
     )
-    .expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+    .expect(<span class="string">"invalid or out-of-range datetime"</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `date64` to [`NaiveDate`]
@@ -624,7 +626,7 @@
 <span class="doccomment">/// converts a `i32` representing a `time32(s)` to [`NaiveTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>time32s_to_time(v: i32) -&gt; NaiveTime {
-    NaiveTime::from_num_seconds_from_midnight_opt(v <span class="kw">as </span>u32, <span class="number">0</span>).expect(<span class="string">&quot;invalid time&quot;</span>)
+    NaiveTime::from_num_seconds_from_midnight_opt(v <span class="kw">as </span>u32, <span class="number">0</span>).expect(<span class="string">"invalid time"</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `duration(s)` to [`Duration`]
@@ -660,13 +662,13 @@
     <span class="kw">let </span>milli_to_nano = <span class="number">1_000_000</span>;
     <span class="kw">let </span>nano = (v - seconds * MILLISECONDS) * milli_to_nano;
     NaiveTime::from_num_seconds_from_midnight_opt(seconds <span class="kw">as </span>u32, nano <span class="kw">as </span>u32)
-        .expect(<span class="string">&quot;invalid time&quot;</span>)
+        .expect(<span class="string">"invalid time"</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `time64(us)` to [`NaiveTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>time64us_to_time(v: i64) -&gt; NaiveTime {
-    time64us_to_time_opt(v).expect(<span class="string">&quot;invalid time&quot;</span>)
+    time64us_to_time_opt(v).expect(<span class="string">"invalid time"</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `time64(us)` to [`NaiveTime`]
@@ -684,7 +686,7 @@
 <span class="doccomment">/// converts a `i64` representing a `time64(ns)` to [`NaiveTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>time64ns_to_time(v: i64) -&gt; NaiveTime {
-    time64ns_to_time_opt(v).expect(<span class="string">&quot;invalid time&quot;</span>)
+    time64ns_to_time_opt(v).expect(<span class="string">"invalid time"</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `time64(ns)` to [`NaiveTime`]
@@ -701,7 +703,7 @@
 <span class="doccomment">/// converts a `i64` representing a `timestamp(s)` to [`NaiveDateTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_s_to_datetime(seconds: i64) -&gt; NaiveDateTime {
-    timestamp_s_to_datetime_opt(seconds).expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+    timestamp_s_to_datetime_opt(seconds).expect(<span class="string">"invalid or out-of-range datetime"</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(s)` to [`NaiveDateTime`]
@@ -713,7 +715,7 @@
 <span class="doccomment">/// converts a `i64` representing a `timestamp(ms)` to [`NaiveDateTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_ms_to_datetime(v: i64) -&gt; NaiveDateTime {
-    timestamp_ms_to_datetime_opt(v).expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+    timestamp_ms_to_datetime_opt(v).expect(<span class="string">"invalid or out-of-range datetime"</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(ms)` to [`NaiveDateTime`]
@@ -732,8 +734,8 @@
             <span class="comment">// whole/integer seconds; no adjustment required
             </span>NaiveDateTime::from_timestamp_opt(secs_rem.<span class="number">0</span>, <span class="number">0</span>)
         } <span class="kw">else </span>{
-            <span class="comment">// negative values with fractional seconds require &#39;div_floor&#39; rounding behaviour.
-            // (which isn&#39;t yet stabilised: https://github.com/rust-lang/rust/issues/88581)
+            <span class="comment">// negative values with fractional seconds require 'div_floor' rounding behaviour.
+            // (which isn't yet stabilised: https://github.com/rust-lang/rust/issues/88581)
             </span>NaiveDateTime::from_timestamp_opt(
                 secs_rem.<span class="number">0 </span>- <span class="number">1</span>,
                 (NANOSECONDS + (v % MILLISECONDS * MICROSECONDS)) <span class="kw">as </span>u32,
@@ -745,7 +747,7 @@
 <span class="doccomment">/// converts a `i64` representing a `timestamp(us)` to [`NaiveDateTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_us_to_datetime(v: i64) -&gt; NaiveDateTime {
-    timestamp_us_to_datetime_opt(v).expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+    timestamp_us_to_datetime_opt(v).expect(<span class="string">"invalid or out-of-range datetime"</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(us)` to [`NaiveDateTime`]
@@ -764,8 +766,8 @@
             <span class="comment">// whole/integer seconds; no adjustment required
             </span>NaiveDateTime::from_timestamp_opt(secs_rem.<span class="number">0</span>, <span class="number">0</span>)
         } <span class="kw">else </span>{
-            <span class="comment">// negative values with fractional seconds require &#39;div_floor&#39; rounding behaviour.
-            // (which isn&#39;t yet stabilised: https://github.com/rust-lang/rust/issues/88581)
+            <span class="comment">// negative values with fractional seconds require 'div_floor' rounding behaviour.
+            // (which isn't yet stabilised: https://github.com/rust-lang/rust/issues/88581)
             </span>NaiveDateTime::from_timestamp_opt(
                 secs_rem.<span class="number">0 </span>- <span class="number">1</span>,
                 (NANOSECONDS + (v % MICROSECONDS * MILLISECONDS)) <span class="kw">as </span>u32,
@@ -777,7 +779,7 @@
 <span class="doccomment">/// converts a `i64` representing a `timestamp(ns)` to [`NaiveDateTime`]
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>timestamp_ns_to_datetime(v: i64) -&gt; NaiveDateTime {
-    timestamp_ns_to_datetime_opt(v).expect(<span class="string">&quot;invalid or out-of-range datetime&quot;</span>)
+    timestamp_ns_to_datetime_opt(v).expect(<span class="string">"invalid or out-of-range datetime"</span>)
 }
 
 <span class="doccomment">/// converts a `i64` representing a `timestamp(ns)` to [`NaiveDateTime`]
@@ -796,8 +798,8 @@
             <span class="comment">// whole/integer seconds; no adjustment required
             </span>NaiveDateTime::from_timestamp_opt(secs_rem.<span class="number">0</span>, <span class="number">0</span>)
         } <span class="kw">else </span>{
-            <span class="comment">// negative values with fractional seconds require &#39;div_floor&#39; rounding behaviour.
-            // (which isn&#39;t yet stabilised: https://github.com/rust-lang/rust/issues/88581)
+            <span class="comment">// negative values with fractional seconds require 'div_floor' rounding behaviour.
+            // (which isn't yet stabilised: https://github.com/rust-lang/rust/issues/88581)
             </span>NaiveDateTime::from_timestamp_opt(
                 secs_rem.<span class="number">0 </span>- <span class="number">1</span>,
                 (NANOSECONDS + (v % NANOSECONDS)) <span class="kw">as </span>u32,
@@ -828,8 +830,8 @@
 }
 
 <span class="doccomment">/// Calculates the scale factor between two TimeUnits. The function returns the
-/// scale that should multiply the TimeUnit &quot;b&quot; to have the same time scale as
-/// the TimeUnit &quot;a&quot;.
+/// scale that should multiply the TimeUnit "b" to have the same time scale as
+/// the TimeUnit "a".
 </span><span class="kw">pub fn </span>timeunit_scale(a: TimeUnit, b: TimeUnit) -&gt; f64 {
     <span class="kw">match </span>(a, b) {
         (TimeUnit::Second, TimeUnit::Second) =&gt; <span class="number">1.0</span>,
@@ -851,16 +853,16 @@
     }
 }
 
-<span class="doccomment">/// Parses an offset of the form `&quot;+WX:YZ&quot;` or `&quot;UTC&quot;` into [`FixedOffset`].
+<span class="doccomment">/// Parses an offset of the form `"+WX:YZ"` or `"UTC"` into [`FixedOffset`].
 /// # Errors
 /// If the offset is not in any of the allowed forms.
 </span><span class="kw">pub fn </span>parse_offset(offset: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;FixedOffset&gt; {
-    <span class="kw">if </span>offset == <span class="string">&quot;UTC&quot; </span>{
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(FixedOffset::east_opt(<span class="number">0</span>).expect(<span class="string">&quot;FixedOffset::east out of bounds&quot;</span>));
+    <span class="kw">if </span>offset == <span class="string">"UTC" </span>{
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(FixedOffset::east_opt(<span class="number">0</span>).expect(<span class="string">"FixedOffset::east out of bounds"</span>));
     }
-    <span class="kw">let </span>error = <span class="string">&quot;timezone offset must be of the form [-]00:00&quot;</span>;
+    <span class="kw">let </span>error = <span class="string">"timezone offset must be of the form [-]00:00"</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>a = offset.split(<span class="string">&#39;:&#39;</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>a = offset.split(<span class="string">':'</span>);
     <span class="kw">let </span>first = a
         .next()
         .map(<span class="prelude-val">Ok</span>)
@@ -877,10 +879,10 @@
         .map_err(|<span class="kw">_</span>| Error::InvalidArgumentError(error.to_string()))<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(FixedOffset::east_opt(hours * <span class="number">60 </span>* <span class="number">60 </span>+ minutes * <span class="number">60</span>)
-        .expect(<span class="string">&quot;FixedOffset::east out of bounds&quot;</span>))
+        .expect(<span class="string">"FixedOffset::east out of bounds"</span>))
 }
 
-<span class="doccomment">/// Parses `value` to `Option&lt;i64&gt;` consistent with the Arrow&#39;s definition of timestamp with timezone.
+<span class="doccomment">/// Parses `value` to `Option&lt;i64&gt;` consistent with the Arrow's definition of timestamp with timezone.
 /// `tz` must be built from `timezone` (either via [`parse_offset`] or `chrono-tz`).
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>utf8_to_timestamp_ns_scalar&lt;T: chrono::TimeZone&gt;(
@@ -891,7 +893,7 @@
     utf8_to_timestamp_scalar(value, fmt, tz, <span class="kw-2">&amp;</span>TimeUnit::Nanosecond)
 }
 
-<span class="doccomment">/// Parses `value` to `Option&lt;i64&gt;` consistent with the Arrow&#39;s definition of timestamp with timezone.
+<span class="doccomment">/// Parses `value` to `Option&lt;i64&gt;` consistent with the Arrow's definition of timestamp with timezone.
 /// `tz` must be built from `timezone` (either via [`parse_offset`] or `chrono-tz`).
 /// Returns in scale `tz` of `TimeUnit`.
 </span><span class="attr">#[inline]
@@ -921,13 +923,13 @@
     </span>}
 }
 
-<span class="doccomment">/// Parses `value` to `Option&lt;i64&gt;` consistent with the Arrow&#39;s definition of timestamp without timezone.
+<span class="doccomment">/// Parses `value` to `Option&lt;i64&gt;` consistent with the Arrow's definition of timestamp without timezone.
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>utf8_to_naive_timestamp_ns_scalar(value: <span class="kw-2">&amp;</span>str, fmt: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;i64&gt; {
     utf8_to_naive_timestamp_scalar(value, fmt, <span class="kw-2">&amp;</span>TimeUnit::Nanosecond)
 }
 
-<span class="doccomment">/// Parses `value` to `Option&lt;i64&gt;` consistent with the Arrow&#39;s definition of timestamp without timezone.
+<span class="doccomment">/// Parses `value` to `Option&lt;i64&gt;` consistent with the Arrow's definition of timestamp without timezone.
 /// Returns in scale `tz` of `TimeUnit`.
 </span><span class="attr">#[inline]
 </span><span class="kw">pub fn </span>utf8_to_naive_timestamp_scalar(value: <span class="kw-2">&amp;</span>str, fmt: <span class="kw-2">&amp;</span>str, tu: <span class="kw-2">&amp;</span>TimeUnit) -&gt; <span class="prelude-ty">Option</span>&lt;i64&gt; {
@@ -959,17 +961,17 @@
         .to(DataType::Timestamp(TimeUnit::Nanosecond, <span class="prelude-val">Some</span>(timezone)))
 }
 
-<span class="doccomment">/// Parses `value` to a [`chrono_tz::Tz`] with the Arrow&#39;s definition of timestamp with a timezone.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
-#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)))]
+<span class="doccomment">/// Parses `value` to a [`chrono_tz::Tz`] with the Arrow's definition of timestamp with a timezone.
+</span><span class="attr">#[cfg(feature = <span class="string">"chrono-tz"</span>)]
+#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">"chrono-tz"</span>)))]
 </span><span class="kw">pub fn </span>parse_offset_tz(timezone: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;chrono_tz::Tz&gt; {
     timezone.parse::&lt;chrono_tz::Tz&gt;().map_err(|<span class="kw">_</span>| {
-        Error::InvalidArgumentError(<span class="macro">format!</span>(<span class="string">&quot;timezone \&quot;{timezone}\&quot; cannot be parsed&quot;</span>))
+        Error::InvalidArgumentError(<span class="macro">format!</span>(<span class="string">"timezone \"{timezone}\" cannot be parsed"</span>))
     })
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)]
-#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;chrono-tz&quot;</span>)))]
+<span class="attr">#[cfg(feature = <span class="string">"chrono-tz"</span>)]
+#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">"chrono-tz"</span>)))]
 </span><span class="kw">fn </span>chrono_tz_utf_to_timestamp_ns&lt;O: Offset&gt;(
     array: <span class="kw-2">&amp;</span>Utf8Array&lt;O&gt;,
     fmt: <span class="kw-2">&amp;</span>str,
@@ -979,14 +981,14 @@
     <span class="prelude-val">Ok</span>(utf8_to_timestamp_ns_impl(array, fmt, timezone, tz))
 }
 
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;chrono-tz&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"chrono-tz"</span>))]
 </span><span class="kw">fn </span>chrono_tz_utf_to_timestamp_ns&lt;O: Offset&gt;(
     <span class="kw">_</span>: <span class="kw-2">&amp;</span>Utf8Array&lt;O&gt;,
     <span class="kw">_</span>: <span class="kw-2">&amp;</span>str,
     timezone: String,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;PrimitiveArray&lt;i64&gt;&gt; {
     <span class="prelude-val">Err</span>(Error::InvalidArgumentError(<span class="macro">format!</span>(
-        <span class="string">&quot;timezone \&quot;{timezone}\&quot; cannot be parsed (feature chrono-tz is not active)&quot;</span>,
+        <span class="string">"timezone \"{timezone}\" cannot be parsed (feature chrono-tz is not active)"</span>,
     )))
 }
 
@@ -995,7 +997,7 @@
 /// * parsed values with timezone other than `timezone` are converted to `timezone`.
 /// * parsed values without timezone are null. Use [`utf8_to_naive_timestamp_ns`] to parse naive timezones.
 /// * Null elements remain null; non-parsable elements are null.
-/// The feature `&quot;chrono-tz&quot;` enables IANA and zoneinfo formats for `timezone`.
+/// The feature `"chrono-tz"` enables IANA and zoneinfo formats for `timezone`.
 /// # Error
 /// This function errors iff `timezone` is not parsable to an offset.
 </span><span class="kw">pub fn </span>utf8_to_timestamp_ns&lt;O: Offset&gt;(
@@ -1031,13 +1033,13 @@
     <span class="kw">let </span>new_year = (year * <span class="number">12 </span>+ (month - <span class="number">1</span>) <span class="kw">as </span>i32 + months) / <span class="number">12</span>;
     <span class="kw">let </span>new_month = (year * <span class="number">12 </span>+ (month - <span class="number">1</span>) <span class="kw">as </span>i32 + months) % <span class="number">12 </span>+ <span class="number">1</span>;
     chrono::NaiveDate::from_ymd_opt(new_year, new_month <span class="kw">as </span>u32, <span class="number">1</span>)
-        .expect(<span class="string">&quot;invalid or out-of-range date&quot;</span>)
+        .expect(<span class="string">"invalid or out-of-range date"</span>)
 }
 
 <span class="kw">fn </span>get_days_between_months(year: i32, month: u32, months: i32) -&gt; i64 {
     add_month(year, month, months)
         .signed_duration_since(
-            chrono::NaiveDate::from_ymd_opt(year, month, <span class="number">1</span>).expect(<span class="string">&quot;invalid or out-of-range date&quot;</span>),
+            chrono::NaiveDate::from_ymd_opt(year, month, <span class="number">1</span>).expect(<span class="string">"invalid or out-of-range date"</span>),
         )
         .num_days()
 }
