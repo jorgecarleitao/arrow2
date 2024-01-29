@@ -1,3 +1,9 @@
+# THIS CRATE IS UNMAINTAINED
+As of 2024-01-17 this crate is no longer maintained. See discussion [#1429]
+for more details.
+
+[#1429]: https://github.com/jorgecarleitao/arrow2/issues/1429
+
 # Arrow2: Transmute-free Arrow
 
 [![test](https://github.com/jorgecarleitao/arrow2/actions/workflows/test.yml/badge.svg)](https://github.com/jorgecarleitao/arrow2/actions/workflows/Build.yml)
@@ -50,7 +56,7 @@ for a detailed documentation of each of its APIs.
 * Extensive set of cargo feature flags to reduce compilation time and binary size
 * Fully-decoupled IO between CPU-bounded and IO-bounded tasks, allowing
   this crate to both be used in `async` contexts without blocking and leverage parallelism
-* Fastest known implementation of Avro and Parquet (e.g. faster than the official 
+* Fastest known implementation of Avro and Parquet (e.g. faster than the official
   C++ implementations)
 
 ## Safety and Security
