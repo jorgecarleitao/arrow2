@@ -25,9 +25,7 @@ use crate::{
     error::{Error, Result},
     offset::{Offset, Offsets},
 };
-use crate::compute::cast::binview_to::{
-    utf8view_to_date32_dyn, utf8view_to_naive_timestamp_dyn, view_to_binary,
-};
+use crate::compute::cast::binview_to::{RFC3339, utf8view_to_date32_dyn, utf8view_to_naive_timestamp_dyn, view_to_binary};
 use crate::temporal_conversions::utf8view_to_timestamp;
 
 /// options defining how Cast kernels behave
@@ -161,10 +159,10 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
         (LargeBinary, to_type) => {
             is_numeric(to_type)
                 || match to_type {
-                    Binary | LargeUtf8 => true,
-                    LargeList(field) => matches!(field.data_type, UInt8),
-                    _ => false,
-                }
+                Binary | LargeUtf8 => true,
+                LargeList(field) => matches!(field.data_type, UInt8),
+                _ => false,
+            }
         }
         (FixedSizeBinary(_), to_type) => matches!(to_type, Binary | LargeBinary),
         (Timestamp(_, _), Utf8) => true,
@@ -337,6 +335,26 @@ pub fn can_cast_types(from_type: &DataType, to_type: &DataType) -> bool {
     }
 }
 
+fn cast_struct(
+    array: &StructArray,
+    to_type: &DataType,
+    options: CastOptions,
+) -> Result<StructArray> {
+    let values = array.values();
+    let fields = StructArray::get_fields(to_type);
+    let new_values = values
+        .iter()
+        .zip(fields)
+        .map(|(arr, field)| cast(arr.as_ref(), field.data_type(), options))
+        .collect::<Result<Vec<_>>>()?;
+
+    Ok(StructArray::new(
+        to_type.clone(),
+        new_values,
+        array.validity().cloned(),
+    ))
+}
+
 fn cast_list<O: Offset>(
     array: &ListArray<O>,
     to_type: &DataType,
@@ -456,13 +474,14 @@ pub fn cast_unchecked(array: &dyn Array, to_type: &DataType) -> Result<Box<dyn A
 /// * Fixed Size List to List: the underlying data type is cast
 /// * List to Fixed Size List: the offsets are checked for valid order, then the
 ///   underlying type is cast.
+/// * Struct to Struct: the underlying fields are cast.
 /// * PrimitiveArray to List: a list array with 1 value per slot is created
 /// * Date32 and Date64: precision lost when going to higher interval
 /// * Time32 and Time64: precision lost when going to higher interval
 /// * Timestamp and Date{32|64}: precision lost when going to higher interval
 /// * Temporal to/from backing primitive: zero-copy with data type change
 /// Unsupported Casts
-/// * To or from `StructArray`
+/// * non-`StructArray` to `StructArray` or `StructArray` to non-`StructArray`
 /// * List to primitive
 /// * Utf8 to boolean
 /// * Interval and duration
@@ -478,11 +497,14 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
     let as_options = options.with_wrapped(true);
     match (from_type, to_type) {
         (Null, _) | (_, Null) => Ok(new_null_array(to_type.clone(), array.len())),
-        (Struct(_), _) => Err(Error::NotYetImplemented(
+        (Struct(from_fd), Struct(to_fd)) => {
+            if from_fd.len() != to_fd.len() {
+                return Err(Error::InvalidArgumentError("incompatible offsets in source list".to_string()));
+            }
+            cast_struct(array.as_any().downcast_ref().unwrap(), to_type, options).map(|x| x.boxed())
+        },
+        (Struct(_), _) | (_, Struct(_)) => Err(Error::NotYetImplemented(
             "Cannot cast from struct to other types".to_string(),
-        )),
-        (_, Struct(_)) => Err(Error::NotYetImplemented(
-            "Cannot cast to struct from other types".to_string(),
         )),
         (List(_), FixedSizeList(inner, size)) => cast_list_to_fixed_size_list::<i32>(
             array.as_any().downcast_ref().unwrap(),
