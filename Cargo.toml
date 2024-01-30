@@ -1,11 +1,14 @@
 [package]
 name = "arrow2"
-version = "0.17.4"
+version = "0.17.5"
 license = "Apache-2.0"
 description = "Unofficial implementation of Apache Arrow spec in safe Rust"
 homepage = "https://github.com/jorgecarleitao/arrow2"
 repository = "https://github.com/jorgecarleitao/arrow2"
-authors = ["Jorge C. Leitao <jorgecarleitao@gmail.com>", "Apache Arrow <dev@arrow.apache.org>"]
+authors = [
+    "Jorge C. Leitao <jorgecarleitao@gmail.com>",
+    "Apache Arrow <dev@arrow.apache.org>",
+]
 keywords = ["arrow", "analytics"]
 edition = "2021"
 exclude = ["testing/"]
@@ -51,7 +54,9 @@ regex-syntax = { version = "0.7", optional = true }
 streaming-iterator = { version = "0.1", optional = true }
 fallible-streaming-iterator = { version = "0.1", optional = true }
 
-json-deserializer = { version = "0.4.4", optional = true, features = ["preserve_order"] }
+json-deserializer = { version = "0.4.4", optional = true, features = [
+    "preserve_order",
+] }
 indexmap = { version = "^1.6", optional = true }
 
 # used to print columns in a nice columnar format
@@ -86,7 +91,9 @@ orc-format = { version = "0.3.0", optional = true }
 # Arrow integration tests support
 serde = { version = "^1.0", features = ["rc"], optional = true }
 serde_derive = { version = "^1.0", optional = true }
-serde_json = { version = "^1.0", features = ["preserve_order"], optional = true }
+serde_json = { version = "^1.0", features = [
+    "preserve_order",
+], optional = true }
 
 # for division/remainder optimization at runtime
 strength_reduce = { version = "0.2", optional = true }
@@ -180,7 +187,11 @@ io_csv_read_async = ["csv-async", "lexical-core", "futures"]
 io_csv_write = ["csv-core", "streaming-iterator", "lexical-core"]
 io_json = ["io_json_read", "io_json_write"]
 io_json_read = ["json-deserializer", "indexmap", "lexical-core"]
-io_json_write = ["streaming-iterator", "fallible-streaming-iterator", "lexical-core"]
+io_json_write = [
+    "streaming-iterator",
+    "fallible-streaming-iterator",
+    "lexical-core",
+]
 io_ipc = ["arrow-format"]
 io_ipc_write_async = ["io_ipc", "futures"]
 io_ipc_read_async = ["io_ipc", "futures", "async-stream"]
@@ -188,7 +199,13 @@ io_ipc_compression = ["lz4", "zstd"]
 io_flight = ["io_ipc", "arrow-format/flight-data"]
 
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.
-io_parquet = ["parquet2", "io_ipc", "base64", "streaming-iterator", "fallible-streaming-iterator"]
+io_parquet = [
+    "parquet2",
+    "io_ipc",
+    "base64",
+    "streaming-iterator",
+    "fallible-streaming-iterator",
+]
 io_parquet_async = ["futures", "io_parquet", "parquet2/async"]
 
 io_parquet_compression = [
@@ -196,7 +213,7 @@ io_parquet_compression = [
     "io_parquet_gzip",
     "io_parquet_snappy",
     "io_parquet_lz4",
-    "io_parquet_brotli"
+    "io_parquet_brotli",
 ]
 
 # sample testing of generated arrow data
@@ -214,9 +231,7 @@ io_parquet_brotli = ["parquet2/brotli"]
 io_parquet_bloom_filter = ["parquet2/bloom_filter"]
 
 io_avro = ["avro-schema", "streaming-iterator"]
-io_avro_compression = [
-    "avro-schema/compression",
-]
+io_avro_compression = ["avro-schema/compression"]
 io_avro_async = ["avro-schema/async"]
 
 io_orc = ["orc-format"]
@@ -277,7 +292,7 @@ compute = [
     "compute_take",
     "compute_temporal",
     "compute_utf8",
-    "compute_window"
+    "compute_window",
 ]
 benchmarks = ["rand"]
 serde_types = ["serde", "serde_derive"]
@@ -401,4 +416,3 @@ harness = false
 [[bench]]
 name = "like_kernels"
 harness = false
-

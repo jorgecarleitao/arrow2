@@ -172,6 +172,11 @@ impl FixedSizeBinaryArray {
         }
     }
 
+    /// Returns an option of a mutable reference to the values of this [`FixedSizeBinaryArray`].
+    pub fn get_mut_values(&mut self) -> Option<&mut [u8]> {
+        self.values.get_mut_slice()
+    }
+
     /// Returns a new [`FixedSizeBinaryArray`] with a different logical type.
     /// This is `O(1)`.
     /// # Panics

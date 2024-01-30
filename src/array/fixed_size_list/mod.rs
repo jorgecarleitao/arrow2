@@ -148,9 +148,14 @@ impl FixedSizeListArray {
         self.validity.as_ref()
     }
 
-    /// Returns the inner array.
+    /// Returns the inner array reference.
     pub fn values(&self) -> &Box<dyn Array> {
         &self.values
+    }
+
+    /// Returns the inner array mutable reference.
+    pub fn mut_values(&mut self) -> &mut Box<dyn Array> {
+        &mut self.values
     }
 
     /// Returns the `Vec<T>` at position `i`.
