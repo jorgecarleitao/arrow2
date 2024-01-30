@@ -193,6 +193,15 @@ fn to_primitive_type_inner(
     primitive_type: &PrimitiveType,
     options: &SchemaInferenceOptions,
 ) -> DataType {
+    // Unknown type refers to values that should always be treated as Null
+    // See: https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#unknown-always-null
+    if matches!(
+        primitive_type.logical_type,
+        Some(PrimitiveLogicalType::Unknown)
+    ) {
+        return DataType::Null;
+    }
+
     match primitive_type.physical_type {
         PhysicalType::Boolean => DataType::Boolean,
         PhysicalType::Int32 => {
