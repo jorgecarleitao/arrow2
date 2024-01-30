@@ -12,6 +12,8 @@
 #![allow(clippy::type_complexity)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "simd", feature(portable_simd))]
+#![cfg_attr(feature = "simd", feature(build_hasher_simple_hash_one))]
+#![cfg_attr(feature = "compute", feature(build_hasher_simple_hash_one))]
 #![cfg_attr(feature = "nightly_build", feature(build_hasher_simple_hash_one))]
 
 #[macro_use]

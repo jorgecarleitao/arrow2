@@ -65,7 +65,12 @@ fn infer_dt(type_: &Type, types: &[Type]) -> Result<DataType, Error> {
 }
 
 fn deserialize_validity(column: &Column, scratch: &mut Vec<u8>) -> Result<Option<Bitmap>, Error> {
-    let stream = column.get_stream(Kind::Present, std::mem::take(scratch))?;
+    let stream = match column.get_stream(Kind::Present, std::mem::take(scratch)) {
+        Ok(stream) => stream,
+        Err(_) => {
+            return Ok(None);
+        }
+    };
 
     let mut stream = decode::BooleanIter::new(stream, column.number_of_rows());
 

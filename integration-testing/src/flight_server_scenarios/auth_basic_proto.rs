@@ -31,7 +31,7 @@ impl Service {
             .get_bin("auth-token-bin")
             .and_then(|v| v.to_bytes().ok())
             .and_then(|b| String::from_utf8(b.to_vec()).ok())
-            .and_then(|username| (username == AUTH_USERNAME).then(|| AUTH_USERNAME.to_string()))
+            .and_then(|username| (username == AUTH_USERNAME).then_some(AUTH_USERNAME.to_string()))
             .ok_or_else(|| Status::unauthenticated("Invalid token"))
     }
 }

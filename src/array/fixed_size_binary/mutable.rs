@@ -149,6 +149,12 @@ impl MutableFixedSizeBinaryArray {
         self.values.len() / self.size
     }
 
+    /// Returns `true` if the array has a length of 0.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Pop the last entry from [`MutableFixedSizeBinaryArray`].
     /// This function returns `None` iff this array is empty
     pub fn pop(&mut self) -> Option<Vec<u8>> {
@@ -159,7 +165,7 @@ impl MutableFixedSizeBinaryArray {
         let value = self.values.split_off(value_start);
         self.validity
             .as_mut()
-            .map(|x| x.pop()?.then(|| ()))
+            .map(|x| x.pop()?.then_some(()))
             .unwrap_or_else(|| Some(()))
             .map(|_| value)
     }

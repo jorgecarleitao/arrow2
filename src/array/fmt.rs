@@ -7,6 +7,7 @@ use super::Array;
 /// Returns a function that writes the value of the element of `array`
 /// at position `index` to a [`Write`],
 /// writing `null` in the null slots.
+#[allow(clippy::type_complexity)]
 pub fn get_value_display<'a, F: Write + 'a>(
     array: &'a dyn Array,
     null: &'static str,
@@ -101,6 +102,7 @@ pub fn get_value_display<'a, F: Write + 'a>(
 
 /// Returns a function that writes the element of `array`
 /// at position `index` to a [`Write`], writing `null` to the null slots.
+#[allow(clippy::type_complexity)]
 pub fn get_display<'a, F: Write + 'a>(
     array: &'a dyn Array,
     null: &'static str,

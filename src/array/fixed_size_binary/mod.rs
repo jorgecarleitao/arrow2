@@ -110,7 +110,7 @@ impl FixedSizeBinaryArray {
     pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
         self.validity.as_mut().and_then(|bitmap| {
             bitmap.slice_unchecked(offset, length);
-            (bitmap.unset_bits() > 0).then(|| bitmap)
+            (bitmap.unset_bits() > 0).then_some(bitmap)
         });
         self.values
             .slice_unchecked(offset * self.size, length * self.size);
@@ -127,6 +127,12 @@ impl FixedSizeBinaryArray {
     #[inline]
     pub fn len(&self) -> usize {
         self.values.len() / self.size
+    }
+
+    /// Returns `true` if the array has a length of 0.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// The optional validity.

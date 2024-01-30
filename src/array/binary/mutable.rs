@@ -125,7 +125,7 @@ impl<O: Offset> MutableBinaryArray<O> {
         let value = self.values.pop()?;
         self.validity
             .as_mut()
-            .map(|x| x.pop()?.then(|| ()))
+            .map(|x| x.pop()?.then_some(()))
             .unwrap_or_else(|| Some(()))
             .map(|_| value)
     }

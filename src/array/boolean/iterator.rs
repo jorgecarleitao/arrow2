@@ -22,8 +22,8 @@ impl IntoIterator for BooleanArray {
     fn into_iter(self) -> Self::IntoIter {
         let (_, values, validity) = self.into_inner();
         let values = values.into_iter();
-        let validity =
-            validity.and_then(|validity| (validity.unset_bits() > 0).then(|| validity.into_iter()));
+        let validity = validity
+            .and_then(|validity| (validity.unset_bits() > 0).then_some(validity.into_iter()));
         ZipValidity::new(values, validity)
     }
 }

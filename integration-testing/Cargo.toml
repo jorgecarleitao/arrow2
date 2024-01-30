@@ -28,7 +28,12 @@ publish = false
 logging = ["tracing-subscriber"]
 
 [dependencies]
-arrow2 = { path = "../", features = ["io_ipc", "io_ipc_compression", "io_flight", "io_json_integration"] }
+arrow2 = { path = "../", features = [
+  "io_ipc",
+  "io_ipc_compression",
+  "io_flight",
+  "io_json_integration",
+] }
 arrow-format = { version = "0.8", features = ["flight-data", "flight-service"] }
 async-trait = "0.1.41"
 clap = { version = "^3", features = ["derive"] }

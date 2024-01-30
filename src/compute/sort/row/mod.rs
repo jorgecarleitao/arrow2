@@ -284,6 +284,12 @@ impl Rows {
         self.offsets.len() - 1
     }
 
+    /// Returns `true` if the number of rows is 0.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     #[inline]
     /// Returns the iterator
     pub fn iter(&self) -> RowsIter<'_> {
@@ -710,7 +716,7 @@ mod tests {
     {
         let mut rng = thread_rng();
         (0..len)
-            .map(|_| rng.gen_bool(valid_percent).then(|| rng.gen()))
+            .map(|_| rng.gen_bool(valid_percent).then_some(rng.gen()))
             .collect()
     }
 
@@ -718,7 +724,7 @@ mod tests {
         let mut rng = thread_rng();
         (0..len)
             .map(|_| {
-                rng.gen_bool(valid_percent).then(|| {
+                rng.gen_bool(valid_percent).then_some({
                     let len = rng.gen_range(0..100);
                     let bytes = (0..len).map(|_| rng.gen_range(0..128)).collect();
                     String::from_utf8(bytes).unwrap()
@@ -742,7 +748,7 @@ mod tests {
         let keys: PrimitiveArray<K> = (0..len)
             .map(|_| {
                 rng.gen_bool(valid_percent)
-                    .then(|| rng.gen_range(min_key..max_key))
+                    .then_some(rng.gen_range(min_key..max_key))
             })
             .collect();
 

@@ -39,7 +39,7 @@ pub(crate) use boolean::take as take_boolean;
 /// Returns a new [`Array`] with only indices at `indices`. Null indices are taken as nulls.
 /// The returned array has a length equal to `indices.len()`.
 pub fn take<O: Index>(values: &dyn Array, indices: &PrimitiveArray<O>) -> Result<Box<dyn Array>> {
-    if indices.len() == 0 {
+    if indices.is_empty() {
         return Ok(new_empty_array(values.data_type().clone()));
     }
 

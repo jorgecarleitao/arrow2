@@ -141,6 +141,12 @@ impl<O: Offset> MutableUtf8Array<O> {
         self.values.len()
     }
 
+    /// Returns `true` if the array has a length of 0.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Pushes a new element to the array.
     /// # Panic
     /// This operation panics iff the length of all values (in bytes) exceeds `O` maximum value.
@@ -171,7 +177,7 @@ impl<O: Offset> MutableUtf8Array<O> {
         let value = self.values.pop()?;
         self.validity
             .as_mut()
-            .map(|x| x.pop()?.then(|| ()))
+            .map(|x| x.pop()?.then_some(()))
             .unwrap_or_else(|| Some(()))
             .map(|_| value)
     }

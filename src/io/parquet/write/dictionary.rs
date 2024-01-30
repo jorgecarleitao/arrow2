@@ -47,7 +47,7 @@ fn serialize_keys_values<K: DictionaryKey>(
         // discard indices whose values are null.
         let keys = keys
             .zip(validity.iter())
-            .filter_map(|(key, is_valid)| is_valid.then(|| key));
+            .filter_map(|(key, is_valid)| is_valid.then_some(key));
         let num_bits = utils::get_bit_width(keys.clone().max().unwrap_or(0) as u64);
 
         let keys = utils::ExactSizedIter::new(keys, array.len() - validity.unset_bits());

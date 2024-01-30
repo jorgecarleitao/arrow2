@@ -40,7 +40,7 @@ where
         let is_valid = self.validity.next();
         is_valid
             .zip(value)
-            .map(|(is_valid, value)| is_valid.then(|| value))
+            .map(|(is_valid, value)| is_valid.then_some(value))
     }
 
     #[inline]
@@ -54,7 +54,7 @@ where
         let is_valid = self.validity.nth(n);
         is_valid
             .zip(value)
-            .map(|(is_valid, value)| is_valid.then(|| value))
+            .map(|(is_valid, value)| is_valid.then_some(value))
     }
 }
 
@@ -69,7 +69,7 @@ where
         let is_valid = self.validity.next_back();
         is_valid
             .zip(value)
-            .map(|(is_valid, value)| is_valid.then(|| value))
+            .map(|(is_valid, value)| is_valid.then_some(value))
     }
 }
 
@@ -126,7 +126,7 @@ where
     /// are valid.
     pub fn new_with_validity(values: I, validity: Option<&'a Bitmap>) -> Self {
         // only if the validity has nulls we take the optional branch.
-        match validity.and_then(|validity| (validity.unset_bits() > 0).then(|| validity.iter())) {
+        match validity.and_then(|validity| (validity.unset_bits() > 0).then_some(validity.iter())) {
             Some(validity) => Self::Optional(ZipValidityIter::new(values, validity)),
             _ => Self::Required(values),
         }

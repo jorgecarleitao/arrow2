@@ -188,7 +188,7 @@ impl StructArray {
     pub unsafe fn slice_unchecked(&mut self, offset: usize, length: usize) {
         self.validity.as_mut().and_then(|bitmap| {
             bitmap.slice_unchecked(offset, length);
-            (bitmap.unset_bits() > 0).then(|| bitmap)
+            (bitmap.unset_bits() > 0).then_some(bitmap)
         });
         self.values
             .iter_mut()

@@ -48,6 +48,11 @@ pub trait Growable<'a> {
     /// The current length of the [`Growable`].
     fn len(&self) -> usize;
 
+    /// Returns `true` if the length of the [`Growable`] is 0.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Converts this [`Growable`] to an [`Arc<dyn Array>`], thereby finishing the mutation.
     /// Self will be empty after such operation.
     fn as_arc(&mut self) -> Arc<dyn Array> {

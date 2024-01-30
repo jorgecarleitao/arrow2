@@ -55,6 +55,11 @@ impl Nested {
             Nested::Struct(_, _, len) => *len,
         }
     }
+
+    /// Returns `true` if the length of the element is 0.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 /// Constructs the necessary `Vec<Vec<Nested>>` to write the rep and def levels of `array` to parquet

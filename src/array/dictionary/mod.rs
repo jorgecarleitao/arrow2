@@ -104,7 +104,7 @@ unsafe impl DictionaryKey for u64 {
 /// # Safety
 /// This struct guarantees that each item of [`DictionaryArray::keys`] is castable to `usize` and
 /// its value is smaller than [`DictionaryArray::values`]`.len()`. In other words, you can safely
-/// use `unchecked` calls to retrive the values
+/// use `unchecked` calls to retrieve the values
 #[derive(Clone)]
 pub struct DictionaryArray<K: DictionaryKey> {
     data_type: DataType,
@@ -265,6 +265,7 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     /// # Panics
     ///
     /// This function panics if the `values` array
+    #[allow(clippy::type_complexity)]
     pub fn iter_typed<V: DictValue>(
         &self,
     ) -> Result<ZipValidity<V::IterValue<'_>, DictionaryValuesIterTyped<K, V>, BitmapIter>, Error>
@@ -333,6 +334,12 @@ impl<K: DictionaryKey> DictionaryArray<K> {
     #[inline]
     pub fn len(&self) -> usize {
         self.keys.len()
+    }
+
+    /// Returns `true` if the array has a length of 0.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// The optional validity. Equivalent to `self.keys().validity()`.

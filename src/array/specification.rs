@@ -72,7 +72,7 @@ pub(crate) fn try_check_utf8<O: Offset, C: OffsetsContainer<O>>(
             .enumerate()
             .skip(1)
             .rev()
-            .find_map(|(i, offset)| (offset.to_usize() < values.len()).then(|| i));
+            .find_map(|(i, offset)| (offset.to_usize() < values.len()).then_some(i));
 
         let last = if let Some(last) = last {
             // following the example: last = 1 (offset = 5)
@@ -84,7 +84,7 @@ pub(crate) fn try_check_utf8<O: Offset, C: OffsetsContainer<O>>(
             return Ok(());
         };
 
-        // trucate to relevant offsets. Note: `=last` because last was computed skipping the first item
+        // truncate to relevant offsets. Note: `=last` because last was computed skipping the first item
         // following the example: starts = [0, 5]
         let starts = unsafe { offsets.get_unchecked(..=last) };
 
