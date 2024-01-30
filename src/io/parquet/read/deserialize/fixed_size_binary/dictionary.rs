@@ -1,11 +1,11 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
 use parquet2::page::DictPage;
 
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, FixedSizeBinaryArray},
     bitmap::MutableBitmap,
-    datatypes::DataType,
+    datatypes::{ArcExt, DataType},
     error::Result,
     io::parquet::read::deserialize::nested_utils::{InitNested, NestedState},
 };
@@ -48,7 +48,7 @@ where
 
 fn read_dict(data_type: DataType, dict: &DictPage) -> Box<dyn Array> {
     let data_type = match data_type {
-        DataType::Dictionary(_, values, _) => *values,
+        DataType::Dictionary(_, values, _) => Arc::unwrap_or_clone_polyfill(values),
         _ => data_type,
     };
 

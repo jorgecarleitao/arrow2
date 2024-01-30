@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::array::*;
 use arrow2::datatypes::*;
 use arrow2::error::Result;
@@ -24,7 +26,7 @@ fn read_json() -> Result<()> {
     let result = read::deserialize(&json, data_type)?;
 
     let expected = StructArray::new(
-        DataType::Struct(vec![Field::new("a", DataType::Int64, true)]),
+        DataType::Struct(Arc::new(vec![Field::new("a", DataType::Int64, true)])),
         vec![Box::new(Int64Array::from_slice([1, 2, 3])) as _],
         None,
     );
@@ -231,7 +233,7 @@ fn deserialize_timestamp_string_ns() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Timestamp(TimeUnit::Nanosecond, None),
         false,
@@ -253,7 +255,7 @@ fn deserialize_timestamp_string_us() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Timestamp(TimeUnit::Microsecond, None),
         false,
@@ -275,7 +277,7 @@ fn deserialize_timestamp_string_ms() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Timestamp(TimeUnit::Millisecond, None),
         false,
@@ -297,7 +299,7 @@ fn deserialize_timestamp_string_s() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Timestamp(TimeUnit::Second, None),
         false,
@@ -319,9 +321,12 @@ fn deserialize_timestamp_string_tz_s() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
-        DataType::Timestamp(TimeUnit::Second, Some("+01:00".to_string())),
+        DataType::Timestamp(
+            TimeUnit::Second,
+            Some(std::sync::Arc::new("+01:00".to_string())),
+        ),
         false,
     )));
 
@@ -329,7 +334,7 @@ fn deserialize_timestamp_string_tz_s() -> Result<()> {
 
     let expected = Int64Array::from([Some(1680870214)]).to(DataType::Timestamp(
         TimeUnit::Second,
-        Some("+01:00".to_string()),
+        Some(std::sync::Arc::new("+01:00".to_string())),
     ));
 
     assert_eq!(expected, result.as_ref());
@@ -343,7 +348,7 @@ fn deserialize_timestamp_int_ns() -> Result<()> {
 
     let json = json_deserializer::parse(data)?;
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
         DataType::Timestamp(TimeUnit::Nanosecond, None),
         false,

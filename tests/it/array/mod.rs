@@ -13,6 +13,8 @@ mod struct_;
 mod union;
 mod utf8;
 
+use std::sync::Arc;
+
 use arrow2::array::{clone, new_empty_array, new_null_array, Array, PrimitiveArray};
 use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::{DataType, Field, UnionMode};
@@ -24,7 +26,7 @@ fn nulls() {
         DataType::Float64,
         DataType::Utf8,
         DataType::Binary,
-        DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::Binary, true))),
     ];
     let a = datatypes
         .into_iter()
@@ -34,12 +36,12 @@ fn nulls() {
     // unions' null count is always 0
     let datatypes = vec![
         DataType::Union(
-            vec![Field::new("a", DataType::Binary, true)],
+            Arc::new(vec![Field::new("a", DataType::Binary, true)]),
             None,
             UnionMode::Dense,
         ),
         DataType::Union(
-            vec![Field::new("a", DataType::Binary, true)],
+            Arc::new(vec![Field::new("a", DataType::Binary, true)]),
             None,
             UnionMode::Sparse,
         ),
@@ -57,23 +59,23 @@ fn empty() {
         DataType::Float64,
         DataType::Utf8,
         DataType::Binary,
-        DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
-        DataType::List(Box::new(Field::new(
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::Binary, true))),
+        DataType::List(std::sync::Arc::new(Field::new(
             "a",
-            DataType::Extension("ext".to_owned(), Box::new(DataType::Int32), None),
+            DataType::Extension("ext".to_owned(), Arc::new(DataType::Int32), None),
             true,
         ))),
         DataType::Union(
-            vec![Field::new("a", DataType::Binary, true)],
+            Arc::new(vec![Field::new("a", DataType::Binary, true)]),
             None,
             UnionMode::Sparse,
         ),
         DataType::Union(
-            vec![Field::new("a", DataType::Binary, true)],
+            Arc::new(vec![Field::new("a", DataType::Binary, true)]),
             None,
             UnionMode::Dense,
         ),
-        DataType::Struct(vec![Field::new("a", DataType::Int32, true)]),
+        DataType::Struct(Arc::new(vec![Field::new("a", DataType::Int32, true)])),
     ];
     let a = datatypes.into_iter().all(|x| new_empty_array(x).len() == 0);
     assert!(a);
@@ -86,22 +88,22 @@ fn empty_extension() {
         DataType::Float64,
         DataType::Utf8,
         DataType::Binary,
-        DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::Binary, true))),
         DataType::Union(
-            vec![Field::new("a", DataType::Binary, true)],
+            Arc::new(vec![Field::new("a", DataType::Binary, true)]),
             None,
             UnionMode::Sparse,
         ),
         DataType::Union(
-            vec![Field::new("a", DataType::Binary, true)],
+            Arc::new(vec![Field::new("a", DataType::Binary, true)]),
             None,
             UnionMode::Dense,
         ),
-        DataType::Struct(vec![Field::new("a", DataType::Int32, true)]),
+        DataType::Struct(Arc::new(vec![Field::new("a", DataType::Int32, true)])),
     ];
     let a = datatypes
         .into_iter()
-        .map(|dt| DataType::Extension("ext".to_owned(), Box::new(dt), None))
+        .map(|dt| DataType::Extension("ext".to_owned(), Arc::new(dt), None))
         .all(|x| {
             let a = new_empty_array(x);
             a.len() == 0 && matches!(a.data_type(), DataType::Extension(_, _, _))
@@ -116,7 +118,7 @@ fn test_clone() {
         DataType::Float64,
         DataType::Utf8,
         DataType::Binary,
-        DataType::List(Box::new(Field::new("a", DataType::Binary, true))),
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::Binary, true))),
     ];
     let a = datatypes
         .into_iter()

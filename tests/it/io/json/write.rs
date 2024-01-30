@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::datatypes::IntegerType;
 use arrow2::{
     array::*,
@@ -83,7 +85,7 @@ fn dictionary_utf8() -> Result<()> {
     let values = Utf8Array::<i64>::from([Some("a"), Some("b"), Some("c"), Some("d")]);
     let keys = PrimitiveArray::from_slice([0u32, 1, 2, 3, 1]);
     let array = DictionaryArray::try_new(
-        DataType::Dictionary(IntegerType::UInt32, Box::new(DataType::LargeUtf8), false),
+        DataType::Dictionary(IntegerType::UInt32, Arc::new(DataType::LargeUtf8), false),
         keys,
         Box::new(values),
     )
@@ -99,10 +101,10 @@ fn struct_() -> Result<()> {
     let c1 = Int32Array::from([Some(1), Some(2), Some(3), None, Some(5)]);
     let c2 = Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c"), Some("d"), None]);
 
-    let data_type = DataType::Struct(vec![
+    let data_type = DataType::Struct(Arc::new(vec![
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
-    ]);
+    ]));
     let array = StructArray::new(data_type, vec![Box::new(c1) as _, Box::new(c2)], None);
 
     let expected = r#"[{"c1":1,"c2":"a"},{"c1":2,"c2":"b"},{"c1":3,"c2":"c"},{"c1":null,"c2":"d"},{"c1":5,"c2":null}]"#;
@@ -112,14 +114,14 @@ fn struct_() -> Result<()> {
 
 #[test]
 fn nested_struct_with_validity() -> Result<()> {
-    let inner = vec![
+    let inner = Arc::new(vec![
         Field::new("c121", DataType::Utf8, false),
         Field::new("c122", DataType::Int32, false),
-    ];
-    let fields = vec![
+    ]);
+    let fields = Arc::new(vec![
         Field::new("c11", DataType::Int32, false),
         Field::new("c12", DataType::Struct(inner.clone()), false),
-    ];
+    ]);
 
     let c1 = StructArray::new(
         DataType::Struct(fields),
@@ -139,10 +141,10 @@ fn nested_struct_with_validity() -> Result<()> {
     );
     let c2 = Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]);
 
-    let data_type = DataType::Struct(vec![
+    let data_type = DataType::Struct(Arc::new(vec![
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
-    ]);
+    ]));
     let array = StructArray::new(data_type, vec![c1.boxed(), c2.boxed()], None);
 
     let expected = r#"[{"c1":{"c11":1,"c12":null},"c2":"a"},{"c1":{"c11":null,"c12":{"c121":"f","c122":null}},"c2":"b"},{"c1":null,"c2":"c"}]"#;
@@ -153,17 +155,17 @@ fn nested_struct_with_validity() -> Result<()> {
 #[test]
 fn nested_struct() -> Result<()> {
     let c121 = Field::new("c121", DataType::Utf8, false);
-    let fields = vec![
+    let fields = Arc::new(vec![
         Field::new("c11", DataType::Int32, false),
-        Field::new("c12", DataType::Struct(vec![c121.clone()]), false),
-    ];
+        Field::new("c12", DataType::Struct(Arc::new(vec![c121.clone()])), false),
+    ]);
 
     let c1 = StructArray::new(
         DataType::Struct(fields),
         vec![
             Int32Array::from(&[Some(1), None, Some(5)]).boxed(),
             StructArray::new(
-                DataType::Struct(vec![c121]),
+                DataType::Struct(Arc::new(vec![c121])),
                 vec![Box::new(Utf8Array::<i32>::from([
                     Some("e"),
                     Some("f"),
@@ -178,10 +180,10 @@ fn nested_struct() -> Result<()> {
 
     let c2 = Utf8Array::<i32>::from([Some("a"), Some("b"), Some("c")]);
 
-    let data_type = DataType::Struct(vec![
+    let data_type = DataType::Struct(Arc::new(vec![
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
-    ]);
+    ]));
     let array = StructArray::new(data_type, vec![c1.boxed(), c2.boxed()], None);
 
     let expected = r#"[{"c1":{"c11":1,"c12":{"c121":"e"}},"c2":"a"},{"c1":{"c11":null,"c12":{"c121":"f"}},"c2":"b"},{"c1":{"c11":5,"c12":{"c121":"g"}},"c2":"c"}]"#;
@@ -207,10 +209,10 @@ fn struct_with_list_field() -> Result<()> {
 
     let c2 = PrimitiveArray::from_slice([1, 2, 3, 4, 5]);
 
-    let data_type = DataType::Struct(vec![
+    let data_type = DataType::Struct(Arc::new(vec![
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
-    ]);
+    ]));
     let array = StructArray::new(data_type, vec![c1.boxed(), c2.boxed()], None);
 
     let expected = r#"[{"c1":["a","a1"],"c2":1},{"c1":["b"],"c2":2},{"c1":["c"],"c2":3},{"c1":["d"],"c2":4},{"c1":["e"],"c2":5}]"#;
@@ -242,10 +244,10 @@ fn nested_list() -> Result<()> {
 
     let c2 = Utf8Array::<i32>::from([Some("foo"), Some("bar"), None]);
 
-    let data_type = DataType::Struct(vec![
+    let data_type = DataType::Struct(Arc::new(vec![
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
-    ]);
+    ]));
     let array = StructArray::new(data_type, vec![c1.boxed(), c2.boxed()], None);
 
     let expected =
@@ -330,12 +332,12 @@ fn fixed_size_list_records() -> Result<()> {
 
 #[test]
 fn list_of_struct() -> Result<()> {
-    let inner = vec![Field::new("c121", DataType::Utf8, false)];
-    let fields = vec![
+    let inner = Arc::new(vec![Field::new("c121", DataType::Utf8, false)]);
+    let fields = Arc::new(vec![
         Field::new("c11", DataType::Int32, false),
         Field::new("c12", DataType::Struct(inner.clone()), false),
-    ];
-    let c1_datatype = DataType::List(Box::new(Field::new(
+    ]);
+    let c1_datatype = DataType::List(std::sync::Arc::new(Field::new(
         "s",
         DataType::Struct(fields.clone()),
         false,
@@ -372,10 +374,10 @@ fn list_of_struct() -> Result<()> {
 
     let c2 = Int32Array::from_slice([1, 2, 3]);
 
-    let data_type = DataType::Struct(vec![
+    let data_type = DataType::Struct(Arc::new(vec![
         Field::new("c1", c1.data_type().clone(), true),
         Field::new("c2", c2.data_type().clone(), true),
-    ]);
+    ]));
     let array = StructArray::new(data_type, vec![c1.boxed(), c2.boxed()], None);
 
     let expected = r#"[{"c1":[{"c11":1,"c12":null},{"c11":null,"c12":{"c121":"f"}}],"c2":1},{"c1":null,"c2":2},{"c1":[null],"c2":3}]"#;

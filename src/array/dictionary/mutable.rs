@@ -86,7 +86,7 @@ impl<K: DictionaryKey, M: MutableArray> MutableDictionaryArray<K, M> {
     fn from_value_map(value_map: ValueMap<K, M>) -> Self {
         let keys = MutablePrimitiveArray::<K>::new();
         let data_type =
-            DataType::Dictionary(K::KEY_TYPE, Box::new(value_map.data_type().clone()), false);
+            DataType::Dictionary(K::KEY_TYPE, Arc::new(value_map.data_type().clone()), false);
         Self {
             data_type,
             map: value_map,

@@ -1,9 +1,10 @@
 //! APIs to read from [ORC format](https://orc.apache.org).
 use std::io::Read;
+use std::sync::Arc;
 
 use crate::array::{Array, BinaryArray, BooleanArray, Int64Array, PrimitiveArray, Utf8Array};
 use crate::bitmap::{Bitmap, MutableBitmap};
-use crate::datatypes::{DataType, Field, Schema};
+use crate::datatypes::{ArcExt, DataType, Field, Schema};
 use crate::error::Error;
 use crate::offset::{Offset, Offsets};
 use crate::types::NativeType;
@@ -21,7 +22,7 @@ pub fn infer_schema(footer: &Footer) -> Result<Schema, Error> {
 
     let dt = infer_dt(&footer.types[0], types)?;
     if let DataType::Struct(fields) = dt {
-        Ok(fields.into())
+        Ok(Arc::unwrap_or_clone_polyfill(fields).into())
     } else {
         Err(Error::ExternalFormat(
             "ORC root type must be a struct".to_string(),
@@ -57,7 +58,7 @@ fn infer_dt(type_: &Type, types: &[Type]) -> Result<DataType, Error> {
                     .map(|dt| Field::new(name, dt, true))
                 })
                 .collect::<Result<Vec<_>, Error>>()?;
-            DataType::Struct(sub_types)
+            DataType::Struct(Arc::new(sub_types))
         }
         kind => return Err(Error::nyi(format!("Reading {kind:?} from ORC"))),
     };

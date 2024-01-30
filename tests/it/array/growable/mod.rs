@@ -11,6 +11,8 @@ mod struct_;
 mod union;
 mod utf8;
 
+use std::sync::Arc;
+
 use arrow2::array::growable::make_growable;
 use arrow2::array::*;
 use arrow2::datatypes::{DataType, Field};
@@ -49,18 +51,18 @@ fn test_make_growable_extension() {
     .unwrap();
     make_growable(&[&array], false, 2);
 
-    let data_type = DataType::Extension("ext".to_owned(), Box::new(DataType::Int32), None);
+    let data_type = DataType::Extension("ext".to_owned(), Arc::new(DataType::Int32), None);
     let array = Int32Array::from_slice([1, 2]).to(data_type.clone());
     let array_grown = make_growable(&[&array], false, 2).as_box();
     assert_eq!(array_grown.data_type(), &data_type);
 
     let data_type = DataType::Extension(
         "ext".to_owned(),
-        Box::new(DataType::Struct(vec![Field::new(
+        Arc::new(DataType::Struct(Arc::new(vec![Field::new(
             "a",
             DataType::Int32,
             false,
-        )])),
+        )]))),
         None,
     );
     let array = StructArray::new(

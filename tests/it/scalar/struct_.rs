@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::{
     datatypes::{DataType, Field},
     scalar::{BooleanScalar, Scalar, StructScalar},
@@ -6,7 +8,7 @@ use arrow2::{
 #[allow(clippy::eq_op)]
 #[test]
 fn equal() {
-    let dt = DataType::Struct(vec![Field::new("a", DataType::Boolean, true)]);
+    let dt = DataType::Struct(Arc::new(vec![Field::new("a", DataType::Boolean, true)]));
     let a = StructScalar::new(
         dt.clone(),
         Some(vec![
@@ -29,7 +31,7 @@ fn equal() {
 
 #[test]
 fn basics() {
-    let dt = DataType::Struct(vec![Field::new("a", DataType::Boolean, true)]);
+    let dt = DataType::Struct(Arc::new(vec![Field::new("a", DataType::Boolean, true)]));
 
     let values = vec![Box::new(BooleanScalar::from(Some(true))) as Box<dyn Scalar>];
 

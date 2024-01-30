@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::array::*;
 use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
@@ -42,20 +44,36 @@ pub(super) fn schema() -> Schema {
         ),
         Field::new(
             "list",
-            DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+            DataType::List(std::sync::Arc::new(Field::new(
+                "item",
+                DataType::Int32,
+                true,
+            ))),
             false,
         ),
         Field::new(
             "list nullable",
-            DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+            DataType::List(std::sync::Arc::new(Field::new(
+                "item",
+                DataType::Int32,
+                true,
+            ))),
             true,
         ),
     ])
 }
 
 pub(super) fn data() -> Chunk<Box<dyn Array>> {
-    let list_dt = DataType::List(Box::new(Field::new("item", DataType::Int32, true)));
-    let list_dt1 = DataType::List(Box::new(Field::new("item", DataType::Int32, true)));
+    let list_dt = DataType::List(std::sync::Arc::new(Field::new(
+        "item",
+        DataType::Int32,
+        true,
+    )));
+    let list_dt1 = DataType::List(std::sync::Arc::new(Field::new(
+        "item",
+        DataType::Int32,
+        true,
+    )));
 
     let columns = vec![
         Box::new(Int64Array::from_slice([27, 47])) as Box<dyn Array>,
@@ -242,28 +260,28 @@ fn struct_schema() -> Schema {
     Schema::from(vec![
         Field::new(
             "struct",
-            DataType::Struct(vec![
+            DataType::Struct(Arc::new(vec![
                 Field::new("item1", DataType::Int32, false),
                 Field::new("item2", DataType::Int32, true),
-            ]),
+            ])),
             false,
         ),
         Field::new(
             "struct nullable",
-            DataType::Struct(vec![
+            DataType::Struct(Arc::new(vec![
                 Field::new("item1", DataType::Int32, false),
                 Field::new("item2", DataType::Int32, true),
-            ]),
+            ])),
             true,
         ),
     ])
 }
 
 fn struct_data() -> Chunk<Box<dyn Array>> {
-    let struct_dt = DataType::Struct(vec![
+    let struct_dt = DataType::Struct(Arc::new(vec![
         Field::new("item1", DataType::Int32, false),
         Field::new("item2", DataType::Int32, true),
-    ]);
+    ]));
 
     Chunk::new(vec![
         Box::new(StructArray::new(

@@ -13,7 +13,7 @@ fn sparse() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Sparse);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Sparse);
     let types = vec![0, 0, 1].into();
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
@@ -45,7 +45,7 @@ fn dense() -> Result<()> {
         Field::new("a", DataType::Int32, true),
         Field::new("b", DataType::Utf8, true),
     ];
-    let data_type = DataType::Union(fields, None, UnionMode::Dense);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Dense);
     let types = vec![0, 0, 1].into();
     let fields = vec![
         Int32Array::from(&[Some(1), None, Some(2)]).boxed(),
@@ -74,8 +74,10 @@ fn dense() -> Result<()> {
 
 #[test]
 fn complex_dense() -> Result<()> {
-    let fixed_size_type =
-        DataType::FixedSizeList(Box::new(Field::new("i", DataType::UInt16, true)), 3);
+    let fixed_size_type = DataType::FixedSizeList(
+        std::sync::Arc::new(Field::new("i", DataType::UInt16, true)),
+        3,
+    );
 
     let fields = vec![
         Field::new("a", DataType::Int32, true),
@@ -83,7 +85,7 @@ fn complex_dense() -> Result<()> {
         Field::new("c", fixed_size_type.clone(), true),
     ];
 
-    let data_type = DataType::Union(fields, None, UnionMode::Dense);
+    let data_type = DataType::Union(std::sync::Arc::new(fields), None, UnionMode::Dense);
 
     // UnionArray[1, [11, 12, 13], abcd, [21, 22, 23], 2]
     let types = vec![0, 2, 1, 2, 0].into();

@@ -1,5 +1,7 @@
 mod read;
 
+use std::sync::Arc;
+
 use arrow2::array::*;
 use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::*;
@@ -46,20 +48,28 @@ fn case_list() -> (String, Box<dyn Array>) {
             "#
     .to_string();
 
-    let data_type = DataType::Struct(vec![
+    let data_type = DataType::Struct(Arc::new(vec![
         Field::new("a", DataType::Int64, true),
         Field::new(
             "b",
-            DataType::List(Box::new(Field::new("item", DataType::Float64, true))),
+            DataType::List(std::sync::Arc::new(Field::new(
+                "item",
+                DataType::Float64,
+                true,
+            ))),
             true,
         ),
         Field::new(
             "c",
-            DataType::List(Box::new(Field::new("item", DataType::Boolean, true))),
+            DataType::List(std::sync::Arc::new(Field::new(
+                "item",
+                DataType::Boolean,
+                true,
+            ))),
             true,
         ),
         Field::new("d", DataType::Utf8, true),
-    ]);
+    ]));
 
     let a = Int64Array::from(&[Some(1), Some(-10), None]);
     let mut b = MutableListArray::<i32, MutablePrimitiveArray<f64>>::new();
@@ -100,9 +110,9 @@ fn case_dict() -> (String, Box<dyn Array>) {
     "#
     .to_string();
 
-    let data_type = DataType::List(Box::new(Field::new(
+    let data_type = DataType::List(std::sync::Arc::new(Field::new(
         "item",
-        DataType::Dictionary(u64::KEY_TYPE, Box::new(DataType::Utf8), false),
+        DataType::Dictionary(u64::KEY_TYPE, Arc::new(DataType::Utf8), false),
         true,
     )));
 
@@ -130,7 +140,12 @@ fn case_dict() -> (String, Box<dyn Array>) {
 
     (
         data,
-        StructArray::new(DataType::Struct(fields), vec![array.boxed()], None).boxed(),
+        StructArray::new(
+            DataType::Struct(std::sync::Arc::new(fields)),
+            vec![array.boxed()],
+            None,
+        )
+        .boxed(),
     )
 }
 
@@ -139,12 +154,12 @@ fn case_basics() -> (String, Box<dyn Array>) {
     {"a":-10, "b":-3.5, "c":true, "d":null}
     {"a":100000000, "b":0.6, "d":"text"}"#
         .to_string();
-    let data_type = DataType::Struct(vec![
+    let data_type = DataType::Struct(Arc::new(vec![
         Field::new("a", DataType::Int64, true),
         Field::new("b", DataType::Float64, true),
         Field::new("c", DataType::Boolean, true),
         Field::new("d", DataType::Utf8, true),
-    ]);
+    ]));
     let array = StructArray::new(
         data_type,
         vec![
@@ -163,13 +178,13 @@ fn case_projection() -> (String, Box<dyn Array>) {
     {"a":10, "b":-3.5, "c":true, "d":null, "e":"text"}
     {"a":100000000, "b":0.6, "d":"text"}"#
         .to_string();
-    let data_type = DataType::Struct(vec![
+    let data_type = DataType::Struct(Arc::new(vec![
         Field::new("a", DataType::UInt32, true),
         Field::new("b", DataType::Float32, true),
         Field::new("c", DataType::Boolean, true),
         // note how "d" is not here
         Field::new("e", DataType::Binary, true),
-    ]);
+    ]));
     let array = StructArray::new(
         data_type,
         vec![
@@ -191,27 +206,30 @@ fn case_struct() -> (String, Box<dyn Array>) {
         .to_string();
 
     let d_field = Field::new("d", DataType::Utf8, true);
-    let c_field = Field::new("c", DataType::Struct(vec![d_field.clone()]), true);
+    let c_field = Field::new("c", DataType::Struct(Arc::new(vec![d_field.clone()])), true);
     let a_field = Field::new(
         "a",
-        DataType::Struct(vec![
+        DataType::Struct(Arc::new(vec![
             Field::new("b", DataType::Boolean, true),
             c_field.clone(),
-        ]),
+        ])),
         true,
     );
-    let fields = vec![a_field];
+    let fields = Arc::new(vec![a_field]);
 
     // build expected output
     let d = Utf8Array::<i32>::from([Some("text"), None, Some("text"), None]);
     let c = StructArray::new(
-        DataType::Struct(vec![d_field]),
+        DataType::Struct(Arc::new(vec![d_field])),
         vec![d.boxed()],
         Some([true, false, true, true].into()),
     );
 
     let b = BooleanArray::from(vec![Some(true), Some(false), Some(true), None]);
-    let inner = DataType::Struct(vec![Field::new("b", DataType::Boolean, true), c_field]);
+    let inner = DataType::Struct(Arc::new(vec![
+        Field::new("b", DataType::Boolean, true),
+        c_field,
+    ]));
     let expected = StructArray::new(
         inner,
         vec![b.boxed(), c.boxed()],
@@ -228,14 +246,14 @@ fn case_struct() -> (String, Box<dyn Array>) {
 
 fn case_nested_list() -> (String, Box<dyn Array>) {
     let d_field = Field::new("d", DataType::Utf8, true);
-    let c_field = Field::new("c", DataType::Struct(vec![d_field.clone()]), true);
+    let c_field = Field::new("c", DataType::Struct(Arc::new(vec![d_field.clone()])), true);
     let b_field = Field::new("b", DataType::Boolean, true);
     let a_struct_field = Field::new(
         "a",
-        DataType::Struct(vec![b_field.clone(), c_field.clone()]),
+        DataType::Struct(Arc::new(vec![b_field.clone(), c_field.clone()])),
         true,
     );
-    let a_list_data_type = DataType::List(Box::new(a_struct_field));
+    let a_list_data_type = DataType::List(std::sync::Arc::new(a_struct_field));
     let a_field = Field::new("a", a_list_data_type.clone(), true);
 
     let data = r#"
@@ -257,7 +275,7 @@ fn case_nested_list() -> (String, Box<dyn Array>) {
     ]);
 
     let c = StructArray::new(
-        DataType::Struct(vec![d_field]),
+        DataType::Struct(Arc::new(vec![d_field])),
         vec![d.boxed()],
         Some(Bitmap::from_u8_slice([0b11111011], 6)),
     );
@@ -271,7 +289,7 @@ fn case_nested_list() -> (String, Box<dyn Array>) {
         Some(true),
     ]);
     let a_struct = StructArray::new(
-        DataType::Struct(vec![b_field, c_field]),
+        DataType::Struct(Arc::new(vec![b_field, c_field])),
         vec![b.boxed(), c.boxed()],
         None,
     );
@@ -283,7 +301,7 @@ fn case_nested_list() -> (String, Box<dyn Array>) {
     );
 
     let array = StructArray::new(
-        DataType::Struct(vec![a_field]),
+        DataType::Struct(Arc::new(vec![a_field])),
         vec![expected.boxed()],
         None,
     )
@@ -316,7 +334,7 @@ fn infer_object() -> Result<()> {
     let utf8_fld = Field::new("utf8", DataType::Utf8, true);
     let bools_fld = Field::new("bools", DataType::Boolean, true);
 
-    let expected = DataType::Struct(vec![u64_fld, f64_fld, utf8_fld, bools_fld]);
+    let expected = DataType::Struct(Arc::new(vec![u64_fld, f64_fld, utf8_fld, bools_fld]));
     let actual = infer(data)?;
 
     assert_eq!(expected, actual);

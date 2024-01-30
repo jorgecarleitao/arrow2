@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use chrono::Datelike;
 
 use crate::{
@@ -127,7 +129,7 @@ pub fn utf8_to_naive_timestamp_ns<O: Offset>(from: &Utf8Array<O>) -> PrimitiveAr
 
 pub(super) fn utf8_to_timestamp_ns_dyn<O: Offset>(
     from: &dyn Array,
-    timezone: String,
+    timezone: Arc<String>,
 ) -> Result<Box<dyn Array>> {
     let from = from.as_any().downcast_ref().unwrap();
     utf8_to_timestamp_ns::<O>(from, timezone)
@@ -138,7 +140,7 @@ pub(super) fn utf8_to_timestamp_ns_dyn<O: Offset>(
 /// [`crate::temporal_conversions::utf8_to_timestamp_ns`] applied for RFC3339 formatting
 pub fn utf8_to_timestamp_ns<O: Offset>(
     from: &Utf8Array<O>,
-    timezone: String,
+    timezone: Arc<String>,
 ) -> Result<PrimitiveArray<i64>> {
     utf8_to_timestamp_ns_(from, RFC3339, timezone)
 }

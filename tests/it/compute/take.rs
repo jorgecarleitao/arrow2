@@ -72,7 +72,7 @@ fn create_test_struct() -> StructArray {
         Field::new("b", DataType::Int32, true),
     ];
     StructArray::new(
-        DataType::Struct(fields),
+        DataType::Struct(std::sync::Arc::new(fields)),
         vec![boolean.boxed(), int.boxed()],
         validity,
     )

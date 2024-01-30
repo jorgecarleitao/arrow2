@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::{
     array::*,
     datatypes::*,
@@ -118,7 +120,7 @@ fn debug_timestamp_ns() {
 fn debug_timestamp_tz_ns() {
     let array = Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Timestamp(
         TimeUnit::Nanosecond,
-        Some("+02:00".to_string()),
+        Some(Arc::new("+02:00".to_string())),
     ));
     assert_eq!(
         format!("{array:?}"),
@@ -130,7 +132,7 @@ fn debug_timestamp_tz_ns() {
 fn debug_timestamp_tz_not_parsable() {
     let array = Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Timestamp(
         TimeUnit::Nanosecond,
-        Some("aa".to_string()),
+        Some(Arc::new("aa".to_string())),
     ));
     assert_eq!(
         format!("{array:?}"),
@@ -143,7 +145,7 @@ fn debug_timestamp_tz_not_parsable() {
 fn debug_timestamp_tz1_ns() {
     let array = Int64Array::from(&[Some(1), None, Some(2)]).to(DataType::Timestamp(
         TimeUnit::Nanosecond,
-        Some("Europe/Lisbon".to_string()),
+        Some(Arc::new("Europe/Lisbon".to_string())),
     ));
     assert_eq!(
         format!("{array:?}"),

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::datatypes::{DataType, Field, TimeUnit};
 use ahash::AHashSet;
 
@@ -27,15 +29,18 @@ fn is_naive_datetime(string: &str) -> bool {
     string.parse::<chrono::NaiveDateTime>().is_ok()
 }
 
-fn is_datetime(string: &str) -> Option<String> {
+fn is_datetime(string: &str) -> Option<Arc<String>> {
     let mut parsed = chrono::format::Parsed::new();
     let fmt = chrono::format::StrftimeItems::new(RFC3339);
     if chrono::format::parse(&mut parsed, string, fmt).is_ok() {
-        parsed.offset.map(|x| {
-            let hours = x / 60 / 60;
-            let minutes = x / 60 - hours * 60;
-            format!("{hours:03}:{minutes:02}")
-        })
+        parsed
+            .offset
+            .map(|x| {
+                let hours = x / 60 / 60;
+                let minutes = x / 60 - hours * 60;
+                format!("{hours:03}:{minutes:02}")
+            })
+            .map(Arc::new)
     } else {
         None
     }

@@ -3,6 +3,7 @@ use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::{DataType, Field, TimeUnit};
 use arrow2::{error::Result, ffi};
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 fn _test_round_trip(array: Box<dyn Array>, expected: Box<dyn Array>) -> Result<()> {
     let field = Field::new("a", array.data_type().clone(), true);
@@ -93,7 +94,7 @@ fn decimal_nullable() -> Result<()> {
 fn timestamp_tz() -> Result<()> {
     let data = Int64Array::from(&vec![Some(2), None, None]).to(DataType::Timestamp(
         TimeUnit::Second,
-        Some("UTC".to_string()),
+        Some(Arc::new("UTC".to_string())),
     ));
     test_round_trip(data)
 }
@@ -210,7 +211,7 @@ fn list_sliced() -> Result<()> {
     let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
 
     let array = ListArray::<i32>::try_new(
-        DataType::List(Box::new(Field::new("a", DataType::Int32, true))),
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::Int32, true))),
         vec![0, 1, 1, 2].try_into().unwrap(),
         Box::new(PrimitiveArray::<i32>::from_slice([1, 2])),
         Some(bitmap),
@@ -256,7 +257,10 @@ fn fixed_size_list_sliced() -> Result<()> {
     let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
 
     let array = FixedSizeListArray::try_new(
-        DataType::FixedSizeList(Box::new(Field::new("a", DataType::Int32, true)), 2),
+        DataType::FixedSizeList(
+            std::sync::Arc::new(Field::new("a", DataType::Int32, true)),
+            2,
+        ),
         Box::new(PrimitiveArray::<i32>::from_vec(vec![1, 2, 3, 4, 5, 6])),
         Some(bitmap),
     )?;
@@ -287,7 +291,7 @@ fn list_list() -> Result<()> {
 
 #[test]
 fn struct_() -> Result<()> {
-    let data_type = DataType::Struct(vec![Field::new("a", DataType::Int32, true)]);
+    let data_type = DataType::Struct(Arc::new(vec![Field::new("a", DataType::Int32, true)]));
     let values = vec![Int32Array::from([Some(1), None, Some(3)]).boxed()];
     let validity = Bitmap::from([true, false, true]);
 
@@ -312,14 +316,14 @@ fn dict() -> Result<()> {
 fn schema() -> Result<()> {
     let field = Field::new(
         "a",
-        DataType::List(Box::new(Field::new("a", DataType::UInt32, true))),
+        DataType::List(std::sync::Arc::new(Field::new("a", DataType::UInt32, true))),
         true,
     );
     test_round_trip_schema(field)?;
 
     let field = Field::new(
         "a",
-        DataType::Dictionary(u32::KEY_TYPE, Box::new(DataType::Utf8), false),
+        DataType::Dictionary(u32::KEY_TYPE, Arc::new(DataType::Utf8), false),
         true,
     );
     test_round_trip_schema(field)?;
@@ -337,8 +341,8 @@ fn extension() -> Result<()> {
         "a",
         DataType::Extension(
             "a".to_string(),
-            Box::new(DataType::Int32),
-            Some("bla".to_string()),
+            Arc::new(DataType::Int32),
+            Some("bla".to_string()).map(Arc::new),
         ),
         true,
     );
@@ -351,11 +355,11 @@ fn extension_children() -> Result<()> {
         "a",
         DataType::Extension(
             "b".to_string(),
-            Box::new(DataType::Struct(vec![Field::new(
+            Arc::new(DataType::Struct(Arc::new(vec![Field::new(
                 "c",
                 DataType::Int32,
                 true,
-            )])),
+            )]))),
             None,
         ),
         true,

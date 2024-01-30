@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::{array::FixedSizeBinaryArray, bitmap::Bitmap, buffer::Buffer, datatypes::DataType};
 
 mod mutable;
@@ -89,7 +91,7 @@ fn to() {
 
     let extension = DataType::Extension(
         "a".to_string(),
-        Box::new(DataType::FixedSizeBinary(2)),
+        Arc::new(DataType::FixedSizeBinary(2)),
         None,
     );
     let _ = a.to(extension);

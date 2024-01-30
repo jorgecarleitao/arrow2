@@ -599,7 +599,7 @@ pub fn deserialize(json: &Value, data_type: DataType) -> Result<Box<dyn Array>, 
     match json {
         Value::Array(rows) => match data_type {
             DataType::List(inner) | DataType::LargeList(inner) => {
-                Ok(_deserialize(rows, inner.data_type))
+                Ok(_deserialize(rows, inner.data_type.clone()))
             }
             _ => Err(Error::nyi("read an Array from a non-Array data type")),
         },

@@ -29,7 +29,10 @@ fn some_values() -> (DataType, Vec<Box<dyn Array>>) {
         Field::new("key", DataType::Utf8, true),
         Field::new("val", DataType::Int32, true),
     ];
-    (DataType::Struct(fields), vec![strings, ints])
+    (
+        DataType::Struct(std::sync::Arc::new(fields)),
+        vec![strings, ints],
+    )
 }
 
 #[test]
@@ -38,7 +41,7 @@ fn basic() {
 
     let kv_array = StructArray::new(fields.clone(), values, None).boxed();
     let kv_field = Field::new("kv", fields, false);
-    let data_type = DataType::Map(Box::new(kv_field), false);
+    let data_type = DataType::Map(std::sync::Arc::new(kv_field), false);
     let offsets = OffsetsBuffer::try_from(vec![0, 1, 2, 4, 6]).unwrap();
 
     let array = MapArray::new(data_type.clone(), offsets, kv_array.clone(), None);
@@ -62,7 +65,7 @@ fn offset() {
 
     let kv_array = StructArray::new(fields.clone(), values, None).boxed();
     let kv_field = Field::new("kv", fields, false);
-    let data_type = DataType::Map(Box::new(kv_field), false);
+    let data_type = DataType::Map(std::sync::Arc::new(kv_field), false);
     let offsets = OffsetsBuffer::try_from(vec![0, 1, 2, 4, 6]).unwrap();
 
     let array = MapArray::new(data_type.clone(), offsets, kv_array.clone(), None).sliced(1, 3);
@@ -86,7 +89,7 @@ fn nulls() {
 
     let kv_array = StructArray::new(fields.clone(), values, None).boxed();
     let kv_field = Field::new("kv", fields, false);
-    let data_type = DataType::Map(Box::new(kv_field), false);
+    let data_type = DataType::Map(std::sync::Arc::new(kv_field), false);
     let offsets = OffsetsBuffer::try_from(vec![0, 1, 2, 4, 6]).unwrap();
 
     let array = MapArray::new(

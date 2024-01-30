@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::{
     array::*,
     datatypes::{DataType, Field},
@@ -7,7 +9,7 @@ use arrow2::{
 fn push() {
     let c1 = Box::new(MutablePrimitiveArray::<i32>::new()) as Box<dyn MutableArray>;
     let values = vec![c1];
-    let data_type = DataType::Struct(vec![Field::new("f1", DataType::Int32, true)]);
+    let data_type = DataType::Struct(Arc::new(vec![Field::new("f1", DataType::Int32, true)]));
     let mut a = MutableStructArray::new(data_type, values);
 
     a.value::<MutablePrimitiveArray<i32>>(0)

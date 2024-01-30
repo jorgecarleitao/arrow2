@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, convert::TryInto, ffi::CStr, ffi::CString, ptr};
+use std::{collections::BTreeMap, convert::TryInto, ffi::CStr, ffi::CString, ptr, sync::Arc};
 
 use crate::{
     datatypes::{
@@ -87,7 +87,7 @@ impl ArrowSchema {
             if let Some(extension_metadata) = extension_metadata {
                 metadata.insert(
                     "ARROW:extension:metadata".to_string(),
-                    extension_metadata.clone(),
+                    extension_metadata.to_string(),
                 );
             }
 
@@ -196,14 +196,18 @@ pub(crate) unsafe fn to_field(schema: &ArrowSchema) -> Result<Field> {
         let indices = to_integer_type(schema.format())?;
         let values = to_field(dictionary)?;
         let is_ordered = schema.flags & 1 == 1;
-        DataType::Dictionary(indices, Box::new(values.data_type().clone()), is_ordered)
+        DataType::Dictionary(
+            indices,
+            std::sync::Arc::new(values.data_type().clone()),
+            is_ordered,
+        )
     } else {
         to_data_type(schema)?
     };
     let (metadata, extension) = unsafe { metadata_from_bytes(schema.metadata) };
 
     let data_type = if let Some((name, extension_metadata)) = extension {
-        DataType::Extension(name, Box::new(data_type), extension_metadata)
+        DataType::Extension(name, Arc::new(data_type), extension_metadata.map(Arc::new))
     } else {
         data_type
     };
@@ -263,23 +267,23 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
         "tiD" => DataType::Interval(IntervalUnit::DayTime),
         "+l" => {
             let child = schema.child(0);
-            DataType::List(Box::new(to_field(child)?))
+            DataType::List(Arc::new(to_field(child)?))
         }
         "+L" => {
             let child = schema.child(0);
-            DataType::LargeList(Box::new(to_field(child)?))
+            DataType::LargeList(Arc::new(to_field(child)?))
         }
         "+m" => {
             let child = schema.child(0);
 
             let is_sorted = (schema.flags & 4) != 0;
-            DataType::Map(Box::new(to_field(child)?), is_sorted)
+            DataType::Map(std::sync::Arc::new(to_field(child)?), is_sorted)
         }
         "+s" => {
             let children = (0..schema.n_children as usize)
                 .map(|x| to_field(schema.child(x)))
                 .collect::<Result<Vec<_>>>()?;
-            DataType::Struct(children)
+            DataType::Struct(Arc::new(children))
         }
         other => {
             match other.splitn(2, ':').collect::<Vec<_>>()[..] {
@@ -290,10 +294,18 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                 ["tsn", ""] => DataType::Timestamp(TimeUnit::Nanosecond, None),
 
                 // Timestamps with timezone
-                ["tss", tz] => DataType::Timestamp(TimeUnit::Second, Some(tz.to_string())),
-                ["tsm", tz] => DataType::Timestamp(TimeUnit::Millisecond, Some(tz.to_string())),
-                ["tsu", tz] => DataType::Timestamp(TimeUnit::Microsecond, Some(tz.to_string())),
-                ["tsn", tz] => DataType::Timestamp(TimeUnit::Nanosecond, Some(tz.to_string())),
+                ["tss", tz] => {
+                    DataType::Timestamp(TimeUnit::Second, Some(Arc::new(tz.to_string())))
+                }
+                ["tsm", tz] => {
+                    DataType::Timestamp(TimeUnit::Millisecond, Some(Arc::new(tz.to_string())))
+                }
+                ["tsu", tz] => {
+                    DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::new(tz.to_string())))
+                }
+                ["tsn", tz] => {
+                    DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::new(tz.to_string())))
+                }
 
                 ["w", size_raw] => {
                     // Example: "w:42" fixed-width binary [42 bytes]
@@ -308,7 +320,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                         .parse::<usize>()
                         .map_err(|_| Error::OutOfSpec("size is not a valid integer".to_string()))?;
                     let child = to_field(schema.child(0))?;
-                    DataType::FixedSizeList(Box::new(child), size)
+                    DataType::FixedSizeList(Arc::new(child), size)
                 }
                 ["d", raw] => {
                     // Decimal
@@ -373,7 +385,7 @@ unsafe fn to_data_type(schema: &ArrowSchema) -> Result<DataType> {
                     let fields = (0..schema.n_children as usize)
                         .map(|x| to_field(schema.child(x)))
                         .collect::<Result<Vec<_>>>()?;
-                    DataType::Union(fields, Some(type_ids), mode)
+                    DataType::Union(Arc::new(fields), Some(Arc::new(type_ids)), mode)
                 }
                 _ => {
                     return Err(Error::OutOfSpec(format!(
@@ -436,7 +448,7 @@ fn to_format(data_type: &DataType) -> String {
             format!(
                 "ts{}:{}",
                 unit,
-                tz.as_ref().map(|x| x.as_ref()).unwrap_or("")
+                tz.as_ref().map(|x| x.as_str()).unwrap_or("")
             )
         }
         DataType::Decimal(precision, scale) => format!("d:{precision},{scale}"),
@@ -568,40 +580,43 @@ mod tests {
             DataType::Binary,
             DataType::LargeBinary,
             DataType::FixedSizeBinary(2),
-            DataType::List(Box::new(Field::new("example", DataType::Boolean, false))),
-            DataType::FixedSizeList(Box::new(Field::new("example", DataType::Boolean, false)), 2),
-            DataType::LargeList(Box::new(Field::new("example", DataType::Boolean, false))),
-            DataType::Struct(vec![
+            DataType::List(Arc::new(Field::new("example", DataType::Boolean, false))),
+            DataType::FixedSizeList(Arc::new(Field::new("example", DataType::Boolean, false)), 2),
+            DataType::LargeList(Arc::new(Field::new("example", DataType::Boolean, false))),
+            DataType::Struct(Arc::new(vec![
                 Field::new("a", DataType::Int64, true),
                 Field::new(
                     "b",
-                    DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+                    DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
                     true,
                 ),
-            ]),
-            DataType::Map(Box::new(Field::new("a", DataType::Int64, true)), true),
+            ])),
+            DataType::Map(
+                std::sync::Arc::new(Field::new("a", DataType::Int64, true)),
+                true,
+            ),
             DataType::Union(
-                vec![
+                Arc::new(vec![
                     Field::new("a", DataType::Int64, true),
                     Field::new(
                         "b",
-                        DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+                        DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
                         true,
                     ),
-                ],
-                Some(vec![1, 2]),
+                ]),
+                Some(Arc::new(vec![1, 2])),
                 UnionMode::Dense,
             ),
             DataType::Union(
-                vec![
+                Arc::new(vec![
                     Field::new("a", DataType::Int64, true),
                     Field::new(
                         "b",
-                        DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+                        DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
                         true,
                     ),
-                ],
-                Some(vec![0, 1]),
+                ]),
+                Some(Arc::new(vec![0, 1])),
                 UnionMode::Sparse,
             ),
         ];
@@ -612,7 +627,10 @@ mod tests {
             TimeUnit::Nanosecond,
         ] {
             dts.push(DataType::Timestamp(time_unit, None));
-            dts.push(DataType::Timestamp(time_unit, Some("00:00".to_string())));
+            dts.push(DataType::Timestamp(
+                time_unit,
+                Some(Arc::new("00:00".to_string())),
+            ));
             dts.push(DataType::Duration(time_unit));
         }
         for interval_type in [

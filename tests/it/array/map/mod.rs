@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::{
     array::*,
     datatypes::{DataType, Field},
@@ -5,11 +7,14 @@ use arrow2::{
 
 #[test]
 fn basics() {
-    let dt = DataType::Struct(vec![
+    let dt = DataType::Struct(Arc::new(vec![
         Field::new("a", DataType::Utf8, true),
         Field::new("b", DataType::Utf8, true),
-    ]);
-    let data_type = DataType::Map(Box::new(Field::new("a", dt.clone(), true)), false);
+    ]));
+    let data_type = DataType::Map(
+        std::sync::Arc::new(Field::new("a", dt.clone(), true)),
+        false,
+    );
 
     let field = StructArray::new(
         dt.clone(),

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::chunk::Chunk;
 use avro_rs::types::{Record, Value};
 use avro_rs::{Codec, Writer};
@@ -73,23 +75,27 @@ pub(super) fn schema() -> (AvroSchema, Schema) {
         Field::new("g", DataType::Utf8, true),
         Field::new(
             "h",
-            DataType::List(Box::new(Field::new("item", DataType::Int32, true))),
+            DataType::List(std::sync::Arc::new(Field::new(
+                "item",
+                DataType::Int32,
+                true,
+            ))),
             false,
         ),
         Field::new(
             "i",
-            DataType::Struct(vec![Field::new("e", DataType::Float64, false)]),
+            DataType::Struct(Arc::new(vec![Field::new("e", DataType::Float64, false)])),
             false,
         ),
         Field::new(
             "enum",
-            DataType::Dictionary(i32::KEY_TYPE, Box::new(DataType::Utf8), false),
+            DataType::Dictionary(i32::KEY_TYPE, Arc::new(DataType::Utf8), false),
             false,
         ),
         Field::new("decimal", DataType::Decimal(18, 5), false),
         Field::new(
             "nullable_struct",
-            DataType::Struct(vec![Field::new("e", DataType::Float64, false)]),
+            DataType::Struct(Arc::new(vec![Field::new("e", DataType::Float64, false)])),
             true,
         ),
     ]);
@@ -117,7 +123,7 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
         Utf8Array::<i32>::from([Some("foo"), None]).boxed(),
         array.into_box(),
         StructArray::new(
-            DataType::Struct(vec![Field::new("e", DataType::Float64, false)]),
+            DataType::Struct(Arc::new(vec![Field::new("e", DataType::Float64, false)])),
             vec![PrimitiveArray::<f64>::from_slice([1.0, 2.0]).boxed()],
             None,
         )
@@ -132,7 +138,7 @@ pub(super) fn data() -> Chunk<Box<dyn Array>> {
             .to(DataType::Decimal(18, 5))
             .boxed(),
         StructArray::new(
-            DataType::Struct(vec![Field::new("e", DataType::Float64, false)]),
+            DataType::Struct(Arc::new(vec![Field::new("e", DataType::Float64, false)])),
             vec![PrimitiveArray::<f64>::from_slice([1.0, 0.0]).boxed()],
             Some([true, false].into()),
         )
@@ -331,7 +337,11 @@ fn schema_list() -> (AvroSchema, Schema) {
 
     let schema = Schema::from(vec![Field::new(
         "h",
-        DataType::List(Box::new(Field::new("item", DataType::Int32, false))),
+        DataType::List(std::sync::Arc::new(Field::new(
+            "item",
+            DataType::Int32,
+            false,
+        ))),
         false,
     )]);
 
@@ -343,7 +353,11 @@ pub(super) fn data_list() -> Chunk<Box<dyn Array>> {
 
     let mut array = MutableListArray::<i32, MutablePrimitiveArray<i32>>::new_from(
         Default::default(),
-        DataType::List(Box::new(Field::new("item", DataType::Int32, false))),
+        DataType::List(std::sync::Arc::new(Field::new(
+            "item",
+            DataType::Int32,
+            false,
+        ))),
         0,
     );
     array.try_extend(data).unwrap();

@@ -129,7 +129,7 @@ impl FixedItemsUtf8Dictionary {
         Self {
             data_type: DataType::Dictionary(
                 IntegerType::Int32,
-                Box::new(values.data_type().clone()),
+                std::sync::Arc::new(values.data_type().clone()),
                 false,
             ),
             keys: MutablePrimitiveArray::<i32>::with_capacity(capacity),

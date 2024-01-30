@@ -1,5 +1,7 @@
 //! Conversion methods for dates and times.
 
+use std::sync::Arc;
+
 use chrono::{
     format::{parse, Parsed, StrftimeItems},
     Datelike, Duration, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime,
@@ -398,7 +400,7 @@ pub fn utf8_to_naive_timestamp_scalar(value: &str, fmt: &str, tu: &TimeUnit) -> 
 fn utf8_to_timestamp_ns_impl<O: Offset, T: chrono::TimeZone>(
     array: &Utf8Array<O>,
     fmt: &str,
-    timezone: String,
+    timezone: Arc<String>,
     tz: T,
 ) -> PrimitiveArray<i64> {
     let iter = array
@@ -423,9 +425,9 @@ pub fn parse_offset_tz(timezone: &str) -> Result<chrono_tz::Tz> {
 fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
     array: &Utf8Array<O>,
     fmt: &str,
-    timezone: String,
+    timezone: Arc<String>,
 ) -> Result<PrimitiveArray<i64>> {
-    let tz = parse_offset_tz(&timezone)?;
+    let tz = parse_offset_tz(timezone.as_str())?;
     Ok(utf8_to_timestamp_ns_impl(array, fmt, timezone, tz))
 }
 
@@ -433,7 +435,7 @@ fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
 fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
     _: &Utf8Array<O>,
     _: &str,
-    timezone: String,
+    timezone: Arc<String>,
 ) -> Result<PrimitiveArray<i64>> {
     Err(Error::InvalidArgumentError(format!(
         "timezone \"{timezone}\" cannot be parsed (feature chrono-tz is not active)",
@@ -451,7 +453,7 @@ fn chrono_tz_utf_to_timestamp_ns<O: Offset>(
 pub fn utf8_to_timestamp_ns<O: Offset>(
     array: &Utf8Array<O>,
     fmt: &str,
-    timezone: String,
+    timezone: Arc<String>,
 ) -> Result<PrimitiveArray<i64>> {
     let tz = parse_offset(timezone.as_str());
 

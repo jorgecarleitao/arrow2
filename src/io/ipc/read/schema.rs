@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow_format::ipc::{
     planus::ReadAsRoot, FieldRef, FixedSizeListRef, MapRef, TimeRef, TimestampRef, UnionRef,
 };
@@ -104,7 +106,7 @@ fn deserialize_time(time: TimeRef) -> Result<(DataType, IpcField)> {
 }
 
 fn deserialize_timestamp(timestamp: TimestampRef) -> Result<(DataType, IpcField)> {
-    let timezone = timestamp.timezone()?.map(|tz| tz.to_string());
+    let timezone = timestamp.timezone()?.map(|tz| Arc::new(tz.to_string()));
     let time_unit = deserialize_timeunit(timestamp.unit()?)?;
     Ok((
         DataType::Timestamp(time_unit, timezone),
@@ -131,7 +133,10 @@ fn deserialize_union(union_: UnionRef, field: FieldRef) -> Result<(DataType, Ipc
         fields: ipc_fields,
         dictionary_id: None,
     };
-    Ok((DataType::Union(fields, ids, mode), ipc_field))
+    Ok((
+        DataType::Union(Arc::new(fields), ids.map(Arc::new), mode),
+        ipc_field,
+    ))
 }
 
 fn deserialize_map(map: MapRef, field: FieldRef) -> Result<(DataType, IpcField)> {
@@ -145,7 +150,7 @@ fn deserialize_map(map: MapRef, field: FieldRef) -> Result<(DataType, IpcField)>
         .ok_or_else(|| Error::oos("IPC: Map must contain one child"))??;
     let (field, ipc_field) = deserialize_field(inner)?;
 
-    let data_type = DataType::Map(Box::new(field), is_sorted);
+    let data_type = DataType::Map(std::sync::Arc::new(field), is_sorted);
     Ok((
         data_type,
         IpcField {
@@ -170,7 +175,7 @@ fn deserialize_struct(field: FieldRef) -> Result<(DataType, IpcField)> {
         fields: ipc_fields,
         dictionary_id: None,
     };
-    Ok((DataType::Struct(fields), ipc_field))
+    Ok((DataType::Struct(std::sync::Arc::new(fields)), ipc_field))
 }
 
 fn deserialize_list(field: FieldRef) -> Result<(DataType, IpcField)> {
@@ -183,7 +188,7 @@ fn deserialize_list(field: FieldRef) -> Result<(DataType, IpcField)> {
     let (field, ipc_field) = deserialize_field(inner)?;
 
     Ok((
-        DataType::List(Box::new(field)),
+        DataType::List(std::sync::Arc::new(field)),
         IpcField {
             fields: vec![ipc_field],
             dictionary_id: None,
@@ -201,7 +206,7 @@ fn deserialize_large_list(field: FieldRef) -> Result<(DataType, IpcField)> {
     let (field, ipc_field) = deserialize_field(inner)?;
 
     Ok((
-        DataType::LargeList(Box::new(field)),
+        DataType::LargeList(std::sync::Arc::new(field)),
         IpcField {
             fields: vec![ipc_field],
             dictionary_id: None,
@@ -227,7 +232,7 @@ fn deserialize_fixed_size_list(
         .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
     Ok((
-        DataType::FixedSizeList(Box::new(field), size),
+        DataType::FixedSizeList(std::sync::Arc::new(field), size),
         IpcField {
             fields: vec![ipc_field],
             dictionary_id: None,
@@ -250,7 +255,7 @@ fn get_data_type(
             let (inner, mut ipc_field) = get_data_type(field, extension, false)?;
             ipc_field.dictionary_id = Some(dictionary.id()?);
             return Ok((
-                DataType::Dictionary(index_type, Box::new(inner), dictionary.is_ordered()?),
+                DataType::Dictionary(index_type, Arc::new(inner), dictionary.is_ordered()?),
                 ipc_field,
             ));
         }
@@ -260,7 +265,7 @@ fn get_data_type(
         let (name, metadata) = extension;
         let (data_type, fields) = get_data_type(field, None, false)?;
         return Ok((
-            DataType::Extension(name, Box::new(data_type), metadata),
+            DataType::Extension(name, Arc::new(data_type), metadata.map(Arc::new)),
             fields,
         ));
     }

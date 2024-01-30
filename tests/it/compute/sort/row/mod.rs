@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arrow2::{
     array::{
         Array, BinaryArray, BooleanArray, DictionaryArray, Float32Array, Int128Array, Int16Array,
@@ -265,7 +267,7 @@ fn test_dictionary_nulls() {
     let values = Int32Array::from_iter([Some(1), Some(-1), None, Some(4), None]);
     let keys = Int32Array::from_iter([Some(0), Some(0), Some(1), Some(2), Some(4), None]);
 
-    let data_type = DataType::Dictionary(IntegerType::Int32, Box::new(DataType::Int32), false);
+    let data_type = DataType::Dictionary(IntegerType::Int32, Arc::new(DataType::Int32), false);
     let data = DictionaryArray::try_from_keys(keys, values.to_boxed()).unwrap();
 
     let mut converter = RowConverter::new(vec![SortField::new(data_type)]);

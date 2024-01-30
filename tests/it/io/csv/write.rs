@@ -226,7 +226,7 @@ fn data_array(column: &str) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
             ])
             .to(DataType::Timestamp(
                 TimeUnit::Nanosecond,
-                Some("+01:00".to_string()),
+                Some(std::sync::Arc::new("+01:00".to_string())),
             ));
             (
                 array.boxed(),
@@ -243,7 +243,7 @@ fn data_array(column: &str) -> (Chunk<Box<dyn Array>>, Vec<&'static str>) {
             ])
             .to(DataType::Timestamp(
                 TimeUnit::Nanosecond,
-                Some("Europe/Lisbon".to_string()),
+                Some(std::sync::Arc::new("Europe/Lisbon".to_string())),
             ));
             (
                 array.boxed(),
@@ -344,7 +344,7 @@ fn write_tz_timezone_formatted_offset() -> Result<()> {
         PrimitiveArray::<i64>::from_slice([1_555_584_887_378_000_001, 1_555_555_555_555_000_001])
             .to(DataType::Timestamp(
                 TimeUnit::Nanosecond,
-                Some("+01:00".to_string()),
+                Some(std::sync::Arc::new("+01:00".to_string())),
             ));
 
     let columns = Chunk::new(vec![array.boxed()]);
@@ -369,7 +369,7 @@ fn write_tz_timezone_formatted_tz() -> Result<()> {
         PrimitiveArray::<i64>::from_slice([1_555_584_887_378_000_001, 1_555_555_555_555_000_001])
             .to(DataType::Timestamp(
                 TimeUnit::Nanosecond,
-                Some("Europe/Lisbon".to_string()),
+                Some(std::sync::Arc::new("Europe/Lisbon".to_string())),
             ));
 
     let columns = Chunk::new(vec![array.boxed()]);

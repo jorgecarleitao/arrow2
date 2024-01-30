@@ -42,7 +42,7 @@ impl<M: MutableArray> MutableFixedSizeListArray<M> {
     /// Creates a new [`MutableFixedSizeListArray`] from a [`MutableArray`] and size.
     pub fn new_with_field(values: M, name: &str, nullable: bool, size: usize) -> Self {
         let data_type = DataType::FixedSizeList(
-            Box::new(Field::new(name, values.data_type().clone(), nullable)),
+            Arc::new(Field::new(name, values.data_type().clone(), nullable)),
             size,
         );
         Self::new_from(values, data_type, size)

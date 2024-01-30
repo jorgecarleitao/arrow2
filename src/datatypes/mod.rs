@@ -20,6 +20,47 @@ pub type Metadata = BTreeMap<String, String>;
 /// typedef fpr [Option<(String, Option<String>)>] descr
 pub(crate) type Extension = Option<(String, Option<String>)>;
 
+/// An extension trait to polyfill [`Arc::unwrap_or_clone`] from the nightly stdlib.
+pub trait ArcExt<T> {
+    /// If we have the only reference to `T` then unwrap it. Otherwise, clone `T` and return the
+    /// clone.
+    ///
+    /// Assuming `arc_t` is of type `Arc<T>`, this function is functionally equivalent to
+    /// `(*arc_t).clone()`, but will avoid cloning the inner value where possible.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::{ptr, sync::Arc};
+    /// # use arrow2::datatype::ArcExt;
+    /// let inner = String::from("test");
+    /// let ptr = inner.as_ptr();
+    ///
+    /// let arc = Arc::new(inner);
+    /// let inner = Arc::unwrap_or_clone(arc);
+    /// // The inner value was not cloned
+    /// assert!(ptr::eq(ptr, inner.as_ptr()));
+    ///
+    /// let arc = Arc::new(inner);
+    /// let arc2 = arc.clone();
+    /// let inner = Arc::unwrap_or_clone(arc);
+    /// // Because there were 2 references, we had to clone the inner value.
+    /// assert!(!ptr::eq(ptr, inner.as_ptr()));
+    /// // `arc2` is the last reference, so when we unwrap it we get back
+    /// // the original `String`.
+    /// let inner = Arc::unwrap_or_clone(arc2);
+    /// assert!(ptr::eq(ptr, inner.as_ptr()));
+    /// ```
+    fn unwrap_or_clone_polyfill(this: Self) -> T;
+}
+
+impl<T: Clone> ArcExt<T> for Arc<T> {
+    #[inline]
+    fn unwrap_or_clone_polyfill(this: Self) -> T {
+        Arc::try_unwrap(this).unwrap_or_else(|arc| (*arc).clone())
+    }
+}
+
 /// The set of supported logical types in this crate.
 ///
 /// Each variant uniquely identifies a logical type, which define specific semantics to the data
@@ -70,7 +111,7 @@ pub enum DataType {
     /// * An absolute time zone offset of the form +XX:XX or -XX:XX, such as +07:30
     /// When the timezone is not specified, the timestamp is considered to have no timezone
     /// and is represented _as is_
-    Timestamp(TimeUnit, Option<String>),
+    Timestamp(TimeUnit, Option<Arc<String>>),
     /// An [`i32`] representing the elapsed time since UNIX epoch (1970-01-01)
     /// in days.
     Date32,
@@ -100,16 +141,16 @@ pub enum DataType {
     /// A variable-length UTF-8 encoded string whose offsets are represented as [`i64`].
     LargeUtf8,
     /// A list of some logical data type whose offsets are represented as [`i32`].
-    List(Box<Field>),
+    List(Arc<Field>),
     /// A list of some logical data type with a fixed number of elements.
-    FixedSizeList(Box<Field>, usize),
+    FixedSizeList(Arc<Field>, usize),
     /// A list of some logical data type whose offsets are represented as [`i64`].
-    LargeList(Box<Field>),
+    LargeList(Arc<Field>),
     /// A nested [`DataType`] with a given number of [`Field`]s.
-    Struct(Vec<Field>),
+    Struct(Arc<Vec<Field>>),
     /// A nested datatype that can represent slots of differing types.
     /// Third argument represents mode
-    Union(Vec<Field>, Option<Vec<i32>>, UnionMode),
+    Union(Arc<Vec<Field>>, Option<Arc<Vec<i32>>>, UnionMode),
     /// A nested type that is represented as
     ///
     /// List<entries: Struct<key: K, value: V>>
@@ -135,7 +176,7 @@ pub enum DataType {
     /// The metadata is structured so that Arrow systems without special handling
     /// for Map can make Map an alias for List. The "layout" attribute for the Map
     /// field must have the same contents as a List.
-    Map(Box<Field>, bool),
+    Map(Arc<Field>, bool),
     /// A dictionary encoded array (`key_type`, `value_type`), where
     /// each array element is an index of `key_type` into an
     /// associated dictionary of `value_type`.
@@ -148,7 +189,7 @@ pub enum DataType {
     /// arrays or a limited set of primitive types as integers.
     ///
     /// The `bool` value indicates the `Dictionary` is sorted if set to `true`.
-    Dictionary(IntegerType, Box<DataType>, bool),
+    Dictionary(IntegerType, Arc<DataType>, bool),
     /// Decimal value with precision and scale
     /// precision is the number of digits in the number and
     /// scale is the number of decimal places.
@@ -157,7 +198,7 @@ pub enum DataType {
     /// Decimal backed by 256 bits
     Decimal256(usize, usize),
     /// Extension type.
-    Extension(String, Box<DataType>, Option<String>),
+    Extension(String, Arc<DataType>, Option<Arc<String>>),
 }
 
 #[cfg(feature = "arrow")]
@@ -180,7 +221,10 @@ impl From<DataType> for arrow_schema::DataType {
             DataType::Float16 => Self::Float16,
             DataType::Float32 => Self::Float32,
             DataType::Float64 => Self::Float64,
-            DataType::Timestamp(unit, tz) => Self::Timestamp(unit.into(), tz.map(Into::into)),
+            DataType::Timestamp(unit, tz) => Self::Timestamp(
+                unit.into(),
+                tz.map(Arc::unwrap_or_clone_polyfill).map(Into::into),
+            ),
             DataType::Date32 => Self::Date32,
             DataType::Date64 => Self::Date64,
             DataType::Time32(unit) => Self::Time32(unit.into()),
@@ -192,30 +236,45 @@ impl From<DataType> for arrow_schema::DataType {
             DataType::LargeBinary => Self::LargeBinary,
             DataType::Utf8 => Self::Utf8,
             DataType::LargeUtf8 => Self::LargeUtf8,
-            DataType::List(f) => Self::List(Arc::new((*f).into())),
+            DataType::List(f) => Self::List(Arc::new(Arc::unwrap_or_clone_polyfill(f).into())),
             DataType::FixedSizeList(f, size) => {
-                Self::FixedSizeList(Arc::new((*f).into()), size as _)
+                Self::FixedSizeList(Arc::new(Arc::unwrap_or_clone_polyfill(f).into()), size as _)
             }
-            DataType::LargeList(f) => Self::LargeList(Arc::new((*f).into())),
-            DataType::Struct(f) => Self::Struct(f.into_iter().map(ArrowField::from).collect()),
+            DataType::LargeList(f) => {
+                Self::LargeList(Arc::new(Arc::unwrap_or_clone_polyfill(f).into()))
+            }
+            DataType::Struct(f) => Self::Struct(
+                Arc::unwrap_or_clone_polyfill(f)
+                    .into_iter()
+                    .map(ArrowField::from)
+                    .collect(),
+            ),
             DataType::Union(fields, Some(ids), mode) => {
-                let ids = ids.into_iter().map(|x| x as _);
-                let fields = fields.into_iter().map(ArrowField::from);
+                let ids = Arc::unwrap_or_clone_polyfill(ids)
+                    .into_iter()
+                    .map(|x| x as _);
+                let fields = Arc::unwrap_or_clone_polyfill(fields)
+                    .into_iter()
+                    .map(ArrowField::from);
                 Self::Union(UnionFields::new(ids, fields), mode.into())
             }
             DataType::Union(fields, None, mode) => {
                 let ids = 0..fields.len() as i8;
-                let fields = fields.into_iter().map(ArrowField::from);
+                let fields = Arc::unwrap_or_clone_polyfill(fields)
+                    .into_iter()
+                    .map(ArrowField::from);
                 Self::Union(UnionFields::new(ids, fields), mode.into())
             }
-            DataType::Map(f, ordered) => Self::Map(Arc::new((*f).into()), ordered),
+            DataType::Map(f, ordered) => {
+                Self::Map(Arc::new(Arc::unwrap_or_clone_polyfill(f).into()), ordered)
+            }
             DataType::Dictionary(key, value, _) => Self::Dictionary(
                 Box::new(DataType::from(key).into()),
-                Box::new((*value).into()),
+                Box::new(Arc::unwrap_or_clone_polyfill(value).into()),
             ),
             DataType::Decimal(precision, scale) => Self::Decimal128(precision as _, scale as _),
             DataType::Decimal256(precision, scale) => Self::Decimal256(precision as _, scale as _),
-            DataType::Extension(_, d, _) => (*d).into(),
+            DataType::Extension(_, d, _) => Arc::unwrap_or_clone_polyfill(d).into(),
         }
     }
 }
@@ -239,7 +298,7 @@ impl From<arrow_schema::DataType> for DataType {
             DataType::Float32 => Self::Float32,
             DataType::Float64 => Self::Float64,
             DataType::Timestamp(unit, tz) => {
-                Self::Timestamp(unit.into(), tz.map(|x| x.to_string()))
+                Self::Timestamp(unit.into(), tz.map(|tz| Arc::new(tz.to_string())))
             }
             DataType::Date32 => Self::Date32,
             DataType::Date64 => Self::Date64,
@@ -252,16 +311,16 @@ impl From<arrow_schema::DataType> for DataType {
             DataType::LargeBinary => Self::LargeBinary,
             DataType::Utf8 => Self::Utf8,
             DataType::LargeUtf8 => Self::LargeUtf8,
-            DataType::List(f) => Self::List(Box::new(f.into())),
-            DataType::FixedSizeList(f, size) => Self::FixedSizeList(Box::new(f.into()), size as _),
-            DataType::LargeList(f) => Self::LargeList(Box::new(f.into())),
-            DataType::Struct(f) => Self::Struct(f.into_iter().map(Into::into).collect()),
+            DataType::List(f) => Self::List(Arc::new(f.into())),
+            DataType::FixedSizeList(f, size) => Self::FixedSizeList(Arc::new(f.into()), size as _),
+            DataType::LargeList(f) => Self::LargeList(Arc::new(f.into())),
+            DataType::Struct(f) => Self::Struct(Arc::new(f.into_iter().map(Into::into).collect())),
             DataType::Union(fields, mode) => {
-                let ids = fields.iter().map(|(x, _)| x as _).collect();
-                let fields = fields.iter().map(|(_, f)| f.into()).collect();
+                let ids = Arc::new(fields.iter().map(|(x, _)| x as _).collect());
+                let fields = Arc::new(fields.iter().map(|(_, f)| f.into()).collect());
                 Self::Union(fields, Some(ids), mode.into())
             }
-            DataType::Map(f, ordered) => Self::Map(Box::new(f.into()), ordered),
+            DataType::Map(f, ordered) => Self::Map(std::sync::Arc::new(f.into()), ordered),
             DataType::Dictionary(key, value) => {
                 let key = match *key {
                     DataType::Int8 => IntegerType::Int8,
@@ -274,7 +333,7 @@ impl From<arrow_schema::DataType> for DataType {
                     DataType::UInt64 => IntegerType::UInt64,
                     d => panic!("illegal dictionary key type: {d}"),
                 };
-                Self::Dictionary(key, Box::new((*value).into()), false)
+                Self::Dictionary(key, Arc::new((*value).into()), false)
             }
             DataType::Decimal128(precision, scale) => Self::Decimal(precision as _, scale as _),
             DataType::Decimal256(precision, scale) => Self::Decimal256(precision as _, scale as _),

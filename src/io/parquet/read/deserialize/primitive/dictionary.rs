@@ -1,11 +1,11 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
 use parquet2::{page::DictPage, types::NativeType as ParquetNativeType};
 
 use crate::{
     array::{Array, DictionaryArray, DictionaryKey, PrimitiveArray},
     bitmap::MutableBitmap,
-    datatypes::DataType,
+    datatypes::{ArcExt, DataType},
     error::Result,
     types::NativeType,
 };
@@ -24,7 +24,7 @@ where
     F: Copy + Fn(P) -> T,
 {
     let data_type = match data_type {
-        DataType::Dictionary(_, values, _) => *values,
+        DataType::Dictionary(_, values, _) => Arc::unwrap_or_clone_polyfill(values),
         _ => data_type,
     };
     let values = deserialize_plain(&dict.buffer, op);
