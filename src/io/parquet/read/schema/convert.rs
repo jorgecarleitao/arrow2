@@ -154,6 +154,12 @@ fn from_byte_array(
         (_, Some(PrimitiveConvertedType::Bson)) => DataType::Binary,
         (_, Some(PrimitiveConvertedType::Enum)) => DataType::Binary,
         (_, Some(PrimitiveConvertedType::Utf8)) => DataType::Utf8,
+        (Some(PrimitiveLogicalType::Decimal(precision, scale)), _) => {
+            DataType::Decimal(*precision, *scale)
+        }
+        (_, Some(PrimitiveConvertedType::Decimal(precision, scale))) => {
+            DataType::Decimal(*precision, *scale)
+        }
         (_, _) => DataType::Binary,
     }
 }
