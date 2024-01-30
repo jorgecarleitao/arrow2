@@ -5,13 +5,13 @@ use super::super::api;
 use super::super::api::ResultSetMetadata;
 
 /// Infers the Arrow [`Field`]s from a [`ResultSetMetadata`]
-pub fn infer_schema(resut_set_metadata: &impl ResultSetMetadata) -> Result<Vec<Field>> {
-    let num_cols: u16 = resut_set_metadata.num_result_cols().unwrap() as u16;
+pub fn infer_schema(result_set_metadata: &mut impl ResultSetMetadata) -> Result<Vec<Field>> {
+    let num_cols: u16 = result_set_metadata.num_result_cols().unwrap() as u16;
 
     let fields = (0..num_cols)
         .map(|index| {
             let mut column_description = api::ColumnDescription::default();
-            resut_set_metadata
+            result_set_metadata
                 .describe_col(index + 1, &mut column_description)
                 .unwrap();
 
@@ -58,7 +58,9 @@ fn column_to_data_type(data_type: &api::DataType) -> DataType {
         OdbcDataType::BigInt => DataType::Int64,
         OdbcDataType::TinyInt => DataType::Int8,
         OdbcDataType::Bit => DataType::Boolean,
-        OdbcDataType::Binary { length } => DataType::FixedSizeBinary(*length),
+        OdbcDataType::Binary { length } => length
+            .map(|l| DataType::FixedSizeBinary(l.get()))
+            .unwrap_or(DataType::FixedSizeBinary(0)),
         OdbcDataType::LongVarbinary { length: _ } | OdbcDataType::Varbinary { length: _ } => {
             DataType::Binary
         }

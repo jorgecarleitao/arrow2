@@ -1,5 +1,3 @@
-use api::buffers::{BinColumnWriter, TextColumnWriter};
-
 use crate::array::*;
 use crate::bitmap::Bitmap;
 use crate::datatypes::DataType;
@@ -7,18 +5,18 @@ use crate::error::{Error, Result};
 use crate::offset::Offset;
 use crate::types::NativeType;
 
-use super::super::api;
-use super::super::api::buffers::NullableSliceMut;
+use odbc_api as api;
+use odbc_api::buffers::{AnySliceMut, BinColumnSliceMut, NullableSliceMut, TextColumnSliceMut};
 
 /// Serializes an [`Array`] to [`api::buffers::AnyColumnViewMut`]
 /// This operation is CPU-bounded
-pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut) -> Result<()> {
+pub fn serialize(array: &dyn Array, column: &mut AnySliceMut) -> Result<()> {
     match array.data_type() {
         DataType::Boolean => {
-            if let api::buffers::AnyColumnViewMut::Bit(values) = column {
+            if let AnySliceMut::Bit(values) = column {
                 bool(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
-            } else if let api::buffers::AnyColumnViewMut::NullableBit(values) = column {
+            } else if let AnySliceMut::NullableBit(values) = column {
                 bool_optional(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
@@ -26,10 +24,10 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
             }
         }
         DataType::Int16 => {
-            if let api::buffers::AnyColumnViewMut::I16(values) = column {
+            if let AnySliceMut::I16(values) = column {
                 primitive(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
-            } else if let api::buffers::AnyColumnViewMut::NullableI16(values) = column {
+            } else if let AnySliceMut::NullableI16(values) = column {
                 primitive_optional(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
@@ -37,10 +35,10 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
             }
         }
         DataType::Int32 => {
-            if let api::buffers::AnyColumnViewMut::I32(values) = column {
+            if let AnySliceMut::I32(values) = column {
                 primitive(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
-            } else if let api::buffers::AnyColumnViewMut::NullableI32(values) = column {
+            } else if let AnySliceMut::NullableI32(values) = column {
                 primitive_optional(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
@@ -48,10 +46,10 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
             }
         }
         DataType::Float32 => {
-            if let api::buffers::AnyColumnViewMut::F32(values) = column {
+            if let AnySliceMut::F32(values) = column {
                 primitive(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
-            } else if let api::buffers::AnyColumnViewMut::NullableF32(values) = column {
+            } else if let AnySliceMut::NullableF32(values) = column {
                 primitive_optional(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
@@ -59,10 +57,10 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
             }
         }
         DataType::Float64 => {
-            if let api::buffers::AnyColumnViewMut::F64(values) = column {
+            if let AnySliceMut::F64(values) = column {
                 primitive(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
-            } else if let api::buffers::AnyColumnViewMut::NullableF64(values) = column {
+            } else if let AnySliceMut::NullableF64(values) = column {
                 primitive_optional(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
@@ -70,7 +68,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
             }
         }
         DataType::Utf8 => {
-            if let api::buffers::AnyColumnViewMut::Text(values) = column {
+            if let AnySliceMut::Text(values) = column {
                 utf8::<i32>(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
@@ -78,7 +76,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
             }
         }
         DataType::LargeUtf8 => {
-            if let api::buffers::AnyColumnViewMut::Text(values) = column {
+            if let AnySliceMut::Text(values) = column {
                 utf8::<i64>(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
@@ -86,7 +84,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
             }
         }
         DataType::Binary => {
-            if let api::buffers::AnyColumnViewMut::Binary(values) = column {
+            if let AnySliceMut::Binary(values) = column {
                 binary::<i32>(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
@@ -94,7 +92,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
             }
         }
         DataType::LargeBinary => {
-            if let api::buffers::AnyColumnViewMut::Binary(values) = column {
+            if let AnySliceMut::Binary(values) = column {
                 binary::<i64>(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
@@ -102,7 +100,7 @@ pub fn serialize(array: &dyn Array, column: &mut api::buffers::AnyColumnViewMut)
             }
         }
         DataType::FixedSizeBinary(_) => {
-            if let api::buffers::AnyColumnViewMut::Binary(values) = column {
+            if let AnySliceMut::Binary(values) = column {
                 fixed_binary(array.as_any().downcast_ref().unwrap(), values);
                 Ok(())
             } else {
@@ -152,12 +150,25 @@ fn primitive_optional<T: NativeType>(array: &PrimitiveArray<T>, values: &mut Nul
     write_validity(array.validity(), indicators);
 }
 
-fn fixed_binary(array: &FixedSizeBinaryArray, writer: &mut BinColumnWriter) {
-    writer.set_max_len(array.size());
-    writer.write(array.iter())
+fn fixed_binary(array: &FixedSizeBinaryArray, writer: &mut BinColumnSliceMut) {
+    // Since the length of each elment is identical and fixed as `array.size`,
+    // we only need to reallocate and rebind the buffer once.
+    writer.ensure_max_element_length(array.size(), 0).unwrap();
+
+    for (row_index, value) in array
+        .values()
+        .chunks(array.size())
+        .collect::<Vec<_>>()
+        .iter()
+        .enumerate()
+    {
+        writer.set_cell(row_index, Some(value));
+    }
 }
 
-fn binary<O: Offset>(array: &BinaryArray<O>, writer: &mut BinColumnWriter) {
+fn binary<O: Offset>(array: &BinaryArray<O>, writer: &mut BinColumnSliceMut) {
+    // Get the largest length from all the elements
+
     let max_len = array
         .offsets()
         .buffer()
@@ -165,11 +176,14 @@ fn binary<O: Offset>(array: &BinaryArray<O>, writer: &mut BinColumnWriter) {
         .map(|x| (x[1] - x[0]).to_usize())
         .max()
         .unwrap_or(0);
-    writer.set_max_len(max_len);
-    writer.write(array.iter())
+
+    writer.ensure_max_element_length(max_len, 0).unwrap();
+
+    (0..array.offsets().len_proxy()) // loop index of each elements
+        .for_each(|row_idx| writer.set_cell(row_idx, array.get(row_idx)));
 }
 
-fn utf8<O: Offset>(array: &Utf8Array<O>, writer: &mut TextColumnWriter<u8>) {
+fn utf8<O: Offset>(array: &Utf8Array<O>, writer: &mut TextColumnSliceMut<u8>) {
     let max_len = array
         .offsets()
         .buffer()
@@ -177,6 +191,8 @@ fn utf8<O: Offset>(array: &Utf8Array<O>, writer: &mut TextColumnWriter<u8>) {
         .map(|x| (x[1] - x[0]).to_usize())
         .max()
         .unwrap_or(0);
-    writer.set_max_len(max_len);
-    writer.write(array.iter().map(|x| x.map(|x| x.as_bytes())))
+    writer.ensure_max_element_length(max_len, 0).ok();
+
+    (0..array.offsets().len_proxy()) // loop index of each elements
+        .for_each(|row_idx| writer.set_cell(row_idx, array.get(row_idx).map(|s| s.as_bytes())));
 }

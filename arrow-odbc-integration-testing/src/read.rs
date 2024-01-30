@@ -2,10 +2,10 @@ use stdext::function_name;
 
 use arrow2::array::{Array, BinaryArray, BooleanArray, Int32Array, Int64Array, Utf8Array};
 use arrow2::chunk::Chunk;
-use arrow2::datatypes::{DataType, Field, TimeUnit};
+use arrow2::datatypes::{DataType, TimeUnit};
 use arrow2::error::Result;
-use arrow2::io::odbc::api::{Connection, Cursor};
-use arrow2::io::odbc::read::{buffer_from_metadata, deserialize, infer_schema};
+use arrow2::io::odbc::api::ConnectionOptions;
+use arrow2::io::odbc::read::Reader;
 
 use super::{setup_empty_table, ENV, MSSQL};
 
@@ -138,45 +138,18 @@ fn test(
     insert: &str,
     table_name: &str,
 ) -> Result<()> {
-    let connection = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let connection = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
     setup_empty_table(&connection, table_name, &[type_]).unwrap();
+
     connection
         .execute(&format!("INSERT INTO {table_name} (a) VALUES {insert}"), ())
         .unwrap();
 
-    // When
     let query = format!("SELECT a FROM {table_name} ORDER BY id");
-
-    let chunks = read(&connection, &query)?.1;
+    let chunks = Reader::new(MSSQL.to_string(), query, None, None).read()?;
 
     assert_eq!(chunks, expected);
     Ok(())
-}
-
-pub fn read(
-    connection: &Connection<'_>,
-    query: &str,
-) -> Result<(Vec<Field>, Vec<Chunk<Box<dyn Array>>>)> {
-    let mut a = connection.prepare(query).unwrap();
-    let fields = infer_schema(&a)?;
-
-    let max_batch_size = 100;
-    let buffer = buffer_from_metadata(&a, max_batch_size).unwrap();
-
-    let cursor = a.execute(()).unwrap().unwrap();
-    let mut cursor = cursor.bind_buffer(buffer).unwrap();
-
-    let mut chunks = vec![];
-    while let Some(batch) = cursor.fetch().unwrap() {
-        let arrays = (0..batch.num_cols())
-            .zip(fields.iter())
-            .map(|(index, field)| {
-                let column_view = batch.column(index);
-                deserialize(column_view, field.data_type.clone())
-            })
-            .collect::<Vec<_>>();
-        chunks.push(Chunk::new(arrays));
-    }
-
-    Ok((fields, chunks))
 }

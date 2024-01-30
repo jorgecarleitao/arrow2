@@ -95,7 +95,7 @@ strength_reduce = { version = "0.2", optional = true }
 multiversion = { version = "0.7.3", optional = true }
 
 # For support for odbc
-odbc-api = { version = "0.36", optional = true }
+odbc-api = { version = "4.1.0", optional = true }
 
 # Faster hashing
 ahash = "0.8"
