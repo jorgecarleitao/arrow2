@@ -12,7 +12,7 @@ use crate::{
     trusted_len::TrustedLen,
 };
 
-use super::ListArray;
+use super::{try_check_offsets_bounds, ListArray};
 
 /// The mutable version of [`ListArray`].
 #[derive(Debug, Clone)]
@@ -24,6 +24,48 @@ pub struct MutableListArray<O: Offset, M: MutableArray> {
 }
 
 impl<O: Offset, M: MutableArray + Default> MutableListArray<O, M> {
+    /// Creates a new [`MutableListArray`].
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The last offset is not equal to the values' length.
+    /// * the validity's length is not equal to `offsets.len()`.
+    /// * The `data_type`'s [`crate::datatypes::PhysicalType`] is not equal to either [`crate::datatypes::PhysicalType::List`] or [`crate::datatypes::PhysicalType::LargeList`].
+    /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
+    /// # Implementation
+    /// This function is `O(1)`
+    pub fn try_new(
+        data_type: DataType,
+        offsets: Offsets<O>,
+        values: M,
+        validity: Option<MutableBitmap>,
+    ) -> Result<Self> {
+        try_check_offsets_bounds(&offsets, values.len())?;
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != offsets.len_proxy())
+        {
+            return Err(Error::oos(
+                "validity mask length must match the number of values",
+            ));
+        }
+
+        let child_data_type = ListArray::<O>::try_get_child(&data_type)?.data_type();
+        let values_data_type = values.data_type();
+        if child_data_type != values_data_type {
+            return Err(Error::oos(
+                format!("ListArray's child's DataType must match. However, the expected DataType is {child_data_type:?} while it got {values_data_type:?}."),
+            ));
+        }
+        Ok(Self {
+            data_type,
+            offsets,
+            values,
+            validity,
+        })
+    }
+
     /// Creates a new empty [`MutableListArray`].
     pub fn new() -> Self {
         let values = M::default();

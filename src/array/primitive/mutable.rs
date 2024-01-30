@@ -93,6 +93,20 @@ impl<T: NativeType> MutablePrimitiveArray<T> {
     pub fn apply_values<F: Fn(&mut [T])>(&mut self, f: F) {
         f(&mut self.values);
     }
+
+    /// The number of null slots on this [`Array`].
+    /// # Implementation
+    /// This is `O(1)` since the number of null elements is pre-computed.
+    #[inline]
+    pub fn null_count(&self) -> usize {
+        if self.data_type() == &DataType::Null {
+            return self.len();
+        };
+        self.validity()
+            .as_ref()
+            .map(|x| x.unset_bits())
+            .unwrap_or(0)
+    }
 }
 
 impl<T: NativeType> Default for MutablePrimitiveArray<T> {

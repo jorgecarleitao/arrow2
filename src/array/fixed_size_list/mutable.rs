@@ -33,6 +33,57 @@ impl<M: MutableArray> From<MutableFixedSizeListArray<M>> for FixedSizeListArray 
 }
 
 impl<M: MutableArray> MutableFixedSizeListArray<M> {
+    /// Creates a new [`MutableFixedSizeListArray`].
+    ///
+    /// # Errors
+    /// This function returns an error iff:
+    /// * The `data_type`'s physical type is not [`crate::datatypes::PhysicalType::FixedSizeList`]
+    /// * The `data_type`'s inner field's data type is not equal to `values.data_type`.
+    /// * The length of `values` is not a multiple of `size` in `data_type`
+    /// * the validity's length is not equal to `values.len() / size`.
+    pub fn try_new(
+        data_type: DataType,
+        values: M,
+        validity: Option<MutableBitmap>,
+    ) -> Result<Self> {
+        let (child, size) = FixedSizeListArray::try_child_and_size(&data_type)?;
+
+        let child_data_type = &child.data_type;
+        let values_data_type = values.data_type();
+        if child_data_type != values_data_type {
+            return Err(Error::oos(
+                format!(
+                    "MutableFixedSizeListArray's child's DataType must match. However, the expected DataType is {child_data_type:?} while it got {values_data_type:?}.",
+                )
+            ));
+        }
+
+        if values.len() % size != 0 {
+            return Err(Error::oos(format!(
+                "values (of len {}) must be a multiple of size ({}) in MutableFixedSizeListArray.",
+                values.len(),
+                size
+            )));
+        }
+        let len = values.len() / size;
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() != len)
+        {
+            return Err(Error::oos(
+                "validity mask length must be equal to the number of values divided by size",
+            ));
+        }
+
+        Ok(Self {
+            data_type,
+            size,
+            values,
+            validity,
+        })
+    }
+
     /// Creates a new [`MutableFixedSizeListArray`] from a [`MutableArray`] and size.
     pub fn new(values: M, size: usize) -> Self {
         let data_type = FixedSizeListArray::default_datatype(values.data_type().clone(), size);
