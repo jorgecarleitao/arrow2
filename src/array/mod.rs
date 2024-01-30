@@ -16,10 +16,10 @@
 //!
 //! Most arrays contain a [`MutableArray`] counterpart that is neither clonable nor slicable, but
 //! can be operated in-place.
-use std::any::Any;
+use std::any::{type_name, Any};
 use std::sync::Arc;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::{
     bitmap::{Bitmap, MutableBitmap},
     datatypes::DataType,
@@ -142,6 +142,12 @@ pub trait Array: Send + Sync + dyn_clone::DynClone + 'static {
 
     /// Clone a `&dyn Array` to an owned `Box<dyn Array>`.
     fn to_boxed(&self) -> Box<dyn Array>;
+
+    #[doc(hidden)]
+    #[inline]
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self.as_any_mut()
+    }
 }
 
 dyn_clone::clone_trait_object!(Array);
@@ -700,6 +706,93 @@ pub fn clone(array: &dyn Array) -> Box<dyn Array> {
 impl<'a> AsRef<(dyn Array + 'a)> for dyn Array {
     fn as_ref(&self) -> &(dyn Array + 'a) {
         self
+    }
+}
+
+mod downcast {
+    use super::{Array, DataType, MutableArray};
+    use std::any::Any;
+
+    /// Arrays that can be downcasted to a concrete type ([`Array`] and [`MutableArray`]).
+    pub trait ArrayAny {
+        /// The [`DataType`] of the array.
+        fn data_type(&self) -> &DataType;
+        /// Converts itself to a reference of [`Any`].
+        fn as_any(&self) -> &dyn Any;
+        /// Converts itself to a mutable reference of [`Any`].
+        fn as_mut_any(&mut self) -> &mut dyn Any;
+    }
+
+    macro_rules! impl_array_any {
+        ($ty:ident) => {
+            impl ArrayAny for dyn $ty {
+                #[inline]
+                fn data_type(&self) -> &DataType {
+                    $ty::data_type(self)
+                }
+
+                #[inline]
+                fn as_any(&self) -> &dyn Any {
+                    $ty::as_any(self)
+                }
+
+                #[inline]
+                fn as_mut_any(&mut self) -> &mut dyn Any {
+                    $ty::as_mut_any(self)
+                }
+            }
+
+            impl ArrayAny for Box<dyn $ty> {
+                #[inline]
+                fn data_type(&self) -> &DataType {
+                    $ty::data_type(self.as_ref())
+                }
+
+                #[inline]
+                fn as_any(&self) -> &dyn Any {
+                    $ty::as_any(self.as_ref())
+                }
+
+                #[inline]
+                fn as_mut_any(&mut self) -> &mut dyn Any {
+                    $ty::as_mut_any(self.as_mut())
+                }
+            }
+        };
+    }
+
+    impl_array_any!(Array);
+    impl_array_any!(MutableArray);
+}
+
+/// Downcast an array reference to a concrete type.
+#[inline]
+pub fn downcast_ref<M: 'static>(array: &(impl downcast::ArrayAny + ?Sized)) -> Result<&M> {
+    array.as_any().downcast_ref().ok_or_else(|| {
+        Error::oos(format!(
+            "Unable to downcast array of data type {:?} into {}",
+            array.data_type(),
+            type_name::<M>()
+        ))
+    })
+}
+
+/// Downcast a mutable array reference to a concrete type.
+#[inline]
+pub fn downcast_mut<M: 'static>(array: &mut (impl downcast::ArrayAny + ?Sized)) -> Result<&mut M> {
+    let arr_ptr = array.as_mut_any() as *mut dyn Any;
+    // Safety: this is sound and is only to avoid non-polonius borrow checker which erroneously
+    // thinks that array will be mutable borrowed even past the return point; we know that the
+    // pointer comes from a mutable reference and we are returning a reference bound to the same
+    // lifetime.
+    if let Some(array) = unsafe { (*arr_ptr).downcast_mut::<M>() } {
+        Ok(array)
+    } else {
+        Err(Error::oos(format!(
+            "Unable to downcast array of data type {:?} into {}",
+            array.data_type(),
+            type_name::<M>()
+        )))
     }
 }
 

@@ -13,7 +13,10 @@ mod struct_;
 mod union;
 mod utf8;
 
-use arrow2::array::{clone, new_empty_array, new_null_array, Array, PrimitiveArray};
+use arrow2::array::{
+    clone, downcast_mut, downcast_ref, new_empty_array, new_null_array, Array, MutableArray,
+    MutablePrimitiveArray, PrimitiveArray,
+};
 use arrow2::bitmap::Bitmap;
 use arrow2::datatypes::{DataType, Field, UnionMode};
 
@@ -139,4 +142,28 @@ fn test_with_validity() {
 #[derive(PartialEq, Clone, Debug)]
 struct A {
     array: Box<dyn Array>,
+}
+
+#[test]
+fn test_downcast() {
+    let arr = PrimitiveArray::from_slice([1i32, 2, 3]);
+    let arr_box: Box<dyn Array> = Box::new(arr.clone());
+    assert_eq!(downcast_ref::<PrimitiveArray<i32>>(&arr_box).unwrap(), &arr);
+    assert_eq!(
+        downcast_ref::<PrimitiveArray<i32>>(arr_box.as_ref()).unwrap(),
+        &arr
+    );
+    assert!(downcast_ref::<PrimitiveArray<u8>>(&arr_box).is_err());
+
+    let mut_arr = MutablePrimitiveArray::from_slice([1i32, 2, 3]);
+    let mut mut_arr_box: Box<dyn MutableArray> = Box::new(mut_arr.clone());
+    assert_eq!(
+        downcast_mut::<MutablePrimitiveArray<i32>>(&mut mut_arr_box).unwrap(),
+        &mut_arr
+    );
+    assert_eq!(
+        downcast_mut::<MutablePrimitiveArray<i32>>(mut_arr_box.as_mut()).unwrap(),
+        &mut_arr
+    );
+    assert!(downcast_mut::<MutablePrimitiveArray<u8>>(&mut mut_arr_box).is_err());
 }
