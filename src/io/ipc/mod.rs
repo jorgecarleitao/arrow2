@@ -42,7 +42,7 @@
 //! let y_coord = Field::new("y", DataType::Int32, false);
 //! let schema = Schema::from(vec![x_coord, y_coord]);
 //! let options = WriteOptions {compression: None};
-//! let mut writer = FileWriter::try_new(file, schema, None, options)?;
+//! let mut writer = FileWriter::try_new(file, schema.into(), None, options)?;
 //!
 //! // Setup the data
 //! let x_data = Int32Array::from_slice([-1i32, 1]);

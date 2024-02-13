@@ -1,4 +1,5 @@
 use std::borrow::{Borrow, Cow};
+use arrow_array::LargeListArray;
 
 use arrow_format::ipc::planus::Builder;
 
@@ -8,14 +9,9 @@ use crate::datatypes::*;
 use crate::error::{Error, Result};
 use crate::io::ipc::endianess::is_native_little_endian;
 use crate::io::ipc::read::Dictionaries;
-<<<<<<< HEAD
 
 use super::super::IpcField;
 use super::{write, write_dictionary};
-=======
-use crate::legacy::prelude::LargeListArray;
-use crate::match_integer_type;
->>>>>>> 64003155e8 (feat: new implementation for `String/Binary` type.  (#13748))
 
 /// Compression codec
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -237,29 +233,29 @@ fn serialize_compression(
 
 fn set_variadic_buffer_counts(counts: &mut Vec<i64>, array: &dyn Array) {
     match array.data_type() {
-        ArrowDataType::Utf8View => {
+        DataType::Utf8View => {
             let array = array.as_any().downcast_ref::<Utf8ViewArray>().unwrap();
             counts.push(array.data_buffers().len() as i64);
         },
-        ArrowDataType::BinaryView => {
+        DataType::BinaryView => {
             let array = array.as_any().downcast_ref::<BinaryViewArray>().unwrap();
             counts.push(array.data_buffers().len() as i64);
         },
-        ArrowDataType::Struct(_) => {
+        DataType::Struct(_) => {
             let array = array.as_any().downcast_ref::<StructArray>().unwrap();
             for array in array.values() {
                 set_variadic_buffer_counts(counts, array.as_ref())
             }
         },
-        ArrowDataType::LargeList(_) => {
+        DataType::LargeList(_) => {
             let array = array.as_any().downcast_ref::<LargeListArray>().unwrap();
             set_variadic_buffer_counts(counts, array.values().as_ref())
         },
-        ArrowDataType::FixedSizeList(_, _) => {
+        DataType::FixedSizeList(_, _) => {
             let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();
             set_variadic_buffer_counts(counts, array.values().as_ref())
         },
-        ArrowDataType::Dictionary(_, _, _) => {
+        DataType::Dictionary(_, _, _) => {
             let array = array
                 .as_any()
                 .downcast_ref::<DictionaryArray<u32>>()
@@ -285,27 +281,33 @@ fn chunk_to_bytes_amortized(
     let mut offset = 0;
     let mut variadic_buffer_counts = vec![];
     for array in chunk.arrays() {
-<<<<<<< HEAD
-        let dtype = array.data_type();
-        if dtype.is_view() {
-            match dtype {
-                DataType::Utf8View => {
-                    let array = array.as_any().downcast_ref::<Utf8ViewArray>().unwrap();
-                    variadic_buffer_counts.push(array.data_buffers().len() as i64);
-                },
-                DataType::BinaryView => {
-                    let array = array.as_any().downcast_ref::<BinaryViewArray>().unwrap();
-                    variadic_buffer_counts.push(array.data_buffers().len() as i64);
-                },
-                _ => {},
-            }
-        }
-=======
         set_variadic_buffer_counts(&mut variadic_buffer_counts, array.as_ref());
->>>>>>> 64003155e8 (feat: new implementation for `String/Binary` type.  (#13748))
+        // We don't want to write all buffers in sliced arrays.
+        let array = match array.data_type() {
+            DataType::BinaryView => {
+                let concrete_arr = array.as_any().downcast_ref::<BinaryViewArray>().unwrap();
+                if concrete_arr.is_sliced() {
+                    Cow::Owned(concrete_arr.clone().maybe_gc().boxed())
+                } else {
+                    Cow::Borrowed(array)
+                }
+            },
+            DataType::Utf8View => {
+                let concrete_arr = array.as_any().downcast_ref::<Utf8ViewArray>().unwrap();
+                if concrete_arr.is_sliced() {
+                    Cow::Owned(concrete_arr.clone().maybe_gc().boxed())
+                } else {
+                    Cow::Borrowed(array)
+                }
+            },
+            _ => Cow::Borrowed(array),
+        };
+        let array = array.as_ref().as_ref();
+
+        set_variadic_buffer_counts(&mut variadic_buffer_counts, array);
 
         write(
-            array.as_ref(),
+            array,
             &mut buffers,
             &mut arrow_data,
             &mut nodes,

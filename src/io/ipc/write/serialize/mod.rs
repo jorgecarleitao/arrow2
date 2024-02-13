@@ -13,7 +13,6 @@ use crate::{
 use super::super::compression;
 use super::super::endianess::is_native_little_endian;
 use super::common::{pad_to_64, Compression};
-use crate::{match_integer_type, with_match_primitive_type_full};
 mod binary;
 mod binview;
 mod boolean;
