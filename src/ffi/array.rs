@@ -104,7 +104,7 @@ impl ArrowArray {
             DataType::BinaryView | DataType::Utf8View
         );
 
-        let (offset, mut buffers, children, dictionary) =
+        let (offset, buffers, children, dictionary) =
             offset_buffers_children_dictionary(array.as_ref());
 
         let variadic_buffer_sizes = if needs_variadic_buffer_sizes {

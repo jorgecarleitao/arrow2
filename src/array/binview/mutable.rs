@@ -136,10 +136,10 @@ impl<T: ViewType + ?Sized> MutableBinaryViewArray<T> {
             self.views.push(v)
         } else {
             self.total_buffer_len += len as usize;
-            let (data_ptr, data_len) = *buffers.get_unchecked_release(v.buffer_idx as usize);
+            let (data_ptr, data_len) = *buffers.get_unchecked(v.buffer_idx as usize);
             let data = std::slice::from_raw_parts(data_ptr, data_len);
             let offset = v.offset as usize;
-            let bytes = data.get_unchecked_release(offset..offset + len as usize);
+            let bytes = data.get_unchecked(offset..offset + len as usize);
             let t = T::from_bytes_unchecked(bytes);
             self.push_value_ignore_validity(t)
         }
@@ -344,7 +344,7 @@ impl<T: ViewType + ?Sized> MutableBinaryViewArray<T> {
             let data = if buffer_idx == self.completed_buffers.len() {
                 self.in_progress_buffer.as_slice()
             } else {
-                self.completed_buffers.get_unchecked_release(buffer_idx)
+                self.completed_buffers.get_unchecked(buffer_idx)
             };
 
             let offset = offset as usize;

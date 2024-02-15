@@ -1,6 +1,5 @@
 use crate::buffer::Buffer;
 use crate::error::{Error, Result};
-use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::ops::Add;
 
@@ -179,16 +178,16 @@ pub(super) unsafe fn validate_utf8_only(
         if len <= 12 {
             validate_utf8(
                 view.to_le_bytes()
-                    .get_unchecked_release(4..4 + len as usize),
+                    .get_unchecked(4..4 + len as usize),
             )?;
         } else {
             let buffer_idx = view.buffer_idx;
             let offset = view.offset;
-            let data = buffers.get_unchecked_release(buffer_idx as usize);
+            let data = buffers.get_unchecked(buffer_idx as usize);
 
             let start = offset as usize;
             let end = start + len as usize;
-            let b = &data.as_slice().get_unchecked_release(start..end);
+            let b = &data.as_slice().get_unchecked(start..end);
             validate_utf8(b)?;
         };
     }
