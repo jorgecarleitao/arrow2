@@ -2,7 +2,7 @@ use std::fmt::{Debug, Formatter};
 
 use super::Scalar;
 use crate::array::ViewType;
-use crate::datatypes::ArrowDataType;
+use crate::datatypes::DataType;
 
 /// The implementation of [`Scalar`] for utf8, semantically equivalent to [`Option<String>`].
 #[derive(PartialEq, Eq)]
@@ -62,11 +62,11 @@ impl<T: ViewType + ?Sized> Scalar for BinaryViewScalar<T> {
     }
 
     #[inline]
-    fn data_type(&self) -> &ArrowDataType {
+    fn data_type(&self) -> &DataType {
         if T::IS_UTF8 {
-            &ArrowDataType::Utf8View
+            &DataType::Utf8View
         } else {
-            &ArrowDataType::BinaryView
+            &DataType::BinaryView
         }
     }
 }

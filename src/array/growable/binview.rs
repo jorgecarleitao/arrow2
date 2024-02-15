@@ -6,12 +6,12 @@ use crate::array::growable::utils::{extend_validity, prepare_validity};
 use crate::array::Array;
 use crate::bitmap::MutableBitmap;
 use crate::buffer::Buffer;
-use crate::datatypes::ArrowDataType;
+use crate::datatypes::DataType;
 
 /// Concrete [`Growable`] for the [`BinaryArray`].
 pub struct GrowableBinaryViewArray<'a, T: ViewType + ?Sized> {
     arrays: Vec<&'a BinaryViewArrayGeneric<T>>,
-    data_type: ArrowDataType,
+    data_type: DataType,
     validity: Option<MutableBitmap>,
     views: Vec<u128>,
     buffers: Vec<Buffer<u8>>,

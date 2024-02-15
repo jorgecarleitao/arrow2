@@ -133,7 +133,7 @@ impl<T: ViewType + ?Sized> MutableBinaryViewArray<T> {
             let (data_ptr, data_len) = *buffers.get_unchecked(buffer_idx as usize);
             let data = std::slice::from_raw_parts(data_ptr, data_len);
             let offset = offset as usize;
-            let bytes = data.get_unchecked_release(offset..offset + len as usize);
+            let bytes = data.get_unchecked(offset..offset + len as usize);
             let t = T::from_bytes_unchecked(bytes);
             self.push_value_ignore_validity(t)
         }
@@ -165,7 +165,7 @@ impl<T: ViewType + ?Sized> MutableBinaryViewArray<T> {
             let offset = self.in_progress_buffer.len() as u32;
             self.in_progress_buffer.extend_from_slice(bytes);
 
-            unsafe { payload[4..8].copy_from_slice(bytes.get_unchecked_release(0..4)) };
+            unsafe { payload[4..8].copy_from_slice(bytes.get_unchecked(0..4)) };
             let buffer_idx: u32 = self.completed_buffers.len().try_into().unwrap();
             payload[8..12].copy_from_slice(&buffer_idx.to_le_bytes());
             payload[12..16].copy_from_slice(&offset.to_le_bytes());

@@ -35,15 +35,17 @@ impl From<View> for u128 {
     }
 }
 
-fn validate_view<F>(views: &[u128], buffers: &[Buffer<u8>], validate_bytes: F) -> PolarsResult<()>
+fn validate_view<F>(views: &[u128], buffers: &[Buffer<u8>], validate_bytes: F) -> Result<()>
 where
-    F: Fn(&[u8]) -> PolarsResult<()>,
+    F: Fn(&[u8]) -> Result<()>,
 {
     for view in views {
         let len = *view as u32;
         if len <= 12 {
             if len < 12 && view >> (32 + len * 8) != 0 {
-                polars_bail!(ComputeError: "view contained non-zero padding in prefix");
+                return Err(Error::InvalidArgumentError(format!(
+                    "View contained non-zero padding for string of length {len}",
+                )));
             }
 
             validate_bytes(&view.to_le_bytes()[4..4 + len as usize])?;
@@ -51,7 +53,11 @@ where
             let view = View::from(*view);
 
             let data = buffers.get(view.buffer_idx as usize).ok_or_else(|| {
-                polars_err!(OutOfBounds: "view index out of bounds\n\nGot: {} buffers and index: {}", buffers.len(), view.buffer_idx)
+                Error::InvalidArgumentError(format!(
+                    "Invalid buffer index: got index {} but only has {} buffers",
+                    view.buffer_idx,
+                    buffers.len()
+                ))
             })?;
 
             let start = view.offset as usize;
@@ -59,9 +65,19 @@ where
             let b = data
                 .as_slice()
                 .get(start..end)
-                .ok_or_else(|| polars_err!(OutOfBounds: "buffer slice out of bounds"))?;
+                .ok_or_else(|| {
+                    Error::InvalidArgumentError(format!(
+                        "Invalid buffer slice: got {start}..{end} but buffer {} has length {}",
+                        view.buffer_idx,
+                        data.len()
+                    ))
+                })?;
 
-            polars_ensure!(b.starts_with(&view.prefix.to_le_bytes()), ComputeError: "prefix does not match string data");
+            if !b.starts_with(&view.prefix.to_le_bytes()) {
+                return Err(Error::InvalidArgumentError(
+                    "Mismatch between embedded prefix and data".to_string(),
+                ));
+            }
             validate_bytes(b)?;
         };
     }
@@ -69,7 +85,7 @@ where
     Ok(())
 }
 
-pub(super) fn validate_binary_view(views: &[u128], buffers: &[Buffer<u8>]) -> PolarsResult<()> {
+pub(super) fn validate_binary_view(views: &[u128], buffers: &[Buffer<u8>]) -> Result<()> {
     validate_view(views, buffers, |_| Ok(()))
 }
 

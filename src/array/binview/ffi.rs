@@ -1,9 +1,9 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use polars_error::PolarsResult;
-
 use super::BinaryViewArrayGeneric;
+
+use crate::error::Result;
 use crate::array::binview::ViewType;
 use crate::array::{FromFfi, ToFfi};
 use crate::bitmap::align;
@@ -56,7 +56,7 @@ unsafe impl<T: ViewType + ?Sized> ToFfi for BinaryViewArrayGeneric<T> {
 }
 
 impl<T: ViewType + ?Sized, A: ffi::ArrowArrayRef> FromFfi<A> for BinaryViewArrayGeneric<T> {
-    unsafe fn try_from_ffi(array: A) -> PolarsResult<Self> {
+    unsafe fn try_from_ffi(array: A) -> Result<Self> {
         let data_type = array.data_type().clone();
 
         let validity = unsafe { array.validity() }?;

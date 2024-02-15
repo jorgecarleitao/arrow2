@@ -9,7 +9,6 @@ use crate::error::Result;
 use crate::{
     array::{PrimitiveArray, Utf8ViewArray},
     error::Error,
-    offset::Offset,
 };
 use crate::{
     datatypes::{DataType, TimeUnit},
@@ -440,7 +439,7 @@ fn chrono_tz_utf_to_timestamp(
     _: &Utf8ViewArray,
     _: &str,
     timezone: String,
-    time_unit: TimeUnit,
+    _: TimeUnit,
 ) -> Result<PrimitiveArray<i64>> {
     Err(Error::InvalidArgumentError(format!(
         "timezone \"{timezone}\" cannot be parsed (feature chrono-tz is not active)",
@@ -455,7 +454,7 @@ fn chrono_tz_utf_to_timestamp(
 /// The feature `"chrono-tz"` enables IANA and zoneinfo formats for `timezone`.
 /// # Error
 /// This function errors iff `timezone` is not parsable to an offset.
-pub(crate) fn utf8view_to_timestamp(
+pub fn utf8view_to_timestamp(
     array: &Utf8ViewArray,
     fmt: &str,
     timezone: String,
@@ -476,7 +475,7 @@ pub(crate) fn utf8view_to_timestamp(
 /// [`PrimitiveArray<i64>`] with type `Timestamp(Nanosecond, None)`.
 /// Timezones are ignored.
 /// Null elements remain null; non-parsable elements are set to null.
-pub(crate) fn utf8view_to_naive_timestamp(
+pub fn utf8view_to_naive_timestamp(
     array: &Utf8ViewArray,
     fmt: &str,
 ) -> PrimitiveArray<i64> {

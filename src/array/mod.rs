@@ -308,6 +308,8 @@ macro_rules! with_match_primitive_type {(
         Float16 => __with_ty__! { f16 },
         Float32 => __with_ty__! { f32 },
         Float64 => __with_ty__! { f64 },
+        _ => panic!("operator does not support primitive `{:?}`",
+            $key_type)
     }
 })}
 

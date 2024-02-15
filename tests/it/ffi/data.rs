@@ -30,7 +30,6 @@ fn test_round_trip(expected: impl Array + Clone + 'static) -> Result<()> {
     _test_round_trip(array.sliced(1, 2), expected.sliced(1, 2))
 }
 
-<<<<<<< HEAD
 fn test_round_trip_schema(field: Field) -> Result<()> {
     let schema_ffi = ffi::export_field_to_c(&field);
 
@@ -52,7 +51,7 @@ fn bool() -> Result<()> {
     test_round_trip(data)
 }
 
-fn binview_nullable_inlined() -> PolarsResult<()> {
+fn binview_nullable_inlined() -> Result<()> {
     let data = Utf8ViewArray::from_slice([Some("foo"), None, Some("barbar"), None]);
     test_round_trip(data)
 }

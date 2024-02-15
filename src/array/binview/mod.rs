@@ -222,8 +222,14 @@ impl<T: ViewType + ?Sized> BinaryViewArrayGeneric<T> {
             validate_binary_view(views.as_ref(), buffers.as_ref())?;
         }
 
-        if let Some(validity) = &validity {
-            polars_ensure!(validity.len()== views.len(), ComputeError: "validity mask length must match the number of values" )
+
+        if validity
+            .as_ref()
+            .map_or(false, |validity| validity.len() == views.len())
+        {
+            return Err(Error::oos(
+                "validity mask length must match the number of values",
+            ));
         }
 
         unsafe {
