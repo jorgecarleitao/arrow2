@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 use crate::{array::PrimitiveArray, types::NativeType};
 
 use super::super::read_basic::*;
-use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
+use super::super::{Compression, IpcBuffer, Node};
 use crate::io::ipc::read::array::{try_get_array_length, try_get_field_node};
 
 #[allow(clippy::too_many_arguments)]

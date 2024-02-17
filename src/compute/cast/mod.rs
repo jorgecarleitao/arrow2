@@ -626,6 +626,7 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                     array.as_any().downcast_ref().unwrap(),
                     RFC3339,
                     time_zone.clone(),
+                    time_unit.to_owned(),
                 )
                 .map(|arr| arr.boxed()),
                 Date32 => utf8view_to_date32_dyn(array),
@@ -686,16 +687,13 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 .map(|arr| unsafe { arr.to_utf8view_unchecked() }.boxed()),
         },
         (Utf8, _) => match to_type {
-            UInt8 => utf8_to_primitive_dyn::<i32, u8>(array, to_type, options),
-            UInt16 => utf8_to_primitive_dyn::<i32, u16>(array, to_type, options),
-            UInt32 => utf8_to_primitive_dyn::<i32, u32>(array, to_type, options),
-            UInt64 => utf8_to_primitive_dyn::<i32, u64>(array, to_type, options),
-            Int8 => utf8_to_primitive_dyn::<i32, i8>(array, to_type, options),
-            Int16 => utf8_to_primitive_dyn::<i32, i16>(array, to_type, options),
-            Int32 => utf8_to_primitive_dyn::<i32, i32>(array, to_type, options),
-            Int64 => utf8_to_primitive_dyn::<i32, i64>(array, to_type, options),
-            Float32 => utf8_to_primitive_dyn::<i32, f32>(array, to_type, options),
-            Float64 => utf8_to_primitive_dyn::<i32, f64>(array, to_type, options),
+            UInt8 | UInt16 | UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64 | Float32 | Float64 => {
+                let binary = utf8_to_binary::<i32>(
+                    array.as_any().downcast_ref().unwrap(),
+                    Binary,
+                );
+                cast(&binary, to_type, options)
+            },
             Date32 => utf8_to_date32_dyn::<i32>(array),
             Date64 => utf8_to_date64_dyn::<i32>(array),
             LargeUtf8 => Ok(Box::new(utf8_to_large_utf8(
@@ -706,25 +704,22 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 to_type.clone(),
             )
             .boxed()),
-            Timestamp(TimeUnit::Nanosecond, None) => utf8_to_naive_timestamp_ns_dyn::<i32>(array),
+            Timestamp(TimeUnit::Nanosecond, None) => utf8_to_naive_timestamp_dyn::<i32>(array, TimeUnit::Nanosecond),
             Timestamp(TimeUnit::Nanosecond, Some(tz)) => {
-                utf8_to_timestamp_ns_dyn::<i32>(array, tz.clone())
+                utf8_to_timestamp_dyn::<i32>(array, tz.clone())
             }
             _ => Err(Error::NotYetImplemented(format!(
                 "Casting from {from_type:?} to {to_type:?} not supported",
             ))),
         },
         (LargeUtf8, _) => match to_type {
-            UInt8 => utf8_to_primitive_dyn::<i64, u8>(array, to_type, options),
-            UInt16 => utf8_to_primitive_dyn::<i64, u16>(array, to_type, options),
-            UInt32 => utf8_to_primitive_dyn::<i64, u32>(array, to_type, options),
-            UInt64 => utf8_to_primitive_dyn::<i64, u64>(array, to_type, options),
-            Int8 => utf8_to_primitive_dyn::<i64, i8>(array, to_type, options),
-            Int16 => utf8_to_primitive_dyn::<i64, i16>(array, to_type, options),
-            Int32 => utf8_to_primitive_dyn::<i64, i32>(array, to_type, options),
-            Int64 => utf8_to_primitive_dyn::<i64, i64>(array, to_type, options),
-            Float32 => utf8_to_primitive_dyn::<i64, f32>(array, to_type, options),
-            Float64 => utf8_to_primitive_dyn::<i64, f64>(array, to_type, options),
+            UInt8 | UInt16 | UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64 | Float32 | Float64 => {
+                let binary = utf8_to_binary::<i64>(
+                    array.as_any().downcast_ref().unwrap(),
+                    DataType::LargeBinary,
+                );
+                cast(&binary, to_type, options)
+            },
             Date32 => utf8_to_date32_dyn::<i64>(array),
             Date64 => utf8_to_date64_dyn::<i64>(array),
             Utf8 => utf8_large_to_utf8(array.as_any().downcast_ref().unwrap()).map(|x| x.boxed()),
@@ -733,9 +728,9 @@ pub fn cast(array: &dyn Array, to_type: &DataType, options: CastOptions) -> Resu
                 to_type.clone(),
             )
             .boxed()),
-            Timestamp(TimeUnit::Nanosecond, None) => utf8_to_naive_timestamp_ns_dyn::<i64>(array),
+            Timestamp(TimeUnit::Nanosecond, None) => utf8_to_naive_timestamp_dyn::<i64>(array, TimeUnit::Nanosecond),
             Timestamp(TimeUnit::Nanosecond, Some(tz)) => {
-                utf8_to_timestamp_ns_dyn::<i64>(array, tz.clone())
+                utf8_to_timestamp_dyn::<i64>(array, tz.clone())
             }
             _ => Err(Error::NotYetImplemented(format!(
                 "Casting from {from_type:?} to {to_type:?} not supported",
@@ -1142,7 +1137,7 @@ fn from_to_binview(
         Binary => binary_to_binview::<i32>(array.as_any().downcast_ref().unwrap()),
         FixedSizeBinary(_) => fixed_size_binary_to_binview(array.as_any().downcast_ref().unwrap()),
         LargeBinary => binary_to_binview::<i64>(array.as_any().downcast_ref().unwrap()),
-        _ => Err(Error::NotYetImplemented(format!(
+        _ => return Err(Error::NotYetImplemented(format!(
             "Unsupported casting from {from_type:?} to {to_type:?}"
         ))),
     };

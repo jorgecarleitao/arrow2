@@ -15,12 +15,12 @@ fn naive() {
         "1996-12-19 13:39:57-03:00", // missing T
     ];
     let array = Utf8ViewArray::from_slice_values(slice);
-    let r = temporal_conversions::utf8view_to_naive_timestamp(&array, fmt);
+    let r = temporal_conversions::utf8view_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
     assert_eq!(format!("{r:?}"), expected);
 
     let fmt = "%Y-%m-%dT%H:%M:%S"; // no tz info
     let array = Utf8ViewArray::from_slice_values(slice);
-    let r = temporal_conversions::utf8view_to_naive_timestamp(&array, fmt);
+    let r = temporal_conversions::utf8view_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
     assert_eq!(format!("{r:?}"), expected);
 }
 
@@ -117,7 +117,7 @@ fn naive_no_tz() {
         "1996-12-19T13:39:57",
         "1996-12-19 13:39:57", // missing T
     ]);
-    let r = temporal_conversions::utf8view_to_naive_timestamp(&array, fmt);
+    let r = temporal_conversions::utf8view_to_naive_timestamp(&array, fmt, TimeUnit::Nanosecond);
     assert_eq!(format!("{r:?}"), expected);
 }
 

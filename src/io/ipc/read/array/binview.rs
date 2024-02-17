@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 
 use super::super::read_basic::*;
 use super::*;
-use crate::array::{ArrayRef, BinaryViewArrayGeneric, View, ViewType};
+use crate::array::{BinaryViewArrayGeneric, View, ViewType};
 use crate::buffer::Buffer;
 use crate::datatypes::DataType;
 
@@ -22,7 +22,7 @@ pub fn read_binview<T: ViewType + ?Sized, R: Read + Seek>(
     compression: Option<Compression>,
     limit: Option<usize>,
     scratch: &mut Vec<u8>,
-) -> Result<ArrayRef> {
+) -> Result<BinaryViewArrayGeneric<T>> {
     let field_node = try_get_field_node(field_nodes, &data_type)?;
 
     let validity = read_validity(
@@ -48,8 +48,9 @@ pub fn read_binview<T: ViewType + ?Sized, R: Read + Seek>(
     )?;
 
     let n_variadic = variadic_buffer_counts.pop_front().ok_or_else(
-        || polars_err!(ComputeError: "IPC: unable to fetch the variadic buffers\n\nThe file or stream is corrupted.")
-    )?;
+        || {
+        Error::oos("IPC: unable to fetch the variadic buffers\n\nThe file or stream is corrupted.")
+    })?;
 
     let variadic_buffers = (0..n_variadic)
         .map(|_| {
@@ -65,5 +66,4 @@ pub fn read_binview<T: ViewType + ?Sized, R: Read + Seek>(
         .collect::<Result<Vec<Buffer<u8>>>>()?;
 
     BinaryViewArrayGeneric::<T>::try_new(data_type, views, Arc::from(variadic_buffers), validity)
-        .map(|arr| arr.boxed())
 }

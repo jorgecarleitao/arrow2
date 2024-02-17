@@ -21,6 +21,10 @@ num-traits = "0.2"
 dyn-clone = "1"
 bytemuck = { version = "1", features = ["derive"] }
 chrono = { version = "0.4.31", default_features = false, features = ["std"] }
+atoi_simd = "0.15.5"
+itoa = "1.0.6"
+ryu = "1.0.13"
+fast-float = { version = "0.2" }
 
 # for decimal i256
 ethnum = "1"

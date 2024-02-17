@@ -6,7 +6,7 @@ use crate::{
     error::{Error, Result},
 };
 
-use super::super::{Node, OutOfSpecKind};
+use super::super::Node;
 use crate::io::ipc::read::array::{try_get_array_length, try_get_field_node};
 
 pub fn read_null(

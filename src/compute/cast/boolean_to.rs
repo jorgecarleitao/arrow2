@@ -1,9 +1,9 @@
 use crate::{
     array::{Array, BinaryViewArray, BooleanArray, PrimitiveArray, Utf8ViewArray},
     error::Result,
-    offset::Offset,
     types::NativeType,
 };
+use crate::array::MutableBinaryViewArray;
 
 pub(super) fn boolean_to_primitive_dyn<T>(array: &dyn Array) -> Result<Box<dyn Array>>
 where
@@ -43,7 +43,7 @@ pub fn boolean_to_binaryview(from: &BooleanArray) -> BinaryViewArray {
         Some(false) => Some("false".as_bytes()),
         None => None,
     });
-    BinaryViewArray::arr_from_iter_trusted(iter)
+    MutableBinaryViewArray::from_iter(iter).into()
 }
 
 pub(super) fn boolean_to_binaryview_dyn(array: &dyn Array) -> Result<Box<dyn Array>> {

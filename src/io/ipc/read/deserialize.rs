@@ -244,7 +244,8 @@ pub fn read<R: Read + Seek>(
             compression,
             limit,
             scratch,
-        ),
+        )
+        .map(|x| x.boxed()),
         BinaryView => read_binview::<[u8], _>(
             field_nodes,
             variadic_buffer_counts,
@@ -256,7 +257,8 @@ pub fn read<R: Read + Seek>(
             compression,
             limit,
             scratch,
-        ),
+        )
+        .map(|x| x.boxed()),
     }
 }
 

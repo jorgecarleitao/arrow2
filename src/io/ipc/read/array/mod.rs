@@ -37,7 +37,7 @@ fn try_get_field_node<'a>(
     data_type: &DataType,
 ) -> Result<Node<'a>> {
     field_nodes.pop_front().ok_or_else(|| {
-        polars_err!(ComputeError: "IPC: unable to fetch the field for {:?}\n\nThe file or stream is corrupted.", data_type)
+        Error::oos(format!("IPC: unable to fetch the field for {:?}\n\nThe file or stream is corrupted.", data_type))
     })
 }
 
@@ -45,6 +45,6 @@ fn try_get_array_length(field_node: Node, limit: Option<usize>) -> Result<usize>
     let length: usize = field_node
         .length()
         .try_into()
-        .map_err(|_| polars_err!(oos = OutOfSpecKind::NegativeFooterLength))?;
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
     Ok(limit.map(|limit| limit.min(length)).unwrap_or(length))
 }

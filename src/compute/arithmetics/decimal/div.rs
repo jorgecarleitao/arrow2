@@ -4,7 +4,6 @@
 use crate::{
     array::PrimitiveArray,
     compute::{
-        arithmetics::{ArrayCheckedDiv, ArrayDiv},
         arity::{binary, binary_checked, unary},
         utils::{check_same_len, combine_validities},
     },
@@ -197,20 +196,6 @@ pub fn checked_div(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Pr
     };
 
     binary_checked(lhs, rhs, lhs.data_type().clone(), op)
-}
-
-// Implementation of ArrayDiv trait for PrimitiveArrays
-impl ArrayDiv<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn div(&self, rhs: &PrimitiveArray<i128>) -> Self {
-        div(self, rhs)
-    }
-}
-
-// Implementation of ArrayCheckedDiv trait for PrimitiveArrays
-impl ArrayCheckedDiv<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn checked_div(&self, rhs: &PrimitiveArray<i128>) -> Self {
-        checked_div(self, rhs)
-    }
 }
 
 /// Adaptive division of two decimal primitive arrays with different precision

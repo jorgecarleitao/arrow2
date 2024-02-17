@@ -2,7 +2,6 @@
 use crate::{
     array::PrimitiveArray,
     compute::{
-        arithmetics::{ArrayAdd, ArrayCheckedAdd, ArraySaturatingAdd},
         arity::{binary, binary_checked},
         utils::{check_same_len, combine_validities},
     },
@@ -132,27 +131,6 @@ pub fn checked_add(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Pr
     };
 
     binary_checked(lhs, rhs, lhs.data_type().clone(), op)
-}
-
-// Implementation of ArrayAdd trait for PrimitiveArrays
-impl ArrayAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn add(&self, rhs: &PrimitiveArray<i128>) -> Self {
-        add(self, rhs)
-    }
-}
-
-// Implementation of ArrayCheckedAdd trait for PrimitiveArrays
-impl ArrayCheckedAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn checked_add(&self, rhs: &PrimitiveArray<i128>) -> Self {
-        checked_add(self, rhs)
-    }
-}
-
-// Implementation of ArraySaturatingAdd trait for PrimitiveArrays
-impl ArraySaturatingAdd<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn saturating_add(&self, rhs: &PrimitiveArray<i128>) -> Self {
-        saturating_add(self, rhs)
-    }
 }
 
 /// Adaptive addition of two decimal primitive arrays with different precision

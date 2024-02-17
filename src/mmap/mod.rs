@@ -87,7 +87,7 @@ unsafe fn _mmap_record<T: AsRef<[u8]>>(
     let (mut buffers, mut field_nodes) = get_buffers_nodes(batch)?;
     let mut variadic_buffer_counts = batch
         .variadic_buffer_counts()
-        .map_err(|err| polars_err!(oos = OutOfSpecKind::InvalidFlatbufferRecordBatches(err)))?
+        .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferRecordBatches(err)))?
         .map(|v| v.iter().map(|v| v as usize).collect::<VecDeque<usize>>())
         .unwrap_or_else(VecDeque::new);
 

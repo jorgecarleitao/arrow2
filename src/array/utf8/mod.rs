@@ -12,10 +12,7 @@ use crate::{
 
 use either::Either;
 
-use super::{
-    specification::{try_check_offsets_bounds, try_check_utf8},
-    Array, GenericBinaryArray,
-};
+use super::{specification::{try_check_offsets_bounds, try_check_utf8}, Array, GenericBinaryArray, BinaryArray};
 
 #[cfg(feature = "arrow")]
 mod data;
@@ -511,6 +508,18 @@ impl<O: Offset> Utf8Array<O> {
     pub fn apply_validity<F: FnOnce(Bitmap) -> Bitmap>(&mut self, f: F) {
         if let Some(validity) = std::mem::take(&mut self.validity) {
             self.set_validity(Some(f(validity)))
+        }
+    }
+
+    // Convert this [`Utf8Array`] to a [`BinaryArray`].
+    pub fn to_binary(&self) -> BinaryArray<O> {
+        unsafe {
+            BinaryArray::new(
+                BinaryArray::<O>::default_data_type(),
+                self.offsets.clone(),
+                self.values.clone(),
+                self.validity.clone(),
+            )
         }
     }
 }

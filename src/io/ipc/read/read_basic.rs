@@ -47,7 +47,7 @@ fn read_uncompressed_bytes<R: Read + Seek>(
     reader: &mut R,
     buffer_length: usize,
     is_little_endian: bool,
-) -> PolarsResult<Vec<u8>> {
+) -> Result<Vec<u8>> {
     if is_native_little_endian() == is_little_endian {
         let mut buffer = Vec::with_capacity(buffer_length);
         let _ = reader
@@ -153,7 +153,7 @@ fn read_compressed_bytes<R: Read + Seek>(
     is_little_endian: bool,
     compression: Compression,
     scratch: &mut Vec<u8>,
-) -> PolarsResult<Vec<u8>> {
+) -> Result<Vec<u8>> {
     read_compressed_buffer::<u8, _>(
         reader,
         buffer_length,
@@ -171,20 +171,20 @@ pub fn read_bytes<R: Read + Seek>(
     is_little_endian: bool,
     compression: Option<Compression>,
     scratch: &mut Vec<u8>,
-) -> PolarsResult<Buffer<u8>> {
+) -> Result<Buffer<u8>> {
     let buf = buf
         .pop_front()
-        .ok_or_else(|| polars_err!(oos = OutOfSpecKind::ExpectedBuffer))?;
+        .ok_or_else(|| Error::from(OutOfSpecKind::ExpectedBuffer))?;
 
     let offset: u64 = buf
         .offset()
         .try_into()
-        .map_err(|_| polars_err!(oos = OutOfSpecKind::NegativeFooterLength))?;
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
     let buffer_length: usize = buf
         .length()
         .try_into()
-        .map_err(|_| polars_err!(oos = OutOfSpecKind::NegativeFooterLength))?;
+        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
 
     reader.seek(SeekFrom::Start(block_offset + offset))?;
 

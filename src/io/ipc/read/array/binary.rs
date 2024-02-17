@@ -9,7 +9,7 @@ use crate::io::ipc::read::array::{try_get_array_length, try_get_field_node};
 use crate::offset::Offset;
 
 use super::super::read_basic::*;
-use super::super::{Compression, IpcBuffer, Node, OutOfSpecKind};
+use super::super::{Compression, IpcBuffer, Node};
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_binary<O: Offset, R: Read + Seek>(

@@ -21,7 +21,7 @@ struct PrivateData<T> {
 }
 
 pub(crate) unsafe fn create_array<
-    T: AsRef<[u8]>,
+    T,
     I: Iterator<Item = Option<*const u8>>,
     II: Iterator<Item = ArrowArray>,
 >(

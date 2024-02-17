@@ -1,5 +1,4 @@
 use std::borrow::{Borrow, Cow};
-use arrow_array::LargeListArray;
 
 use arrow_format::ipc::planus::Builder;
 
@@ -116,7 +115,7 @@ fn encode_dictionary(
                 dictionary_tracker,
                 encoded_dictionaries,
             )
-        }
+        },
         FixedSizeList => {
             let values = array
                 .as_any()
@@ -246,10 +245,6 @@ fn set_variadic_buffer_counts(counts: &mut Vec<i64>, array: &dyn Array) {
             for array in array.values() {
                 set_variadic_buffer_counts(counts, array.as_ref())
             }
-        },
-        DataType::LargeList(_) => {
-            let array = array.as_any().downcast_ref::<LargeListArray>().unwrap();
-            set_variadic_buffer_counts(counts, array.values().as_ref())
         },
         DataType::FixedSizeList(_, _) => {
             let array = array.as_any().downcast_ref::<FixedSizeListArray>().unwrap();

@@ -11,7 +11,7 @@ use crate::offset::Offset;
 use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
 use super::super::read_basic::*;
-use super::super::{Compression, Dictionaries, IpcBuffer, Node, OutOfSpecKind, Version};
+use super::super::{Compression, Dictionaries, IpcBuffer, Node, Version};
 use crate::io::ipc::read::array::{try_get_array_length, try_get_field_node};
 
 #[allow(clippy::too_many_arguments)]

@@ -1,12 +1,10 @@
 use chrono::Datelike;
-use polars_error::PolarsResult;
 
+use crate::error::{Result};
 use crate::array::*;
 use crate::compute::cast::binary_to::Parse;
 use crate::compute::cast::CastOptions;
-use crate::datatypes::{ArrowDataType, TimeUnit};
-#[cfg(feature = "dtype-decimal")]
-use crate::legacy::compute::decimal::deserialize_decimal;
+use crate::datatypes::{DataType, TimeUnit};
 use crate::offset::Offset;
 use crate::temporal_conversions::EPOCH_DAYS_FROM_CE;
 use crate::types::NativeType;
@@ -40,7 +38,7 @@ pub fn utf8view_to_utf8<O: Offset>(array: &Utf8ViewArray) -> Utf8Array<O> {
 /// Casts a [`BinaryArray`] to a [`PrimitiveArray`], making any uncastable value a Null.
 pub(super) fn binview_to_primitive<T>(
     from: &BinaryViewArray,
-    to: &ArrowDataType,
+    to: &DataType,
 ) -> PrimitiveArray<T>
 where
     T: NativeType + Parse,
@@ -52,9 +50,9 @@ where
 
 pub(super) fn binview_to_primitive_dyn<T>(
     from: &dyn Array,
-    to: &ArrowDataType,
+    to: &DataType,
     options: CastOptions,
-) -> PolarsResult<Box<dyn Array>>
+) -> Result<Box<dyn Array>>
 where
     T: NativeType + Parse,
 {
@@ -66,23 +64,10 @@ where
     }
 }
 
-#[cfg(feature = "dtype-decimal")]
-pub fn binview_to_decimal(
-    array: &BinaryViewArray,
-    precision: Option<usize>,
-    scale: usize,
-) -> PrimitiveArray<i128> {
-    let precision = precision.map(|p| p as u8);
-    array
-        .iter()
-        .map(|val| val.and_then(|val| deserialize_decimal(val, precision, scale as u8)))
-        .collect()
-}
-
 pub(super) fn utf8view_to_naive_timestamp_dyn(
     from: &dyn Array,
     time_unit: TimeUnit,
-) -> PolarsResult<Box<dyn Array>> {
+) -> Result<Box<dyn Array>> {
     let from = from.as_any().downcast_ref().unwrap();
     Ok(Box::new(utf8view_to_naive_timestamp(from, time_unit)))
 }
@@ -103,10 +88,10 @@ pub(super) fn utf8view_to_date32(from: &Utf8ViewArray) -> PrimitiveArray<i32> {
                 .map(|x| x.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
         })
     });
-    PrimitiveArray::<i32>::from_trusted_len_iter(iter).to(ArrowDataType::Date32)
+    PrimitiveArray::<i32>::from_trusted_len_iter(iter).to(DataType::Date32)
 }
 
-pub(super) fn utf8view_to_date32_dyn(from: &dyn Array) -> PolarsResult<Box<dyn Array>> {
+pub(super) fn utf8view_to_date32_dyn(from: &dyn Array) -> Result<Box<dyn Array>> {
     let from = from.as_any().downcast_ref().unwrap();
     Ok(Box::new(utf8view_to_date32(from)))
 }
