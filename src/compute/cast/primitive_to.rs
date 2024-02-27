@@ -17,10 +17,64 @@ use crate::{
 
 use super::CastOptions;
 
-/// Returns a [`BinaryArray`] where every element is the binary representation of the number.
-pub fn primitive_to_binary<T: NativeType + lexical_core::ToLexical, O: Offset>(
+pub(super) trait SerPrimitive {
+    fn write(f: &mut Vec<u8>, val: Self) -> usize
+        where
+            Self: Sized;
+}
+
+macro_rules! impl_ser_primitive {
+    ($ptype:ident) => {
+        impl SerPrimitive for $ptype {
+            fn write(f: &mut Vec<u8>, val: Self) -> usize
+            where
+                Self: Sized,
+            {
+                let mut buffer = itoa::Buffer::new();
+                let value = buffer.format(val);
+                f.extend_from_slice(value.as_bytes());
+                value.len()
+            }
+        }
+    };
+}
+
+impl_ser_primitive!(i8);
+impl_ser_primitive!(i16);
+impl_ser_primitive!(i32);
+impl_ser_primitive!(i64);
+impl_ser_primitive!(u8);
+impl_ser_primitive!(u16);
+impl_ser_primitive!(u32);
+impl_ser_primitive!(u64);
+
+impl SerPrimitive for f32 {
+    fn write(f: &mut Vec<u8>, val: Self) -> usize
+        where
+            Self: Sized,
+    {
+        let mut buffer = ryu::Buffer::new();
+        let value = buffer.format(val);
+        f.extend_from_slice(value.as_bytes());
+        value.len()
+    }
+}
+
+impl SerPrimitive for f64 {
+    fn write(f: &mut Vec<u8>, val: Self) -> usize
+        where
+            Self: Sized,
+    {
+        let mut buffer = ryu::Buffer::new();
+        let value = buffer.format(val);
+        f.extend_from_slice(value.as_bytes());
+        value.len()
+    }
+}
+
+fn primitive_to_values_and_offsets<T: NativeType + SerPrimitive, O: Offset>(
     from: &PrimitiveArray<T>,
-) -> BinaryArray<O> {
+) -> (Vec<u8>, Offsets<O>) {
     let mut values: Vec<u8> = Vec::with_capacity(from.len());
     let mut offsets: Vec<O> = Vec::with_capacity(from.len() + 1);
     offsets.push(O::default());
@@ -28,35 +82,38 @@ pub fn primitive_to_binary<T: NativeType + lexical_core::ToLexical, O: Offset>(
     let mut offset: usize = 0;
 
     unsafe {
-        for x in from.values().iter() {
-            values.reserve(offset + T::FORMATTED_SIZE_DECIMAL);
-
-            let bytes = std::slice::from_raw_parts_mut(
-                values.as_mut_ptr().add(offset),
-                values.capacity() - offset,
-            );
-            let len = lexical_core::write_unchecked(*x, bytes).len();
+        for &x in from.values().iter() {
+            let len = T::write(&mut values, x);
 
             offset += len;
-            offsets.push(O::from_usize(offset).unwrap());
+            offsets.push(O::from_as_usize(offset));
         }
         values.set_len(offset);
         values.shrink_to_fit();
         // Safety: offsets _are_ monotonically increasing
         let offsets = unsafe { Offsets::new_unchecked(offsets) };
-        BinaryArray::<O>::new(
-            BinaryArray::<O>::default_data_type(),
-            offsets.into(),
-            values.into(),
-            from.validity().cloned(),
-        )
+
+        (values, offsets)
     }
+}
+
+/// Returns a [`BinaryArray`] where every element is the binary representation of the number.
+pub(super) fn primitive_to_binary<T: NativeType + SerPrimitive, O: Offset>(
+    from: &PrimitiveArray<T>,
+) -> BinaryArray<O> {
+    let (values, offsets) = primitive_to_values_and_offsets(from);
+    BinaryArray::<O>::new(
+        BinaryArray::<O>::default_data_type(),
+        offsets.into(),
+        values.into(),
+        from.validity().cloned(),
+    )
 }
 
 pub(super) fn primitive_to_binary_dyn<T, O>(from: &dyn Array) -> Result<Box<dyn Array>>
 where
     O: Offset,
-    T: NativeType + lexical_core::ToLexical,
+    T: NativeType + SerPrimitive,
 {
     let from = from.as_any().downcast_ref().unwrap();
     Ok(Box::new(primitive_to_binary::<T, O>(from)))
@@ -86,32 +143,11 @@ where
 }
 
 /// Returns a [`Utf8Array`] where every element is the utf8 representation of the number.
-pub fn primitive_to_utf8<T: NativeType + lexical_core::ToLexical, O: Offset>(
+pub(super) fn primitive_to_utf8<T: NativeType + SerPrimitive, O: Offset>(
     from: &PrimitiveArray<T>,
 ) -> Utf8Array<O> {
-    let mut values: Vec<u8> = Vec::with_capacity(from.len());
-    let mut offsets: Vec<O> = Vec::with_capacity(from.len() + 1);
-    offsets.push(O::default());
-
-    let mut offset: usize = 0;
-
+    let (values, offsets) = primitive_to_values_and_offsets(from);
     unsafe {
-        for x in from.values().iter() {
-            values.reserve(offset + T::FORMATTED_SIZE_DECIMAL);
-
-            let bytes = std::slice::from_raw_parts_mut(
-                values.as_mut_ptr().add(offset),
-                values.capacity() - offset,
-            );
-            let len = lexical_core::write_unchecked(*x, bytes).len();
-
-            offset += len;
-            offsets.push(O::from_usize(offset).unwrap());
-        }
-        values.set_len(offset);
-        values.shrink_to_fit();
-        // Safety: offsets _are_ monotonically increasing
-        let offsets = unsafe { Offsets::new_unchecked(offsets) };
         Utf8Array::<O>::new_unchecked(
             Utf8Array::<O>::default_data_type(),
             offsets.into(),
@@ -124,7 +160,7 @@ pub fn primitive_to_utf8<T: NativeType + lexical_core::ToLexical, O: Offset>(
 pub(super) fn primitive_to_utf8_dyn<T, O>(from: &dyn Array) -> Result<Box<dyn Array>>
 where
     O: Offset,
-    T: NativeType + lexical_core::ToLexical,
+    T: NativeType + SerPrimitive,
 {
     let from = from.as_any().downcast_ref().unwrap();
     Ok(Box::new(primitive_to_utf8::<T, O>(from)))
@@ -586,4 +622,28 @@ pub fn months_to_months_days_ns(from: &PrimitiveArray<i32>) -> PrimitiveArray<mo
 /// Casts f16 into f32
 pub fn f16_to_f32(from: &PrimitiveArray<f16>) -> PrimitiveArray<f32> {
     unary(from, |x| x.to_f32(), DataType::Float32)
+}
+
+/// Returns a [`Utf8Array`] where every element is the utf8 representation of the number.
+pub(super) fn primitive_to_binview<T: NativeType + SerPrimitive>(
+    from: &PrimitiveArray<T>,
+) -> BinaryViewArray {
+    let mut mutable = MutableBinaryViewArray::with_capacity(from.len());
+
+    let mut scratch = vec![];
+    for &x in from.values().iter() {
+        unsafe { scratch.set_len(0) };
+        T::write(&mut scratch, x);
+        mutable.push_value_ignore_validity(&scratch)
+    }
+
+    mutable.freeze().with_validity(from.validity().cloned())
+}
+
+pub(super) fn primitive_to_binview_dyn<T>(from: &dyn Array) -> BinaryViewArray
+where
+    T: NativeType + SerPrimitive,
+{
+    let from = from.as_any().downcast_ref().unwrap();
+    primitive_to_binview::<T>(from)
 }

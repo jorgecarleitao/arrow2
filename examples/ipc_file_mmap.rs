@@ -29,7 +29,7 @@ fn write(
     let options = arrow2::io::ipc::write::WriteOptions { compression };
     let mut writer = arrow2::io::ipc::write::FileWriter::try_new(
         result,
-        schema.clone(),
+        schema.clone().into(),
         ipc_fields.clone(),
         options,
     )?;

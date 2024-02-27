@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use chrono::Datelike;
 
 use crate::{
@@ -6,11 +7,12 @@ use crate::{
     error::Result,
     offset::Offset,
     temporal_conversions::{
-        utf8_to_naive_timestamp_ns as utf8_to_naive_timestamp_ns_,
-        utf8_to_timestamp_ns as utf8_to_timestamp_ns_, EPOCH_DAYS_FROM_CE,
+        utf8_to_naive_timestamp as utf8_to_naive_timestamp_,
+        utf8_to_timestamp as utf8_to_timestamp_, EPOCH_DAYS_FROM_CE,
     },
     types::NativeType,
 };
+use crate::datatypes::TimeUnit;
 
 use super::CastOptions;
 
@@ -43,6 +45,7 @@ where
     PrimitiveArray::<T>::from_trusted_len_iter(iter).to(to.clone())
 }
 
+#[allow(unused)]
 pub(super) fn utf8_to_primitive_dyn<O: Offset, T>(
     from: &dyn Array,
     to: &DataType,
@@ -113,34 +116,35 @@ pub fn utf8_to_dictionary<O: Offset, K: DictionaryKey>(
     Ok(array.into())
 }
 
-pub(super) fn utf8_to_naive_timestamp_ns_dyn<O: Offset>(
+pub(super) fn utf8_to_naive_timestamp_dyn<O: Offset>(
     from: &dyn Array,
+    time_unit: TimeUnit
 ) -> Result<Box<dyn Array>> {
     let from = from.as_any().downcast_ref().unwrap();
-    Ok(Box::new(utf8_to_naive_timestamp_ns::<O>(from)))
+    Ok(Box::new(utf8_to_naive_timestamp::<O>(from, time_unit)))
 }
 
 /// [`crate::temporal_conversions::utf8_to_timestamp_ns`] applied for RFC3339 formatting
-pub fn utf8_to_naive_timestamp_ns<O: Offset>(from: &Utf8Array<O>) -> PrimitiveArray<i64> {
-    utf8_to_naive_timestamp_ns_(from, RFC3339)
+pub fn utf8_to_naive_timestamp<O: Offset>(from: &Utf8Array<O>, time_unit: TimeUnit) -> PrimitiveArray<i64> {
+    utf8_to_naive_timestamp_(from, RFC3339, time_unit)
 }
 
-pub(super) fn utf8_to_timestamp_ns_dyn<O: Offset>(
+pub(super) fn utf8_to_timestamp_dyn<O: Offset>(
     from: &dyn Array,
     timezone: String,
 ) -> Result<Box<dyn Array>> {
     let from = from.as_any().downcast_ref().unwrap();
-    utf8_to_timestamp_ns::<O>(from, timezone)
+    utf8_to_timestamp::<O>(from, timezone)
         .map(Box::new)
         .map(|x| x as Box<dyn Array>)
 }
 
 /// [`crate::temporal_conversions::utf8_to_timestamp_ns`] applied for RFC3339 formatting
-pub fn utf8_to_timestamp_ns<O: Offset>(
+pub fn utf8_to_timestamp<O: Offset>(
     from: &Utf8Array<O>,
     timezone: String,
 ) -> Result<PrimitiveArray<i64>> {
-    utf8_to_timestamp_ns_(from, RFC3339, timezone)
+    utf8_to_timestamp_(from, RFC3339, timezone)
 }
 
 /// Conversion of utf8
@@ -176,4 +180,50 @@ pub fn utf8_to_binary<O: Offset>(from: &Utf8Array<O>, to_data_type: DataType) ->
             from.validity().cloned(),
         )
     }
+}
+
+pub fn binary_to_binview<O: Offset>(arr: &BinaryArray<O>) -> BinaryViewArray {
+    let buffer_idx = 0_u32;
+    let base_ptr = arr.values().as_ptr() as usize;
+
+    let mut views = Vec::with_capacity(arr.len());
+    let mut uses_buffer = false;
+    for bytes in arr.values_iter() {
+        let len: u32 = bytes.len().try_into().unwrap();
+
+        let mut payload = [0; 16];
+        payload[0..4].copy_from_slice(&len.to_le_bytes());
+
+        if len <= 12 {
+            payload[4..4 + bytes.len()].copy_from_slice(bytes);
+        } else {
+            uses_buffer = true;
+            unsafe { payload[4..8].copy_from_slice(bytes.get_unchecked(0..4)) };
+            let offset = (bytes.as_ptr() as usize - base_ptr) as u32;
+            payload[0..4].copy_from_slice(&len.to_le_bytes());
+            payload[8..12].copy_from_slice(&buffer_idx.to_le_bytes());
+            payload[12..16].copy_from_slice(&offset.to_le_bytes());
+        }
+
+        let value = View::from_le_bytes(payload);
+        unsafe { views.push(value) };
+    }
+    let buffers = if uses_buffer {
+        Arc::from([arr.values().clone()])
+    } else {
+        Arc::from([])
+    };
+    unsafe {
+        BinaryViewArray::new_unchecked_unknown_md(
+            DataType::BinaryView,
+            views.into(),
+            buffers,
+            arr.validity().cloned(),
+            None,
+        )
+    }
+}
+
+pub fn utf8_to_utf8view<O: Offset>(arr: &Utf8Array<O>) -> Utf8ViewArray {
+    unsafe { binary_to_binview(&arr.to_binary()).to_utf8view_unchecked() }
 }

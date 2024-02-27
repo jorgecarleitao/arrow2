@@ -4,6 +4,7 @@ use crate::types::NativeType;
 use super::*;
 
 mod binary;
+mod binary_view;
 mod boolean;
 mod dictionary;
 mod fixed_size_binary;
@@ -283,6 +284,16 @@ pub fn equal(lhs: &dyn Array, rhs: &dyn Array) -> bool {
             let lhs = lhs.as_any().downcast_ref().unwrap();
             let rhs = rhs.as_any().downcast_ref().unwrap();
             map::equal(lhs, rhs)
-        }
+        },
+        BinaryView => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            binary_view::equal::<[u8]>(lhs, rhs)
+        },
+        Utf8View => {
+            let lhs = lhs.as_any().downcast_ref().unwrap();
+            let rhs = rhs.as_any().downcast_ref().unwrap();
+            binary_view::equal::<str>(lhs, rhs)
+        },
     }
 }

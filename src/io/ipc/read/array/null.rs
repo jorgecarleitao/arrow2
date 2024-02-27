@@ -6,19 +6,17 @@ use crate::{
     error::{Error, Result},
 };
 
-use super::super::{Node, OutOfSpecKind};
+use super::super::Node;
+use crate::io::ipc::read::array::{try_get_array_length, try_get_field_node};
 
-pub fn read_null(field_nodes: &mut VecDeque<Node>, data_type: DataType) -> Result<NullArray> {
-    let field_node = field_nodes.pop_front().ok_or_else(|| {
-        Error::oos(format!(
-            "IPC: unable to fetch the field for {data_type:?}. The file or stream is corrupted."
-        ))
-    })?;
+pub fn read_null(
+    field_nodes: &mut VecDeque<Node>,
+    data_type: DataType,
+    limit: Option<usize>,
+) -> Result<NullArray> {
+    let field_node = try_get_field_node(field_nodes, &data_type)?;
 
-    let length: usize = field_node
-        .length()
-        .try_into()
-        .map_err(|_| Error::from(OutOfSpecKind::NegativeFooterLength))?;
+    let length = try_get_array_length(field_node, limit)?;
 
     NullArray::try_new(data_type, length)
 }

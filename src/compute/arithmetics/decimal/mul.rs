@@ -4,7 +4,6 @@
 use crate::{
     array::PrimitiveArray,
     compute::{
-        arithmetics::{ArrayCheckedMul, ArrayMul, ArraySaturatingMul},
         arity::{binary, binary_checked, unary},
         utils::{check_same_len, combine_validities},
     },
@@ -202,27 +201,6 @@ pub fn checked_mul(lhs: &PrimitiveArray<i128>, rhs: &PrimitiveArray<i128>) -> Pr
     };
 
     binary_checked(lhs, rhs, lhs.data_type().clone(), op)
-}
-
-// Implementation of ArrayMul trait for PrimitiveArrays
-impl ArrayMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn mul(&self, rhs: &PrimitiveArray<i128>) -> Self {
-        mul(self, rhs)
-    }
-}
-
-// Implementation of ArrayCheckedMul trait for PrimitiveArrays
-impl ArrayCheckedMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn checked_mul(&self, rhs: &PrimitiveArray<i128>) -> Self {
-        checked_mul(self, rhs)
-    }
-}
-
-// Implementation of ArraySaturatingMul trait for PrimitiveArrays
-impl ArraySaturatingMul<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn saturating_mul(&self, rhs: &PrimitiveArray<i128>) -> Self {
-        saturating_mul(self, rhs)
-    }
 }
 
 /// Adaptive multiplication of two decimal primitive arrays with different

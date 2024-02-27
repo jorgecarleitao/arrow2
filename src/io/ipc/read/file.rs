@@ -4,7 +4,7 @@ use std::io::{Read, Seek, SeekFrom};
 
 use crate::array::Array;
 use crate::chunk::Chunk;
-use crate::datatypes::Schema;
+use crate::datatypes::SchemaRef;
 use crate::error::{Error, Result};
 use crate::io::ipc::IpcSchema;
 
@@ -19,7 +19,7 @@ use arrow_format::ipc::planus::ReadAsRoot;
 #[derive(Debug, Clone)]
 pub struct FileMetadata {
     /// The schema that is read from the file footer
-    pub schema: Schema,
+    pub schema: SchemaRef,
 
     /// The files' [`IpcSchema`]
     pub ipc_schema: IpcSchema,
@@ -184,6 +184,7 @@ pub(super) fn deserialize_footer(footer_data: &[u8], size: u64) -> Result<FileMe
         .map_err(|err| Error::from(OutOfSpecKind::InvalidFlatbufferSchema(err)))?
         .ok_or_else(|| Error::from(OutOfSpecKind::MissingSchema))?;
     let (schema, ipc_schema) = fb_to_schema(ipc_schema)?;
+    let schema = schema.into();
 
     let dictionaries = footer
         .dictionaries()

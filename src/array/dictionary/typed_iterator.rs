@@ -1,5 +1,5 @@
-use crate::array::{Array, PrimitiveArray, Utf8Array};
 use crate::error::{Error, Result};
+use crate::array::{Array, PrimitiveArray, Utf8Array, Utf8ViewArray};
 use crate::trusted_len::TrustedLen;
 use crate::types::Offset;
 
@@ -35,6 +35,34 @@ impl<O: Offset> DictValue for Utf8Array<O> {
             .as_any()
             .downcast_ref::<Self>()
             .ok_or(Error::InvalidArgumentError(
+                "could not convert array to dictionary value".into(),
+            ))
+            .map(|arr| {
+                assert_eq!(
+                    arr.null_count(),
+                    0,
+                    "null values in values not supported in iteration"
+                );
+                arr
+            })
+    }
+}
+
+impl DictValue for Utf8ViewArray {
+    type IterValue<'a> = &'a str;
+
+    unsafe fn get_unchecked(&self, item: usize) -> Self::IterValue<'_> {
+        self.value_unchecked(item)
+    }
+
+    fn downcast_values(array: &dyn Array) -> Result<&Self>
+    where
+        Self: Sized,
+    {
+        array
+            .as_any()
+            .downcast_ref::<Self>()
+            .ok_or_else(|| Error::InvalidArgumentError(
                 "could not convert array to dictionary value".into(),
             ))
             .map(|arr| {

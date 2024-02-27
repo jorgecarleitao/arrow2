@@ -3,7 +3,6 @@
 use crate::{
     array::PrimitiveArray,
     compute::{
-        arithmetics::{ArrayCheckedSub, ArraySaturatingSub, ArraySub},
         arity::{binary, binary_checked},
         utils::{check_same_len, combine_validities},
     },
@@ -97,26 +96,6 @@ pub fn saturating_sub(
     binary(lhs, rhs, lhs.data_type().clone(), op)
 }
 
-// Implementation of ArraySub trait for PrimitiveArrays
-impl ArraySub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn sub(&self, rhs: &PrimitiveArray<i128>) -> Self {
-        sub(self, rhs)
-    }
-}
-
-// Implementation of ArrayCheckedSub trait for PrimitiveArrays
-impl ArrayCheckedSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn checked_sub(&self, rhs: &PrimitiveArray<i128>) -> Self {
-        checked_sub(self, rhs)
-    }
-}
-
-// Implementation of ArraySaturatingSub trait for PrimitiveArrays
-impl ArraySaturatingSub<PrimitiveArray<i128>> for PrimitiveArray<i128> {
-    fn saturating_sub(&self, rhs: &PrimitiveArray<i128>) -> Self {
-        saturating_sub(self, rhs)
-    }
-}
 /// Checked subtract of two decimal primitive arrays with the same precision
 /// and scale. If the precision and scale is different, then an
 /// InvalidArgumentError is returned. If the result from the sub is larger than

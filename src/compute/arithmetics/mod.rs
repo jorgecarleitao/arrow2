@@ -416,6 +416,7 @@ macro_rules! with_match_negatable {(
         UInt8 | UInt16 | UInt32 | UInt64 | Float16 => todo!(),
         Float32 => __with_ty__! { f32 },
         Float64 => __with_ty__! { f64 },
+        UInt128 => todo!(),
     }
 })}
 

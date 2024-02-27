@@ -9,10 +9,12 @@ use super::super::super::IpcField;
 use super::super::deserialize::{read, skip};
 use super::super::read_basic::*;
 use super::super::{Compression, Dictionaries, IpcBuffer, Node, Version};
+use crate::io::ipc::read::array::try_get_field_node;
 
 #[allow(clippy::too_many_arguments)]
 pub fn read_struct<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
+    variadic_buffer_counts: &mut VecDeque<usize>,
     data_type: DataType,
     ipc_field: &IpcField,
     buffers: &mut VecDeque<IpcBuffer>,
@@ -25,11 +27,7 @@ pub fn read_struct<R: Read + Seek>(
     version: Version,
     scratch: &mut Vec<u8>,
 ) -> Result<StructArray> {
-    let field_node = field_nodes.pop_front().ok_or_else(|| {
-        Error::oos(format!(
-            "IPC: unable to fetch the field for {data_type:?}. The file or stream is corrupted."
-        ))
-    })?;
+    let field_node = try_get_field_node(field_nodes, &data_type)?;
 
     let validity = read_validity(
         buffers,
@@ -50,6 +48,7 @@ pub fn read_struct<R: Read + Seek>(
         .map(|(field, ipc_field)| {
             read(
                 field_nodes,
+                variadic_buffer_counts,
                 field,
                 ipc_field,
                 buffers,

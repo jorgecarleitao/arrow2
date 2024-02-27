@@ -828,7 +828,7 @@ fn transverse_recursive<T, F: Fn(&DataType) -> T + Clone>(
     use crate::datatypes::PhysicalType::*;
     match data_type.to_physical_type() {
         Null | Boolean | Primitive(_) | Binary | FixedSizeBinary | LargeBinary | Utf8
-        | Dictionary(_) | LargeUtf8 => encodings.push(map(data_type)),
+        | Dictionary(_) | LargeUtf8 | BinaryView | Utf8View => encodings.push(map(data_type)),
         List | FixedSizeList | LargeList => {
             let a = data_type.to_logical_type();
             if let DataType::List(inner) = a {

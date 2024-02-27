@@ -51,6 +51,11 @@ fn bool() -> Result<()> {
     test_round_trip(data)
 }
 
+fn binview_nullable_inlined() -> Result<()> {
+    let data = Utf8ViewArray::from_slice([Some("foo"), None, Some("barbar"), None]);
+    test_round_trip(data)
+}
+
 #[test]
 fn bool_nullable_sliced() -> Result<()> {
     let bitmap = Bitmap::from([true, false, false, true]).sliced(1, 3);
@@ -361,4 +366,15 @@ fn extension_children() -> Result<()> {
         true,
     );
     test_round_trip_schema(field)
+}
+
+fn binview_nullable_buffered() -> Result<()> {
+    let data = Utf8ViewArray::from_slice([
+        Some("foobaroiwalksdfjoiei"),
+        None,
+        Some("barbar"),
+        None,
+        Some("aoisejiofjfoiewjjwfoiwejfo"),
+    ]);
+    test_round_trip(data)
 }

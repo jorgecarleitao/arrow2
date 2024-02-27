@@ -296,6 +296,22 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> Result<Box<dyn Array>
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<$T>(array, filter)))
         }),
+        BinaryView => {
+            let iter = SlicesIterator::new(filter.values());
+            let array = array.as_any().downcast_ref::<BinaryViewArray>().unwrap();
+            let mut mutable =
+                growable::GrowableBinaryViewArray::new(vec![array], false, iter.slots());
+            unsafe {
+                // We don't have to correct buffers as there is only one array.
+                iter.for_each(|(start, len)| mutable.extend_unchecked_no_buffers(0, start, len));
+            }
+
+            Ok(mutable.as_box())
+        },
+        // Should go via BinaryView
+        Utf8View => {
+            unreachable!()
+        },
         _ => {
             let iter = SlicesIterator::new(filter.values());
             let mut mutable = make_growable(&[array], false, iter.slots());

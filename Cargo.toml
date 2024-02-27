@@ -21,6 +21,10 @@ num-traits = "0.2"
 dyn-clone = "1"
 bytemuck = { version = "1", features = ["derive"] }
 chrono = { version = "0.4.31", default_features = false, features = ["std"] }
+atoi_simd = "0.15.5"
+itoa = "1.0.6"
+ryu = "1.0.13"
+fast-float = { version = "0.2" }
 
 # for decimal i256
 ethnum = "1"
@@ -57,7 +61,7 @@ indexmap = { version = "^1.6", optional = true }
 # used to print columns in a nice columnar format
 comfy-table = { version = "6.0", optional = true, default-features = false }
 
-arrow-format = { version = "0.8", optional = true, features = ["ipc"] }
+arrow-format = { package = "polars-arrow-format", version = "0.1.0", optional = true, features = ["ipc"] }
 
 hex = { version = "^0.4", optional = true }
 
@@ -184,7 +188,7 @@ io_json_write = ["streaming-iterator", "fallible-streaming-iterator", "lexical-c
 io_ipc = ["arrow-format"]
 io_ipc_write_async = ["io_ipc", "futures"]
 io_ipc_read_async = ["io_ipc", "futures", "async-stream"]
-io_ipc_compression = ["lz4", "zstd"]
+io_ipc_compression = ["lz4", "zstd", "io_ipc"]
 io_flight = ["io_ipc", "arrow-format/flight-data"]
 
 # base64 + io_ipc because arrow schemas are stored as base64-encoded ipc format.

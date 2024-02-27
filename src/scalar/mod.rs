@@ -26,8 +26,11 @@ pub use struct_::*;
 mod fixed_size_list;
 pub use fixed_size_list::*;
 mod fixed_size_binary;
+pub use binview::*;
 pub use fixed_size_binary::*;
+mod binview;
 mod union;
+
 pub use union::UnionScalar;
 
 /// Trait object declaring an optional value with a [`DataType`].
@@ -54,6 +57,21 @@ macro_rules! dyn_new_utf8 {
             None
         };
         Box::new(Utf8Scalar::<$type>::new(value))
+    }};
+}
+
+macro_rules! dyn_new_binview {
+    ($array:expr, $index:expr, $type:ty) => {{
+        let array = $array
+            .as_any()
+            .downcast_ref::<BinaryViewArrayGeneric<$type>>()
+            .unwrap();
+        let value = if array.is_valid($index) {
+            Some(array.value($index))
+        } else {
+            None
+        };
+        Box::new(BinaryViewScalar::<$type>::new(value))
     }};
 }
 
@@ -110,6 +128,8 @@ pub fn new_scalar(array: &dyn Array, index: usize) -> Box<dyn Scalar> {
             };
             Box::new(PrimitiveScalar::new(array.data_type().clone(), value))
         }),
+        BinaryView => dyn_new_binview!(array, index, [u8]),
+        Utf8View => dyn_new_binview!(array, index, str),
         Utf8 => dyn_new_utf8!(array, index, i32),
         LargeUtf8 => dyn_new_utf8!(array, index, i64),
         Binary => dyn_new_binary!(array, index, i32),

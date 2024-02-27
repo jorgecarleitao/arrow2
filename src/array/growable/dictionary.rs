@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     make_growable,
-    utils::{build_extend_null_bits, ExtendNullBits},
+    utils::{extend_validity, prepare_validity},
     Growable,
 };
 
@@ -18,12 +18,11 @@ use super::{
 /// the values of each [`DictionaryArray`] one after the other.
 pub struct GrowableDictionary<'a, K: DictionaryKey> {
     data_type: DataType,
-    keys_values: Vec<&'a [K]>,
+    keys: Vec<&'a PrimitiveArray<K>>,
     key_values: Vec<K>,
-    key_validity: MutableBitmap,
+    validity: Option<MutableBitmap>,
     offsets: Vec<usize>,
     values: Box<dyn Array>,
-    extend_null_bits: Vec<ExtendNullBits<'a>>,
 }
 
 fn concatenate_values<K: DictionaryKey>(
@@ -55,16 +54,6 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
         };
 
         let arrays_keys = arrays.iter().map(|array| array.keys()).collect::<Vec<_>>();
-        let keys_values = arrays_keys
-            .iter()
-            .map(|array| array.values().as_slice())
-            .collect::<Vec<_>>();
-
-        let extend_null_bits = arrays
-            .iter()
-            .map(|array| build_extend_null_bits(array.keys(), use_validity))
-            .collect();
-
         let arrays_values = arrays
             .iter()
             .map(|array| array.values().as_ref())
@@ -76,24 +65,26 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
             data_type,
             offsets,
             values,
-            keys_values,
+            keys: arrays_keys,
             key_values: Vec::with_capacity(capacity),
-            key_validity: MutableBitmap::with_capacity(capacity),
-            extend_null_bits,
+            validity: prepare_validity(use_validity, capacity),
         }
     }
 
     #[inline]
     fn to(&mut self) -> DictionaryArray<T> {
-        let validity = std::mem::take(&mut self.key_validity);
+        let validity = self.validity.take();
         let key_values = std::mem::take(&mut self.key_values);
 
         #[cfg(debug_assertions)]
         {
             crate::array::specification::check_indexes(&key_values, self.values.len()).unwrap();
         }
-        let keys =
-            PrimitiveArray::<T>::new(T::PRIMITIVE.into(), key_values.into(), validity.into());
+        let keys = PrimitiveArray::<T>::new(
+            T::PRIMITIVE.into(),
+            key_values.into(),
+            validity.map(|v| v.into()),
+        );
 
         // Safety - the invariant of this struct ensures that this is up-held
         unsafe {
@@ -110,9 +101,10 @@ impl<'a, T: DictionaryKey> GrowableDictionary<'a, T> {
 impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
     #[inline]
     fn extend(&mut self, index: usize, start: usize, len: usize) {
-        (self.extend_null_bits[index])(&mut self.key_validity, start, len);
+        let keys_array = self.keys[index];
+        extend_validity(&mut self.validity, keys_array, start, len);
 
-        let values = &self.keys_values[index][start..start + len];
+        let values = &keys_array.values()[start..start + len];
         let offset = self.offsets[index];
         self.key_values.extend(
             values
@@ -141,7 +133,9 @@ impl<'a, T: DictionaryKey> Growable<'a> for GrowableDictionary<'a, T> {
     fn extend_validity(&mut self, additional: usize) {
         self.key_values
             .resize(self.key_values.len() + additional, T::default());
-        self.key_validity.extend_constant(additional, false);
+        if let Some(validity) = &mut self.validity {
+            validity.extend_constant(additional, false);
+        }
     }
 
     #[inline]

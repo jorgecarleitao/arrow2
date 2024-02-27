@@ -43,6 +43,8 @@ pub unsafe fn try_from<A: ArrowArrayRef>(array: A) -> Result<Box<dyn Array>> {
         }
         Union => Box::new(UnionArray::try_from_ffi(array)?),
         Map => Box::new(MapArray::try_from_ffi(array)?),
+        BinaryView => Box::new(BinaryViewArray::try_from_ffi(array)?),
+        Utf8View => Box::new(Utf8ViewArray::try_from_ffi(array)?),
     })
 }
 
@@ -88,6 +90,7 @@ struct PrivateData {
     buffers_ptr: Box<[*const std::os::raw::c_void]>,
     children_ptr: Box<[*mut ArrowArray]>,
     dictionary_ptr: Option<*mut ArrowArray>,
+    variadic_buffer_sizes: Box<[i64]>,
 }
 
 impl ArrowArray {
@@ -96,8 +99,35 @@ impl ArrowArray {
     /// This method releases `buffers`. Consumers of this struct *must* call `release` before
     /// releasing this struct, or contents in `buffers` leak.
     pub(crate) fn new(array: Box<dyn Array>) -> Self {
-        let (offset, buffers, children, dictionary) =
+        let needs_variadic_buffer_sizes = matches!(
+            array.data_type(),
+            DataType::BinaryView | DataType::Utf8View
+        );
+
+        let (offset, mut buffers, children, dictionary) =
             offset_buffers_children_dictionary(array.as_ref());
+
+        let variadic_buffer_sizes = if needs_variadic_buffer_sizes {
+            #[cfg(feature = "compute_cast")]
+            {
+                let arr = crate::compute::cast::cast_unchecked(
+                    array.as_ref(),
+                    &DataType::BinaryView,
+                )
+                .unwrap();
+                let arr = arr.as_any().downcast_ref::<BinaryViewArray>().unwrap();
+                let boxed = arr.variadic_buffer_lengths().into_boxed_slice();
+                let ptr = boxed.as_ptr().cast::<u8>();
+                buffers.push(Some(ptr));
+                boxed
+            }
+            #[cfg(not(feature = "compute_cast"))]
+            {
+                panic!("activate 'compute_cast' feature")
+            }
+        } else {
+            Box::from([])
+        };
 
         let buffers_ptr = buffers
             .iter()
@@ -125,6 +155,7 @@ impl ArrowArray {
             buffers_ptr,
             children_ptr,
             dictionary_ptr,
+            variadic_buffer_sizes,
         });
 
         Self {
@@ -216,6 +247,21 @@ unsafe fn get_buffer_ptr<T: NativeType>(
 
     // note: we can't prove that this pointer is not mutably shared - part of the safety invariant
     Ok(ptr as *mut T)
+}
+
+unsafe fn create_buffer_known_len<T: NativeType>(
+    array: &ArrowArray,
+    data_type: &DataType,
+    owner: InternalArrowArray,
+    len: usize,
+    index: usize,
+) -> Result<Buffer<T>> {
+    if len == 0 {
+        return Ok(Buffer::new());
+    }
+    let ptr: *mut T = get_buffer_ptr(array, data_type, index)?;
+    let bytes = Bytes::from_foreign(ptr, len, BytesAllocator::InternalArrowArray(owner));
+    Ok(Buffer::from_bytes(bytes))
 }
 
 /// returns the buffer `i` of `array` interpreted as a [`Buffer`].
@@ -328,7 +374,10 @@ unsafe fn buffer_len(array: &ArrowArray, data_type: &DataType, i: usize) -> Resu
         | (PhysicalType::Map, 1) => {
             // the len of the offset buffer (buffer 1) equals length + 1
             array.offset as usize + array.length as usize + 1
-        }
+        },
+        (PhysicalType::BinaryView, 1) | (PhysicalType::Utf8View, 1) => {
+            array.offset as usize + array.length as usize
+        },
         (PhysicalType::Utf8, 2) | (PhysicalType::Binary, 2) => {
             // the len of the data buffer (buffer 2) equals the last value of the offset buffer (buffer 1)
             let len = buffer_len(array, data_type, 1)?;
@@ -450,6 +499,17 @@ pub trait ArrowArrayRef: std::fmt::Debug {
     /// This function assumes that the buffer created from FFI is valid; this is impossible to prove.
     unsafe fn buffer<T: NativeType>(&self, index: usize) -> Result<Buffer<T>> {
         create_buffer::<T>(self.array(), self.data_type(), self.owner(), index)
+    }
+
+    /// # Safety
+    /// The caller must guarantee that the buffer `index` corresponds to a buffer.
+    /// This function assumes that the buffer created from FFI is valid; this is impossible to prove.
+    unsafe fn buffer_known_len<T: NativeType>(
+        &self,
+        index: usize,
+        len: usize,
+    ) -> Result<Buffer<T>> {
+        create_buffer_known_len::<T>(self.array(), self.data_type(), self.owner(), len, index)
     }
 
     /// # Safety

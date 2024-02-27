@@ -4,6 +4,47 @@ use crate::{array::*, datatypes::DataType, types::NativeType};
 
 use super::CastOptions;
 
+pub(super) trait Parse {
+    fn parse(val: &[u8]) -> Option<Self>
+        where
+            Self: Sized;
+}
+
+macro_rules! impl_parse {
+    ($primitive_type:ident) => {
+        impl Parse for $primitive_type {
+            fn parse(val: &[u8]) -> Option<Self> {
+                atoi_simd::parse(val).ok()
+            }
+        }
+    };
+}
+impl_parse!(i8);
+impl_parse!(i16);
+impl_parse!(i32);
+impl_parse!(i64);
+impl_parse!(u8);
+impl_parse!(u16);
+impl_parse!(u32);
+impl_parse!(u64);
+
+impl Parse for f32 {
+    fn parse(val: &[u8]) -> Option<Self>
+        where
+            Self: Sized,
+    {
+        fast_float::parse(val).ok()
+    }
+}
+impl Parse for f64 {
+    fn parse(val: &[u8]) -> Option<Self>
+        where
+            Self: Sized,
+    {
+        fast_float::parse(val).ok()
+    }
+}
+
 /// Conversion of binary
 pub fn binary_to_large_binary(from: &BinaryArray<i32>, to_data_type: DataType) -> BinaryArray<i64> {
     let values = from.values().clone();
@@ -72,13 +113,11 @@ where
 }
 
 /// Casts a [`BinaryArray`] to a [`PrimitiveArray`], making any uncastable value a Null.
-pub fn binary_to_primitive<O: Offset, T>(from: &BinaryArray<O>, to: &DataType) -> PrimitiveArray<T>
+pub(super) fn binary_to_primitive<O: Offset, T>(from: &BinaryArray<O>, to: &DataType) -> PrimitiveArray<T>
 where
-    T: NativeType + lexical_core::FromLexical,
+    T: NativeType + Parse,
 {
-    let iter = from
-        .iter()
-        .map(|x| x.and_then::<T, _>(|x| lexical_core::parse(x).ok()));
+    let iter = from.iter().map(|x| x.and_then::<T, _>(|x| T::parse(x)));
 
     PrimitiveArray::<T>::from_trusted_len_iter(iter).to(to.clone())
 }
@@ -89,7 +128,7 @@ pub(super) fn binary_to_primitive_dyn<O: Offset, T>(
     options: CastOptions,
 ) -> Result<Box<dyn Array>>
 where
-    T: NativeType + lexical_core::FromLexical,
+    T: NativeType + lexical_core::FromLexical + Parse,
 {
     let from = from.as_any().downcast_ref().unwrap();
     if options.partial {
@@ -143,6 +182,11 @@ pub fn fixed_size_binary_binary<O: Offset>(
         values,
         from.validity().cloned(),
     )
+}
+
+pub fn fixed_size_binary_to_binview(from: &FixedSizeBinaryArray) -> BinaryViewArray {
+    let mutable = MutableBinaryViewArray::from_values_iter(from.values_iter());
+    mutable.freeze().with_validity(from.validity().cloned())
 }
 
 /// Conversion of binary

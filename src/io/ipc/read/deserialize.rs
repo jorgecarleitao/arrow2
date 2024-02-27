@@ -15,6 +15,7 @@ use super::{IpcBuffer, Node};
 #[allow(clippy::too_many_arguments)]
 pub fn read<R: Read + Seek>(
     field_nodes: &mut VecDeque<Node>,
+    variadic_buffer_counts: &mut VecDeque<usize>,
     field: &Field,
     ipc_field: &IpcField,
     buffers: &mut VecDeque<IpcBuffer>,
@@ -31,7 +32,7 @@ pub fn read<R: Read + Seek>(
     let data_type = field.data_type.clone();
 
     match data_type.to_physical_type() {
-        Null => read_null(field_nodes, data_type).map(|x| x.boxed()),
+        Null => read_null(field_nodes, data_type, limit).map(|x| x.boxed()),
         Boolean => read_boolean(
             field_nodes,
             data_type,
@@ -120,6 +121,7 @@ pub fn read<R: Read + Seek>(
         .map(|x| x.boxed()),
         List => read_list::<i32, _>(
             field_nodes,
+            variadic_buffer_counts,
             data_type,
             ipc_field,
             buffers,
@@ -135,6 +137,7 @@ pub fn read<R: Read + Seek>(
         .map(|x| x.boxed()),
         LargeList => read_list::<i64, _>(
             field_nodes,
+            variadic_buffer_counts,
             data_type,
             ipc_field,
             buffers,
@@ -150,6 +153,7 @@ pub fn read<R: Read + Seek>(
         .map(|x| x.boxed()),
         FixedSizeList => read_fixed_size_list(
             field_nodes,
+            variadic_buffer_counts,
             data_type,
             ipc_field,
             buffers,
@@ -165,6 +169,7 @@ pub fn read<R: Read + Seek>(
         .map(|x| x.boxed()),
         Struct => read_struct(
             field_nodes,
+            variadic_buffer_counts,
             data_type,
             ipc_field,
             buffers,
@@ -198,6 +203,7 @@ pub fn read<R: Read + Seek>(
         }
         Union => read_union(
             field_nodes,
+            variadic_buffer_counts,
             data_type,
             ipc_field,
             buffers,
@@ -213,6 +219,7 @@ pub fn read<R: Read + Seek>(
         .map(|x| x.boxed()),
         Map => read_map(
             field_nodes,
+            variadic_buffer_counts,
             data_type,
             ipc_field,
             buffers,
@@ -223,6 +230,32 @@ pub fn read<R: Read + Seek>(
             compression,
             limit,
             version,
+            scratch,
+        )
+        .map(|x| x.boxed()),
+        Utf8View => read_binview::<str, _>(
+            field_nodes,
+            variadic_buffer_counts,
+            data_type,
+            buffers,
+            reader,
+            block_offset,
+            is_little_endian,
+            compression,
+            limit,
+            scratch,
+        )
+        .map(|x| x.boxed()),
+        BinaryView => read_binview::<[u8], _>(
+            field_nodes,
+            variadic_buffer_counts,
+            data_type,
+            buffers,
+            reader,
+            block_offset,
+            is_little_endian,
+            compression,
+            limit,
             scratch,
         )
         .map(|x| x.boxed()),
@@ -249,5 +282,6 @@ pub fn skip(
         Dictionary(_) => skip_dictionary(field_nodes, buffers),
         Union => skip_union(field_nodes, data_type, buffers),
         Map => skip_map(field_nodes, data_type, buffers),
+        BinaryView | Utf8View => todo!(),
     }
 }
