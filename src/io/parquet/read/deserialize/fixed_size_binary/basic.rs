@@ -194,11 +194,17 @@ impl<'a> Decoder<'a> for BinaryDecoder {
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
-        (
-            FixedSizeBinary::with_capacity(capacity, self.size),
-            MutableBitmap::with_capacity(capacity),
-        )
+    fn with_capacity(&self, capacity: usize, page: &Self::State) -> Self::DecodedState {
+        match page {
+            State::FilteredOptional(_, _) | State::OptionalDictionary(_) | State::Optional(_) => (
+                FixedSizeBinary::with_capacity(capacity, self.size),
+                MutableBitmap::with_capacity(capacity),
+            ),
+            State::FilteredRequired(_) | State::RequiredDictionary(_) | State::Required(_) => (
+                FixedSizeBinary::with_capacity(capacity, self.size),
+                MutableBitmap::new(),
+            ),
+        }
     }
 
     fn extend_from_state(

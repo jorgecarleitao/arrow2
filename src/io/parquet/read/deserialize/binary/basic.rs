@@ -305,11 +305,37 @@ impl<'a, O: Offset> utils::Decoder<'a> for BinaryDecoder<O> {
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
-        (
-            Binary::<O>::with_capacity(capacity),
-            MutableBitmap::with_capacity(capacity),
-        )
+    fn with_capacity(&self, capacity: usize, page: &Self::State) -> Self::DecodedState {
+        match page {
+            State::Optional(_, values) => (
+                // this is an upper bound - we may not consume the whole page.
+                // we do not know how many nulls are there, so we do not know how many
+                // valid items are there to discount over the sequence.
+                Binary::<O>::with_capacity(capacity, Some(values.num_bytes())),
+                MutableBitmap::with_capacity(capacity),
+            ),
+            State::Required(values) => (
+                // this is an upper bound - we may not consume the whole page.
+                Binary::<O>::with_capacity(capacity, Some(values.values.num_bytes())),
+                MutableBitmap::new(),
+            ),
+            State::FilteredRequiredDictionary(_)
+            | State::FilteredRequired(_)
+            | State::RequiredDictionary(_)
+            | State::Delta(_)
+            | State::FilteredDelta(_) => (
+                Binary::<O>::with_capacity(capacity, None),
+                MutableBitmap::new(),
+            ),
+            State::FilteredOptionalDictionary(_, _)
+            | State::FilteredOptional(_, _)
+            | State::OptionalDictionary(_, _)
+            | State::OptionalDelta(_, _)
+            | State::FilteredOptionalDelta(_, _) => (
+                Binary::<O>::with_capacity(capacity, None),
+                MutableBitmap::with_capacity(capacity),
+            ),
+        }
     }
 
     fn extend_from_state(

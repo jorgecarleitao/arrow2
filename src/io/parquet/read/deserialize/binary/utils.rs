@@ -36,10 +36,11 @@ impl<O: Offset> Pushable<usize> for Offsets<O> {
 
 impl<O: Offset> Binary<O> {
     #[inline]
-    pub fn with_capacity(capacity: usize) -> Self {
+    pub fn with_capacity(capacity: usize, values_capacity: Option<usize>) -> Self {
+        let values_capacity = values_capacity.unwrap_or(capacity.min(100) * 24);
         Self {
             offsets: Offsets::with_capacity(capacity),
-            values: Vec::with_capacity(capacity.min(100) * 24),
+            values: Vec::with_capacity(values_capacity),
         }
     }
 
@@ -87,6 +88,7 @@ impl<'a, O: Offset> Pushable<&'a [u8]> for Binary<O> {
         self.values.reserve(additional * avg_len);
         self.offsets.reserve(additional);
     }
+
     #[inline]
     fn len(&self) -> usize {
         self.len()
@@ -117,6 +119,10 @@ pub struct BinaryIter<'a> {
 impl<'a> BinaryIter<'a> {
     pub fn new(values: &'a [u8]) -> Self {
         Self { values }
+    }
+
+    pub fn num_bytes(&self) -> usize {
+        self.values.len()
     }
 }
 
@@ -150,6 +156,11 @@ impl<'a> SizedBinaryIter<'a> {
             remaining: size,
         }
     }
+
+    pub fn num_bytes(&self) -> usize {
+        // iter is formed as [length as i32][bytes]
+        self.iter.num_bytes() - 4 * self.remaining
+    }
 }
 
 impl<'a> Iterator for SizedBinaryIter<'a> {
@@ -165,6 +176,7 @@ impl<'a> Iterator for SizedBinaryIter<'a> {
         self.iter.next()
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.remaining, Some(self.remaining))
     }

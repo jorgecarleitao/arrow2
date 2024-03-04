@@ -127,8 +127,18 @@ where
         }
     }
 
-    fn with_capacity(&self, capacity: usize) -> Self::DecodedState {
-        self.0.with_capacity(capacity)
+    fn with_capacity(&self, capacity: usize, page: &Self::State) -> Self::DecodedState {
+        match page {
+            State::Common(page) => self.0.with_capacity(capacity, page),
+            State::DeltaBinaryPackedRequired(_) | State::FilteredDeltaBinaryPackedRequired(_) => {
+                (Vec::<T>::with_capacity(capacity), MutableBitmap::new())
+            }
+            State::DeltaBinaryPackedOptional(_, _)
+            | State::FilteredDeltaBinaryPackedOptional(_, _) => (
+                Vec::<T>::with_capacity(capacity),
+                MutableBitmap::with_capacity(capacity),
+            ),
+        }
     }
 
     fn extend_from_state(

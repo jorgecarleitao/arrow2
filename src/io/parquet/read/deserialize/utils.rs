@@ -387,7 +387,7 @@ pub(super) trait Decoder<'a> {
     ) -> Result<Self::State, Error>;
 
     /// Initializes a new [`Self::DecodedState`].
-    fn with_capacity(&self, capacity: usize) -> Self::DecodedState;
+    fn with_capacity(&self, capacity: usize, page: &Self::State) -> Self::DecodedState;
 
     /// extends [`Self::DecodedState`] by deserializing items in [`Self::State`].
     /// It guarantees that the length of `decoded` is at most `decoded.len() + remaining`.
@@ -416,7 +416,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
         decoded
     } else {
         // there is no state => initialize it
-        decoder.with_capacity(capacity)
+        decoder.with_capacity(capacity, &page)
     };
     let existing = decoded.len();
 
@@ -429,7 +429,7 @@ pub(super) fn extend_from_new_page<'a, T: Decoder<'a>>(
     while page.len() > 0 && *remaining > 0 {
         let additional = chunk_size.min(*remaining);
 
-        let mut decoded = decoder.with_capacity(additional);
+        let mut decoded = decoder.with_capacity(additional, &page);
         decoder.extend_from_state(&mut page, &mut decoded, additional);
         *remaining -= decoded.len();
         items.push_back(decoded)
