@@ -65,14 +65,14 @@ impl<'a, O: Offset> NestedDecoder<'a> for BinaryDecoder<O> {
             (Encoding::PlainDictionary | Encoding::RleDictionary, Some(dict), true, false) => {
                 ValuesDictionary::try_new(page, dict).map(State::OptionalDictionary)
             }
-            (Encoding::Plain, _, true, false) => {
+            (Encoding::Plain, _, true, _) => {
                 let (_, _, values) = split_buffer(page)?;
 
                 let values = BinaryIter::new(values);
 
                 Ok(State::Optional(values))
             }
-            (Encoding::Plain, _, false, false) => {
+            (Encoding::Plain, _, false, _) => {
                 let (_, _, values) = split_buffer(page)?;
 
                 let values = BinaryIter::new(values);
